@@ -1,0 +1,135 @@
+// Prisma schema for Nest — Toast POS to QuickBooks sync
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  isVerified       Boolean    @default(false)
+  verificationCode String?
+  codeExpiresAt    DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  locations        Location[]
+
+  @@map("users")
+}
+
+model Location {
+  id         String       @id @default(cuid())
+  userId     String
+  name       String
+  toastUrl   String
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mappings   Mapping[]
+  rules      Rule[]
+  scanRecords ScanRecord[]
+
+  @@index([userId])
+  @@map("locations")
+}
+
+model Mapping {
+  id                String   @id @default(cuid())
+  locationId        String
+  sourceField       String   // e.g. "Food Sales", "Credit Card Tips"
+  targetAccount     String   // QB Account name or ID
+  targetClass       String?  // QB Class (optional)
+  targetName        String?  // QB Name/Entity (optional)
+  targetDescription String?
+  targetMemo        String?
+  priority          Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  location          Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+  @@map("mappings")
+}
+
+model Rule {
+  id         String   @id @default(cuid())
+  locationId String
+  name       String
+  ruleType   RuleType
+  config     Json     // stores source fields, operator, target, etc.
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+  @@map("rules")
+}
+
+enum RuleType {
+  COMBINE
+  DEDUCT
+  THRESHOLD
+  FORMULA
+}
+
+model ScanRecord {
+  id         String       @id @default(cuid())
+  locationId String
+  scanDate   DateTime
+  rawData    Json         // all extracted Toast fields
+  status     ScanStatus   @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  location   Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  syncLogs   SyncLog[]
+
+  @@index([locationId])
+  @@index([status])
+  @@map("scan_records")
+}
+
+enum ScanStatus {
+  PENDING
+  MAPPED
+  SYNCED
+  FAILED
+}
+
+model SyncLog {
+  id               String     @id @default(cuid())
+  scanRecordId     String
+  qbJournalEntryId String?
+  status           SyncStatus
+  errorMessage     String?
+  syncedAt         DateTime   @default(now())
+  scanRecord       ScanRecord @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
+
+  @@index([scanRecordId])
+  @@map("sync_logs")
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+}
+
+// QB OAuth token storage (one row per user/realm)
+model QBToken {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  realmId       String
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("qb_tokens")
+}
