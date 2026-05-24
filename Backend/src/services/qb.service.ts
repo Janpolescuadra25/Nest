@@ -189,9 +189,9 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
   if (privateNote) payload.PrivateNote = privateNote;
 
   console.log('[QB Service] Journal Entry payload:');
-  console.log(JSON.stringify({ JournalEntry: payload }, null, 2));
+  console.log(JSON.stringify(payload, null, 2));
 
-  return { JournalEntry: payload };
+  return payload;
 }
 
 /**
@@ -203,7 +203,7 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
 
   const payload = buildJournalEntryPayload(input);
 
-  const url = `${QB_API_BASE_URL}/${realmId}/journalentry`;
+  const url = `${QB_API_BASE_URL}/${realmId}/journalentry?minorversion=65`;
 
   console.log(`[QB Service] POST ${url}`);
 
