@@ -1,194 +1,120 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
+import { UserInfo } from '../hooks/useAuth';
 
-interface Props {
-  onLogin: (jwt: string) => void;
+type View = 'login' | 'request-access' | 'forgot-password';
+
+interface LoginViewProps {
+  onLogin: (user: UserInfo, token: string) => void;
 }
 
-type Step = 'email' | 'otp';
-type LoginMode = 'otp' | 'password';
-
-export default function LoginView({ onLogin }: Props) {
-  const [step, setStep] = useState<Step>('email');
-  const [loginMode, setLoginMode] = useState<LoginMode>('otp');
+export default function LoginView({ onLogin }: LoginViewProps) {
+  const [view, setView] = useState<View>('login');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState('');
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    setError('');
     setLoading(true);
-    setError(null);
     try {
-      await api.login(email.trim());
-      setStep('otp');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send code');
+      const data = await api.login(email, password);
+      onLogin(data.user, data.token);
+    } catch (err: any) {
+      setError(err.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
+  const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
+    setError('');
     setLoading(true);
-    setError(null);
     try {
-      const { token } = await api.verify(email.trim(), code.trim());
-      onLogin(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid code');
+      await api.requestAccess(email, name);
+      setSuccess("Request submitted! You'll receive an email once approved.");
+      setEmail('');
+      setName('');
+    } catch (err: any) {
+      setError(err.message || 'Request failed.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    setError('');
     setLoading(true);
-    setError(null);
     try {
-      const { token } = await api.adminLogin(email.trim(), password);
-      onLogin(token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      await api.forgotPassword(email);
+      setSuccess("Reset request submitted! You'll receive an email once approved.");
+      setEmail('');
+    } catch (err: any) {
+      setError(err.message || 'Request failed.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (view === 'request-access') {
+    return (
+      <div className="p-4">
+        <button onClick={() => { setView('login'); setError(''); setSuccess(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 block">&larr; Back to Login</button>
+        <h2 className="text-lg font-semibold text-white mb-1">Request Access</h2>
+        <p className="text-sm text-gray-400 mb-4">Submit your email and the admin will review your request.</p>
+        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+        {success && <p className="text-green-400 text-sm mb-3">{success}</p>}
+        <form onSubmit={handleRequestAccess} className="space-y-3">
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+          <input type="text" placeholder="Full Name (optional)" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+          <button type="submit" disabled={loading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+            {loading ? 'Submitting...' : 'Submit Request'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (view === 'forgot-password') {
+    return (
+      <div className="p-4">
+        <button onClick={() => { setView('login'); setError(''); setSuccess(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 block">&larr; Back to Login</button>
+        <h2 className="text-lg font-semibold text-white mb-1">Forgot Password</h2>
+        <p className="text-sm text-gray-400 mb-4">Enter your email and the admin will review your reset request.</p>
+        {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+        {success && <p className="text-green-400 text-sm mb-3">{success}</p>}
+        <form onSubmit={handleForgotPassword} className="space-y-3">
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+          <button type="submit" disabled={loading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+            {loading ? 'Submitting...' : 'Submit Reset Request'}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col items-center justify-center bg-gray-900 text-white" style={{ width: 380, height: 500 }}>
-      {/* Logo */}
-      <div className="mb-6 text-center">
-        <div className="text-4xl font-black text-cyan-400 tracking-tight">Nest</div>
-        <div className="text-gray-500 text-xs mt-1">Toast → QuickBooks</div>
+    <div className="p-4">
+      <h2 className="text-lg font-semibold text-white mb-1">Sign In</h2>
+      <p className="text-sm text-gray-400 mb-4">Welcome back to Nest.</p>
+      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+      <form onSubmit={handleLogin} className="space-y-3">
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+        <button type="submit" disabled={loading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+      </form>
+      <div className="mt-4 space-y-1">
+        <button onClick={() => { setView('request-access'); setError(''); setSuccess(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 block">Request Access</button>
+        <button onClick={() => { setView('forgot-password'); setError(''); setSuccess(''); }} className="text-sm text-gray-500 hover:text-gray-400 block">Forgot Password?</button>
       </div>
-
-      <div className="w-72 bg-gray-800 rounded-xl p-5 border border-gray-700">
-        {loginMode === 'password' ? (
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Admin email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none"
-                autoFocus
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none"
-                required
-              />
-            </div>
-            {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginMode('otp'); setError(null); setPassword(''); }}
-              className="w-full text-gray-500 text-xs hover:text-gray-300"
-            >
-              ← Sign in with email code instead
-            </button>
-          </form>
-        ) : step === 'email' ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none"
-                autoFocus
-                required
-              />
-            </div>
-            {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-            >
-              {loading ? 'Sending…' : 'Send Code'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginMode('password'); setError(null); }}
-              className="w-full text-gray-500 text-xs hover:text-gray-300"
-            >
-              Admin? Sign in with password →
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerify} className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-400 mb-3">
-                A 6-digit code was sent to{' '}
-                <span className="text-white">{email}</span>. Check your email.
-              </p>
-              <label className="block text-xs text-gray-400 mb-1">Verification code</label>
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
-                maxLength={6}
-                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none tracking-widest text-center"
-                autoFocus
-                required
-              />
-            </div>
-            {error && <p className="text-red-400 text-xs">{error}</p>}
-            <button
-              type="submit"
-              disabled={loading || code.length !== 6}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-            >
-              {loading ? 'Verifying…' : 'Verify & Login'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStep('email'); setCode(''); setError(null); }}
-              className="w-full text-gray-500 text-xs hover:text-gray-300"
-            >
-              ← Change email
-            </button>
-          </form>
-        )}
-      </div>
-
-      <p className="mt-4 text-gray-600 text-xs">
-        No account?{' '}
-        <a
-          href="mailto:paulescuadra25@gmail.com?subject=Nest%20Account%20Request"
-          className="text-cyan-600 hover:text-cyan-400"
-        >
-          Contact us for an invitation
-        </a>
-      </p>
     </div>
   );
 }

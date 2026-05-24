@@ -10,38 +10,46 @@ datasource db {
 }
 
 model User {
-  id               String        @id @default(cuid())
-  email            String        @unique
-  name             String?
-  password         String?
-  role             String        @default("user")
-  isVerified       Boolean       @default(false)
-  verificationCode String?
-  codeExpiresAt    DateTime?
-  invitedById      String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  locations        Location[]
-  invitedBy        User?         @relation("InvitedUsers", fields: [invitedById], references: [id])
-  invitedUsers     User[]        @relation("InvitedUsers")
-  createdInvitations Invitation[] @relation("InvitationCreator")
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  password    String?
+  role        String   @default("user")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  locations   Location[]
+  qbTokens    QBToken[]
+  oauthStates OAuthState[]
 
   @@map("users")
 }
 
-model Invitation {
-  id         String    @id @default(cuid())
-  email      String
-  name       String    @default("")
-  token      String    @unique
-  createdBy  String
-  usedAt     DateTime?
-  expiresAt  DateTime
-  createdAt  DateTime  @default(now())
-  creator    User      @relation("InvitationCreator", fields: [createdBy], references: [id])
+model AccessRequest {
+  id             String              @id @default(cuid())
+  email          String
+  name           String?
+  type           AccessRequestType   @default(SIGNUP)
+  status         AccessRequestStatus @default(PENDING)
+  token          String?             @unique
+  tokenExpiresAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
-  @@unique([email, createdBy])
-  @@map("invitations")
+  @@index(fields: [email, type, status])
+  @@map("access_requests")
+}
+
+enum AccessRequestType {
+  SIGNUP
+  RESET
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  USED
 }
 
 model Location {
@@ -152,7 +160,9 @@ model QBToken {
   expiresAt     DateTime
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("qb_tokens")
 }
 
@@ -163,7 +173,9 @@ model OAuthState {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([state])
+  @@index([userId])
   @@map("oauth_states")
 }

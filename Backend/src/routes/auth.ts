@@ -1,182 +1,99 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 
-// In-memory OTP store (MVP — replace with Redis or DB in production)
-const otpStore: Record<string, { code: string; expiresAt: number }> = {};
-
-// ── Nodemailer transporter ────────────────────────────────────────────────────
-function createTransporter() {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-}
-
-async function sendOtpEmail(email: string, code: string, name?: string | null): Promise<void> {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.log(`[Auth] OTP for ${email}: ${code} (email not configured)`);
-    return;
-  }
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from: `"Nest App" <${process.env.GMAIL_USER}>`,
-    to: email,
-    subject: 'Your Nest verification code',
-    text: `Hi ${name ?? 'there'},\n\nYour verification code is: ${code}\n\nThis code expires in 10 minutes.`,
-    html: `<div style="font-family:sans-serif;max-width:400px;background:#ffffff;padding:24px">
-      <h2 style="color:#06b6d4">🪹 Nest</h2>
-      <p>Hi ${name ?? 'there'},</p>
-      <p>Your verification code is:</p>
-      <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#111;margin:16px 0">${code}</div>
-      <p style="color:#666;font-size:12px">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
-    </div>`,
-  });
-}
-
-// ── POST /api/auth/login ─────────────────────────────────────────────────────
-// Accepts email, generates 6-digit OTP, sends via Gmail
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+// POST /api/auth/login
+router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email } = req.body as { email?: string };
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json({ error: 'Valid email is required' });
-      return;
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
-
-    // Only allow existing users (invitation-only system)
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (!existingUser) {
-      res.status(404).json({ error: 'No account found for this email. Please request an invitation.' });
-      return;
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    await prisma.user.update({
-      where: { email },
-      data: { verificationCode: code, codeExpiresAt: new Date(expiresAt) },
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
     });
-
-    otpStore[email] = { code, expiresAt };
-
-    await sendOtpEmail(email, code, existingUser.name);
-
-    res.json({ message: 'Verification code sent', email });
-  } catch (err) {
-    console.error('[Auth] login error:', err);
-    res.status(500).json({ error: 'Failed to generate verification code' });
-  }
-});
-
-// ── POST /api/auth/verify ────────────────────────────────────────────────────
-// Accepts email + code, returns JWT token
-router.post('/verify', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, code } = req.body as { email?: string; code?: string };
-
-    if (!email || !code) {
-      res.status(400).json({ error: 'email and code are required' });
-      return;
-    }
-
-    const stored = otpStore[email];
-    if (!stored) {
-      res.status(400).json({ error: 'No pending verification for this email' });
-      return;
-    }
-
-    if (Date.now() > stored.expiresAt) {
-      delete otpStore[email];
-      res.status(400).json({ error: 'Verification code has expired' });
-      return;
-    }
-
-    if (stored.code !== code) {
-      res.status(400).json({ error: 'Invalid verification code' });
-      return;
-    }
-
-    // Mark user as verified
-    const user = await prisma.user.update({
-      where: { email },
-      data: { isVerified: true, verificationCode: null, codeExpiresAt: null },
-    });
-
-    delete otpStore[email];
-
+    if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+    if (!user.password) return res.status(401).json({ error: 'This account has not been set up yet. Please contact the admin.' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
     const token = jwt.sign(
-      { sub: user.id, email: user.email, role: user.role },
+      { sub: user.id, email: user.email, role: user.role, name: user.name },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+      { expiresIn: '7d' }
     );
-
-    res.json({ message: 'Verified successfully', token, userId: user.id });
+    return res.json({
+      token,
+      user: { id: user.id, email: user.email, role: user.role, name: user.name },
+    });
   } catch (err) {
-    console.error('[Auth] verify error:', err);
-    res.status(500).json({ error: 'Failed to verify code' });
+    console.error('[Auth] Login error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// ── GET /api/auth/session ────────────────────────────────────────────────────
-// Validate a token and return the session payload
-router.get('/session', async (req: Request, res: Response): Promise<void> => {
+// POST /api/auth/request-access
+router.post('/request-access', async (req: Request, res: Response) => {
+  try {
+    const { email, name } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const normalizedEmail = email.toLowerCase();
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingUser) return res.status(409).json({ error: 'An account with this email already exists. Use Forgot Password instead.' });
+    const pendingRequest = await prisma.accessRequest.findFirst({
+      where: { email: normalizedEmail, type: 'SIGNUP', status: 'PENDING' },
+    });
+    if (pendingRequest) return res.status(409).json({ error: 'A request for this email is still pending approval.' });
+    await prisma.accessRequest.create({
+      data: { email: normalizedEmail, name: name || null, type: 'SIGNUP', status: 'PENDING' },
+    });
+    return res.json({ message: "Your request has been submitted. You'll receive an email once approved." });
+  } catch (err) {
+    console.error('[Auth] Request access error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const normalizedEmail = email.toLowerCase();
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!existingUser) return res.status(404).json({ error: 'No account found with this email. You may need to request access first.' });
+    const pendingRequest = await prisma.accessRequest.findFirst({
+      where: { email: normalizedEmail, type: 'RESET', status: 'PENDING' },
+    });
+    if (pendingRequest) return res.status(403).json({ error: 'A reset request for this email is already pending.' });
+    await prisma.accessRequest.create({
+      data: { email: normalizedEmail, name: existingUser.name, type: 'RESET', status: 'PENDING' },
+    });
+    return res.json({ message: "Your reset request has been submitted. You'll receive an email once approved by the admin." });
+  } catch (err) {
+    console.error('[Auth] Forgot password error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// GET /api/auth/session
+router.get('/session', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
-    }
-
-    const token = authHeader.slice(7);
-    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; email: string };
-
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user) {
-      res.status(401).json({ error: 'User not found' });
-      return;
-    }
-
-    res.json({ userId: user.id, email: user.email, isVerified: user.isVerified, role: user.role });
-  } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
-  }
-});
-
-// ── GET /api/auth/debug-otp/:email ──────────────────────────────────────────
-// TEMPORARY: Exposes OTP for testing on hosted environments where server logs
-// are not easily accessible. REMOVE before going to production.
-// Only active when DEBUG_OTP=true in env.
-router.get('/debug-otp/:email', async (req: Request, res: Response): Promise<void> => {
-  if (process.env.DEBUG_OTP !== 'true') {
-    res.status(404).json({ error: 'Not found' });
-    return;
-  }
-  try {
-    const email = req.params['email'] as string;
+    if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated.' });
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string; email: string; role?: string; name?: string | null };
     const user = await prisma.user.findUnique({
-      where: { email },
-      select: { verificationCode: true, codeExpiresAt: true },
+      where: { id: decoded.sub },
+      select: { id: true, email: true, role: true, name: true },
     });
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-    const expired = user.codeExpiresAt ? user.codeExpiresAt < new Date() : true;
-    res.json({ otp: user.verificationCode, expires: user.codeExpiresAt, expired });
-  } catch (err) {
-    console.error('[Auth] debug-otp error:', err);
-    res.status(500).json({ error: 'Internal error' });
+    if (!user) return res.status(401).json({ error: 'User not found.' });
+    return res.json({ user });
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token.' });
   }
 });
 

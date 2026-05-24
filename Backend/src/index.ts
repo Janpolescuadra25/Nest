@@ -9,7 +9,7 @@ import ruleRoutes from './routes/rules';
 import scanRoutes from './routes/scans';
 import quickbooksRoutes from './routes/quickbooks';
 import adminRoutes from './routes/admin';
-import registerRoutes from './routes/register';
+import passwordRoutes from './routes/password';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,7 +37,7 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/quickbooks', quickbooksRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/register', registerRoutes);
+app.use('/auth', passwordRoutes);
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {

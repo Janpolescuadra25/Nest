@@ -13,8 +13,11 @@ async function headers(jwt?: string | null): Promise<Record<string, string>> {
 
 async function get<T>(path: string, jwt?: string | null): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, { headers: await headers(jwt) });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
-  return res.json() as Promise<T>;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+    throw new Error(err.error ?? `API ${path} failed`);
+  }
+  return res.json();
 }
 
 async function post<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
@@ -50,14 +53,17 @@ async function del(path: string, jwt?: string | null): Promise<void> {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const api = {
-  login: (email: string) =>
-    post<{ message: string; email: string }>('/api/auth/login', { email }),
-
-  verify: (email: string, code: string) =>
-    post<{ token: string; userId: string }>('/api/auth/verify', { email, code }),
-
   getSession: (jwt: string) =>
-    get<{ userId: string; email: string; isVerified: boolean }>('/api/auth/session', jwt),
+    get<{ user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/session', jwt),
+
+  login: (email: string, password: string) =>
+    post<{ token: string; user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/login', { email, password }),
+
+  requestAccess: (email: string, name: string) =>
+    post<{ message: string }>('/api/auth/request-access', { email, name }),
+
+  forgotPassword: (email: string) =>
+    post<{ message: string }>('/api/auth/forgot-password', { email }),
 
   // ── Locations ──────────────────────────────────────────────────────────────
   getLocations: (jwt: string) => get<Location[]>('/api/locations', jwt),
@@ -133,30 +139,29 @@ export const api = {
 
   // ── Admin ──────────────────────────────────────────────────────────────────
   getCurrentUser: (jwt: string) =>
-    get<{ userId: string; email: string; name?: string; role?: string }>('/api/auth/session', jwt),
+    get<{ user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/session', jwt),
 
-  adminLogin: async (email: string, password: string) => {
-    const res = await fetch(`${BASE_URL}/api/admin/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+  getRequests: (jwt: string) =>
+    get<{ requests: Array<{ id: string; email: string; name: string | null; type: string; status: string; createdAt: string }> }>('/api/admin/requests', jwt),
+
+  approveRequest: (id: string, jwt: string) =>
+    post<{ message: string }>(`/api/admin/requests/${id}/approve`, {}, jwt),
+
+  rejectRequest: (id: string, jwt: string) =>
+    post<{ message: string }>(`/api/admin/requests/${id}/reject`, {}, jwt),
+
+  getUsers: (jwt: string) =>
+    get<{ users: Array<{ id: string; email: string; name: string | null; role: string; createdAt: string }> }>('/api/admin/users', jwt),
+
+  deleteUser: async (id: string, jwt: string): Promise<{ message: string }> => {
+    const res = await fetch(`${BASE_URL}/api/admin/users/${id}`, {
+      method: 'DELETE',
+      headers: await headers(jwt),
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Login failed' })) as { error?: string };
-      throw new Error(err.error ?? 'Login failed');
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+      throw new Error(err.error ?? 'Delete user failed');
     }
-    return res.json() as Promise<{ token: string; user: { id: string; email: string; name: string; role: string } }>;
+    return res.json();
   },
-
-  adminGetUsers: (jwt: string) =>
-    get<{ users: Array<{ id: string; email: string; name: string; role: string; createdAt: string }> }>('/api/admin/users', jwt),
-
-  adminInvite: (jwt: string, email: string, name?: string) =>
-    post<{ message: string; registerUrl: string; expiresIn: string; invitationId: string }>('/api/admin/invite', { email, name }, jwt),
-
-  adminToggleUser: (jwt: string, userId: string, role: string) =>
-    put<{ user: { id: string; email: string; name: string; role: string } }>(`/api/admin/users/${userId}`, { role }, jwt),
-
-  adminGetStats: (jwt: string) =>
-    get<{ totalUsers: number; activeInvitations: number; totalSyncs: number }>('/api/admin/stats', jwt),
 };

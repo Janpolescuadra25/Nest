@@ -1,16 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import { sendApprovalEmail } from '../lib/email';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AdminRequest extends Request {
-  adminUser?: { userId: string; email: string; role: string };
+  adminUser?: { userId: string; email: string; role: string; name?: string | null };
 }
 
 // ── Admin auth middleware ─────────────────────────────────────────────────────
@@ -23,9 +22,7 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
 
   try {
     const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as {
-      sub: string;
-      email: string;
-      role?: string;
+      sub: string; email: string; role?: string; name?: string | null;
     };
 
     if (payload.role !== 'admin') {
@@ -33,185 +30,105 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
       return;
     }
 
-    req.adminUser = { userId: payload.sub, email: payload.email, role: payload.role! };
+    req.adminUser = { userId: payload.sub, email: payload.email, role: payload.role!, name: payload.name };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 
-// ── POST /api/admin/auth ──────────────────────────────────────────────────────
-// Admin login with email + password
-router.post('/auth', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body as { email?: string; password?: string };
-
-    if (!email || !password) {
-      res.status(400).json({ error: 'email and password are required' });
-      return;
-    }
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || user.role !== 'admin') {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    if (!user.password) {
-      res.status(401).json({ error: 'Password not set for this account' });
-      return;
-    }
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    const token = jwt.sign(
-      { sub: user.id, email: user.email, name: user.name ?? '', role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' } as jwt.SignOptions
-    );
-
-    res.json({
-      token,
-      user: { id: user.id, email: user.email, name: user.name ?? '', role: user.role },
-    });
-  } catch (err) {
-    console.error('[Admin] auth error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // ── GET /api/admin/users ──────────────────────────────────────────────────────
-router.get('/users', requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+router.get('/users', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, createdAt: true, isVerified: true },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
-    res.json({ users });
+    return res.json({ users });
   } catch (err) {
     console.error('[Admin] getUsers error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// ── PUT /api/admin/users/:id ──────────────────────────────────────────────────
-router.put('/users/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
+// ── GET /api/admin/requests ───────────────────────────────────────────────────
+router.get('/requests', requireAdmin, async (_req: AdminRequest, res: Response) => {
   try {
-    const { id } = req.params as { id: string };
-    const { role, name } = req.body as { role?: string; name?: string };
-
-    const updateData: Record<string, unknown> = {};
-    if (role !== undefined) updateData['role'] = role;
-    if (name !== undefined) updateData['name'] = name;
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: { id: true, email: true, name: true, role: true },
+    const requests = await prisma.accessRequest.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
     });
-
-    res.json({ user });
+    return res.json({ requests });
   } catch (err) {
-    console.error('[Admin] updateUser error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Admin] Get requests error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// ── POST /api/admin/invite ────────────────────────────────────────────────────
-router.post('/invite', requireAdmin, async (req: AdminRequest, res: Response): Promise<void> => {
+// ── POST /api/admin/requests/:id/approve ─────────────────────────────────────
+router.post('/requests/:id/approve', requireAdmin, async (req: AdminRequest, res: Response) => {
   try {
-    const { email, name } = req.body as { email?: string; name?: string };
+    const id = req.params['id'] as string;
+    const request = await prisma.accessRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    if (request.status !== 'PENDING') return res.status(409).json({ error: 'This request has already been processed.' });
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json({ error: 'Valid email is required' });
-      return;
-    }
-
-    const inviterUserId = req.adminUser!.userId;
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const baseUrl = process.env.BASE_URL || 'https://nest-backend-mddn.onrender.com';
+    const path = request.type === 'SIGNUP' ? 'setup-password' : 'reset-password';
+    const link = `${baseUrl}/auth/${path}?token=${token}`;
 
-    // Check for existing invitations
-    const existing = await prisma.invitation.findFirst({
-      where: { email, createdBy: inviterUserId },
-    });
-
-    if (existing) {
-      if (existing.usedAt) {
-        res.status(409).json({ error: 'This email has already been registered.' });
-        return;
-      }
-      if (existing.expiresAt && existing.expiresAt > new Date()) {
-        res.status(409).json({ error: 'An active invitation already exists for this email.' });
-        return;
-      }
-      // Expired — delete and allow re-invite
-      await prisma.invitation.delete({ where: { id: existing.id } });
+    let emailSent = false;
+    try {
+      emailSent = await sendApprovalEmail(request.email, request.name, request.type as 'SIGNUP' | 'RESET', link);
+    } catch (err) {
+      console.error('[Admin] Failed to send approval email:', err);
+      console.log('[Admin] Approval link (email not sent):', link);
     }
 
-    const invitation = await prisma.invitation.create({
-      data: {
-        email,
-        name: name ?? '',
-        token,
-        createdBy: inviterUserId,
-        expiresAt,
-      },
+    await prisma.accessRequest.update({
+      where: { id },
+      data: { status: 'APPROVED', token, tokenExpiresAt },
     });
 
-    const registerUrl = `${process.env.FRONTEND_URL ?? 'https://nest-backend-mddn.onrender.com'}/register?token=${token}`;
-
-    // Send invitation email if Gmail is configured
-    if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-      });
-      await transporter.sendMail({
-        from: `"Nest App" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: "You've been invited to Nest",
-        text: `You've been invited to join Nest. Register here: ${registerUrl}\n\nThis link expires in 7 days.`,
-        html: `<div style="font-family:sans-serif;max-width:400px">
-          <h2 style="color:#06b6d4">🪹 Nest</h2>
-          <p>You've been invited to join Nest${name ? `, ${name}` : ''}!</p>
-          <p><a href="${registerUrl}" style="background:#06b6d4;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block">Accept Invitation</a></p>
-          <p style="color:#666;font-size:12px">This link expires in 7 days.</p>
-        </div>`,
-      });
-    } else {
-      console.log(`[Admin] Invitation for ${email}: ${registerUrl}`);
-    }
-
-    res.json({
-      message: 'Invitation sent',
-      registerUrl,
-      expiresIn: '7 days',
-      invitationId: invitation.id,
-    });
+    const suffix = emailSent ? ' Email sent.' : ' Email could not be sent — check server logs for the approval link.';
+    return res.json({ message: 'Request approved.' + suffix });
   } catch (err) {
-    console.error('[Admin] invite error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Admin] Approve request error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// ── GET /api/admin/stats ──────────────────────────────────────────────────────
-router.get('/stats', requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+// ── POST /api/admin/requests/:id/reject ──────────────────────────────────────
+router.post('/requests/:id/reject', requireAdmin, async (req: AdminRequest, res: Response) => {
   try {
-    const [totalUsers, activeInvitations, totalSyncs] = await Promise.all([
-      prisma.user.count(),
-      prisma.invitation.count({ where: { usedAt: null, expiresAt: { gt: new Date() } } }),
-      prisma.syncLog.count({ where: { status: 'SUCCESS' } }),
-    ]);
-
-    res.json({ totalUsers, activeInvitations, totalSyncs });
+    const id = req.params['id'] as string;
+    const request = await prisma.accessRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    if (request.status !== 'PENDING') return res.status(409).json({ error: 'This request has already been processed.' });
+    await prisma.accessRequest.update({ where: { id }, data: { status: 'REJECTED' } });
+    return res.json({ message: 'Request rejected.' });
   } catch (err) {
-    console.error('[Admin] stats error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Admin] Reject request error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
+router.delete('/users/:id', requireAdmin, async (req: AdminRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    if (req.adminUser && req.adminUser.userId === id) {
+      return res.status(403).json({ error: 'You cannot delete your own account.' });
+    }
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    await prisma.user.delete({ where: { id } });
+    return res.json({ message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('[Admin] Delete user error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 

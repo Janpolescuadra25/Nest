@@ -15,8 +15,8 @@ async function main(): Promise<void> {
 
   const adminUser = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { password: hashedPassword, role: 'admin', name: adminName, isVerified: true },
-    create: { email: adminEmail, name: adminName, password: hashedPassword, role: 'admin', isVerified: true },
+    update: { password: hashedPassword, role: 'admin', name: adminName },
+    create: { email: adminEmail, name: adminName, password: hashedPassword, role: 'admin' },
   });
   console.log(`[Seed] Admin: ${adminUser.email} / password: ${adminPassword}`);
 
@@ -26,7 +26,6 @@ async function main(): Promise<void> {
     update: {},
     create: {
       email: 'test@nest.app',
-      isVerified: true,
     },
   });
   console.log('[Seed] User:', user.email, '— id:', user.id);

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { QBContextProvider } from './contexts/QBContext';
 import LoginView from './components/LoginView';
+import AdminDashboard from './components/AdminDashboard';
 import TabNav from './components/TabNav';
 import ScanView from './components/ScanView';
 import MappingView from './components/MappingView';
@@ -13,7 +14,7 @@ import HelpPanel from './components/HelpPanel';
 import type { TabId, ScanData } from '../types';
 
 export default function App() {
-  const { jwt, setJwt, loading } = useAuth();
+  const { jwt, user, loading, login, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<TabId>('scan');
   const [scanData, setScanData] = useState<ScanData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
@@ -27,35 +28,28 @@ export default function App() {
     );
   }
 
-  if (!jwt) {
+  if (!user) {
     return (
       <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div className="grid items-center px-4 py-3 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
-          <div />
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-cyan-400 font-bold text-lg tracking-tight">🪹 Nest</span>
-            <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
-          </div>
-          <div className="flex justify-end">
-            <button
-              onClick={() => window.close()}
-              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-              title="Close"
-              aria-label="Close window"
-            >
-              ✕
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
+          <span className="text-sm font-semibold text-white">Nest</span>
+          <button onClick={() => window.close()} className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white rounded hover:bg-slate-700">✕</button>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <LoginView onLogin={setJwt} />
-        </div>
+        <LoginView onLogin={login} />
+      </div>
+    );
+  }
+
+  if (user.role === 'admin') {
+    return (
+      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        <AdminDashboard jwt={jwt!} onSignOut={logout} currentUserId={user.id} />
       </div>
     );
   }
 
   return (
-    <QBContextProvider jwt={jwt}>
+    <QBContextProvider jwt={jwt!}>
       <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         {/* Header */}
         <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
@@ -91,11 +85,11 @@ export default function App() {
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', minHeight: 0 }}>
           {currentTab === 'scan' && (
-            <ScanView jwt={jwt} scanData={scanData} onScanData={setScanData} />
+            <ScanView jwt={jwt!} scanData={scanData} onScanData={setScanData} />
           )}
           {currentTab === 'mappings' && (
             <MappingView
-              jwt={jwt}
+              jwt={jwt!}
               selectedLocationId={selectedLocationId}
               onLocationChange={setSelectedLocationId}
               scanData={scanData}
@@ -104,7 +98,7 @@ export default function App() {
           )}
           {currentTab === 'preview' && (
             <JournalEntryPreview
-              jwt={jwt}
+              jwt={jwt!}
               scanData={scanData}
               selectedLocationId={selectedLocationId}
             />
@@ -114,18 +108,15 @@ export default function App() {
           )}
           {currentTab === 'sync' && (
             <SyncView
-              jwt={jwt}
+              jwt={jwt!}
               selectedLocationId={selectedLocationId}
               onLocationChange={setSelectedLocationId}
             />
           )}
           {currentTab === 'settings' && (
             <SettingsView
-              jwt={jwt}
-              onLogout={() => {
-                chrome.storage.local.remove(['jwt']);
-                setJwt(null);
-              }}
+              jwt={jwt!}
+              onLogout={logout}
             />
           )}
         </div>

@@ -1,39 +1,58 @@
 import { useState, useEffect, useCallback } from 'react';
+import { api } from '../lib/api';
+
+export interface UserInfo {
+  id: string;
+  email: string;
+  role: string;
+  name: string | null;
+}
 
 export function useAuth() {
-  const [jwt, setJwtState] = useState<string | null>(null);
+  const [jwt, setJwt] = useState<string | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    chrome.storage.local.get(['jwt'], (result) => {
-      const stored = result['jwt'] as string | undefined;
-      if (stored) {
-        try {
-          const parts = stored.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1])) as { exp?: number };
-            if (payload.exp && payload.exp * 1000 > Date.now()) {
-              setJwtState(stored);
-            } else {
-              chrome.storage.local.remove(['jwt']);
-            }
+    (async () => {
+      try {
+        const result = await Promise.race([
+          new Promise<{ jwt?: string }>((resolve) => {
+            chrome.storage.local.get(['jwt'], (items) => resolve(items as { jwt?: string }));
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Storage timeout')), 5000)
+          ),
+        ]);
+        if (result.jwt) {
+          setJwt(result.jwt);
+          try {
+            const session = await api.getSession(result.jwt);
+            setUser(session.user);
+          } catch {
+            await chrome.storage.local.remove('jwt');
+            setJwt(null);
           }
-        } catch {
-          chrome.storage.local.remove(['jwt']);
         }
+      } catch {
+        // Timeout or other error
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    })();
   }, []);
 
-  const setJwt = useCallback((token: string | null) => {
-    if (token) {
-      chrome.storage.local.set({ jwt: token });
-    } else {
-      chrome.storage.local.remove(['jwt']);
-    }
-    setJwtState(token);
+  const login = useCallback(async (userData: UserInfo, token: string) => {
+    setJwt(token);
+    setUser(userData);
+    await chrome.storage.local.set({ jwt: token });
   }, []);
 
-  return { jwt, setJwt, loading };
+  const logout = useCallback(async () => {
+    setJwt(null);
+    setUser(null);
+    await chrome.storage.local.remove('jwt');
+  }, []);
+
+  return { jwt, user, loading, login, logout };
 }
