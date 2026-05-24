@@ -21,7 +21,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: QB_CLIENT_ID
-        sync: false
+        value: "ABzXz08BjZ2oE2u9u4dRQomYmBNM8nEg0yaDKLVTYsSOolehep"
       - key: QB_CLIENT_SECRET
         sync: false
       - key: QB_REDIRECT_URI
