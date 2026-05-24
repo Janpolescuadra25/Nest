@@ -39,7 +39,10 @@ async function put<T>(path: string, body: unknown, jwt?: string | null): Promise
     headers: await headers(jwt),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+    throw new Error(err.error ?? `API ${path} failed`);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -48,7 +51,10 @@ async function del(path: string, jwt?: string | null): Promise<void> {
     method: 'DELETE',
     headers: await headers(jwt),
   });
-  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+    throw new Error(err.error ?? `API ${path} failed`);
+  }
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -138,9 +144,6 @@ export const api = {
   }>('/api/quickbooks/sync-all', jwt),
 
   // ── Admin ──────────────────────────────────────────────────────────────────
-  getCurrentUser: (jwt: string) =>
-    get<{ user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/session', jwt),
-
   getRequests: (jwt: string) =>
     get<{ requests: Array<{ id: string; email: string; name: string | null; type: string; status: string; createdAt: string }> }>('/api/admin/requests', jwt),
 

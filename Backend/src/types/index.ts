@@ -7,13 +7,6 @@ export interface AuthPayload {
   name?: string | null;
 }
 
-export interface OTPStore {
-  [email: string]: {
-    code: string;
-    expiresAt: number;
-  };
-}
-
 export interface QBTokens {
   accessToken: string;
   refreshToken: string;
