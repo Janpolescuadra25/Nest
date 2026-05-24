@@ -290,6 +290,126 @@ router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Respon
   }
 });
 
+// ── Helper: get valid (refreshed) QB token for a user ────────────────────────
+async function getValidToken(userId: string): Promise<{ accessToken: string; realmId: string }> {
+  const qbToken = await prisma.qBToken.findUnique({ where: { userId } });
+  if (!qbToken) throw new Error('QuickBooks not connected. Please complete OAuth first.');
+
+  if (qbToken.expiresAt < new Date()) {
+    console.log('[QB] Access token expired — refreshing for userId:', userId);
+    const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
+    await prisma.qBToken.update({
+      where: { userId },
+      data: {
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+      },
+    });
+    return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
+  }
+
+  return { accessToken: qbToken.accessToken, realmId: qbToken.realmId };
+}
+
+// ── GET /api/quickbooks/accounts ──────────────────────────────────────────────
+router.get('/accounts', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const accounts = await qbService.getAccounts(realmId, accessToken);
+    res.json({ accounts });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] accounts error:', message);
+    res.status(500).json({ error: 'Failed to fetch accounts', message });
+  }
+});
+
+// ── GET /api/quickbooks/classes ───────────────────────────────────────────────
+router.get('/classes', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const classes = await qbService.getClasses(realmId, accessToken);
+    res.json({ classes });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] classes error:', message);
+    res.status(500).json({ error: 'Failed to fetch classes', message });
+  }
+});
+
+// ── GET /api/quickbooks/employees ─────────────────────────────────────────────
+router.get('/employees', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const employees = await qbService.getEmployees(realmId, accessToken);
+    res.json({ employees });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] employees error:', message);
+    res.status(500).json({ error: 'Failed to fetch employees', message });
+  }
+});
+
+// ── GET /api/quickbooks/vendors ───────────────────────────────────────────────
+router.get('/vendors', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const vendors = await qbService.getVendors(realmId, accessToken);
+    res.json({ vendors });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] vendors error:', message);
+    res.status(500).json({ error: 'Failed to fetch vendors', message });
+  }
+});
+
+// ── GET /api/quickbooks/customers ─────────────────────────────────────────────
+router.get('/customers', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const customers = await qbService.getCustomers(realmId, accessToken);
+    res.json({ customers });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] customers error:', message);
+    res.status(500).json({ error: 'Failed to fetch customers', message });
+  }
+});
+
+// ── GET /api/quickbooks/tax-codes ────────────────────────────────────────────
+router.get('/tax-codes', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const taxCodes = await qbService.getTaxCodes(realmId, accessToken);
+    res.json({ taxCodes });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] tax-codes error:', message);
+    res.status(500).json({ error: 'Failed to fetch tax codes', message });
+  }
+});
+
+// ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
+router.get('/sync-all', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
+    const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([
+      qbService.getAccounts(realmId, accessToken),
+      qbService.getClasses(realmId, accessToken),
+      qbService.getEmployees(realmId, accessToken),
+      qbService.getVendors(realmId, accessToken),
+      qbService.getCustomers(realmId, accessToken),
+      qbService.getTaxCodes(realmId, accessToken),
+    ]);
+    res.json({ accounts, classes, employees, vendors, customers, taxCodes });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] sync-all error:', message);
+    res.status(500).json({ error: 'Failed to sync QB data', message });
+  }
+});
+
 // ── HTML page helpers ─────────────────────────────────────────────────────────
 function successPage(realmId: string): string {
   return `<!DOCTYPE html>

@@ -114,4 +114,19 @@ export const api = {
     privateNote?: string
   ) =>
     post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote }, jwt),
+
+  getQBAccounts: (jwt: string) => get<{ accounts: unknown[] }>('/api/quickbooks/accounts', jwt),
+  getQBClasses: (jwt: string) => get<{ classes: unknown[] }>('/api/quickbooks/classes', jwt),
+  getQBEmployees: (jwt: string) => get<{ employees: unknown[] }>('/api/quickbooks/employees', jwt),
+  getQBVendors: (jwt: string) => get<{ vendors: unknown[] }>('/api/quickbooks/vendors', jwt),
+  getQBCustomers: (jwt: string) => get<{ customers: unknown[] }>('/api/quickbooks/customers', jwt),
+  getQBTaxCodes: (jwt: string) => get<{ taxCodes: unknown[] }>('/api/quickbooks/tax-codes', jwt),
+  syncQBAll: (jwt: string) => get<{
+    accounts: unknown[];
+    classes: unknown[];
+    employees: unknown[];
+    vendors: unknown[];
+    customers: unknown[];
+    taxCodes: unknown[];
+  }>('/api/quickbooks/sync-all', jwt),
 };

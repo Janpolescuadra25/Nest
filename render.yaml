@@ -31,6 +31,6 @@ services:
       - key: QB_TOKEN_URL
         value: https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
       - key: QB_API_BASE_URL
-        value: https://sandbox-quickbooks.api.intuit.com/v3/company
+        value: https://quickbooks.api.intuit.com/v3/company
       - key: QB_ENVIRONMENT
-        value: development
+        value: production

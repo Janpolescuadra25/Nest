@@ -1,6 +1,140 @@
 import { CreateJournalEntryInput, JournalEntryResponse, QBJournalLineItem } from '../types';
 
-const QB_API_BASE_URL = process.env.QB_API_BASE_URL ?? 'https://sandbox-quickbooks.api.intuit.com/v3/company';
+const QB_API_BASE_URL = process.env.QB_API_BASE_URL ?? 'https://quickbooks.api.intuit.com/v3/company';
+
+// ── Internal QB response types ────────────────────────────────────────────────
+interface QBAccount {
+  Id: string;
+  Name: string;
+  AccountType: string;
+  AccountSubType: string;
+  Classification?: string;
+  FullyQualifiedName: string;
+  Active: boolean;
+}
+
+interface QBClass {
+  Id: string;
+  Name: string;
+  FullyQualifiedName: string;
+  Active: boolean;
+}
+
+interface QBEmployee {
+  Id: string;
+  DisplayName: string;
+  Active: boolean;
+}
+
+interface QBVendor {
+  Id: string;
+  DisplayName: string;
+  Active: boolean;
+}
+
+interface QBCustomer {
+  Id: string;
+  DisplayName: string;
+  Active: boolean;
+}
+
+interface QBTaxCode {
+  Id: string;
+  Name: string;
+  Description?: string;
+  Active: boolean;
+}
+
+// ── Generic QB query helper ───────────────────────────────────────────────────
+async function qbQuery<T>(realmId: string, accessToken: string, query: string): Promise<T> {
+  const url = `${QB_API_BASE_URL}/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=65`;
+  console.log(`[QB Service] QUERY ${url}`);
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`QB query failed (${response.status}): ${text}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+// ── Entity query functions ────────────────────────────────────────────────────
+async function getAccounts(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { Account?: QBAccount[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Account WHERE Active = true MAXRESULTS 1000',
+  );
+  return (data.QueryResponse.Account ?? []).map((a) => ({
+    id: a.Id,
+    name: a.Name,
+    type: a.AccountType,
+    subType: a.AccountSubType,
+    classification: a.Classification,
+    fullyQualifiedName: a.FullyQualifiedName,
+  }));
+}
+
+async function getClasses(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { Class?: QBClass[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Class WHERE Active = true MAXRESULTS 500',
+  );
+  return (data.QueryResponse.Class ?? []).map((c) => ({
+    id: c.Id,
+    name: c.Name,
+    fullyQualifiedName: c.FullyQualifiedName,
+  }));
+}
+
+async function getEmployees(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { Employee?: QBEmployee[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Employee WHERE Active = true MAXRESULTS 500',
+  );
+  return (data.QueryResponse.Employee ?? []).map((e) => ({
+    id: e.Id,
+    displayName: e.DisplayName,
+  }));
+}
+
+async function getVendors(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { Vendor?: QBVendor[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Vendor WHERE Active = true MAXRESULTS 500',
+  );
+  return (data.QueryResponse.Vendor ?? []).map((v) => ({
+    id: v.Id,
+    displayName: v.DisplayName,
+  }));
+}
+
+async function getCustomers(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { Customer?: QBCustomer[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Customer WHERE Active = true MAXRESULTS 500',
+  );
+  return (data.QueryResponse.Customer ?? []).map((c) => ({
+    id: c.Id,
+    displayName: c.DisplayName,
+  }));
+}
+
+async function getTaxCodes(realmId: string, accessToken: string) {
+  const data = await qbQuery<{ QueryResponse: { TaxCode?: QBTaxCode[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM TaxCode MAXRESULTS 500',
+  );
+  return (data.QueryResponse.TaxCode ?? []).map((t) => ({
+    id: t.Id,
+    name: t.Name,
+    description: t.Description,
+    active: t.Active,
+  }));
+}
 
 /**
  * Build the QuickBooks JournalEntry payload per the QB API spec.
@@ -148,4 +282,14 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   };
 }
 
-export const qbService = { createJournalEntry, refreshAccessToken, buildJournalEntryPayload };
+export const qbService = {
+  createJournalEntry,
+  refreshAccessToken,
+  buildJournalEntryPayload,
+  getAccounts,
+  getClasses,
+  getEmployees,
+  getVendors,
+  getCustomers,
+  getTaxCodes,
+};
