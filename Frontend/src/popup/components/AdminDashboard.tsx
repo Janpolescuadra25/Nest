@@ -67,9 +67,8 @@ export default function AdminDashboard({ jwt, onSignOut, currentUserId }: AdminD
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
         <h1 className="text-sm font-semibold text-white">Admin Dashboard</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <button onClick={onSignOut} className="text-xs text-red-400 hover:text-red-300">Sign Out</button>
-          <button onClick={() => window.close()} className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white rounded hover:bg-slate-700" title="Close">✕</button>
         </div>
       </div>
       <div className="flex border-b border-slate-700">

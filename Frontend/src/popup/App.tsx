@@ -33,7 +33,6 @@ export default function App() {
       <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
           <span className="text-sm font-semibold text-white">Nest</span>
-          <button onClick={() => window.close()} className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white rounded hover:bg-slate-700">✕</button>
         </div>
         <LoginView onLogin={login} />
       </div>
@@ -59,7 +58,7 @@ export default function App() {
             <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end">
             <button
               onClick={() => setShowHelp(true)}
               className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
@@ -67,14 +66,6 @@ export default function App() {
               aria-label="Open help"
             >
               ❓
-            </button>
-            <button
-              onClick={() => window.close()}
-              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-              title="Close"
-              aria-label="Close window"
-            >
-              ✕
             </button>
           </div>
         </div>
