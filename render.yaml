@@ -2,13 +2,18 @@ services:
   - type: web
     name: nest-backend
     runtime: node
+    region: oregon
     plan: free
     buildCommand: cd Backend && npm install && npx prisma generate && npm run build
-    startCommand: cd Backend && npx prisma db push --skip-generate && node dist/index.js
+    startCommand: cd Backend && node dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
+      - key: DEBUG_OTP
+        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
