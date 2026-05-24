@@ -62,7 +62,7 @@ async function build() {
     ...sharedConfig,
     entryPoints: [path.join(ROOT, 'src', 'background', 'service-worker.ts')],
     outfile: path.join(DIST, 'background', 'service-worker.js'),
-    format: 'iife',
+    format: 'esm',
   });
   console.log('[Build] background/service-worker.js');
 

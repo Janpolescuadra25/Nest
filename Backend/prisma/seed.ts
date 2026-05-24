@@ -1,10 +1,24 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   console.log('[Seed] Starting seed...');
+
+  // ── 0. Create admin user ────────────────────────────────────────────────────
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nestapp.io';
+  const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const adminName = process.env.ADMIN_NAME ?? 'Admin';
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { password: hashedPassword, role: 'admin', name: adminName, isVerified: true },
+    create: { email: adminEmail, name: adminName, password: hashedPassword, role: 'admin', isVerified: true },
+  });
+  console.log(`[Seed] Admin: ${adminUser.email} / password: ${adminPassword}`);
 
   // ── 1. Create test user ────────────────────────────────────────────────────
   const user = await prisma.user.upsert({

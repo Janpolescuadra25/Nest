@@ -10,16 +10,38 @@ datasource db {
 }
 
 model User {
-  id               String     @id @default(cuid())
-  email            String     @unique
-  isVerified       Boolean    @default(false)
+  id               String        @id @default(cuid())
+  email            String        @unique
+  name             String?
+  password         String?
+  role             String        @default("user")
+  isVerified       Boolean       @default(false)
   verificationCode String?
   codeExpiresAt    DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  invitedById      String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   locations        Location[]
+  invitedBy        User?         @relation("InvitedUsers", fields: [invitedById], references: [id])
+  invitedUsers     User[]        @relation("InvitedUsers")
+  createdInvitations Invitation[] @relation("InvitationCreator")
 
   @@map("users")
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  email      String
+  name       String    @default("")
+  token      String    @unique
+  createdBy  String
+  usedAt     DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  creator    User      @relation("InvitationCreator", fields: [createdBy], references: [id])
+
+  @@unique([email, createdBy])
+  @@map("invitations")
 }
 
 model Location {

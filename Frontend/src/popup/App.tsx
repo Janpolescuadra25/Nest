@@ -21,7 +21,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center bg-gray-900" style={{ width: 950, height: 750 }}>
+      <div className="flex items-center justify-center bg-gray-900" style={{ width: '100vw', height: '100vh' }}>
         <div className="text-gray-500 text-sm">Loading…</div>
       </div>
     );
@@ -29,14 +29,23 @@ export default function App() {
 
   if (!jwt) {
     return (
-      <div className="flex flex-col bg-gray-900 text-white" style={{ width: 950, height: 750, overflow: 'hidden' }}>
+      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         <div className="grid items-center px-4 py-3 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           <div />
           <div className="flex items-center justify-center gap-2">
             <span className="text-cyan-400 font-bold text-lg tracking-tight">🪹 Nest</span>
             <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
           </div>
-          <div />
+          <div className="flex justify-end">
+            <button
+              onClick={() => window.close()}
+              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              title="Close"
+              aria-label="Close window"
+            >
+              ✕
+            </button>
+          </div>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <LoginView onLogin={setJwt} />
@@ -47,7 +56,7 @@ export default function App() {
 
   return (
     <QBContextProvider jwt={jwt}>
-      <div className="flex flex-col bg-gray-900 text-white" style={{ width: 950, height: 750, overflow: 'hidden' }}>
+      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         {/* Header */}
         <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           <div />
@@ -56,7 +65,7 @@ export default function App() {
             <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowHelp(true)}
               className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
@@ -64,6 +73,14 @@ export default function App() {
               aria-label="Open help"
             >
               ❓
+            </button>
+            <button
+              onClick={() => window.close()}
+              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              title="Close"
+              aria-label="Close window"
+            >
+              ✕
             </button>
           </div>
         </div>

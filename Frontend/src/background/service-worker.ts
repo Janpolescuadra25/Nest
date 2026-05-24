@@ -1,9 +1,45 @@
-// Background service worker — Manifest V3
+// Background service worker — Manifest V3 (floating window)
 
-// Backend URL — update to your Render URL after deployment:
-// e.g. https://nest-backend-xxx.onrender.com
 const BACKEND_URL = 'https://nest-backend-mddn.onrender.com';
+const WINDOW_WIDTH = 950;
+const WINDOW_HEIGHT = 750;
 
+// ── Floating window ───────────────────────────────────────────────────────────
+chrome.action.onClicked.addListener(async () => {
+  const { nestWindowId } = await chrome.storage.session.get('nestWindowId') as { nestWindowId?: number };
+
+  if (nestWindowId !== undefined) {
+    try {
+      await chrome.windows.get(nestWindowId);
+      await chrome.windows.update(nestWindowId, { focused: true });
+      return;
+    } catch {
+      await chrome.storage.session.remove('nestWindowId');
+    }
+  }
+
+  const popupUrl = chrome.runtime.getURL('popup/index.html');
+  const win = await chrome.windows.create({
+    url: popupUrl,
+    type: 'popup',
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    focused: true,
+  });
+
+  if (win?.id !== undefined) {
+    await chrome.storage.session.set({ nestWindowId: win.id });
+  }
+});
+
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  const { nestWindowId } = await chrome.storage.session.get('nestWindowId') as { nestWindowId?: number };
+  if (windowId === nestWindowId) {
+    await chrome.storage.session.remove('nestWindowId');
+  }
+});
+
+// ── Message handlers ──────────────────────────────────────────────────────────
 interface ScanDataMessage {
   type: 'SCAN_DATA';
   payload: Record<string, number>;
@@ -18,12 +54,10 @@ type ExtMessage = ScanDataMessage | OpenQBAuthMessage;
 
 chrome.runtime.onMessage.addListener((message: ExtMessage, _sender, sendResponse) => {
   if (message.type === 'SCAN_DATA') {
-    // Store latest scan data for popup retrieval
     chrome.storage.local.set({ lastScanData: message.payload }, () => {
       sendResponse({ ok: true });
     });
 
-    // Optionally POST to backend if JWT is available
     chrome.storage.local.get(['jwt', 'selectedLocationId'], (result) => {
       const jwt = result['jwt'] as string | undefined;
       const locationId = result['selectedLocationId'] as string | undefined;
@@ -36,15 +70,11 @@ chrome.runtime.onMessage.addListener((message: ExtMessage, _sender, sendResponse
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwt}`,
         },
-        body: JSON.stringify({
-          locationId,
-          scanDate: today,
-          rawData: message.payload,
-        }),
+        body: JSON.stringify({ locationId, scanDate: today, rawData: message.payload }),
       }).catch((err) => console.error('[BG] Failed to save scan:', err));
     });
 
-    return true; // async response
+    return true;
   }
 
   if (message.type === 'OPEN_QB_AUTH') {
@@ -57,3 +87,4 @@ chrome.runtime.onMessage.addListener((message: ExtMessage, _sender, sendResponse
 
   return false;
 });
+

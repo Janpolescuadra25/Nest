@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -9,8 +10,39 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 // In-memory OTP store (MVP — replace with Redis or DB in production)
 const otpStore: Record<string, { code: string; expiresAt: number }> = {};
 
+// ── Nodemailer transporter ────────────────────────────────────────────────────
+function createTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+}
+
+async function sendOtpEmail(email: string, code: string): Promise<void> {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.log(`[Auth] OTP for ${email}: ${code} (email not configured)`);
+    return;
+  }
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: `"Nest App" <${process.env.GMAIL_USER}>`,
+    to: email,
+    subject: 'Your Nest verification code',
+    text: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+    html: `<div style="font-family:sans-serif;max-width:400px">
+      <h2 style="color:#06b6d4">🪹 Nest</h2>
+      <p>Your verification code is:</p>
+      <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#111;margin:16px 0">${code}</div>
+      <p style="color:#666;font-size:12px">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
+    </div>`,
+  });
+}
+
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
-// Accepts email, generates 6-digit OTP, logs it (MVP — no email sending yet)
+// Accepts email, generates 6-digit OTP, sends via Gmail
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body as { email?: string };
@@ -20,20 +52,24 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Only allow existing users (invitation-only system)
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (!existingUser) {
+      res.status(404).json({ error: 'No account found for this email. Please request an invitation.' });
+      return;
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Upsert user
-    await prisma.user.upsert({
+    await prisma.user.update({
       where: { email },
-      update: { verificationCode: code, codeExpiresAt: new Date(expiresAt) },
-      create: { email, verificationCode: code, codeExpiresAt: new Date(expiresAt) },
+      data: { verificationCode: code, codeExpiresAt: new Date(expiresAt) },
     });
 
     otpStore[email] = { code, expiresAt };
 
-    // MVP: log the code — replace with real email service later
-    console.log(`[Auth] OTP for ${email}: ${code}`);
+    await sendOtpEmail(email, code);
 
     res.json({ message: 'Verification code sent', email });
   } catch (err) {
@@ -79,7 +115,7 @@ router.post('/verify', async (req: Request, res: Response): Promise<void> => {
     delete otpStore[email];
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
@@ -110,7 +146,7 @@ router.get('/session', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    res.json({ userId: user.id, email: user.email, isVerified: user.isVerified });
+    res.json({ userId: user.id, email: user.email, isVerified: user.isVerified, role: user.role });
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
   }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { api } from '../lib/api';
 import type {
   QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode, QBEntity,
@@ -37,9 +37,11 @@ export function QBContextProvider({
   const [taxCodes, setTaxCodes] = useState<QBTaxCode[]>([]);
   const [listsLoaded, setListsLoaded] = useState(false);
   const [listsLoading, setListsLoading] = useState(false);
+  const listsLoadingRef = useRef(false);
 
   const syncAllLists = useCallback(async () => {
-    if (!jwt || listsLoading) return;
+    if (!jwt || listsLoadingRef.current) return;
+    listsLoadingRef.current = true;
     console.log('[QBContext] syncAllLists called, jwt present:', !!jwt);
     setListsLoading(true);
     try {
@@ -62,9 +64,10 @@ export function QBContextProvider({
     } catch (err) {
       console.error('[QBContext] syncAllLists error:', err);
     } finally {
+      listsLoadingRef.current = false;
       setListsLoading(false);
     }
-  }, [jwt, listsLoading]);
+  }, [jwt]);
 
   const getAccountById = useCallback(
     (id: string) => accounts.find((a) => a.Id === id),

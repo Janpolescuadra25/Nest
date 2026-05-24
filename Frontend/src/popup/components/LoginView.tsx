@@ -6,11 +6,14 @@ interface Props {
 }
 
 type Step = 'email' | 'otp';
+type LoginMode = 'otp' | 'password';
 
 export default function LoginView({ onLogin }: Props) {
   const [step, setStep] = useState<Step>('email');
+  const [loginMode, setLoginMode] = useState<LoginMode>('otp');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +47,21 @@ export default function LoginView({ onLogin }: Props) {
     }
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { token } = await api.adminLogin(email.trim(), password);
+      onLogin(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center bg-gray-900 text-white" style={{ width: 380, height: 500 }}>
       {/* Logo */}
@@ -53,7 +71,48 @@ export default function LoginView({ onLogin }: Props) {
       </div>
 
       <div className="w-72 bg-gray-800 rounded-xl p-5 border border-gray-700">
-        {step === 'email' ? (
+        {loginMode === 'password' ? (
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Admin email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none"
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cyan-500 focus:outline-none"
+                required
+              />
+            </div>
+            {error && <p className="text-red-400 text-xs">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+            >
+              {loading ? 'Signing in…' : 'Sign In'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('otp'); setError(null); setPassword(''); }}
+              className="w-full text-gray-500 text-xs hover:text-gray-300"
+            >
+              ← Sign in with email code instead
+            </button>
+          </form>
+        ) : step === 'email' ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Email address</label>
@@ -75,13 +134,20 @@ export default function LoginView({ onLogin }: Props) {
             >
               {loading ? 'Sending…' : 'Send Code'}
             </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMode('password'); setError(null); }}
+              className="w-full text-gray-500 text-xs hover:text-gray-300"
+            >
+              Admin? Sign in with password →
+            </button>
           </form>
         ) : (
           <form onSubmit={handleVerify} className="space-y-4">
             <div>
               <p className="text-xs text-gray-400 mb-3">
-                Check server logs for the 6-digit code sent to{' '}
-                <span className="text-white">{email}</span>
+                A 6-digit code was sent to{' '}
+                <span className="text-white">{email}</span>. Check your email.
               </p>
               <label className="block text-xs text-gray-400 mb-1">Verification code</label>
               <input
@@ -113,6 +179,16 @@ export default function LoginView({ onLogin }: Props) {
           </form>
         )}
       </div>
+
+      <p className="mt-4 text-gray-600 text-xs">
+        No account?{' '}
+        <a
+          href="mailto:admin@nestapp.io"
+          className="text-cyan-600 hover:text-cyan-400"
+        >
+          Contact us for an invitation
+        </a>
+      </p>
     </div>
   );
 }

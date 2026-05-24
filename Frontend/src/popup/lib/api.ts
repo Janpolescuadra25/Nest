@@ -130,4 +130,33 @@ export const api = {
     customers: QBCustomer[];
     taxCodes: QBTaxCode[];
   }>('/api/quickbooks/sync-all', jwt),
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+  getCurrentUser: (jwt: string) =>
+    get<{ userId: string; email: string; name?: string; role?: string }>('/api/auth/session', jwt),
+
+  adminLogin: async (email: string, password: string) => {
+    const res = await fetch(`${BASE_URL}/api/admin/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Login failed' })) as { error?: string };
+      throw new Error(err.error ?? 'Login failed');
+    }
+    return res.json() as Promise<{ token: string; user: { id: string; email: string; name: string; role: string } }>;
+  },
+
+  adminGetUsers: (jwt: string) =>
+    get<{ users: Array<{ id: string; email: string; name: string; role: string; createdAt: string }> }>('/api/admin/users', jwt),
+
+  adminInvite: (jwt: string, email: string, name: string) =>
+    post<{ message: string; registerUrl: string; expiresIn: string; invitationId: string }>('/api/admin/invite', { email, name }, jwt),
+
+  adminToggleUser: (jwt: string, userId: string, role: string) =>
+    put<{ user: { id: string; email: string; name: string; role: string } }>(`/api/admin/users/${userId}`, { role }, jwt),
+
+  adminGetStats: (jwt: string) =>
+    get<{ totalUsers: number; activeInvitations: number; totalSyncs: number }>('/api/admin/stats', jwt),
 };
