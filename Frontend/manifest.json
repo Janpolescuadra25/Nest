@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Nest — Toast to QuickBooks Sync",
+  "version": "0.1.0",
+  "description": "Scan Toast POS sales reports and sync to QuickBooks journal entries",
+  "permissions": ["activeTab", "storage", "tabs", "scripting"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "*://*.toasttab.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "public/icons/icon16.png",
+      "48": "public/icons/icon48.png",
+      "128": "public/icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.toasttab.com/*"],
+      "js": ["content/scanner.js"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["public/icons/*.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

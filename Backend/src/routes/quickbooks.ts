@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
+
+// In-memory state → userId map for OAuth CSRF protection (one-time use, 10-min TTL)
+const oauthStateMap = new Map<string, string>();
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -14,9 +18,11 @@ const QB_AUTH_URL = process.env.QB_AUTH_URL ?? 'https://appcenter.intuit.com/con
 const QB_TOKEN_URL = process.env.QB_TOKEN_URL ?? 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 
 // ── GET /api/quickbooks/auth-url ──────────────────────────────────────────────
-// Generate the QB OAuth 2.0 authorization URL (no auth required — user initiates it)
-router.get('/auth-url', (req: Request, res: Response): void => {
-  const state = Math.random().toString(36).slice(2); // CSRF protection token
+// Generate QB OAuth URL — requires auth so state can be bound to this user
+router.get('/auth-url', authenticate, (req: AuthRequest, res: Response): void => {
+  const state = randomBytes(16).toString('hex');
+  oauthStateMap.set(state, req.user!.userId);
+  setTimeout(() => oauthStateMap.delete(state), 10 * 60 * 1000); // expire in 10 min
 
   const params = new URLSearchParams({
     client_id: QB_CLIENT_ID,
@@ -27,29 +33,50 @@ router.get('/auth-url', (req: Request, res: Response): void => {
   });
 
   const authUrl = `${QB_AUTH_URL}?${params.toString()}`;
-
-  console.log('[QB] Auth URL generated for state:', state);
+  console.log('[QB] Auth URL generated for userId:', req.user!.userId);
   res.json({ authUrl, state });
 });
 
 // ── GET /api/quickbooks/callback ──────────────────────────────────────────────
-// Handle OAuth callback, exchange code for tokens, store them
-router.get('/callback', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+// OAuth browser redirect — NO Authorization header here (it's a browser redirect from Intuit)
+// Identify user via the state parameter stored in oauthStateMap
+router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { code, realmId, state } = req.query as {
-      code?: string; realmId?: string; state?: string;
+    const { code, realmId, state, error } = req.query as {
+      code?: string; realmId?: string; state?: string; error?: string;
     };
 
-    if (!code || !realmId) {
-      res.status(400).json({ error: 'code and realmId are required in query params' });
+    if (error) {
+      console.error('[QB] OAuth error from Intuit:', error);
+      res.send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center;padding:40px;background:#1e293b;border-radius:12px">
+          <div style="font-size:48px">❌</div>
+          <h2 style="color:#ef4444">Authorization Failed</h2>
+          <p>${error}</p><p style="color:#64748b">Close this tab and try again from the extension.</p>
+        </div></body></html>`);
       return;
     }
 
-    console.log('[QB] Received OAuth callback — state:', state, 'realmId:', realmId);
+    if (!code || !realmId || !state) {
+      res.status(400).send('Missing required OAuth parameters.');
+      return;
+    }
 
-    // Exchange authorization code for tokens
+    const userId = oauthStateMap.get(state);
+    if (!userId) {
+      res.status(400).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+        <div style="text-align:center;padding:40px;background:#1e293b;border-radius:12px">
+          <div style="font-size:48px">⚠️</div>
+          <h2 style="color:#f59e0b">Session Expired</h2>
+          <p style="color:#64748b">Please start the authorization flow again from the extension.</p>
+        </div></body></html>`);
+      return;
+    }
+    oauthStateMap.delete(state); // one-time use
+
+    console.log('[QB] OAuth callback — userId:', userId, 'realmId:', realmId);
+
     const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');
-
     const tokenBody = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -69,40 +96,51 @@ router.get('/callback', authenticate, async (req: AuthRequest, res: Response): P
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('[QB] Token exchange failed:', errorText);
-      res.status(502).json({ error: 'Failed to exchange code for tokens', details: errorText });
+      res.send(`<html><body><h2>Token exchange failed</h2><pre>${errorText}</pre></body></html>`);
       return;
     }
 
     const tokens = await tokenResponse.json() as {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
+      access_token: string; refresh_token: string; expires_in: number;
     };
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Store tokens in DB
     await prisma.qBToken.upsert({
-      where: { userId: req.user!.userId },
-      update: {
-        realmId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt,
-      },
-      create: {
-        userId: req.user!.userId,
-        realmId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        expiresAt,
-      },
+      where: { userId },
+      update: { realmId, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt },
+      create: { userId, realmId, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt },
     });
 
-    res.json({ message: 'QuickBooks connected successfully', realmId });
+    console.log('[QB] Tokens stored successfully for userId:', userId);
+
+    res.send(`<!DOCTYPE html>
+<html><head><title>Nest — QuickBooks Connected</title></head>
+<body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+  <div style="text-align:center;padding:40px;background:#1e293b;border-radius:12px;border:1px solid #334155">
+    <div style="font-size:48px">✅</div>
+    <h2 style="color:#22d3ee;margin:16px 0 8px">QuickBooks Connected!</h2>
+    <p style="color:#94a3b8;margin:0">Company ID: ${realmId}</p>
+    <p style="color:#64748b;font-size:14px;margin-top:16px">Close this tab and return to the Nest extension.</p>
+  </div>
+</body></html>`);
   } catch (err) {
     console.error('[QB] callback error:', err);
-    res.status(500).json({ error: 'Failed to complete QuickBooks authorization' });
+    res.status(500).send('<html><body>Internal server error during OAuth callback.</body></html>');
+  }
+});
+
+// ── GET /api/quickbooks/status ────────────────────────────────────────────────
+router.get('/status', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const token = await prisma.qBToken.findUnique({ where: { userId: req.user!.userId } });
+    if (!token) { res.json({ connected: false }); return; }
+
+    const isExpired = token.expiresAt < new Date();
+    res.json({ connected: true, realmId: token.realmId, expiresAt: token.expiresAt, tokenExpired: isExpired });
+  } catch (err) {
+    console.error('[QB] status error:', err);
+    res.status(500).json({ error: 'Failed to check QB status' });
   }
 });
 
@@ -130,12 +168,28 @@ router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Respon
       return;
     }
 
+    // Auto-refresh access token if expired
+    let accessToken = qbToken.accessToken;
+    if (qbToken.expiresAt < new Date()) {
+      console.log('[QB] Access token expired — refreshing...');
+      const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
+      await prisma.qBToken.update({
+        where: { userId: req.user!.userId },
+        data: {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+        },
+      });
+      accessToken = refreshed.accessToken;
+    }
+
     const input: CreateJournalEntryInput = {
       txnDate,
       lines,
       privateNote,
       realmId: qbToken.realmId,
-      accessToken: qbToken.accessToken,
+      accessToken,
     };
 
     const result = await qbService.createJournalEntry(input);
