@@ -133,3 +133,15 @@ model QBToken {
 
   @@map("qb_tokens")
 }
+
+// Persisted OAuth state — survives server restarts (one-time use, TTL enforced in code)
+model OAuthState {
+  id        String   @id @default(cuid())
+  state     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([state])
+  @@map("oauth_states")
+}
