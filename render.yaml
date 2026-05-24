@@ -21,9 +21,9 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: QB_CLIENT_ID
-        value: "ABzXz08BjZ2oE2u9u4dRQomYmBNM8nEg0yaDKLVTYsSOolehep"
+        value: "ABnJGWv9uA34NkQf17It4i15yM82XWVPSIePLe0XRhv9llLnms"
       - key: QB_CLIENT_SECRET
-        sync: false
+        value: "XmvpXiOAm5HbTT2EEN5AeXXVGGX5ute63iv4L9WV"
       - key: QB_REDIRECT_URI
         value: "https://nest-backend-mddn.onrender.com/api/quickbooks/callback"
       - key: QB_AUTH_URL
