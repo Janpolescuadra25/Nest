@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQBContext } from '../contexts/QBContext';
 
 const CLASS_COLORS: Record<string, string> = {
@@ -18,6 +18,11 @@ export default function QBDataView() {
   const [openSection, setOpenSection] = useState<string>('accounts');
   const [searches, setSearches] = useState<Record<string, string>>({});
   const [classFilter, setClassFilter] = useState('');
+
+  // Auto-trigger sync when tab is opened
+  useEffect(() => {
+    if (!listsLoaded && !listsLoading) void syncAllLists();
+  }, [listsLoaded, listsLoading, syncAllLists]);
 
   const setSearch = (key: string, val: string) =>
     setSearches((prev) => ({ ...prev, [key]: val }));
@@ -85,16 +90,30 @@ export default function QBDataView() {
     { key: 'classes', label: 'Classes', icon: '🏷️' },
   ];
 
-  if (!listsLoaded && !listsLoading) {
+  if (listsLoading) {
+    return (
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-gray-400 animate-pulse">Loading QuickBooks data…</span>
+        </div>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-10 bg-gray-800 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!listsLoaded) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">📊</div>
-        <p className="text-gray-400 text-sm mb-3">QB data not loaded yet</p>
+        <p className="text-gray-400 text-sm mb-3">Failed to load QB data</p>
+        <p className="text-gray-600 text-xs mb-4">Make sure QuickBooks is connected in Settings</p>
         <button
           onClick={() => void syncAllLists()}
           className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg"
         >
-          Load QB Data
+          Retry
         </button>
       </div>
     );

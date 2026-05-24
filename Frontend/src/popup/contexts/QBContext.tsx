@@ -40,18 +40,27 @@ export function QBContextProvider({
 
   const syncAllLists = useCallback(async () => {
     if (!jwt || listsLoading) return;
+    console.log('[QBContext] syncAllLists called, jwt present:', !!jwt);
     setListsLoading(true);
     try {
       const data = await api.syncQBAll(jwt);
-      setAccounts(data.accounts);
-      setClasses(data.classes);
-      setEmployees(data.employees);
-      setVendors(data.vendors);
-      setCustomers(data.customers);
-      setTaxCodes(data.taxCodes);
+      console.log('[QBContext] syncAllLists received:', {
+        accounts: data.accounts?.length ?? 0,
+        classes: data.classes?.length ?? 0,
+        employees: data.employees?.length ?? 0,
+        vendors: data.vendors?.length ?? 0,
+        customers: data.customers?.length ?? 0,
+        taxCodes: data.taxCodes?.length ?? 0,
+      });
+      setAccounts(data.accounts ?? []);
+      setClasses(data.classes ?? []);
+      setEmployees(data.employees ?? []);
+      setVendors(data.vendors ?? []);
+      setCustomers(data.customers ?? []);
+      setTaxCodes(data.taxCodes ?? []);
       setListsLoaded(true);
     } catch (err) {
-      console.error('[QBContext] Failed to sync QB lists:', err);
+      console.error('[QBContext] syncAllLists error:', err);
     } finally {
       setListsLoading(false);
     }
