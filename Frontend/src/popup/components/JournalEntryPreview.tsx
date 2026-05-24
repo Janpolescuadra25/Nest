@@ -77,6 +77,16 @@ function guessPostingType(field: string): 'debit' | 'credit' {
   return 'debit';
 }
 
+function resolveMemoTemplate(template: string, data: ScanData | null): string {
+  if (!template || !data) return '';
+  return template.replace(/\{(\w+)\}/g, (match, field: string) => {
+    const key = Object.keys(data).find(
+      (k) => k.toLowerCase().replace(/\s+/g, '_') === field.toLowerCase(),
+    );
+    return key !== undefined ? String(data[key]) : match;
+  });
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -85,7 +95,7 @@ interface Props {
   selectedLocationId: string;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, selectedLocationId: _loc }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, selectedLocationId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -114,6 +124,20 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId:
   useEffect(() => {
     if (!listsLoaded && !listsLoading) void syncAllLists();
   }, [listsLoaded, listsLoading, syncAllLists]);
+
+  const locId = selectedLocationId || locations[0]?.id || '';
+
+  // Apply memo/docNumber templates from localStorage when scan data loads
+  useEffect(() => {
+    if (!scanData || !locId) return;
+    try {
+      const raw = localStorage.getItem(`nest_templates_${locId}`);
+      if (!raw) return;
+      const config = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
+      if (config.memoTemplate) setPrivateNote(resolveMemoTemplate(config.memoTemplate, scanData));
+      if (config.docNumberTemplate) setDocNumber(resolveMemoTemplate(config.docNumberTemplate, scanData));
+    } catch { /* ignore */ }
+  }, [scanData, locId]);
 
   // Build lines from scan data
   useEffect(() => {

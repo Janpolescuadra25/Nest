@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQBContext } from '../contexts/QBContext';
@@ -84,6 +84,33 @@ const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountH
 
 const AMOUNT_RULES = ['Direct Amount', 'Percentage of Total', 'Static Value'];
 
+function resolveMemoTemplate(template: string, data: Record<string, number> | null): string {
+  if (!template || !data) return '';
+  return template.replace(/\{(\w+)\}/g, (match, field: string) => {
+    const key = Object.keys(data).find(
+      (k) => k.toLowerCase().replace(/\s+/g, '_') === field.toLowerCase(),
+    );
+    return key !== undefined ? String(data[key]) : match;
+  });
+}
+
+function insertAtCursor(
+  el: HTMLTextAreaElement | HTMLInputElement | null,
+  text: string,
+  currentValue: string,
+  setValue: (val: string) => void,
+): void {
+  if (!el) { setValue(currentValue + text); return; }
+  const start = el.selectionStart ?? currentValue.length;
+  const end = el.selectionEnd ?? currentValue.length;
+  const newVal = currentValue.slice(0, start) + text + currentValue.slice(end);
+  setValue(newVal);
+  requestAnimationFrame(() => {
+    el.focus();
+    el.setSelectionRange(start + text.length, start + text.length);
+  });
+}
+
 interface Props {
   jwt: string;
   selectedLocationId: string;
@@ -116,6 +143,11 @@ export default function MappingView({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [autoMsg, setAutoMsg] = useState<string | null>(null);
+  const [memoTemplate, setMemoTemplate] = useState('');
+  const [docNumberTemplate, setDocNumberTemplate] = useState('');
+  const [memoOpen, setMemoOpen] = useState(true);
+  const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
 
@@ -138,6 +170,28 @@ export default function MappingView({
   }, [jwt, locId]);
 
   useEffect(() => { void loadMappings(); }, [loadMappings]);
+
+  // Load templates from localStorage when location changes
+  useEffect(() => {
+    if (!locId) return;
+    try {
+      const raw = localStorage.getItem(`nest_templates_${locId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
+        setMemoTemplate(parsed.memoTemplate ?? '');
+        setDocNumberTemplate(parsed.docNumberTemplate ?? '');
+      } else {
+        setMemoTemplate('');
+        setDocNumberTemplate('');
+      }
+    } catch { /* ignore */ }
+  }, [locId]);
+
+  // Persist templates
+  useEffect(() => {
+    if (!locId) return;
+    localStorage.setItem(`nest_templates_${locId}`, JSON.stringify({ memoTemplate, docNumberTemplate }));
+  }, [locId, memoTemplate, docNumberTemplate]);
 
   useEffect(() => {
     if (!selectedLocationId && locations[0]) onLocationChange(locations[0].id);
@@ -183,6 +237,17 @@ export default function MappingView({
       subtitle: `$${Number(amount).toFixed(2)}`,
     }));
   }, [scanData]);
+
+  const scanFieldChips = useMemo(() => {
+    if (!scanData) return [];
+    return Object.keys(scanData).map((field) => ({
+      original: field,
+      normalized: field.toLowerCase().replace(/\s+/g, '_'),
+    }));
+  }, [scanData]);
+
+  const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
+  const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
 
   const updateMapping = (localId: string, patch: Partial<LocalMapping>) => {
     setLocalMappings((prev) =>
@@ -458,6 +523,91 @@ export default function MappingView({
           <button onClick={() => setError(null)} className="text-red-500 hover:text-red-300">✕</button>
         </div>
       )}
+
+      {/* Memo & Doc Number Templates */}
+      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setMemoOpen((x) => !x)}
+          className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+        >
+          <span className="text-xs font-semibold text-gray-300">
+            📝 Memo Template <span className="text-gray-600 font-normal">(auto-fills Private Note on journal entry)</span>
+          </span>
+          <span className="text-gray-500 text-xs">{memoOpen ? '▲' : '▼'}</span>
+        </button>
+        {memoOpen && (
+          <div className="px-3 pb-3 space-y-3 border-t border-gray-700/60 pt-3">
+            <p className="text-xs text-gray-500">
+              Use <code className="text-cyan-400 bg-gray-900 px-1 rounded">{'{field_name}'}</code> placeholders to insert scan values. Click a chip to insert at cursor.
+            </p>
+
+            {/* Memo textarea */}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Private Note / Memo</div>
+              <textarea
+                ref={memoTextareaRef}
+                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none resize-none"
+                rows={2}
+                value={memoTemplate}
+                onChange={(e) => setMemoTemplate(e.target.value)}
+                placeholder="e.g. Daily Sales — {location} — {report_date}"
+              />
+              {memoPreview && (
+                <p className="text-xs text-gray-600 italic mt-1 truncate">Preview: {memoPreview}</p>
+              )}
+            </div>
+
+            {/* Doc number input */}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">
+                Doc Number <span className="text-gray-600">(leave blank for QB auto-generate)</span>
+              </div>
+              <input
+                ref={docInputRef}
+                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+                value={docNumberTemplate}
+                onChange={(e) => setDocNumberTemplate(e.target.value)}
+                placeholder="e.g. JE-{location}-{report_date}"
+              />
+              {docPreview && (
+                <p className="text-xs text-gray-600 italic mt-1 truncate">Preview: {docPreview}</p>
+              )}
+            </div>
+
+            {/* Field chips */}
+            {scanFieldChips.length > 0 ? (
+              <div>
+                <div className="text-xs text-gray-500 mb-1.5">Available fields — click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {scanFieldChips.map((chip) => (
+                    <div key={chip.normalized} className="flex rounded overflow-hidden text-xs border border-gray-600">
+                      <button
+                        type="button"
+                        onClick={() => insertAtCursor(memoTextareaRef.current, `{${chip.normalized}}`, memoTemplate, setMemoTemplate)}
+                        className="px-2 py-0.5 bg-gray-700 hover:bg-cyan-800 text-gray-300 hover:text-white transition-colors"
+                        title={`Insert {${chip.normalized}} into Memo`}
+                      >
+                        {chip.original}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertAtCursor(docInputRef.current, `{${chip.normalized}}`, docNumberTemplate, setDocNumberTemplate)}
+                        className="px-1.5 py-0.5 bg-gray-800 hover:bg-purple-900 text-gray-500 hover:text-purple-300 transition-colors border-l border-gray-600"
+                        title={`Insert {${chip.normalized}} into Doc #`}
+                      >
+                        #
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-600">Scan a Toast report first to see available field chips.</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Loading */}
       {loading ? (

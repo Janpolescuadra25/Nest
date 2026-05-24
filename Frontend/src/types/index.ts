@@ -70,6 +70,11 @@ export type TabId = 'scan' | 'mappings' | 'preview' | 'data' | 'sync' | 'setting
 
 export type ScanData = Record<string, number>;
 
+export interface LocationConfig {
+  memoTemplate?: string;
+  docNumberTemplate?: string;
+}
+
 // Chrome extension message types
 export interface ExtMessage {
   type:
