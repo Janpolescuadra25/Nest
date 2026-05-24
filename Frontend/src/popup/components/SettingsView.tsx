@@ -146,6 +146,64 @@ export default function SettingsView({ jwt, onLogout }: Props) {
           Sign out
         </button>
       </div>
+
+      {/* Divider */}
+      <div className="border-t border-gray-700/60" />
+
+      {/* About Nest */}
+      <div>
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">About Nest</div>
+
+        {/* Branding card */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3 flex items-center gap-3">
+          <span className="text-3xl leading-none">🪹</span>
+          <div>
+            <div className="text-white font-bold text-sm">Nest</div>
+            <div className="text-gray-400 text-xs">Version 1.0.0</div>
+            <div className="text-gray-500 text-xs mt-0.5">Bridge between Toast POS and QuickBooks</div>
+          </div>
+        </div>
+
+        {/* Creator card */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-800/60 border border-gray-700 rounded-lg p-3 mb-3">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Created By</div>
+          <div className="text-white text-sm font-medium">John Paul O. Escuadra</div>
+          <div className="text-gray-500 text-xs mt-1 leading-relaxed">
+            John Paul is a full-stack developer specializing in restaurant technology and financial integrations.
+            Nest was built to solve the real-world challenge of bridging Toast POS sales data with QuickBooks accounting,
+            making daily bookkeeping effortless for restaurant teams.
+          </div>
+        </div>
+
+        {/* Support card */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3">
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Need Help?</div>
+          <a
+            href="mailto:paulescuadra25@gmail.com"
+            className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 text-xs transition-colors mb-2"
+          >
+            <span>✉️</span>
+            <span>paulescuadra25@gmail.com</span>
+          </a>
+          <div className="flex gap-2">
+            <a
+              href="mailto:paulescuadra25@gmail.com?subject=Nest%20Bug%20Report"
+              className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
+            >
+              🐛 Report a Bug
+            </a>
+            <a
+              href="mailto:paulescuadra25@gmail.com?subject=Nest%20Feature%20Request"
+              className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
+            >
+              💡 Feature Request
+            </a>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-gray-600">Made with ❤️ in the Philippines</p>
+      </div>
     </div>
   );
 }

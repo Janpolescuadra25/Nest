@@ -37,6 +37,12 @@ export default function App() {
         <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
           <span className="text-cyan-400 font-bold text-base tracking-tight">Nest</span>
           <span className="ml-2 text-gray-500 text-xs">Toast → QuickBooks</span>
+          <span
+            className="ml-1 text-gray-700 text-xs hidden sm:inline"
+            title="Created by John Paul O. Escuadra"
+          >
+            · by JP Escuadra
+          </span>
           <button
             onClick={() => setShowHelp(true)}
             className="ml-auto text-gray-500 hover:text-gray-300 text-sm transition-colors"

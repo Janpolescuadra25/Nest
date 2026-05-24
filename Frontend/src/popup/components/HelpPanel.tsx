@@ -59,6 +59,16 @@ const SECTIONS: Section[] = [
       'Token expired → Reconnect QuickBooks in Settings',
     ],
   },
+  {
+    title: 'Contact & Support',
+    icon: '📬',
+    bullets: [
+      'For technical support, bugs, or feature requests, reach out to:',
+      '✉️ paulescuadra25@gmail.com',
+      'Created by John Paul O. Escuadra',
+      'Made with ❤️ in the Philippines',
+    ],
+  },
 ];
 
 interface Props {
@@ -114,7 +124,16 @@ export default function HelpPanel({ onClose }: Props) {
                   {section.bullets.map((bullet, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
                       <span className="text-cyan-500 shrink-0 mt-0.5">•</span>
-                      <span>{bullet}</span>
+                      {bullet.startsWith('✉️') ? (
+                        <a
+                          href="mailto:paulescuadra25@gmail.com"
+                          className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                        >
+                          {bullet}
+                        </a>
+                      ) : (
+                        <span>{bullet}</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -128,6 +147,9 @@ export default function HelpPanel({ onClose }: Props) {
       <div className="px-4 py-3 border-t border-gray-700 text-center">
         <p className="text-xs text-gray-600">
           Nest — Toast POS → QuickBooks sync
+        </p>
+        <p className="text-xs text-gray-700 mt-0.5">
+          Created by John Paul O. Escuadra
         </p>
       </div>
     </div>
