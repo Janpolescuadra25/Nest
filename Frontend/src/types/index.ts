@@ -66,7 +66,7 @@ export interface JournalLineItem {
   description?: string;
 }
 
-export type TabId = 'scan' | 'mappings' | 'preview' | 'sync' | 'settings';
+export type TabId = 'scan' | 'mappings' | 'preview' | 'data' | 'sync' | 'settings';
 
 export type ScanData = Record<string, number>;
 

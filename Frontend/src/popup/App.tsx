@@ -5,8 +5,9 @@ import LoginView from './components/LoginView';
 import TabNav from './components/TabNav';
 import ScanView from './components/ScanView';
 import MappingView from './components/MappingView';
-import RulesView from './components/RulesView';
 import JournalEntryPreview from './components/JournalEntryPreview';
+import QBDataView from './components/QBDataView';
+import SyncView from './components/SyncView';
 import SettingsView from './components/SettingsView';
 import HelpPanel from './components/HelpPanel';
 import type { TabId, ScanData } from '../types';
@@ -32,7 +33,7 @@ export default function App() {
 
   return (
     <QBContextProvider jwt={jwt}>
-      <div className="flex flex-col bg-gray-900 text-white relative" style={{ width: 380, height: 500 }}>
+      <div className="flex flex-col bg-gray-900 text-white relative" style={{ width: 900, minHeight: 650 }}>
         {/* Header */}
         <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
           <span className="text-cyan-400 font-bold text-base tracking-tight">Nest</span>
@@ -70,13 +71,6 @@ export default function App() {
               onTabChange={setCurrentTab}
             />
           )}
-          {currentTab === 'rules' && (
-            <RulesView
-              jwt={jwt}
-              selectedLocationId={selectedLocationId}
-              onLocationChange={setSelectedLocationId}
-            />
-          )}
           {currentTab === 'preview' && (
             <JournalEntryPreview
               jwt={jwt}
@@ -84,11 +78,14 @@ export default function App() {
               selectedLocationId={selectedLocationId}
             />
           )}
+          {currentTab === 'data' && (
+            <QBDataView />
+          )}
           {currentTab === 'sync' && (
-            <JournalEntryPreview
+            <SyncView
               jwt={jwt}
-              scanData={scanData}
               selectedLocationId={selectedLocationId}
+              onLocationChange={setSelectedLocationId}
             />
           )}
           {currentTab === 'settings' && (
