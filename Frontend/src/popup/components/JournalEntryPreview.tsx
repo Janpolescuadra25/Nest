@@ -387,9 +387,9 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         </div>
       </div>
 
-      {/* Full column table */}
+      {/* Full column table — scrollable container */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 380 }}>
           <table className="w-full text-xs border-collapse" style={{ minWidth: 580 }}>
             <thead>
               <tr className="border-b border-gray-700 bg-gray-700/50">

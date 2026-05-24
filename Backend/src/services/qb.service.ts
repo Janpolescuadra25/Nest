@@ -47,7 +47,7 @@ interface QBTaxCode {
 
 // ── Generic QB query helper ───────────────────────────────────────────────────
 async function qbQuery<T>(realmId: string, accessToken: string, query: string): Promise<T> {
-  const url = `${QB_API_BASE_URL}/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=65`;
+  const url = `${QB_API_BASE_URL}/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=75`;
   console.log(`[QB Service] QUERY ${url}`);
   const response = await fetch(url, {
     headers: {
@@ -63,77 +63,52 @@ async function qbQuery<T>(realmId: string, accessToken: string, query: string): 
 }
 
 // ── Entity query functions ────────────────────────────────────────────────────
-async function getAccounts(realmId: string, accessToken: string) {
+async function getAccounts(realmId: string, accessToken: string): Promise<QBAccount[]> {
   const data = await qbQuery<{ QueryResponse: { Account?: QBAccount[] } }>(
     realmId, accessToken,
     'SELECT * FROM Account WHERE Active = true MAXRESULTS 1000',
   );
-  return (data.QueryResponse.Account ?? []).map((a) => ({
-    id: a.Id,
-    name: a.Name,
-    type: a.AccountType,
-    subType: a.AccountSubType,
-    classification: a.Classification,
-    fullyQualifiedName: a.FullyQualifiedName,
-  }));
+  return data.QueryResponse.Account ?? [];
 }
 
-async function getClasses(realmId: string, accessToken: string) {
+async function getClasses(realmId: string, accessToken: string): Promise<QBClass[]> {
   const data = await qbQuery<{ QueryResponse: { Class?: QBClass[] } }>(
     realmId, accessToken,
-    'SELECT * FROM Class WHERE Active = true MAXRESULTS 500',
+    'SELECT * FROM Class WHERE Active = true MAXRESULTS 1000',
   );
-  return (data.QueryResponse.Class ?? []).map((c) => ({
-    id: c.Id,
-    name: c.Name,
-    fullyQualifiedName: c.FullyQualifiedName,
-  }));
+  return data.QueryResponse.Class ?? [];
 }
 
-async function getEmployees(realmId: string, accessToken: string) {
+async function getEmployees(realmId: string, accessToken: string): Promise<QBEmployee[]> {
   const data = await qbQuery<{ QueryResponse: { Employee?: QBEmployee[] } }>(
     realmId, accessToken,
-    'SELECT * FROM Employee WHERE Active = true MAXRESULTS 500',
+    'SELECT * FROM Employee WHERE Active = true MAXRESULTS 1000',
   );
-  return (data.QueryResponse.Employee ?? []).map((e) => ({
-    id: e.Id,
-    displayName: e.DisplayName,
-  }));
+  return data.QueryResponse.Employee ?? [];
 }
 
-async function getVendors(realmId: string, accessToken: string) {
+async function getVendors(realmId: string, accessToken: string): Promise<QBVendor[]> {
   const data = await qbQuery<{ QueryResponse: { Vendor?: QBVendor[] } }>(
     realmId, accessToken,
-    'SELECT * FROM Vendor WHERE Active = true MAXRESULTS 500',
+    'SELECT * FROM Vendor WHERE Active = true MAXRESULTS 1000',
   );
-  return (data.QueryResponse.Vendor ?? []).map((v) => ({
-    id: v.Id,
-    displayName: v.DisplayName,
-  }));
+  return data.QueryResponse.Vendor ?? [];
 }
 
-async function getCustomers(realmId: string, accessToken: string) {
+async function getCustomers(realmId: string, accessToken: string): Promise<QBCustomer[]> {
   const data = await qbQuery<{ QueryResponse: { Customer?: QBCustomer[] } }>(
     realmId, accessToken,
-    'SELECT * FROM Customer WHERE Active = true MAXRESULTS 500',
+    'SELECT * FROM Customer WHERE Active = true MAXRESULTS 1000',
   );
-  return (data.QueryResponse.Customer ?? []).map((c) => ({
-    id: c.Id,
-    displayName: c.DisplayName,
-  }));
+  return data.QueryResponse.Customer ?? [];
 }
 
-async function getTaxCodes(realmId: string, accessToken: string) {
+async function getTaxCodes(realmId: string, accessToken: string): Promise<QBTaxCode[]> {
   const data = await qbQuery<{ QueryResponse: { TaxCode?: QBTaxCode[] } }>(
     realmId, accessToken,
-    'SELECT * FROM TaxCode MAXRESULTS 500',
+    'SELECT * FROM TaxCode MAXRESULTS 1000',
   );
-  return (data.QueryResponse.TaxCode ?? []).map((t) => ({
-    id: t.Id,
-    name: t.Name,
-    description: t.Description,
-    active: t.Active,
-  }));
+  return data.QueryResponse.TaxCode ?? [];
 }
 
 /**

@@ -21,44 +21,58 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center w-full bg-gray-900" style={{ height: 500 }}>
+      <div className="flex items-center justify-center bg-gray-900" style={{ width: 950, height: 750 }}>
         <div className="text-gray-500 text-sm">Loading…</div>
       </div>
     );
   }
 
   if (!jwt) {
-    return <LoginView onLogin={setJwt} />;
+    return (
+      <div className="flex flex-col bg-gray-900 text-white" style={{ width: 950, height: 750, overflow: 'hidden' }}>
+        <div className="grid items-center px-4 py-3 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+          <div />
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-cyan-400 font-bold text-lg tracking-tight">🪹 Nest</span>
+            <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
+          </div>
+          <div />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <LoginView onLogin={setJwt} />
+        </div>
+      </div>
+    );
   }
 
   return (
     <QBContextProvider jwt={jwt}>
       <div className="flex flex-col bg-gray-900 text-white" style={{ width: 950, height: 750, overflow: 'hidden' }}>
         {/* Header */}
-        <div className="flex items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
-          <span className="text-cyan-400 font-bold text-base tracking-tight">Nest</span>
-          <span className="ml-2 text-gray-500 text-xs">Toast → QuickBooks</span>
-          <span
-            className="ml-1 text-gray-700 text-xs hidden sm:inline"
-            title="Created by John Paul O. Escuadra"
-          >
-            · by JP Escuadra
-          </span>
-          <button
-            onClick={() => setShowHelp(true)}
-            className="ml-auto text-gray-500 hover:text-gray-300 text-sm transition-colors"
-            title="Help"
-            aria-label="Open help"
-          >
-            ❓
-          </button>
+        <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+          <div />
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-cyan-400 font-bold text-base tracking-tight">🪹 Nest</span>
+            <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
+            <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowHelp(true)}
+              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              title="Help"
+              aria-label="Open help"
+            >
+              ❓
+            </button>
+          </div>
         </div>
 
         {/* Tab Nav */}
         <TabNav currentTab={currentTab} onTabChange={setCurrentTab} />
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden' }}>
+        <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', minHeight: 0 }}>
           {currentTab === 'scan' && (
             <ScanView jwt={jwt} scanData={scanData} onScanData={setScanData} />
           )}
