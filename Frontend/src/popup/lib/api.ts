@@ -1,4 +1,5 @@
 import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
+import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 
 // Backend URL — update this to your Render URL after deployment:
 // e.g. https://nest-backend-xxx.onrender.com
@@ -115,18 +116,18 @@ export const api = {
   ) =>
     post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote }, jwt),
 
-  getQBAccounts: (jwt: string) => get<{ accounts: unknown[] }>('/api/quickbooks/accounts', jwt),
-  getQBClasses: (jwt: string) => get<{ classes: unknown[] }>('/api/quickbooks/classes', jwt),
-  getQBEmployees: (jwt: string) => get<{ employees: unknown[] }>('/api/quickbooks/employees', jwt),
-  getQBVendors: (jwt: string) => get<{ vendors: unknown[] }>('/api/quickbooks/vendors', jwt),
-  getQBCustomers: (jwt: string) => get<{ customers: unknown[] }>('/api/quickbooks/customers', jwt),
-  getQBTaxCodes: (jwt: string) => get<{ taxCodes: unknown[] }>('/api/quickbooks/tax-codes', jwt),
+  getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
+  getQBClasses: (jwt: string) => get<{ classes: QBClass[] }>('/api/quickbooks/classes', jwt),
+  getQBEmployees: (jwt: string) => get<{ employees: QBEmployee[] }>('/api/quickbooks/employees', jwt),
+  getQBVendors: (jwt: string) => get<{ vendors: QBVendor[] }>('/api/quickbooks/vendors', jwt),
+  getQBCustomers: (jwt: string) => get<{ customers: QBCustomer[] }>('/api/quickbooks/customers', jwt),
+  getQBTaxCodes: (jwt: string) => get<{ taxCodes: QBTaxCode[] }>('/api/quickbooks/tax-codes', jwt),
   syncQBAll: (jwt: string) => get<{
-    accounts: unknown[];
-    classes: unknown[];
-    employees: unknown[];
-    vendors: unknown[];
-    customers: unknown[];
-    taxCodes: unknown[];
+    accounts: QBAccount[];
+    classes: QBClass[];
+    employees: QBEmployee[];
+    vendors: QBVendor[];
+    customers: QBCustomer[];
+    taxCodes: QBTaxCode[];
   }>('/api/quickbooks/sync-all', jwt),
 };
