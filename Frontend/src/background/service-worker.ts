@@ -2,7 +2,7 @@
 
 // Backend URL — update to your Render URL after deployment:
 // e.g. https://nest-backend-xxx.onrender.com
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'https://nest-backend-mddn.onrender.com';
 
 interface ScanDataMessage {
   type: 'SCAN_DATA';

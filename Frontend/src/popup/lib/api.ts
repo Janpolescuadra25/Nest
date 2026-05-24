@@ -2,7 +2,7 @@ import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
 
 // Backend URL — update this to your Render URL after deployment:
 // e.g. https://nest-backend-xxx.onrender.com
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'https://nest-backend-mddn.onrender.com';
 
 async function headers(jwt?: string | null): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };

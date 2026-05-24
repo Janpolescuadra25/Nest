@@ -25,7 +25,7 @@ services:
       - key: QB_CLIENT_SECRET
         sync: false
       - key: QB_REDIRECT_URI
-        sync: false
+        value: "https://nest-backend-mddn.onrender.com/api/quickbooks/callback"
       - key: QB_AUTH_URL
         value: https://appcenter.intuit.com/connect/oauth2
       - key: QB_TOKEN_URL
