@@ -151,7 +151,7 @@ export const api = {
   adminGetUsers: (jwt: string) =>
     get<{ users: Array<{ id: string; email: string; name: string; role: string; createdAt: string }> }>('/api/admin/users', jwt),
 
-  adminInvite: (jwt: string, email: string, name: string) =>
+  adminInvite: (jwt: string, email: string, name?: string) =>
     post<{ message: string; registerUrl: string; expiresIn: string; invitationId: string }>('/api/admin/invite', { email, name }, jwt),
 
   adminToggleUser: (jwt: string, userId: string, role: string) =>

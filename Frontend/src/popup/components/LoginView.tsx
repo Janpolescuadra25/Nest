@@ -183,7 +183,7 @@ export default function LoginView({ onLogin }: Props) {
       <p className="mt-4 text-gray-600 text-xs">
         No account?{' '}
         <a
-          href="mailto:admin@nestapp.io"
+          href="mailto:paulescuadra25@gmail.com?subject=Nest%20Account%20Request"
           className="text-cyan-600 hover:text-cyan-400"
         >
           Contact us for an invitation

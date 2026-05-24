@@ -21,7 +21,7 @@ function createTransporter() {
   });
 }
 
-async function sendOtpEmail(email: string, code: string): Promise<void> {
+async function sendOtpEmail(email: string, code: string, name?: string | null): Promise<void> {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     console.log(`[Auth] OTP for ${email}: ${code} (email not configured)`);
     return;
@@ -31,9 +31,10 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
     from: `"Nest App" <${process.env.GMAIL_USER}>`,
     to: email,
     subject: 'Your Nest verification code',
-    text: `Your verification code is: ${code}\n\nThis code expires in 10 minutes.`,
-    html: `<div style="font-family:sans-serif;max-width:400px">
+    text: `Hi ${name ?? 'there'},\n\nYour verification code is: ${code}\n\nThis code expires in 10 minutes.`,
+    html: `<div style="font-family:sans-serif;max-width:400px;background:#ffffff;padding:24px">
       <h2 style="color:#06b6d4">🪹 Nest</h2>
+      <p>Hi ${name ?? 'there'},</p>
       <p>Your verification code is:</p>
       <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#111;margin:16px 0">${code}</div>
       <p style="color:#666;font-size:12px">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
@@ -69,7 +70,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     otpStore[email] = { code, expiresAt };
 
-    await sendOtpEmail(email, code);
+    await sendOtpEmail(email, code, existingUser.name);
 
     res.json({ message: 'Verification code sent', email });
   } catch (err) {
@@ -115,7 +116,7 @@ router.post('/verify', async (req: Request, res: Response): Promise<void> => {
     delete otpStore[email];
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { sub: user.id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
     );
@@ -138,9 +139,9 @@ router.get('/session', async (req: Request, res: Response): Promise<void> => {
     }
 
     const token = authHeader.slice(7);
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; email: string };
 
-    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) {
       res.status(401).json({ error: 'User not found' });
       return;

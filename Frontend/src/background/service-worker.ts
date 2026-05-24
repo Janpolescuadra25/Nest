@@ -19,16 +19,19 @@ chrome.action.onClicked.addListener(async () => {
   }
 
   const popupUrl = chrome.runtime.getURL('popup/index.html');
-  const win = await chrome.windows.create({
-    url: popupUrl,
-    type: 'popup',
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
-    focused: true,
-  });
-
-  if (win?.id !== undefined) {
-    await chrome.storage.session.set({ nestWindowId: win.id });
+  try {
+    const win = await chrome.windows.create({
+      url: popupUrl,
+      type: 'popup',
+      width: WINDOW_WIDTH,
+      height: WINDOW_HEIGHT,
+      focused: true,
+    });
+    if (win?.id !== undefined) {
+      await chrome.storage.session.set({ nestWindowId: win.id });
+    }
+  } catch (err) {
+    console.error('[Nest] Failed to open floating window:', err);
   }
 });
 

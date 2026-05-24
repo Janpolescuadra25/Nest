@@ -8,9 +8,9 @@ async function main(): Promise<void> {
   console.log('[Seed] Starting seed...');
 
   // ── 0. Create admin user ────────────────────────────────────────────────────
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@nestapp.io';
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'paulescuadra25@gmail.com';
   const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
-  const adminName = process.env.ADMIN_NAME ?? 'Admin';
+  const adminName = process.env.ADMIN_NAME ?? 'John Paul O. Escuadra';
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const adminUser = await prisma.user.upsert({

@@ -23,7 +23,7 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
 
   try {
     const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as {
-      userId: string;
+      sub: string;
       email: string;
       role?: string;
     };
@@ -33,7 +33,7 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
       return;
     }
 
-    req.adminUser = { userId: payload.userId, email: payload.email, role: payload.role };
+    req.adminUser = { userId: payload.sub, email: payload.email, role: payload.role! };
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
@@ -69,7 +69,7 @@ router.post('/auth', async (req: Request, res: Response): Promise<void> => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { sub: user.id, email: user.email, name: user.name ?? '', role: user.role },
       JWT_SECRET,
       { expiresIn: '7d' } as jwt.SignOptions
     );
@@ -135,10 +135,23 @@ router.post('/invite', requireAdmin, async (req: AdminRequest, res: Response): P
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Delete any existing unused invitation for this email from this admin
-    await prisma.invitation.deleteMany({
-      where: { email, createdBy: inviterUserId, usedAt: null },
+    // Check for existing invitations
+    const existing = await prisma.invitation.findFirst({
+      where: { email, createdBy: inviterUserId },
     });
+
+    if (existing) {
+      if (existing.usedAt) {
+        res.status(409).json({ error: 'This email has already been registered.' });
+        return;
+      }
+      if (existing.expiresAt && existing.expiresAt > new Date()) {
+        res.status(409).json({ error: 'An active invitation already exists for this email.' });
+        return;
+      }
+      // Expired — delete and allow re-invite
+      await prisma.invitation.delete({ where: { id: existing.id } });
+    }
 
     const invitation = await prisma.invitation.create({
       data: {

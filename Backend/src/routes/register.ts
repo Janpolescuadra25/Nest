@@ -114,7 +114,11 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     ]);
 
     res.status(201).json({ message: 'Account created successfully', user });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      res.status(409).json({ error: 'An account with this email already exists.' });
+      return;
+    }
     console.error('[Register] POST error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
