@@ -1,17 +1,17 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate);
 
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const rule = await prisma.rule.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { location: true },
     });
 
@@ -31,7 +31,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     const updated = await prisma.rule.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(name !== undefined && { name }),
         ...(ruleType !== undefined && { ruleType: ruleType as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA' }),
@@ -50,8 +50,9 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── DELETE /api/rules/:id ─────────────────────────────────────────────────────
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const rule = await prisma.rule.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { location: true },
     });
 
@@ -60,7 +61,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    await prisma.rule.delete({ where: { id: req.params.id } });
+    await prisma.rule.delete({ where: { id } });
     res.json({ message: 'Rule deleted' });
   } catch (err) {
     console.error('[Rules] delete error:', err);

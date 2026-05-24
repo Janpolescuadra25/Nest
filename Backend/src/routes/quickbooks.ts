@@ -1,12 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const QB_CLIENT_ID = process.env.QB_CLIENT_ID ?? '';
 const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET ?? '';

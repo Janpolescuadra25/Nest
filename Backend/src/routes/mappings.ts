@@ -1,17 +1,17 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate);
 
 // ── PUT /api/mappings/:id ─────────────────────────────────────────────────────
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const mapping = await prisma.mapping.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { location: true },
     });
 
@@ -27,7 +27,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
       };
 
     const updated = await prisma.mapping.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(sourceField !== undefined && { sourceField }),
         ...(targetAccount !== undefined && { targetAccount }),
@@ -49,8 +49,9 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── DELETE /api/mappings/:id ──────────────────────────────────────────────────
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const mapping = await prisma.mapping.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { location: true },
     });
 
@@ -59,7 +60,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    await prisma.mapping.delete({ where: { id: req.params.id } });
+    await prisma.mapping.delete({ where: { id } });
     res.json({ message: 'Mapping deleted' });
   } catch (err) {
     console.error('[Mappings] delete error:', err);

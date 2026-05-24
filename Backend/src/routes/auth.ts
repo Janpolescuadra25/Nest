@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 
@@ -114,6 +113,33 @@ router.get('/session', async (req: Request, res: Response): Promise<void> => {
     res.json({ userId: user.id, email: user.email, isVerified: user.isVerified });
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
+
+// ── GET /api/auth/debug-otp/:email ──────────────────────────────────────────
+// TEMPORARY: Exposes OTP for testing on hosted environments where server logs
+// are not easily accessible. REMOVE before going to production.
+// Only active when DEBUG_OTP=true in env.
+router.get('/debug-otp/:email', async (req: Request, res: Response): Promise<void> => {
+  if (process.env.DEBUG_OTP !== 'true') {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  try {
+    const email = req.params['email'] as string;
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { verificationCode: true, codeExpiresAt: true },
+    });
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    const expired = user.codeExpiresAt ? user.codeExpiresAt < new Date() : true;
+    res.json({ otp: user.verificationCode, expires: user.codeExpiresAt, expired });
+  } catch (err) {
+    console.error('[Auth] debug-otp error:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
 });
 

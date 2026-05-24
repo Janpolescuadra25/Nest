@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate);
 
@@ -43,7 +43,7 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       data: {
         locationId,
         scanDate: parsedDate,
-        rawData,
+        rawData: rawData as unknown as Prisma.InputJsonValue,
         status: 'PENDING',
       },
     });
@@ -58,8 +58,9 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── GET /api/scans/:id ────────────────────────────────────────────────────────
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const scan = await prisma.scanRecord.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { location: true, syncLogs: true },
     });
 

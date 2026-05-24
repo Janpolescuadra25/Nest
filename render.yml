@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: nest-backend
+    runtime: node
+    plan: free
+    buildCommand: cd Backend && npm install && npx prisma generate && npm run build
+    startCommand: cd Backend && npx prisma db push --skip-generate && node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: QB_CLIENT_ID
+        sync: false
+      - key: QB_CLIENT_SECRET
+        sync: false
+      - key: QB_REDIRECT_URI
+        sync: false
+      - key: QB_AUTH_URL
+        value: https://appcenter.intuit.com/connect/oauth2
+      - key: QB_TOKEN_URL
+        value: https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer
+      - key: QB_API_BASE_URL
+        value: https://sandbox-quickbooks.api.intuit.com/v3/company
+      - key: QB_ENVIRONMENT
+        value: development

@@ -14,7 +14,8 @@ const PORT = process.env.PORT || 3000;
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: '*', // Chrome extension can call from any origin
+  origin: true,  // allow all origins (Chrome extension uses chrome-extension:// scheme)
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

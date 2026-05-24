@@ -1,9 +1,8 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // All location routes require authentication
 router.use(authenticate);
@@ -46,8 +45,9 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── GET /api/locations/:id ────────────────────────────────────────────────────
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
       include: { mappings: true, rules: true },
     });
 
@@ -66,8 +66,9 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── PUT /api/locations/:id ────────────────────────────────────────────────────
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!existing) {
@@ -80,7 +81,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     };
 
     const updated = await prisma.location.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         ...(name !== undefined && { name }),
         ...(toastUrl !== undefined && { toastUrl }),
@@ -98,8 +99,9 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── DELETE /api/locations/:id ─────────────────────────────────────────────────
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!existing) {
@@ -107,7 +109,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    await prisma.location.delete({ where: { id: req.params.id } });
+    await prisma.location.delete({ where: { id } });
     res.json({ message: 'Location deleted' });
   } catch (err) {
     console.error('[Locations] delete error:', err);
@@ -118,8 +120,9 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
 // ── GET /api/locations/:id/mappings ───────────────────────────────────────────
 router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!location) {
@@ -128,7 +131,7 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
     }
 
     const mappings = await prisma.mapping.findMany({
-      where: { locationId: req.params.id },
+      where: { locationId: id },
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     });
 
@@ -142,8 +145,9 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
 // ── POST /api/locations/:id/mappings ──────────────────────────────────────────
 router.post('/:id/mappings', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!location) {
@@ -164,7 +168,7 @@ router.post('/:id/mappings', async (req: AuthRequest, res: Response): Promise<vo
 
     const mapping = await prisma.mapping.create({
       data: {
-        locationId: req.params.id,
+        locationId: id,
         sourceField,
         targetAccount,
         targetClass,
@@ -185,8 +189,9 @@ router.post('/:id/mappings', async (req: AuthRequest, res: Response): Promise<vo
 // ── GET /api/locations/:id/rules ──────────────────────────────────────────────
 router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!location) {
@@ -195,7 +200,7 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     const rules = await prisma.rule.findMany({
-      where: { locationId: req.params.id },
+      where: { locationId: id },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -209,8 +214,9 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
 // ── POST /api/locations/:id/rules ─────────────────────────────────────────────
 router.post('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!location) {
@@ -235,7 +241,7 @@ router.post('/:id/rules', async (req: AuthRequest, res: Response): Promise<void>
 
     const rule = await prisma.rule.create({
       data: {
-        locationId: req.params.id,
+        locationId: id,
         name,
         ruleType: ruleType as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA',
         config,
@@ -253,8 +259,9 @@ router.post('/:id/rules', async (req: AuthRequest, res: Response): Promise<void>
 // ── GET /api/locations/:id/scans ──────────────────────────────────────────────
 router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id: req.params.id, userId: req.user!.userId },
+      where: { id, userId: req.user!.userId },
     });
 
     if (!location) {
@@ -263,7 +270,7 @@ router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     const scans = await prisma.scanRecord.findMany({
-      where: { locationId: req.params.id },
+      where: { locationId: id },
       orderBy: { scanDate: 'desc' },
       include: { syncLogs: true },
     });

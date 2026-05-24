@@ -1,5 +1,9 @@
 // Background service worker — Manifest V3
 
+// Backend URL — update to your Render URL after deployment:
+// e.g. https://nest-backend-xxx.onrender.com
+const BACKEND_URL = 'http://localhost:3000';
+
 interface ScanDataMessage {
   type: 'SCAN_DATA';
   payload: Record<string, number>;
@@ -26,7 +30,7 @@ chrome.runtime.onMessage.addListener((message: ExtMessage, _sender, sendResponse
       if (!jwt || !locationId) return;
 
       const today = new Date().toISOString().split('T')[0];
-      fetch('http://localhost:3000/api/scans', {
+      fetch(`${BACKEND_URL}/api/scans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -6,6 +6,7 @@
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
   "host_permissions": [
     "http://localhost:3000/*",
+    "https://*.onrender.com/*",
     "*://*.toasttab.com/*"
   ],
   "action": {
@@ -26,7 +27,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 https://*.onrender.com https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
   },
   "web_accessible_resources": [
     {
