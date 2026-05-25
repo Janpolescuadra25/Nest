@@ -74,13 +74,39 @@ function toYMD(d: Date): string {
 
 function guessPostingType(field: string): 'debit' | 'credit' {
   const section = field.toLowerCase().split('.')[0]?.trim() ?? '';
-  if (/^(payments|cash activity|cash summary)$/.test(section)) return 'debit';
-  if (/^(revenue|net sales|tips|sales category|tax|service charge|revenue center|service daypart|dining option|service mode|deferred)$/.test(section)) return 'credit';
-  if (/^(discount|void)$/.test(section)) return 'debit';
-  if (/^(unpaid orders)$/.test(section)) return 'debit';
   const lower = field.toLowerCase();
+
+  // Cash Activity: most items are Debit (cash coming in), but tips paid out are Credit
+  if (section === 'cash activity') {
+    if (/credit.*tip|non-cash tip|tip.*paid/i.test(lower)) return 'credit';
+    return 'debit';
+  }
+
+  // Tips: most items are Credit (tips received), but tips paid out are Debit
+  if (section === 'tips') {
+    if (/paid out|paid.*out|cash.*tip/i.test(lower)) return 'debit';
+    return 'credit';
+  }
+
+  // Payments: always Debit (money coming IN)
+  if (/^(payments|cash summary)$/.test(section)) return 'debit';
+
+  // Revenue / Sales: always Credit
+  if (/^(revenue|net sales|sales category|revenue center|service daypart|dining option|service mode|deferred)$/.test(section)) return 'credit';
+
+  // Tax, Service Charge: Credit
+  if (/^(tax|service charge)$/.test(section)) return 'credit';
+
+  // Discount, Void: Debit (contra-revenue)
+  if (/^(discount|void)$/.test(section)) return 'debit';
+
+  // Unpaid Orders: Debit (Accounts Receivable)
+  if (/^(unpaid orders)$/.test(section)) return 'debit';
+
+  // Fallback: keyword matching on the full field name
   if (/cash|credit card|debit card|gift card|discount|comp\b|net sales|total/.test(lower)) return 'debit';
   if (/sales|revenue|tax|tip|gratuity|fee|charge/.test(lower)) return 'credit';
+
   return 'debit';
 }
 
@@ -211,9 +237,13 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
       .filter(([, v]) => v !== 0)
       .map(([field, amount]) => {
         const mapping = decoded.find((m) => m.sourceField === field);
-        const side = mapping
+        const rawSide = mapping
           ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
           : guessPostingType(field);
+        // Negative amount flips the posting side: a negative Credit is a Debit, and vice versa
+        const side = amount < 0
+          ? (rawSide === 'debit' ? 'credit' : 'debit')
+          : rawSide;
         const accountName = mapping
           ? (accountsRef.current.find((a) => a.Id === mapping.accountId)?.FullyQualifiedName ?? '')
           : '';
@@ -318,14 +348,49 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     return [...separate, ...merged];
   }, []);
 
-  const displayLines = consolidate ? consolidateLines(lines) : lines;
+  // Auto-balance: if rounding caused a tiny imbalance (≤ $0.02), adjust the largest line
+  const rawDisplayLines = consolidate ? consolidateLines(lines) : lines;
+  const rawTotalDebits = rawDisplayLines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
+  const rawTotalCredits = rawDisplayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
+  const rawDiff = rawTotalDebits - rawTotalCredits;
 
-  const totalDebits = displayLines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
-  const totalCredits = displayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
+  let autoBalancedDisplayLines = rawDisplayLines;
+  let autoBalancedThisRender: { amount: number; lineId: string } | null = null;
+
+  if (Math.abs(rawDiff) > 0.001 && Math.abs(rawDiff) <= 0.02) {
+    const shortSide = rawDiff > 0 ? 'credit' : 'debit';
+    const candidates = rawDisplayLines.filter((l) => {
+      const val = parseFloat(shortSide === 'debit' ? l.debit : l.credit) || 0;
+      return val > 0;
+    });
+    if (candidates.length > 0) {
+      const largest = candidates.reduce((best, l) => {
+        const val = parseFloat(shortSide === 'debit' ? l.debit : l.credit) || 0;
+        const bestVal = parseFloat(shortSide === 'debit' ? best.debit : best.credit) || 0;
+        return val > bestVal ? l : best;
+      });
+      const adjustment = Math.abs(rawDiff);
+      autoBalancedDisplayLines = rawDisplayLines.map((l) => {
+        if (l.localId !== largest.localId) return l;
+        if (shortSide === 'debit') {
+          return { ...l, debit: ((parseFloat(l.debit) || 0) + adjustment).toFixed(2) };
+        } else {
+          return { ...l, credit: ((parseFloat(l.credit) || 0) + adjustment).toFixed(2) };
+        }
+      });
+      autoBalancedThisRender = { amount: adjustment, lineId: largest.localId };
+    }
+  }
+
+  const autoBalanced = autoBalancedThisRender;
+  const effectiveDisplayLines = autoBalancedDisplayLines;
+
+  const totalDebits = effectiveDisplayLines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
+  const totalCredits = effectiveDisplayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
   const diff = totalDebits - totalCredits;
   const isBalanced = Math.abs(diff) < 0.01;
 
-  const unmappedCount = displayLines.filter((l) => !l.accountId).length;
+  const unmappedCount = effectiveDisplayLines.filter((l) => !l.accountId).length;
   const allMapped = unmappedCount === 0;
 
   const handleClearAll = () => {
@@ -343,7 +408,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     setError(null);
     setSyncResult(null);
     try {
-      const jeLines = displayLines
+      const jeLines = effectiveDisplayLines
         .filter((l) => parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0)
         .flatMap((l) => {
           const debitAmt = parseFloat(l.debit) || 0;
@@ -390,7 +455,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     } finally {
       setSyncing(false);
     }
-  }, [jwt, displayLines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced, consolidate]);
+  }, [jwt, effectiveDisplayLines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced, consolidate]);
 
   if (!status.connected) {
     return (
@@ -522,10 +587,17 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         </div>
       )}
 
-      {consolidate && displayLines.length < lines.length && (
+      {consolidate && rawDisplayLines.length < lines.length && (
         <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-cyan-900/20 border border-cyan-800 text-cyan-400">
-          <span>🔗 Consolidated {lines.length} lines → {displayLines.length} lines</span>
-          <span className="text-cyan-600">— {lines.length - displayLines.length} merged</span>
+          <span>🔗 Consolidated {lines.length} lines → {rawDisplayLines.length} lines</span>
+          <span className="text-cyan-600">— {lines.length - rawDisplayLines.length} merged</span>
+        </div>
+      )}
+
+      {autoBalanced && (
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-700 text-yellow-300">
+          <span>⚖️ Auto-balanced ${autoBalanced.amount.toFixed(2)} rounding difference</span>
+          <span className="text-yellow-500">— adjusted largest line to make debits = credits</span>
         </div>
       )}
 
@@ -561,7 +633,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
               </tr>
             </thead>
             <tbody>
-              {displayLines.map((line, idx) => (
+              {effectiveDisplayLines.map((line, idx) => (
                 <TableRow
                   key={line.localId}
                   line={line}
@@ -574,18 +646,18 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
                   accounts={accounts}
                   onChange={(patch) => updateLine(line.localId, patch)}
                   onRemove={() => removeLine(line.localId)}
-                  canRemove={displayLines.length > 1}
+                  canRemove={effectiveDisplayLines.length > 1}
                 />
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
-                <td className="px-2 py-2 text-gray-500">{displayLines.length}</td>
+                <td className="px-2 py-2 text-gray-500">{effectiveDisplayLines.length}</td>
                 {colVis.account && <td></td>}
                 {colVis.name && <td></td>}
                 {colVis.description && (
                   <td className="px-2 py-2 text-gray-500">
-                    {displayLines.length} line{displayLines.length !== 1 ? 's' : ''}
+                    {effectiveDisplayLines.length} line{effectiveDisplayLines.length !== 1 ? 's' : ''}
                   </td>
                 )}
                 {colVis.class && <td></td>}
@@ -639,7 +711,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         </button>
         <button
           onClick={() => void handleSync()}
-          disabled={syncing || !isBalanced || !allMapped || displayLines.every((l) => !l.accountId)}
+          disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
