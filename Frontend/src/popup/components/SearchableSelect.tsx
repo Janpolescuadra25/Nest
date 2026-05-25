@@ -70,7 +70,12 @@ export default function SearchableSelect({
 
   useEffect(() => {
     if (!open) return;
-    const handleScroll = () => { setOpen(false); setQuery(''); };
+    const handleScroll = (e: Event) => {
+      // Don't close if the user is scrolling inside the dropdown itself
+      if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) return;
+      setOpen(false);
+      setQuery('');
+    };
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, [open]);
