@@ -1,17 +1,9 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-let transporter: nodemailer.Transporter | null = null;
-
-function getTransporter(): nodemailer.Transporter | null {
-  if (transporter) return transporter;
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) return null;
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
-  return transporter;
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
 }
 
 export async function sendApprovalEmail(
@@ -20,9 +12,9 @@ export async function sendApprovalEmail(
   type: 'SIGNUP' | 'RESET',
   link: string
 ): Promise<boolean> {
-  const tp = getTransporter();
-  if (!tp) {
-    console.warn('[Email] GMAIL_USER or GMAIL_APP_PASSWORD not set. Skipping email.');
+  const resend = getResend();
+  if (!resend) {
+    console.warn('[Email] RESEND_API_KEY not set. Skipping email.');
     return false;
   }
   const greeting = name ? `Hi ${name}` : 'Hello';
@@ -37,7 +29,16 @@ export async function sendApprovalEmail(
 <p style="color:#9ca3af;font-size:13px;line-height:1.5">If you didn't request this, you can safely ignore this email.<br/>Do not share this link with anyone.</p>
 </div>`;
   try {
-    await tp.sendMail({ from: `"Nest" <${process.env.GMAIL_USER}>`, to: toEmail, subject, html });
+    const { error } = await resend.emails.send({
+      from: 'Nest <onboarding@resend.dev>',
+      to: toEmail,
+      subject,
+      html,
+    });
+    if (error) {
+      console.error('[Email] Resend error:', error);
+      return false;
+    }
     return true;
   } catch (err) {
     console.error('[Email] sendMail failed:', err);
