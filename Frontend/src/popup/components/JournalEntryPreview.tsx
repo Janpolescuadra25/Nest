@@ -413,12 +413,17 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         .flatMap((l) => {
           const debitAmt = parseFloat(l.debit) || 0;
           const creditAmt = parseFloat(l.credit) || 0;
-          let entityRef: { value: string; name?: string } | undefined;
+          let entityRef: { value: string; name?: string; type?: string } | undefined;
           if (l.entityVal) {
             const parts = l.entityVal.split(':');
+            const eType = parts[0];
             const eId = parts[1];
             const opt = entityOptions.find((o) => o.value === l.entityVal);
-            if (eId) entityRef = { value: eId, name: opt?.label };
+            if (eId) entityRef = {
+              value: eId,
+              name: opt?.label,
+              type: eType === 'vendor' ? 'Vendor' : eType === 'employee' ? 'Employee' : 'Customer',
+            };
           }
           const items = [];
           if (debitAmt > 0) {
