@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { api } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
-import type { ScanData } from '../../types';
+import type { ScanData, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 
@@ -71,6 +71,11 @@ function toYMD(d: Date): string {
 }
 
 function guessPostingType(field: string): 'debit' | 'credit' {
+  const section = field.toLowerCase().split('.')[0]?.trim() ?? '';
+  if (/^(payments|cash activity|cash summary)$/.test(section)) return 'debit';
+  if (/^(revenue|net sales|tips|sales category|tax|service charge|revenue center|service daypart|dining option|service mode|deferred)$/.test(section)) return 'credit';
+  if (/^(discount|void)$/.test(section)) return 'debit';
+  if (/^(unpaid orders)$/.test(section)) return 'debit';
   const lower = field.toLowerCase();
   if (/cash|credit card|debit card|gift card|discount|comp\b|net sales|total/.test(lower)) return 'debit';
   if (/sales|revenue|tax|tip|gratuity|fee|charge/.test(lower)) return 'credit';
@@ -85,6 +90,37 @@ function resolveMemoTemplate(template: string, data: ScanData | null): string {
     );
     return key !== undefined ? String(data[key]) : match;
   });
+}
+
+// ── Mapping decoder ───────────────────────────────────────────────────────────
+
+interface DecodedMapping {
+  sourceField: string;
+  accountId: string;
+  postingType: 'Debit' | 'Credit';
+  classId?: string;
+  description?: string;
+}
+
+function decodeMapping(m: Mapping): DecodedMapping {
+  let postingType: 'Debit' | 'Credit' = 'Credit';
+  let classId: string | undefined;
+  try {
+    if (m.targetMemo) {
+      const extra = JSON.parse(m.targetMemo) as { postingType?: string; classId?: string };
+      if (extra.postingType === 'Debit' || extra.postingType === 'Credit') {
+        postingType = extra.postingType;
+      }
+      classId = extra.classId;
+    }
+  } catch { /* ignore */ }
+  return {
+    sourceField: m.sourceField,
+    accountId: m.targetAccount,
+    postingType,
+    classId,
+    description: m.targetDescription ?? undefined,
+  };
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -114,6 +150,12 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
+  const [mappingsLoaded, setMappingsLoaded] = useState(false);
+
+  // Keep a stable ref to accounts to avoid re-render loops in the scan effect
+  const accountsRef = useRef(accounts);
+  accountsRef.current = accounts;
 
   // Persist column visibility
   useEffect(() => {
@@ -127,6 +169,21 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
 
   const locId = selectedLocationId || locations[0]?.id || '';
 
+  // Load saved mappings for this location
+  useEffect(() => {
+    if (!jwt || !locId) return;
+    setMappingsLoaded(false);
+    api.getMappings(jwt, locId)
+      .then((mappings) => {
+        setSavedMappings(mappings);
+        setMappingsLoaded(true);
+      })
+      .catch((err) => {
+        console.error('[JE Preview] Failed to load mappings:', err);
+        setMappingsLoaded(true);
+      });
+  }, [jwt, locId]);
+
   // Apply memo/docNumber templates from localStorage when scan data loads
   useEffect(() => {
     if (!scanData || !locId) return;
@@ -139,21 +196,31 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     } catch { /* ignore */ }
   }, [scanData, locId]);
 
-  // Build lines from scan data
+  // Build lines from scan data, applying saved mappings
   useEffect(() => {
-    if (!scanData) return;
+    if (!scanData || !mappingsLoaded) return;
+    const decoded = savedMappings.map(decodeMapping);
     const scanLines: LineItem[] = Object.entries(scanData)
       .filter(([, v]) => v !== 0)
       .map(([field, amount]) => {
-        const side = guessPostingType(field);
+        const mapping = decoded.find((m) => m.sourceField === field);
+        const side = mapping
+          ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
+          : guessPostingType(field);
+        const accountName = mapping
+          ? (accountsRef.current.find((a) => a.Id === mapping.accountId)?.FullyQualifiedName ?? '')
+          : '';
         return newLine({
-          description: field,
+          description: mapping?.description ?? field,
+          accountId: mapping?.accountId ?? '',
+          accountName,
+          classId: mapping?.classId ?? '',
           debit: side === 'debit' ? Math.abs(amount).toFixed(2) : '',
           credit: side === 'credit' ? Math.abs(amount).toFixed(2) : '',
         });
       });
     if (scanLines.length > 0) setLines(scanLines);
-  }, [scanData]);
+  }, [scanData, savedMappings, mappingsLoaded]); // NOTE: no `accounts` dep — uses accountsRef
 
   // Account options grouped by classification
   const accountOptions = useMemo((): SelectOption[] =>
@@ -209,6 +276,9 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
   const totalCredits = lines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
   const diff = totalDebits - totalCredits;
   const isBalanced = Math.abs(diff) < 0.01;
+
+  const unmappedCount = lines.filter((l) => !l.accountId).length;
+  const allMapped = unmappedCount === 0;
 
   const handleClearAll = () => {
     setLines([newLine(), newLine()]);
@@ -386,6 +456,12 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
           )}
         </div>
       </div>
+      {unmappedCount > 0 && (
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-900/30 border border-amber-700 text-amber-300">
+          <span>⚠️ {unmappedCount} unmapped line{unmappedCount !== 1 ? 's' : ''}</span>
+          <span className="text-amber-500">— assign QB accounts before syncing</span>
+        </div>
+      )}
 
       {/* Full column table — scrollable container */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
@@ -497,10 +573,16 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         </button>
         <button
           onClick={() => void handleSync()}
-          disabled={syncing || !isBalanced || lines.every((l) => !l.accountId)}
+          disabled={syncing || !isBalanced || !allMapped || lines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
-          {syncing ? 'Syncing to QuickBooks…' : !isBalanced ? '⚠️ Journal Entry is Unbalanced' : '⚡ Sync to QuickBooks'}
+          {syncing
+            ? 'Syncing to QuickBooks…'
+            : !isBalanced
+              ? '⚠️ Journal Entry is Unbalanced'
+              : !allMapped
+                ? `⚠️ ${unmappedCount} unmapped line${unmappedCount !== 1 ? 's' : ''} — assign all accounts`
+                : '⚡ Sync to QuickBooks'}
         </button>
       </div>
     </div>
@@ -534,15 +616,22 @@ function TableRow({
 
       {colVis.account && (
         <td className="px-1 py-1" style={{ minWidth: 160, maxWidth: 220 }}>
-          <SearchableSelect
-            options={accountOptions}
-            value={line.accountId}
-            onChange={(v) => {
-              const acct = accounts.find((a) => a.Id === v);
-              onChange({ accountId: v, accountName: acct?.FullyQualifiedName ?? '' });
-            }}
-            placeholder="Account…"
-          />
+          <div className="relative">
+            {!line.accountId && (
+              <span className="absolute -top-3 left-0 text-[10px] bg-amber-900 text-amber-300 px-1 rounded z-10">
+                ⚠️ UNMAPPED
+              </span>
+            )}
+            <SearchableSelect
+              options={accountOptions}
+              value={line.accountId}
+              onChange={(v) => {
+                const acct = accounts.find((a) => a.Id === v);
+                onChange({ accountId: v, accountName: acct?.FullyQualifiedName ?? '' });
+              }}
+              placeholder="Account…"
+            />
+          </div>
         </td>
       )}
 

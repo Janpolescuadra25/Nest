@@ -69,17 +69,52 @@ function decodeFromApi(m: Mapping): LocalMapping {
 
 // Auto-detect patterns: matches scan field names to QB account name fragments + posting type
 const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountHint: string }[] = [
-  { patterns: /food sales|food & bev|food rev/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /bev(erage)? sales|bar sales|drink/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /net sales|total sales|gross sales/i, postingType: 'Debit', accountHint: 'Undeposited' },
-  { patterns: /tax collect|sales tax/i, postingType: 'Credit', accountHint: 'Sales Tax' },
-  { patterns: /tip|gratuity/i, postingType: 'Credit', accountHint: 'Tips' },
-  { patterns: /discount|comp\b/i, postingType: 'Debit', accountHint: 'Discounts' },
-  { patterns: /gift card sold/i, postingType: 'Credit', accountHint: 'Gift Card' },
-  { patterns: /gift card redeem/i, postingType: 'Debit', accountHint: 'Gift Card' },
-  { patterns: /delivery fee|service charge/i, postingType: 'Credit', accountHint: 'Other Income' },
-  { patterns: /cash$/i, postingType: 'Debit', accountHint: 'Cash' },
-  { patterns: /credit card/i, postingType: 'Debit', accountHint: 'Undeposited' },
+  // Revenue section
+  { patterns: /Revenue\.Net Sales/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Revenue\.Gratuity/i, postingType: 'Credit', accountHint: 'Tips' },
+  { patterns: /Revenue\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Net Sales section
+  { patterns: /Net Sales\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Tips section
+  { patterns: /Tips\./i, postingType: 'Credit', accountHint: 'Tips' },
+  // Cash Activity section
+  { patterns: /Cash Activity\.Cash tips/i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Cash Activity\.Credit/i, postingType: 'Credit', accountHint: 'Tips' },
+  { patterns: /Cash Activity\./i, postingType: 'Debit', accountHint: 'Cash' },
+  // Cash Summary section
+  { patterns: /Cash Summary\./i, postingType: 'Debit', accountHint: 'Cash' },
+  // Payments section — debit side (money coming IN)
+  { patterns: /Payments\.Cash\./i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Payments\.(Credit|Amex|Discover|Mastercard|Visa)\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  { patterns: /Payments\.Gift Card\./i, postingType: 'Debit', accountHint: 'Gift Card' },
+  { patterns: /Payments\.House Account\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
+  { patterns: /Payments\.Other\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  { patterns: /Payments\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  // Sales Category section
+  { patterns: /Sales Category\.Food/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\.(Liquor|Beer|Wine|Beverage|Bar)/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\.Merchandise/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Tax section
+  { patterns: /Tax\./i, postingType: 'Credit', accountHint: 'Sales Tax' },
+  // Discount section — debit (contra-revenue)
+  { patterns: /Discount\./i, postingType: 'Debit', accountHint: 'Discounts' },
+  // Service Charge section
+  { patterns: /Service Charge\./i, postingType: 'Credit', accountHint: 'Other Income' },
+  // Void section
+  { patterns: /Void\./i, postingType: 'Debit', accountHint: 'Discounts' },
+  // Unpaid Orders section
+  { patterns: /Unpaid Orders\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
+  // Revenue Center section
+  { patterns: /Revenue Center\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Service Daypart section
+  { patterns: /Service Daypart\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Dining Option section
+  { patterns: /Dining Option\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Service Mode section
+  { patterns: /Service Mode\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  // Deferred section
+  { patterns: /Deferred\./i, postingType: 'Credit', accountHint: 'Deferred Revenue' },
 ];
 
 const AMOUNT_RULES = ['Direct Amount', 'Percentage of Total', 'Static Value'];
@@ -376,25 +411,28 @@ export default function MappingView({
   const applyTemplate = (templateName: string) => {
     const templates: Record<string, { field: string; postingType: 'Debit' | 'Credit'; accountHint: string }[]> = {
       'Standard Daily': [
-        { field: 'Food Sales', postingType: 'Credit', accountHint: 'Sales of Product' },
-        { field: 'Beverage Sales', postingType: 'Credit', accountHint: 'Sales of Product' },
-        { field: 'Tax Collected', postingType: 'Credit', accountHint: 'Sales Tax' },
-        { field: 'Tips', postingType: 'Credit', accountHint: 'Tips' },
-        { field: 'Net Sales', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Revenue.Net sales', postingType: 'Credit', accountHint: 'Sales of Product' },
+        { field: 'Revenue.Tax amount', postingType: 'Credit', accountHint: 'Sales Tax' },
+        { field: 'Tips.Total tips', postingType: 'Credit', accountHint: 'Tips' },
+        { field: 'Payments.Credit/debit.Total', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Payments.Cash.Total', postingType: 'Debit', accountHint: 'Cash' },
       ],
       'Full Service': [
-        { field: 'Food Sales', postingType: 'Credit', accountHint: 'Sales of Product' },
-        { field: 'Beverage Sales', postingType: 'Credit', accountHint: 'Sales of Product' },
-        { field: 'Discounts', postingType: 'Debit', accountHint: 'Discounts' },
-        { field: 'Tax Collected', postingType: 'Credit', accountHint: 'Sales Tax' },
-        { field: 'Credit Card Tips', postingType: 'Credit', accountHint: 'Tips' },
-        { field: 'Cash Tips', postingType: 'Credit', accountHint: 'Tips' },
-        { field: 'Total Sales', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Revenue.Net sales', postingType: 'Credit', accountHint: 'Sales of Product' },
+        { field: 'Revenue.Gratuity', postingType: 'Credit', accountHint: 'Tips' },
+        { field: 'Revenue.Tax amount', postingType: 'Credit', accountHint: 'Sales Tax' },
+        { field: 'Tips.Credit/non-cash tips', postingType: 'Credit', accountHint: 'Tips' },
+        { field: 'Tips.Cash tips', postingType: 'Credit', accountHint: 'Tips' },
+        { field: 'Discount.Total discounts.Amount', postingType: 'Debit', accountHint: 'Discounts' },
+        { field: 'Payments.Credit/debit.Total', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Payments.Cash.Total', postingType: 'Debit', accountHint: 'Cash' },
+        { field: 'Payments.Gift Card.Total', postingType: 'Debit', accountHint: 'Gift Card' },
       ],
       'Quick Service': [
-        { field: 'Sales', postingType: 'Credit', accountHint: 'Sales of Product' },
-        { field: 'Tax', postingType: 'Credit', accountHint: 'Sales Tax' },
-        { field: 'Total', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Revenue.Net sales', postingType: 'Credit', accountHint: 'Sales of Product' },
+        { field: 'Revenue.Tax amount', postingType: 'Credit', accountHint: 'Sales Tax' },
+        { field: 'Payments.Credit/debit.Total', postingType: 'Debit', accountHint: 'Undeposited' },
+        { field: 'Payments.Cash.Total', postingType: 'Debit', accountHint: 'Cash' },
       ],
     };
 
