@@ -32,7 +32,7 @@ export default function SearchableSelect({
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 0, maxHeight: 256 });
 
   const selected = options.find((o) => o.value === value);
 
@@ -78,14 +78,30 @@ export default function SearchableSelect({
   const computePosition = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const DROPDOWN_HEIGHT = 200;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const flipUp = spaceBelow < DROPDOWN_HEIGHT && rect.top > spaceBelow;
-    setDropdownStyle({
-      top: flipUp ? rect.top - DROPDOWN_HEIGHT : rect.bottom + 2,
-      left: rect.left,
-      width: rect.width,
-    });
+    const DROPDOWN_MAX = 256;
+    const PADDING = 4;
+
+    const spaceBelow = window.innerHeight - rect.bottom - PADDING;
+    const spaceAbove = rect.top - PADDING;
+
+    let top: number;
+    let maxHeight: number;
+
+    if (spaceBelow >= DROPDOWN_MAX) {
+      top = rect.bottom + PADDING;
+      maxHeight = DROPDOWN_MAX;
+    } else if (spaceAbove >= DROPDOWN_MAX) {
+      top = rect.top - DROPDOWN_MAX - PADDING;
+      maxHeight = DROPDOWN_MAX;
+    } else if (spaceBelow >= spaceAbove) {
+      top = rect.bottom + PADDING;
+      maxHeight = Math.max(spaceBelow, 80);
+    } else {
+      top = Math.max(PADDING, rect.top - spaceAbove - PADDING);
+      maxHeight = Math.max(spaceAbove, 80);
+    }
+
+    setDropdownStyle({ top, left: rect.left, width: rect.width, maxHeight });
   };
 
   const openDropdown = () => {
@@ -163,8 +179,8 @@ export default function SearchableSelect({
       {open && createPortal(
         <div
           ref={dropdownRef}
-          style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999 }}
-          className="bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-48 overflow-y-auto"
+          style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999, maxHeight: dropdownStyle.maxHeight }}
+          className="bg-gray-800 border border-gray-600 rounded shadow-2xl overflow-y-auto"
         >
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500 italic">No results</div>
