@@ -132,7 +132,7 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
 
     if (line.classRef) lineDetail.ClassRef = line.classRef;
     if (line.departmentRef) lineDetail.DepartmentRef = line.departmentRef;
-    if (line.entityRef) lineDetail.Entity = { EntityRef: line.entityRef, Type: line.entityRef.type ?? 'Customer' };
+    if (line.entityRef) lineDetail.Entity = { EntityRef: { value: line.entityRef.value, name: line.entityRef.name }, Type: line.entityRef.type ?? 'Customer' };
 
     const qbLine: Record<string, unknown> = {
       Amount: line.amount,
