@@ -41,7 +41,7 @@ export async function sendApprovalEmail(
     }
     return true;
   } catch (err) {
-    console.error('[Email] sendMail failed:', err);
+    console.error('[Email] Resend send failed:', err);
     return false;
   }
 }
