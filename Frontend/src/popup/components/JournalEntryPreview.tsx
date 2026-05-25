@@ -21,6 +21,7 @@ interface LineItem {
   taxCodeId: string;
   debit: string;
   credit: string;
+  keepSeparate: boolean;
 }
 
 type ColKey = 'account' | 'name' | 'description' | 'class' | 'taxCode' | 'debit' | 'credit';
@@ -62,6 +63,7 @@ function newLine(overrides?: Partial<LineItem>): LineItem {
     taxCodeId: '',
     debit: '',
     credit: '',
+    keepSeparate: false,
     ...overrides,
   };
 }
@@ -100,18 +102,21 @@ interface DecodedMapping {
   postingType: 'Debit' | 'Credit';
   classId?: string;
   description?: string;
+  keepSeparate?: boolean;
 }
 
 function decodeMapping(m: Mapping): DecodedMapping {
   let postingType: 'Debit' | 'Credit' = 'Credit';
   let classId: string | undefined;
+  let keepSeparate: boolean | undefined;
   try {
     if (m.targetMemo) {
-      const extra = JSON.parse(m.targetMemo) as { postingType?: string; classId?: string };
+      const extra = JSON.parse(m.targetMemo) as { postingType?: string; classId?: string; keepSeparate?: boolean };
       if (extra.postingType === 'Debit' || extra.postingType === 'Credit') {
         postingType = extra.postingType;
       }
       classId = extra.classId;
+      keepSeparate = extra.keepSeparate;
     }
   } catch { /* ignore */ }
   return {
@@ -120,6 +125,7 @@ function decodeMapping(m: Mapping): DecodedMapping {
     postingType,
     classId,
     description: m.targetDescription ?? undefined,
+    keepSeparate,
   };
 }
 
@@ -152,6 +158,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
   const [error, setError] = useState<string | null>(null);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
+  const [consolidate, setConsolidate] = useState(false);
 
   // Keep a stable ref to accounts to avoid re-render loops in the scan effect
   const accountsRef = useRef(accounts);
@@ -215,6 +222,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
           accountId: mapping?.accountId ?? '',
           accountName,
           classId: mapping?.classId ?? '',
+          keepSeparate: mapping?.keepSeparate ?? false,
           debit: side === 'debit' ? Math.abs(amount).toFixed(2) : '',
           credit: side === 'credit' ? Math.abs(amount).toFixed(2) : '',
         });
@@ -272,12 +280,52 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
   const removeLine = (localId: string) =>
     setLines((prev) => prev.filter((l) => l.localId !== localId));
 
-  const totalDebits = lines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
-  const totalCredits = lines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
+  // Consolidate lines that share the same accountId + side + classId
+  const consolidateLines = useCallback((rawLines: LineItem[]): LineItem[] => {
+    const groups: Record<string, LineItem[]> = {};
+    const separate: LineItem[] = [];
+
+    rawLines.forEach((line) => {
+      if (line.keepSeparate || !line.accountId) {
+        separate.push(line);
+        return;
+      }
+      const debitAmt = parseFloat(line.debit) || 0;
+      const side = debitAmt > 0 ? 'debit' : 'credit';
+      const key = `${line.accountId}|${side}|${line.classId}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(line);
+    });
+
+    const merged: LineItem[] = Object.values(groups).map((group) => {
+      if (group.length === 1) return group[0];
+      const totalDebit = group.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
+      const totalCredit = group.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
+      const descriptions = group.map((l) => l.description).filter(Boolean);
+      return newLine({
+        accountId: group[0].accountId,
+        accountName: group[0].accountName,
+        classId: group[0].classId,
+        description: descriptions.length <= 3
+          ? descriptions.join(' + ')
+          : `${descriptions.slice(0, 3).join(' + ')} +${descriptions.length - 3} more`,
+        keepSeparate: false,
+        debit: totalDebit ? totalDebit.toFixed(2) : '',
+        credit: totalCredit ? totalCredit.toFixed(2) : '',
+      });
+    });
+
+    return [...separate, ...merged];
+  }, []);
+
+  const displayLines = consolidate ? consolidateLines(lines) : lines;
+
+  const totalDebits = displayLines.reduce((s, l) => s + (parseFloat(l.debit) || 0), 0);
+  const totalCredits = displayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
   const diff = totalDebits - totalCredits;
   const isBalanced = Math.abs(diff) < 0.01;
 
-  const unmappedCount = lines.filter((l) => !l.accountId).length;
+  const unmappedCount = displayLines.filter((l) => !l.accountId).length;
   const allMapped = unmappedCount === 0;
 
   const handleClearAll = () => {
@@ -295,7 +343,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     setError(null);
     setSyncResult(null);
     try {
-      const jeLines = lines
+      const jeLines = displayLines
         .filter((l) => parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0)
         .flatMap((l) => {
           const debitAmt = parseFloat(l.debit) || 0;
@@ -342,7 +390,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
     } finally {
       setSyncing(false);
     }
-  }, [jwt, lines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced]);
+  }, [jwt, displayLines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced, consolidate]);
 
   if (!status.connected) {
     return (
@@ -431,6 +479,17 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
             <span className="font-mono text-red-400">diff ${fmt(Math.abs(diff))}</span>
           )}
         </div>
+        <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none shrink-0">
+          <input
+            type="checkbox"
+            checked={consolidate}
+            onChange={(e) => setConsolidate(e.target.checked)}
+            className="rounded border-gray-600"
+          />
+          <span className={consolidate ? 'text-cyan-400' : 'text-gray-500'}>
+            🔗 Consolidate
+          </span>
+        </label>
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowColMenu((x) => !x)}
@@ -460,6 +519,13 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-900/30 border border-amber-700 text-amber-300">
           <span>⚠️ {unmappedCount} unmapped line{unmappedCount !== 1 ? 's' : ''}</span>
           <span className="text-amber-500">— assign QB accounts before syncing</span>
+        </div>
+      )}
+
+      {consolidate && displayLines.length < lines.length && (
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-cyan-900/20 border border-cyan-800 text-cyan-400">
+          <span>🔗 Consolidated {lines.length} lines → {displayLines.length} lines</span>
+          <span className="text-cyan-600">— {lines.length - displayLines.length} merged</span>
         </div>
       )}
 
@@ -495,7 +561,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
               </tr>
             </thead>
             <tbody>
-              {lines.map((line, idx) => (
+              {displayLines.map((line, idx) => (
                 <TableRow
                   key={line.localId}
                   line={line}
@@ -508,18 +574,18 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
                   accounts={accounts}
                   onChange={(patch) => updateLine(line.localId, patch)}
                   onRemove={() => removeLine(line.localId)}
-                  canRemove={lines.length > 1}
+                  canRemove={displayLines.length > 1}
                 />
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
-                <td className="px-2 py-2 text-gray-500">{lines.length}</td>
+                <td className="px-2 py-2 text-gray-500">{displayLines.length}</td>
                 {colVis.account && <td></td>}
                 {colVis.name && <td></td>}
                 {colVis.description && (
                   <td className="px-2 py-2 text-gray-500">
-                    {lines.length} line{lines.length !== 1 ? 's' : ''}
+                    {displayLines.length} line{displayLines.length !== 1 ? 's' : ''}
                   </td>
                 )}
                 {colVis.class && <td></td>}
@@ -573,7 +639,7 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         </button>
         <button
           onClick={() => void handleSync()}
-          disabled={syncing || !isBalanced || !allMapped || lines.every((l) => !l.accountId)}
+          disabled={syncing || !isBalanced || !allMapped || displayLines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing

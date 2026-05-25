@@ -18,6 +18,7 @@ interface LocalMapping {
   entityType: '' | 'customer' | 'vendor' | 'employee';
   entityId: string;
   amountRule: string;
+  keepSeparate: boolean;
   isDirty: boolean;
   expanded: boolean;
 }
@@ -31,6 +32,7 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
     targetMemo: JSON.stringify({
       postingType: m.postingType,
       amountRule: m.amountRule,
+      keepSeparate: m.keepSeparate || undefined,
       taxCodeId: m.taxCodeId || undefined,
       entityType: m.entityType || undefined,
       entityId: m.entityId || undefined,
@@ -43,6 +45,7 @@ function decodeFromApi(m: Mapping): LocalMapping {
   let extra: {
     postingType?: string;
     amountRule?: string;
+    keepSeparate?: boolean;
     taxCodeId?: string;
     entityType?: string;
     entityId?: string;
@@ -62,6 +65,7 @@ function decodeFromApi(m: Mapping): LocalMapping {
     entityType: (extra.entityType as LocalMapping['entityType']) ?? '',
     entityId: extra.entityId ?? '',
     amountRule: extra.amountRule ?? 'Direct Amount',
+    keepSeparate: extra.keepSeparate ?? false,
     isDirty: false,
     expanded: false,
   };
@@ -309,6 +313,7 @@ export default function MappingView({
       entityType: '',
       entityId: '',
       amountRule: 'Direct Amount',
+      keepSeparate: false,
       isDirty: true,
       expanded: true,
     };
@@ -393,6 +398,7 @@ export default function MappingView({
         entityType: '',
         entityId: '',
         amountRule: 'Direct Amount',
+        keepSeparate: false,
         isDirty: true,
         expanded: false,
       });
@@ -457,6 +463,7 @@ export default function MappingView({
           entityType: '',
           entityId: '',
           amountRule: 'Direct Amount',
+          keepSeparate: false,
           isDirty: true,
           expanded: false,
         };
@@ -896,6 +903,18 @@ function MappingCard({
               </select>
             </div>
           </div>
+
+          {/* Keep separate toggle */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={m.keepSeparate}
+              onChange={(e) => onUpdate({ keepSeparate: e.target.checked, isDirty: true })}
+              className="rounded border-gray-600"
+            />
+            <span className="text-xs text-gray-400">🔒 Keep separate</span>
+            <span className="text-xs text-gray-600">— don't merge with other lines</span>
+          </label>
 
           {/* Save button */}
           <button
