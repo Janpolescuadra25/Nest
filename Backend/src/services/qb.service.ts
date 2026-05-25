@@ -116,7 +116,7 @@ async function getTaxCodes(realmId: string, accessToken: string): Promise<QBTaxC
  * Validates that total debits === total credits (required by QB).
  */
 function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
-  const { txnDate, lines, privateNote } = input;
+  const { txnDate, docNumber, lines, privateNote } = input;
 
   let totalDebits = 0;
   let totalCredits = 0;
@@ -161,6 +161,7 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
     Line: qbLines,
   };
 
+  if (docNumber) payload.DocNumber = docNumber;
   if (privateNote) payload.PrivateNote = privateNote;
 
   console.log('[QB Service] Journal Entry payload:');

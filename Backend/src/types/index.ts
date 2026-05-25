@@ -27,6 +27,7 @@ export interface QBJournalLineItem {
 
 export interface CreateJournalEntryInput {
   txnDate: string;             // YYYY-MM-DD
+  docNumber?: string;
   privateNote?: string;
   lines: QBJournalLineItem[];
   realmId: string;

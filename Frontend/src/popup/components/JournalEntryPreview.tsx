@@ -450,8 +450,9 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         });
 
       const result = await api.createJournalEntry(
-        jwt, txnDate, jeLines, docNumber || undefined,
+        jwt, txnDate, jeLines, undefined,
         privateNote || `Nest sync — ${txnDate} — ${locations[0]?.name ?? ''}`,
+        docNumber || undefined,
       ) as { journalEntryId: string; txnDate: string };
 
       setSyncResult({ id: result.journalEntryId, txnDate: result.txnDate });

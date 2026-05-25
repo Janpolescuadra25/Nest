@@ -201,11 +201,12 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
 router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { txnDate, lines, privateNote, scanRecordId } = req.body as {
+    const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;
       lines?: QBJournalLineItem[];
       privateNote?: string;
       scanRecordId?: string;
+      docNumber?: string;
     };
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0) {
@@ -236,6 +237,7 @@ router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Respon
 
     const input: CreateJournalEntryInput = {
       txnDate,
+      docNumber,
       lines,
       privateNote,
       realmId: qbToken.realmId,

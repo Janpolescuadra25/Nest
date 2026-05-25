@@ -124,9 +124,10 @@ export const api = {
     txnDate: string,
     lines: unknown[],
     scanRecordId?: string,
-    privateNote?: string
+    privateNote?: string,
+    docNumber?: string
   ) =>
-    post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote }, jwt),
+    post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote, docNumber }, jwt),
 
   getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
   getQBClasses: (jwt: string) => get<{ classes: QBClass[] }>('/api/quickbooks/classes', jwt),
