@@ -76,7 +76,7 @@ export default function App() {
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', minHeight: 0 }}>
           {currentTab === 'scan' && (
-            <ScanView jwt={jwt!} scanData={scanData} onScanData={setScanData} />
+            <ScanView jwt={jwt!} scanData={scanData} onScanData={setScanData} locationId={selectedLocationId || null} />
           )}
           {currentTab === 'mappings' && (
             <MappingView

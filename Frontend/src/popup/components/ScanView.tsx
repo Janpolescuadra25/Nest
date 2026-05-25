@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import type { ScanData } from '../../types';
+import { api } from '../lib/api';
 
 interface Props {
   jwt: string;
   scanData: ScanData | null;
   onScanData: (data: ScanData) => void;
+  locationId: string | null;
 }
 
-export default function ScanView({ jwt: _jwt, scanData, onScanData }: Props) {
+export default function ScanView({ jwt, scanData, onScanData, locationId }: Props) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabUrl, setTabUrl] = useState<string>('');
@@ -15,8 +17,15 @@ export default function ScanView({ jwt: _jwt, scanData, onScanData }: Props) {
   // Load cached scan data and current tab URL on mount
   useEffect(() => {
     chrome.storage.local.get(['lastScanData'], (result) => {
-      if (result['lastScanData'] && !scanData) {
-        onScanData(result['lastScanData'] as ScanData);
+      const cached = result['lastScanData'] as ScanData | undefined;
+      if (cached) {
+        // If cached data has old mock keys, clear it
+        if ('Food Sales' in cached || 'Beverage Sales' in cached) {
+          chrome.storage.local.remove(['lastScanData']);
+          console.log('[Nest] Cleared stale cached scan data (old mock format)');
+          return;
+        }
+        if (!scanData) onScanData(cached);
       }
     });
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -41,6 +50,20 @@ export default function ScanView({ jwt: _jwt, scanData, onScanData }: Props) {
       if (response?.data) {
         onScanData(response.data);
         chrome.storage.local.set({ lastScanData: response.data });
+        if (locationId) {
+          try {
+            await api.saveScan(
+              jwt,
+              locationId,
+              new Date().toISOString().split('T')[0],
+              response.data
+            );
+            console.log('[Nest] Scan data saved to backend');
+          } catch (saveErr) {
+            console.error('[Nest] Failed to save scan to backend:', saveErr);
+            // Don't block the UI — scan still worked locally
+          }
+        }
       } else {
         throw new Error('No data returned from scanner');
       }
@@ -87,11 +110,13 @@ export default function ScanView({ jwt: _jwt, scanData, onScanData }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(scanData).map(([field, amount]) => (
+                {Object.entries(scanData).map(([field, value]) => (
                   <tr key={field} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                     <td className="px-3 py-2 text-gray-300 text-xs">{field}</td>
                     <td className="px-3 py-2 text-white text-xs text-right font-mono">
-                      ${Number(amount).toFixed(2)}
+                      {field.includes('Count')
+                        ? String(value)
+                        : `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
                     </td>
                   </tr>
                 ))}
@@ -100,7 +125,10 @@ export default function ScanView({ jwt: _jwt, scanData, onScanData }: Props) {
                 <tr className="bg-gray-700/40">
                   <td className="px-3 py-2 text-xs text-gray-400 font-medium">Total</td>
                   <td className="px-3 py-2 text-xs text-cyan-400 text-right font-mono font-bold">
-                    ${Object.values(scanData).reduce((s, v) => s + v, 0).toFixed(2)}
+                    ${Object.entries(scanData)
+                      .filter(([key]) => !key.includes('Count'))
+                      .reduce((sum, [, v]) => sum + v, 0)
+                      .toLocaleString('en-US', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
               </tfoot>
