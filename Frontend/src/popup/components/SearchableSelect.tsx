@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface SelectOption {
   value: string;
@@ -28,7 +29,10 @@ export default function SearchableSelect({
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 0 });
 
   const selected = options.find((o) => o.value === value);
 
@@ -52,7 +56,10 @@ export default function SearchableSelect({
 
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current && !containerRef.current.contains(e.target as Node) &&
+        (!dropdownRef.current || !dropdownRef.current.contains(e.target as Node))
+      ) {
         setOpen(false);
         setQuery('');
       }
@@ -61,8 +68,29 @@ export default function SearchableSelect({
     return () => document.removeEventListener('mousedown', handle);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleScroll = () => { setOpen(false); setQuery(''); };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, [open]);
+
+  const computePosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const DROPDOWN_HEIGHT = 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const flipUp = spaceBelow < DROPDOWN_HEIGHT && rect.top > spaceBelow;
+    setDropdownStyle({
+      top: flipUp ? rect.top - DROPDOWN_HEIGHT : rect.bottom + 2,
+      left: rect.left,
+      width: rect.width,
+    });
+  };
+
   const openDropdown = () => {
     if (!disabled) {
+      computePosition();
       setOpen(true);
       setHighlighted(0);
       setTimeout(() => inputRef.current?.focus(), 30);
@@ -94,6 +122,7 @@ export default function SearchableSelect({
     <div ref={containerRef} className="relative">
       {label && <div className="text-xs text-gray-500 mb-0.5">{label}</div>}
       <div
+        ref={triggerRef}
         className={`flex items-center gap-1 bg-gray-900 border rounded px-2 py-1.5 text-xs cursor-pointer transition-colors ${
           open ? 'border-cyan-500' : 'border-gray-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
@@ -131,8 +160,12 @@ export default function SearchableSelect({
         <span className="text-gray-600 shrink-0 text-xs">{open ? '▲' : '▼'}</span>
       </div>
 
-      {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-48 overflow-y-auto">
+      {open && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999 }}
+          className="bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-48 overflow-y-auto"
+        >
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-xs text-gray-500 italic">No results</div>
           ) : (
@@ -171,7 +204,8 @@ export default function SearchableSelect({
               </div>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
