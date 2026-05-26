@@ -212,7 +212,7 @@ const SECTIONS: Section[] = [
         <ul className="space-y-1.5">
           <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the Toast report date.</Bullet>
           <Bullet><span className="text-cyan-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
-          <Bullet><span className="text-cyan-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {date} — Downtown").</Bullet>
+          <Bullet><span className="text-cyan-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
         </ul>
 
         <SubHeading>Line Items</SubHeading>
