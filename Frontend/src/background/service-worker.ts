@@ -4,8 +4,11 @@ const BACKEND_URL = 'https://nest-backend-mddn.onrender.com';
 const WINDOW_WIDTH = 950;
 const WINDOW_HEIGHT = 750;
 
+console.log('[Nest BG] Service worker loaded');
+
 // ── Floating window ───────────────────────────────────────────────────────────
 chrome.action.onClicked.addListener(async () => {
+  console.log('[Nest BG] Extension icon clicked — opening floating window');
   const { nestWindowId } = await chrome.storage.session.get('nestWindowId') as { nestWindowId?: number };
 
   if (nestWindowId !== undefined) {

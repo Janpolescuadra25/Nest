@@ -28,25 +28,67 @@ export default function ScanView({ jwt, scanData, onScanData, locationId }: Prop
         if (!scanData) onScanData(cached);
       }
     });
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    // Search for Toast tabs across ALL windows (popup is in a floating window)
+    chrome.tabs.query({ url: '*://*.toasttab.com/*' }, (tabs) => {
       if (tabs[0]?.url) setTabUrl(tabs[0].url);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isToastTab = tabUrl.includes('toasttab.com');
 
+  /** Send REQUEST_SCAN to a tab and return the response (or null on failure). */
+  const sendScanMessage = (tabId: number): Promise<{ data?: ScanData } | null> => {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        console.warn('[Nest Popup] Scan timed out for tab', tabId);
+        resolve(null);
+      }, 10000);
+
+      chrome.tabs.sendMessage(tabId, { type: 'REQUEST_SCAN' }, (resp) => {
+        clearTimeout(timeout);
+        if (chrome.runtime.lastError) {
+          console.warn('[Nest Popup] sendMessage error:', chrome.runtime.lastError.message);
+          resolve(null);
+        } else {
+          resolve(resp);
+        }
+      });
+    });
+  };
+
   const handleRescan = async () => {
     setScanning(true);
     setError(null);
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) throw new Error('No active tab');
+      // Query specifically for Toast tabs across ALL windows (popup is in a floating window)
+      const toastTabs = await chrome.tabs.query({ url: "*://*.toasttab.com/*" });
+      const tab = toastTabs[0];
+      console.log('[Nest Popup] Scan triggered — found Toast tab:', tab?.id, 'url:', tab?.url);
+      if (!tab?.id) throw new Error('No Toast tab found — navigate to a Toast POS page first');
 
-      if (!tab.url?.includes('toasttab.com')) {
-        throw new Error('Navigate to a Toast POS page to scan');
+      // Try sending the scan message
+      let response = await sendScanMessage(tab.id);
+
+      // If content script isn't injected yet, inject it and retry
+      if (!response) {
+        console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content/scanner.js']
+          });
+          // Wait a moment for the script to initialize
+          await new Promise(r => setTimeout(r, 500));
+          console.log('[Nest Popup] Scanner injected — retrying scan...');
+          response = await sendScanMessage(tab.id);
+        } catch (injectErr) {
+          console.error('[Nest Popup] Failed to inject content script:', injectErr);
+          throw new Error('Could not inject scanner into Toast tab — try refreshing the page');
+        }
       }
 
-      const response = await chrome.tabs.sendMessage(tab.id, { type: 'REQUEST_SCAN' }) as { data?: ScanData };
+      console.log('[Nest Popup] Response from content script:', response,
+        response?.data ? `| keys: ${Object.keys(response.data).length}` : '| no data');
       if (response?.data) {
         onScanData(response.data);
         chrome.storage.local.set({ lastScanData: response.data });
@@ -65,9 +107,10 @@ export default function ScanView({ jwt, scanData, onScanData, locationId }: Prop
           }
         }
       } else {
-        throw new Error('No data returned from scanner');
+        throw new Error('No data returned from scanner — try refreshing the Toast page');
       }
     } catch (err) {
+      console.error('[Nest Popup] Scan error:', err);
       setError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
       setScanning(false);
@@ -100,7 +143,7 @@ export default function ScanView({ jwt, scanData, onScanData, locationId }: Prop
 
       {scanData ? (
         <>
-          <div className="text-xs text-gray-500 mb-2">Extracted Toast fields</div>
+          <div className="text-xs text-gray-500 mb-2">Extracted Toast fields ({Object.keys(scanData).length})</div>
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead>

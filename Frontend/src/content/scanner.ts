@@ -53,10 +53,44 @@ function parseValue(raw: string): number {
 }
 
 /** Get the title attribute from the formatted-value-text div inside an element.
- *  Always returns a string — empty string if not found. */
+ *  Always returns a string — empty string if not found.
+ *  Strips Toast tooltip descriptions that are appended to the label
+ *  (e.g. "Taxable amountThe taxable amount..." → "Taxable amount",
+ *   "AmountAmount of service charges..." → "Amount"). */
 function getCellTitle(cell: Element): string {
-  return cell.querySelector('div[data-testid="formatted-value-text"]')
+  const raw = cell.querySelector('div[data-testid="formatted-value-text"]')
     ?.getAttribute('title')?.trim() ?? '';
+  // Toast appends tooltip descriptions right after the label with no separator.
+  // The label is a short phrase (1-3 words), then a descriptive sentence follows.
+  // Patterns seen:
+  //   "Taxable amountThe taxable amount (net sales...)" → "Taxable amount"
+  //   "AmountAmount of service charges minus refunds..." → "Amount"
+  //
+  // Strategy: The label is always short (≤30 chars). If the title is longer than 30 chars,
+  // we look for where the label ends and the description begins.
+  // Descriptions always contain a verb or preposition like "of", "that", "is", "for",
+  // "The", "This", "Note", "minus", etc. within the first few words after the label.
+  if (raw.length <= 30) return raw; // Short titles are just labels
+
+  // Try: find where a lowercase letter is immediately followed by an uppercase letter
+  // that starts a new sentence (the description). This catches "amountThe" and "AmountAmount".
+  const match = raw.match(/^(.+?[a-z])([A-Z].{10,})$/);
+  if (match) {
+    const label = match[1];
+    const desc = match[2];
+    // Verify it looks like a description (contains common English words)
+    if (/\b(of|that|is|for|the|are|was|will|has|can|may|note|minus)\b/i.test(desc)) {
+      return label;
+    }
+  }
+
+  // Try: same word repeated (e.g. "AmountAmount")
+  const repeatMatch = raw.match(/^([A-Z][a-z]+)([A-Z][a-z]+)/);
+  if (repeatMatch && repeatMatch[1] === repeatMatch[2]) {
+    return repeatMatch[1];
+  }
+
+  return raw;
 }
 
 /** Extract column headers from a table header element. */
@@ -363,9 +397,10 @@ function scanSalesSummary(): Record<string, number> {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
+  console.log('[Nest Scanner] Message received:', message.type);
   if (message.type === 'REQUEST_SCAN') {
     const url = window.location.href;
-    console.log('[Nest Scanner] URL:', url);
+    console.log('[Nest Scanner] REQUEST_SCAN received — URL:', url);
     const isSalesSummary = /\/restaurants\/admin\/reports\/sales\/sales-summary/.test(url);
 
     if (!isSalesSummary) {
@@ -391,6 +426,7 @@ chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendRe
             sendResponse({ data: null });
             return;
           }
+          console.log('[Nest Scanner] Sending response — keys:', Object.keys(scanData).length, '| JSON size:', JSON.stringify(scanData).length, 'bytes');
           sendResponse({ data: scanData });
         } catch (err) {
           console.error('[Nest Scanner] Scan failed:', err);
