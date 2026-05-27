@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
 import { prisma } from '../lib/prisma';
@@ -199,7 +199,7 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
 });
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;
@@ -212,6 +212,23 @@ router.post('/journal-entry', authenticate, async (req: AuthRequest, res: Respon
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0) {
       res.status(400).json({ error: 'txnDate and lines[] are required' });
       return;
+    }
+
+    // Verify scan's location is accessible when scanRecordId is provided
+    if (scanRecordId) {
+      const scan = await prisma.scanRecord.findUnique({
+        where: { id: scanRecordId },
+        select: { locationId: true },
+      });
+      if (scan) {
+        const loc = await prisma.location.findFirst({
+          where: { id: scan.locationId, ...locationFilter(req.user!) },
+        });
+        if (!loc) {
+          res.status(403).json({ error: "You don't have access to this location" });
+          return;
+        }
+      }
     }
 
     const qbToken = await prisma.qBToken.findUnique({ where: { userId: req.user!.userId } });
@@ -393,7 +410,7 @@ router.get('/tax-codes', authenticate, async (req: AuthRequest, res: Response): 
 });
 
 // ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
-router.get('/sync-all', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([

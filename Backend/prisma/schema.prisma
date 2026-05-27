@@ -100,32 +100,7 @@ model AuditLog {
 }
 
 // Kept for backward compatibility — old access-request flow data may still exist
-model AccessRequest {
-  id             String              @id @default(cuid())
-  email          String
-  name           String?
-  type           AccessRequestType   @default(SIGNUP)
-  status         AccessRequestStatus @default(PENDING)
-  token          String?             @unique
-  tokenExpiresAt DateTime?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-
-  @@index(fields: [email, type, status])
-  @@map("access_requests")
-}
-
-enum AccessRequestType {
-  SIGNUP
-  RESET
-}
-
-enum AccessRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  USED
-}
+// AccessRequest model removed — use AdminRequest instead
 
 model Location {
   id          String       @id @default(cuid())

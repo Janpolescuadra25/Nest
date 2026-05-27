@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest, locationFilter } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -7,7 +7,7 @@ const router = Router();
 router.use(authenticate);
 
 // ── PUT /api/mappings/:id ─────────────────────────────────────────────────────
-router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const mapping = await prisma.mapping.findFirst({
@@ -47,7 +47,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── DELETE /api/mappings/:id ──────────────────────────────────────────────────
-router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const mapping = await prisma.mapping.findFirst({

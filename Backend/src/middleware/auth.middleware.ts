@@ -129,3 +129,19 @@ export function locationFilter(user: AuthPayload): Record<string, unknown> {
   return { userId: user.userId };
 }
 
+/**
+ * Middleware factory — requires the authenticated user to have a specific
+ * boolean permission flag set to true. OWNER always passes.
+ * Place after `authenticate`.
+ */
+export const requirePermission = (field: 'canScan' | 'canMap' | 'canSync' | 'canManageLocs') => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    const user = req.user!;
+    if (user.role === 'OWNER') { next(); return; }
+    if (!user[field]) {
+      res.status(403).json({ error: 'Permission denied: ' + field });
+      return;
+    }
+    next();
+  };
+};

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest, locationFilter } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── POST /api/locations ───────────────────────────────────────────────────────
-router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, toastUrl } = req.body as { name?: string; toastUrl?: string };
 
@@ -70,7 +70,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── PUT /api/locations/:id ────────────────────────────────────────────────────
-router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -103,7 +103,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── DELETE /api/locations/:id ─────────────────────────────────────────────────
-router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -149,7 +149,7 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
 });
 
 // ── POST /api/locations/:id/mappings ──────────────────────────────────────────
-router.post('/:id/mappings', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/mappings', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -218,7 +218,7 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
 });
 
 // ── POST /api/locations/:id/rules ─────────────────────────────────────────────
-router.post('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/rules', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
