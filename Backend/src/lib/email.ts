@@ -175,3 +175,45 @@ export async function sendTrialExpired({
     console.error('[Email] sendTrialExpired failed:', err);
   }
 }
+
+// ── sendTrialRenewed ─────────────────────────────────────────────────────────
+
+export async function sendTrialRenewed({
+  to,
+  name,
+  newExpiryDate,
+  customExpiryMessage,
+}: {
+  to: string;
+  name: string | null | undefined;
+  newExpiryDate: Date;
+  customExpiryMessage: string | null | undefined;
+}): Promise<void> {
+  try {
+    const resend = getResendClient();
+    const displayName = name?.trim() || to;
+    const formattedDate = formatDate(newExpiryDate);
+
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        Your Nest trial has been renewed by your administrator.
+        Your new access expiry date is <strong style="color:#0f172a;">${formattedDate}</strong>.
+      </p>
+      ${customMessageBlock(customExpiryMessage)}
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin:16px 0 0;">
+        If you have any questions, contact your administrator.
+      </p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      to,
+      subject: 'Your Nest trial has been renewed',
+      html,
+    });
+    console.log(`[Email] Trial renewed email sent to ${to}`);
+  } catch (err) {
+    console.error('[Email] sendTrialRenewed failed:', err);
+  }
+}

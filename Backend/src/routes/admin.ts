@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
-import { sendWelcomeEmail } from '../lib/email';
+import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
 
 const router = Router();
 
@@ -139,15 +139,41 @@ router.patch('/team/:id', requireRole('ADMIN'), async (req: AuthRequest, res: Re
       return res.status(403).json({ error: 'Cannot modify OWNER or ADMIN accounts.' });
     }
 
+    // ── Trial-reset branch (only when trialExpiresAt is set to a date) ─────────
+    let isTrialReset = false;
+    let newExpiryDate: Date | null = null;
+
+    if (trialExpiresAt) {
+      newExpiryDate = new Date(trialExpiresAt);
+      if (isNaN(newExpiryDate.getTime()) || newExpiryDate <= new Date()) {
+        return res.status(400).json({ error: 'trialExpiresAt must be a future date' });
+      }
+      if (target.status === 'DISABLED') {
+        return res.status(400).json({ error: 'Cannot reset trial for a disabled user' });
+      }
+      isTrialReset = true;
+    }
+
     const updateData: Record<string, unknown> = {};
     if (role !== undefined) updateData['role'] = role;
-    if (canScan !== undefined) updateData['canScan'] = canScan;
-    if (canMap !== undefined) updateData['canMap'] = canMap;
-    if (canSync !== undefined) updateData['canSync'] = canSync;
-    if (canManageLocs !== undefined) updateData['canManageLocs'] = canManageLocs;
-    if (trialExpiresAt !== undefined) updateData['trialExpiresAt'] = trialExpiresAt ? new Date(trialExpiresAt) : null;
+
+    // EXPIRED → ACTIVE: default all permissions to true unless body explicitly sets them
+    if (isTrialReset && target.status === 'EXPIRED') {
+      updateData['status'] = 'ACTIVE';
+      updateData['canScan'] = canScan !== undefined ? canScan : true;
+      updateData['canMap'] = canMap !== undefined ? canMap : true;
+      updateData['canSync'] = canSync !== undefined ? canSync : true;
+      updateData['canManageLocs'] = canManageLocs !== undefined ? canManageLocs : true;
+    } else {
+      if (canScan !== undefined) updateData['canScan'] = canScan;
+      if (canMap !== undefined) updateData['canMap'] = canMap;
+      if (canSync !== undefined) updateData['canSync'] = canSync;
+      if (canManageLocs !== undefined) updateData['canManageLocs'] = canManageLocs;
+      if (status !== undefined) updateData['status'] = status;
+    }
+
+    if (trialExpiresAt !== undefined) updateData['trialExpiresAt'] = newExpiryDate;
     if (customExpiryMessage !== undefined) updateData['customExpiryMessage'] = customExpiryMessage;
-    if (status !== undefined) updateData['status'] = status;
 
     const updated = await prisma.user.update({
       where: { id },
@@ -159,25 +185,61 @@ router.patch('/team/:id', requireRole('ADMIN'), async (req: AuthRequest, res: Re
       },
     });
 
+    // ── Standard audit entries ────────────────────────────────────────────────
     const auditEntries: Array<{ actorId: string; action: string; targetId: string; meta?: object }> = [];
     if (role !== undefined) {
       auditEntries.push({ actorId: req.user!.userId, action: 'ROLE_CHANGED', targetId: id, meta: { newRole: role } });
     }
-    const permKeys = (['canScan', 'canMap', 'canSync', 'canManageLocs'] as const).filter(k => req.body[k] !== undefined);
-    if (permKeys.length > 0) {
-      const changes: Record<string, unknown> = {};
-      permKeys.forEach(k => { changes[k] = req.body[k]; });
-      auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetId: id, meta: { changes } });
+    if (!isTrialReset) {
+      const permKeys = (['canScan', 'canMap', 'canSync', 'canManageLocs'] as const).filter(k => req.body[k] !== undefined);
+      if (permKeys.length > 0) {
+        const changes: Record<string, unknown> = {};
+        permKeys.forEach(k => { changes[k] = req.body[k]; });
+        auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetId: id, meta: { changes } });
+      }
+      if (trialExpiresAt !== undefined || customExpiryMessage !== undefined) {
+        auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetId: id, meta: { trialExpiresAt, customExpiryMessage } });
+      }
+      if (status !== undefined) {
+        auditEntries.push({ actorId: req.user!.userId, action: 'USER_STATUS_CHANGED', targetId: id, meta: { newStatus: status } });
+      }
     }
-    if (trialExpiresAt !== undefined || customExpiryMessage !== undefined) {
-      auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetId: id, meta: { trialExpiresAt, customExpiryMessage } });
-    }
-    if (status !== undefined) {
-      auditEntries.push({ actorId: req.user!.userId, action: 'USER_STATUS_CHANGED', targetId: id, meta: { newStatus: status } });
-    }
-
     if (auditEntries.length > 0) {
       await prisma.auditLog.createMany({ data: auditEntries });
+    }
+
+    // ── Trial-reset post-processing ───────────────────────────────────────────
+    if (isTrialReset && newExpiryDate) {
+      // Always delete old warning logs so the cron re-fires for the new expiry
+      await prisma.auditLog.deleteMany({
+        where: { targetId: id, action: 'TRIAL_EXPIRY_WARNING' },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: req.user!.userId,
+          targetId: id,
+          action: 'TRIAL_RESET',
+          meta: {
+            previousStatus: target.status,
+            previousTrialExpiresAt: target.trialExpiresAt,
+            newTrialExpiresAt: newExpiryDate,
+            permissionsSet: {
+              canScan: updated.canScan,
+              canMap: updated.canMap,
+              canSync: updated.canSync,
+              canManageLocs: updated.canManageLocs,
+            },
+          },
+        },
+      });
+
+      sendTrialRenewed({
+        to: updated.email,
+        name: updated.name,
+        newExpiryDate,
+        customExpiryMessage: updated.customExpiryMessage,
+      }).catch(() => {});
     }
 
     return res.json({ user: updated });
