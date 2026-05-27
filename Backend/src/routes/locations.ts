@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -11,7 +11,7 @@ router.use(authenticate);
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const locations = await prisma.location.findMany({
-      where: { userId: req.user!.userId },
+      where: locationFilter(req.user!),
       orderBy: { createdAt: 'desc' },
     });
     res.json(locations);
@@ -31,8 +31,14 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    const user = req.user!;
+    const adminId =
+      user.role === 'OWNER' ? null
+      : user.role === 'ADMIN' ? user.userId
+      : user.adminId ?? null;
+
     const location = await prisma.location.create({
-      data: { userId: req.user!.userId, name, toastUrl },
+      data: { userId: user.userId, adminId, name, toastUrl },
     });
 
     res.status(201).json(location);
@@ -47,7 +53,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
       include: { mappings: true, rules: true },
     });
 
@@ -68,7 +74,7 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!existing) {
@@ -101,7 +107,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!existing) {
@@ -122,7 +128,7 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!location) {
@@ -147,7 +153,7 @@ router.post('/:id/mappings', async (req: AuthRequest, res: Response): Promise<vo
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!location) {
@@ -191,7 +197,7 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!location) {
@@ -216,7 +222,7 @@ router.post('/:id/rules', async (req: AuthRequest, res: Response): Promise<void>
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!location) {
@@ -261,7 +267,7 @@ router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> 
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
-      where: { id, userId: req.user!.userId },
+      where: { id, ...locationFilter(req.user!) },
     });
 
     if (!location) {

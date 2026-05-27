@@ -9,22 +9,97 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  STAFF
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  EXPIRED
+  DISABLED
+}
+
+enum AdminRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ── Core Models ───────────────────────────────────────────────────────────────
+
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  name        String?
-  password    String?
-  role        String   @default("user")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String      @id @default(cuid())
+  email               String      @unique
+  name                String?
+  password            String?
+  role                UserRole    @default(VIEWER)
+  status              UserStatus  @default(ACTIVE)
+  adminId             String?
+  canScan             Boolean     @default(false)
+  canMap              Boolean     @default(false)
+  canSync             Boolean     @default(false)
+  canManageLocs       Boolean     @default(false)
+  trialExpiresAt      DateTime?
+  customExpiryMessage String?
+  maxUsers            Int?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  locations   Location[]
-  qbTokens    QBToken[]
-  oauthStates OAuthState[]
+  admin               User?          @relation("AdminUsers", fields: [adminId], references: [id])
+  teamMembers         User[]         @relation("AdminUsers")
+  locations           Location[]     @relation("UserLocations")
+  managedLocations    Location[]     @relation("AdminLocations")
+  qbTokens            QBToken[]
+  oauthStates         OAuthState[]
+  approvedRequests    AdminRequest[] @relation("ApprovedAdminRequests")
+  auditLogs           AuditLog[]     @relation("AuditActor")
+  auditTargets        AuditLog[]     @relation("AuditTarget")
 
+  @@index([adminId])
   @@map("users")
 }
 
+model AdminRequest {
+  id            String             @id @default(cuid())
+  email         String
+  name          String?
+  requestedBy   String?
+  approvedById  String?
+  status        AdminRequestStatus @default(PENDING)
+  message       String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  approvedBy    User?              @relation("ApprovedAdminRequests", fields: [approvedById], references: [id])
+
+  @@index([email])
+  @@map("admin_requests")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  targetId  String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
+  target    User?    @relation("AuditTarget", fields: [targetId], references: [id])
+
+  @@index([actorId])
+  @@index([targetId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Kept for backward compatibility — old access-request flow data may still exist
 model AccessRequest {
   id             String              @id @default(cuid())
   email          String
@@ -53,19 +128,23 @@ enum AccessRequestStatus {
 }
 
 model Location {
-  id         String       @id @default(cuid())
-  userId     String
-  name       String
-  toastUrl   String
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mappings   Mapping[]
-  rules      Rule[]
+  id          String       @id @default(cuid())
+  userId      String
+  adminId     String?
+  name        String
+  toastUrl    String
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
+  admin       User?        @relation("AdminLocations", fields: [adminId], references: [id])
+  mappings    Mapping[]
+  rules       Rule[]
   scanRecords ScanRecord[]
 
   @@index([userId])
+  @@index([adminId])
   @@map("locations")
 }
 

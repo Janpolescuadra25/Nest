@@ -57,7 +57,7 @@ router.post('/setup-password', async (req: Request, res: Response) => {
 
     await prisma.$transaction(async (tx) => {
       await tx.user.create({
-        data: { email: request.email, name: request.name, password: hashedPassword, role: 'user' },
+        data: { email: request.email, name: request.name, password: hashedPassword, role: 'VIEWER' },
       });
       await tx.accessRequest.update({
         where: { id: request.id },

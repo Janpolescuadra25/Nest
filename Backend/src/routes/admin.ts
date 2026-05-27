@@ -1,8 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
-import { sendApprovalEmail } from '../lib/email';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
@@ -25,7 +23,7 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
       sub: string; email: string; role?: string; name?: string | null;
     };
 
-    if (payload.role !== 'admin') {
+    if (!['OWNER', 'ADMIN'].includes(payload.role ?? '')) {
       res.status(403).json({ error: 'Admin access required' });
       return;
     }
@@ -41,7 +39,7 @@ function requireAdmin(req: AdminRequest, res: Response, next: NextFunction): voi
 router.get('/users', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     });
     return res.json({ users });
@@ -73,27 +71,12 @@ router.post('/requests/:id/approve', requireAdmin, async (req: AdminRequest, res
     if (!request) return res.status(404).json({ error: 'Request not found.' });
     if (request.status !== 'PENDING') return res.status(409).json({ error: 'This request has already been processed.' });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const baseUrl = process.env.BASE_URL || 'https://nest-backend-mddn.onrender.com';
-    const path = request.type === 'SIGNUP' ? 'setup-password' : 'reset-password';
-    const link = `${baseUrl}/auth/${path}?token=${token}`;
-
-    let emailSent = false;
-    try {
-      emailSent = await sendApprovalEmail(request.email, request.name, request.type as 'SIGNUP' | 'RESET', link);
-    } catch (err) {
-      console.error('[Admin] Failed to send approval email:', err);
-      console.log('[Admin] Approval link (email not sent):', link);
-    }
-
     await prisma.accessRequest.update({
       where: { id },
-      data: { status: 'APPROVED', token, tokenExpiresAt },
+      data: { status: 'APPROVED' },
     });
 
-    const suffix = emailSent ? ' Email sent.' : ' Email could not be sent — check server logs for the approval link.';
-    return res.json({ message: 'Request approved.' + suffix });
+    return res.json({ message: 'Request approved.' });
   } catch (err) {
     console.error('[Admin] Approve request error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -124,8 +107,8 @@ router.delete('/users/:id', requireAdmin, async (req: AdminRequest, res: Respons
     }
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    await prisma.user.delete({ where: { id } });
-    return res.json({ message: 'User deleted successfully.' });
+    await prisma.user.update({ where: { id }, data: { status: 'DISABLED' } });
+    return res.json({ message: 'User disabled successfully.' });
   } catch (err) {
     console.error('[Admin] Delete user error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter } from '../middleware/auth.middleware';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
@@ -23,9 +23,9 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    // Verify the location belongs to the authenticated user
+    // Verify the location is visible to the authenticated user
     const location = await prisma.location.findFirst({
-      where: { id: locationId, userId: req.user!.userId },
+      where: { id: locationId, ...locationFilter(req.user!) },
     });
 
     if (!location) {
@@ -64,7 +64,15 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
       include: { location: true, syncLogs: true },
     });
 
-    if (!scan || scan.location.userId !== req.user!.userId) {
+    if (!scan) {
+      res.status(404).json({ error: 'Scan record not found' });
+      return;
+    }
+    // Verify location access
+    const hasAccess = await prisma.location.count({
+      where: { id: scan.location.id, ...locationFilter(req.user!) },
+    });
+    if (!hasAccess) {
       res.status(404).json({ error: 'Scan record not found' });
       return;
     }

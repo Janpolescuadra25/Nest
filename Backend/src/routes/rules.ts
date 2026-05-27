@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
@@ -10,12 +10,12 @@ router.use(authenticate);
 router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
-    const rule = await prisma.rule.findUnique({
-      where: { id },
+    const rule = await prisma.rule.findFirst({
+      where: { id, location: locationFilter(req.user!) },
       include: { location: true },
     });
 
-    if (!rule || rule.location.userId !== req.user!.userId) {
+    if (!rule) {
       res.status(404).json({ error: 'Rule not found' });
       return;
     }
@@ -51,12 +51,12 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
-    const rule = await prisma.rule.findUnique({
-      where: { id },
+    const rule = await prisma.rule.findFirst({
+      where: { id, location: locationFilter(req.user!) },
       include: { location: true },
     });
 
-    if (!rule || rule.location.userId !== req.user!.userId) {
+    if (!rule) {
       res.status(404).json({ error: 'Rule not found' });
       return;
     }

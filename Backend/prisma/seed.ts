@@ -7,36 +7,65 @@ const prisma = new PrismaClient();
 async function main(): Promise<void> {
   console.log('[Seed] Starting seed...');
 
-  // ── 0. Create admin user ────────────────────────────────────────────────────
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'paulescuadra25@gmail.com';
-  const adminPassword = process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
-  const adminName = process.env.ADMIN_NAME ?? 'John Paul O. Escuadra';
-  const hashedPassword = await bcrypt.hash(adminPassword, 12);
+  // ── 0. Create / update Owner user ──────────────────────────────────────────
+  const ownerEmail   = process.env.OWNER_EMAIL    ?? process.env.ADMIN_EMAIL ?? 'paulescuadra25@gmail.com';
+  const ownerPassword = process.env.OWNER_PASSWORD ?? process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const ownerName    = process.env.OWNER_NAME     ?? process.env.ADMIN_NAME  ?? 'John Paul O. Escuadra';
+  const hashedPassword = await bcrypt.hash(ownerPassword, 12);
 
-  const adminUser = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: { password: hashedPassword, role: 'admin', name: adminName },
-    create: { email: adminEmail, name: adminName, password: hashedPassword, role: 'admin' },
+  const ownerUser = await prisma.user.upsert({
+    where: { email: ownerEmail },
+    update: {
+      password: hashedPassword,
+      role: 'OWNER',
+      status: 'ACTIVE',
+      name: ownerName,
+      canScan: true,
+      canMap: true,
+      canSync: true,
+      canManageLocs: true,
+    },
+    create: {
+      email: ownerEmail,
+      name: ownerName,
+      password: hashedPassword,
+      role: 'OWNER',
+      status: 'ACTIVE',
+      canScan: true,
+      canMap: true,
+      canSync: true,
+      canManageLocs: true,
+    },
   });
-  console.log(`[Seed] Admin: ${adminUser.email} / password: ${adminPassword}`);
+  console.log(`[Seed] Owner: ${ownerUser.email} / password: ${ownerPassword}`);
 
-  // ── 1. Create test user ────────────────────────────────────────────────────
+  // ── 1. Assign all orphan locations (adminId IS NULL) to the Owner ──────────
+  const { count: assigned } = await prisma.location.updateMany({
+    where: { adminId: null },
+    data: { adminId: ownerUser.id },
+  });
+  if (assigned > 0) console.log(`[Seed] Assigned ${assigned} orphan location(s) to Owner`);
+
+  // ── 2. Create test user (VIEWER, no permissions) ───────────────────────────
   const user = await prisma.user.upsert({
     where: { email: 'test@nest.app' },
     update: {},
     create: {
       email: 'test@nest.app',
+      role: 'VIEWER',
+      status: 'ACTIVE',
     },
   });
-  console.log('[Seed] User:', user.email, '— id:', user.id);
+  console.log('[Seed] Test user:', user.email, '— id:', user.id);
 
-  // ── 2. Create 2 test locations ─────────────────────────────────────────────
+  // ── 3. Create 2 test locations ─────────────────────────────────────────────
   const downtown = await prisma.location.upsert({
     where: { id: 'seed-location-downtown' },
     update: {},
     create: {
       id: 'seed-location-downtown',
       userId: user.id,
+      adminId: ownerUser.id,
       name: 'Acme Downtown',
       toastUrl: 'https://www.toasttab.com/acme-downtown/v3',
       isActive: true,
@@ -49,6 +78,7 @@ async function main(): Promise<void> {
     create: {
       id: 'seed-location-uptown',
       userId: user.id,
+      adminId: ownerUser.id,
       name: 'Acme Uptown',
       toastUrl: 'https://www.toasttab.com/acme-uptown/v3',
       isActive: true,
@@ -57,7 +87,7 @@ async function main(): Promise<void> {
 
   console.log('[Seed] Locations:', downtown.name, '|', uptown.name);
 
-  // ── 3. Create sample mappings for each location ────────────────────────────
+  // ── 4. Create sample mappings for each location ────────────────────────────
   const mappingTemplates = [
     {
       sourceField: 'Food Sales',
@@ -108,7 +138,7 @@ async function main(): Promise<void> {
     console.log(`[Seed] Created ${mappingTemplates.length} mappings for ${loc.name}`);
   }
 
-  // ── 4. Create sample rules ─────────────────────────────────────────────────
+  // ── 5. Create sample rules ─────────────────────────────────────────────────
   for (const loc of [downtown, uptown]) {
     await prisma.rule.create({
       data: {

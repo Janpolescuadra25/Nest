@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
@@ -14,20 +15,27 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: (email as string).toLowerCase() },
     });
     if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
-    if (!user.password) return res.status(401).json({ error: 'This account has not been set up yet. Please contact the admin.' });
+    if (!user.password) return res.status(401).json({ error: 'Account password not set. Please contact your admin.' });
+    if (user.status === 'DISABLED') return res.status(403).json({ error: 'Account is disabled.' });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
-    const token = jwt.sign(
-      { sub: user.id, email: user.email, role: user.role, name: user.name },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
     return res.json({
       token,
-      user: { id: user.id, email: user.email, role: user.role, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        canScan: user.canScan,
+        canMap: user.canMap,
+        canSync: user.canSync,
+        canManageLocs: user.canManageLocs,
+      },
     });
   } catch (err) {
     console.error('[Auth] Login error:', err);
@@ -35,60 +43,119 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/request-access
-router.post('/request-access', async (req: Request, res: Response) => {
+// POST /api/auth/register
+// Creates a new VIEWER account. No admin approval required.
+router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, name } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required.' });
-    const normalizedEmail = email.toLowerCase();
-    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existingUser) return res.status(409).json({ error: 'An account with this email already exists. Use Forgot Password instead.' });
-    const pendingRequest = await prisma.accessRequest.findFirst({
-      where: { email: normalizedEmail, type: 'SIGNUP', status: 'PENDING' },
+    const { email, password, name } = req.body as { email?: string; password?: string; name?: string };
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+    const normalizedEmail = (email as string).toLowerCase();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: name ?? null,
+        password: hashedPassword,
+        role: 'VIEWER',
+        status: 'ACTIVE',
+      },
     });
-    if (pendingRequest) return res.status(409).json({ error: 'A request for this email is still pending approval.' });
-    await prisma.accessRequest.create({
-      data: { email: normalizedEmail, name: name || null, type: 'SIGNUP', status: 'PENDING' },
+
+    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    return res.status(201).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        canScan: user.canScan,
+        canMap: user.canMap,
+        canSync: user.canSync,
+        canManageLocs: user.canManageLocs,
+      },
     });
-    return res.json({ message: "Your request has been submitted. You'll receive an email once approved." });
   } catch (err) {
-    console.error('[Auth] Request access error:', err);
+    console.error('[Auth] Register error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// POST /api/auth/forgot-password
-router.post('/forgot-password', async (req: Request, res: Response) => {
+// POST /api/auth/change-password  (requires authentication)
+router.post('/change-password', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required.' });
-    const normalizedEmail = email.toLowerCase();
-    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!existingUser) return res.status(404).json({ error: 'No account found with this email. You may need to request access first.' });
-    const pendingRequest = await prisma.accessRequest.findFirst({
-      where: { email: normalizedEmail, type: 'RESET', status: 'PENDING' },
-    });
-    if (pendingRequest) return res.status(403).json({ error: 'A reset request for this email is already pending.' });
-    await prisma.accessRequest.create({
-      data: { email: normalizedEmail, name: existingUser.name, type: 'RESET', status: 'PENDING' },
-    });
-    return res.json({ message: "Your reset request has been submitted. You'll receive an email once approved by the admin." });
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword and newPassword are required.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user || !user.password) {
+      return res.status(400).json({ error: 'Password not set for this account.' });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+
+    return res.json({ message: 'Password changed successfully.' });
   } catch (err) {
-    console.error('[Auth] Forgot password error:', err);
+    console.error('[Auth] Change password error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// GET /api/auth/session
-router.get('/session', async (req: Request, res: Response) => {
+// GET /api/auth/me  (requires authentication)
+router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated.' });
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string; email: string; role?: string; name?: string | null };
     const user = await prisma.user.findUnique({
-      where: { id: decoded.sub },
-      select: { id: true, email: true, role: true, name: true },
+      where: { id: req.user!.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        canScan: true,
+        canMap: true,
+        canSync: true,
+        canManageLocs: true,
+        trialExpiresAt: true,
+        maxUsers: true,
+        createdAt: true,
+        _count: { select: { teamMembers: true } },
+      },
+    });
+    if (!user) return res.status(401).json({ error: 'User not found.' });
+
+    return res.json({ user });
+  } catch (err) {
+    console.error('[Auth] Me error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// GET /api/auth/session  — kept for backward compatibility, delegates to /me logic
+router.get('/session', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { id: true, email: true, role: true, name: true, status: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });
@@ -98,3 +165,4 @@ router.get('/session', async (req: Request, res: Response) => {
 });
 
 export default router;
+

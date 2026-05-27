@@ -1,10 +1,21 @@
 // Central type definitions for the Nest backend
 
 export interface AuthPayload {
+  /** Primary identifier — same value as userId (kept for backward compat) */
+  id: string;
+  /** Backward-compat alias for id — all existing routes use this */
   userId: string;
   email: string;
-  role?: string;
   name?: string | null;
+  role: string;       // UserRole: OWNER | ADMIN | ACCOUNTANT | STAFF | VIEWER
+  status: string;     // UserStatus: ACTIVE | EXPIRED | DISABLED
+  adminId: string | null;
+  canScan: boolean;
+  canMap: boolean;
+  canSync: boolean;
+  canManageLocs: boolean;
+  trialExpiresAt: Date | null;
+  maxUsers: number | null;
 }
 
 export interface QBTokens {
