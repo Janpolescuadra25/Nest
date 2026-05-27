@@ -39,7 +39,6 @@ router.get('/auth-url', authenticate, async (req: AuthRequest, res: Response): P
     });
 
     const authUrl = `${QB_AUTH_URL}?${params.toString()}`;
-    console.log('[QB] Auth URL generated — userId:', req.user!.userId, '| state:', state);
     res.json({ authUrl, state });
   } catch (err) {
     console.error('[QB] Failed to generate auth URL:', err);
@@ -54,13 +53,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   const { code, realmId, state, error } = req.query as {
     code?: string; realmId?: string; state?: string; error?: string;
   };
-
-  console.log('[QB] Callback received — query params:', {
-    code: code ? `${code.substring(0, 12)}...` : undefined,
-    realmId,
-    state,
-    error,
-  });
 
   // ── Intuit sent back an OAuth error ───────────────────────────────────────
   if (error) {
@@ -97,7 +89,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
 
     userId = stateRecord.userId;
     await prisma.oAuthState.delete({ where: { state } }); // one-time use
-    console.log('[QB] State verified — userId:', userId, '| realmId:', realmId);
   } catch (err) {
     console.error('[QB] DB error during state lookup:', err);
     res.status(500).send(errorPage('Internal error verifying authorization state.'));
@@ -113,8 +104,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
       redirect_uri: QB_REDIRECT_URI,
     });
 
-    console.log('[QB] Exchanging code for tokens — POST', QB_TOKEN_URL);
-
     const tokenResponse = await fetch(QB_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -126,7 +115,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     });
 
     const responseText = await tokenResponse.text();
-    console.log('[QB] Token exchange HTTP status:', tokenResponse.status);
 
     if (!tokenResponse.ok) {
       console.error('[QB] Token exchange FAILED — status:', tokenResponse.status, '| body:', responseText);
@@ -148,7 +136,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     }
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-    console.log('[QB] Tokens received — expires_in:', tokens.expires_in, 's | expiresAt:', expiresAt.toISOString());
 
     // ── Persist tokens in DB ─────────────────────────────────────────────────
     await prisma.qBToken.upsert({
@@ -167,8 +154,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
         expiresAt,
       },
     });
-
-    console.log('[QB] ✅ Tokens stored for userId:', userId, '| realmId:', realmId);
 
     res.send(successPage(realmId));
   } catch (err) {
@@ -239,7 +224,6 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
 
     let accessToken = qbToken.accessToken;
     if (qbToken.expiresAt < new Date()) {
-      console.log('[QB] Access token expired — refreshing...');
       const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
       await prisma.qBToken.update({
         where: { userId: req.user!.userId },
@@ -315,7 +299,6 @@ async function getValidToken(userId: string): Promise<{ accessToken: string; rea
   if (!qbToken) throw new Error('QuickBooks not connected. Please complete OAuth first.');
 
   if (qbToken.expiresAt < new Date()) {
-    console.log('[QB] Access token expired — refreshing for userId:', userId);
     const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
     await prisma.qBToken.update({
       where: { userId },

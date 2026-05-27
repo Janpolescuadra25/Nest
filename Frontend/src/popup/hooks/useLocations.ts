@@ -12,8 +12,8 @@ export function useLocations(jwt: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getLocations(jwt);
-      setLocations(data);
+      const res = await api.getLocations(jwt);
+      setLocations(res.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load locations');
     } finally {

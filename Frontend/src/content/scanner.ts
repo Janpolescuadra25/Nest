@@ -1,7 +1,6 @@
 // Content script — runs on *://*.toasttab.com/* pages
 // Real DOM scraper for Toast POS Sales Summary page
 // Sections 1–17 extracted via data-testid selectors
-console.log('[Nest Scanner] Content script loaded on Toast POS page');
 
 // ---------------------------------------------------------------------------
 // UTILITIES
@@ -28,7 +27,6 @@ function parseValue(raw: string): number {
   if (s === '—' || s === '-' || s === '') return 0;
   // Time values like "03:48" or "1:17:20" — skip
   if (/^\d{1,2}:\d{2}/.test(s)) {
-    console.warn(`[Nest Scanner] Skipping time value: ${s}`);
     return 0;
   }
   // Parenthesized negatives: "(549.75)" → -549.75
@@ -170,9 +168,6 @@ function extractMultiColumnTable(
     const total = isTotalRow(row);
     const label = getCellTitle(cells[labelColumnIndex] as Element);
     if (!label) return;
-    if (total) {
-      console.log(`[Nest Scanner] Section "${sectionPrefix}": detected total row "${label}"`);
-    }
     // Normalize total row label to "Total" unless it already starts with "Total"
     const rowLabel = total
       ? (/^total\b/i.test(label) ? label : 'Total')
@@ -201,7 +196,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="revenue-summary-table-body"]'),
       'Revenue'
     );
-    console.log(`[Nest Scanner] Section "Revenue": tbody found = ${!!document.querySelector('tbody[data-testid="revenue-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -211,7 +205,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="net-sales-summary-table-body"]'),
       'Net Sales'
     );
-    console.log(`[Nest Scanner] Section "Net Sales": tbody found = ${!!document.querySelector('tbody[data-testid="net-sales-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -221,7 +214,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="tip-summary-table-body"]'),
       'Tips'
     );
-    console.log(`[Nest Scanner] Section "Tips": tbody found = ${!!document.querySelector('tbody[data-testid="tip-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -231,7 +223,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="cash-activity-table-body"]'),
       'Cash Activity'
     );
-    console.log(`[Nest Scanner] Section "Cash Activity": tbody found = ${!!document.querySelector('tbody[data-testid="cash-activity-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -241,7 +232,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="cash-summary-table-body"]'),
       'Cash Summary'
     );
-    console.log(`[Nest Scanner] Section "Cash Summary": tbody found = ${!!document.querySelector('tbody[data-testid="cash-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -251,7 +241,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="unpaid-orders-summary-data-table-body"]'),
       'Unpaid Orders'
     );
-    console.log(`[Nest Scanner] Section "Unpaid Orders": tbody found = ${!!document.querySelector('tbody[data-testid="unpaid-orders-summary-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -261,7 +250,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="void-summary-table-body"]'),
       'Void'
     );
-    console.log(`[Nest Scanner] Section "Void": tbody found = ${!!document.querySelector('tbody[data-testid="void-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -272,7 +260,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="payments-summary-table-body"]'),
       'Payments'
     );
-    console.log(`[Nest Scanner] Section "Payments": tbody found = ${!!document.querySelector('tbody[data-testid="payments-summary-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -283,7 +270,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="sales-categories-data-table-body"]'),
       'Sales Category'
     );
-    console.log(`[Nest Scanner] Section "Sales Category": tbody found = ${!!document.querySelector('tbody[data-testid="sales-categories-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -294,7 +280,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="tax-summary-data-table-body"]'),
       'Tax'
     );
-    console.log(`[Nest Scanner] Section "Tax": tbody found = ${!!document.querySelector('tbody[data-testid="tax-summary-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -305,7 +290,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="discount-data-table-body"]'),
       'Discount'
     );
-    console.log(`[Nest Scanner] Section "Discount": tbody found = ${!!document.querySelector('tbody[data-testid="discount-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -316,7 +300,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="service-charge-data-table-body"]'),
       'Service Charge'
     );
-    console.log(`[Nest Scanner] Section "Service Charge": tbody found = ${!!document.querySelector('tbody[data-testid="service-charge-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -327,7 +310,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="RevenueTable-data-table-body"]'),
       'Revenue Center'
     );
-    console.log(`[Nest Scanner] Section "Revenue Center": tbody found = ${!!document.querySelector('tbody[data-testid="RevenueTable-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -338,7 +320,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="Services-data-table-body"]'),
       'Service Daypart'
     );
-    console.log(`[Nest Scanner] Section "Service Daypart": tbody found = ${!!document.querySelector('tbody[data-testid="Services-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -349,7 +330,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="dining-options-data-table-body"]'),
       'Dining Option'
     );
-    console.log(`[Nest Scanner] Section "Dining Option": tbody found = ${!!document.querySelector('tbody[data-testid="dining-options-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -360,7 +340,6 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="service-mode-summary-data-table-body"]'),
       'Service Mode'
     );
-    console.log(`[Nest Scanner] Section "Service Mode": tbody found = ${!!document.querySelector('tbody[data-testid="service-mode-summary-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
   }
 
@@ -371,22 +350,7 @@ function scanSalesSummary(): Record<string, number> {
       document.querySelector('tbody[data-testid="Deferred-data-table-body"]'),
       'Deferred'
     );
-    console.log(`[Nest Scanner] Section "Deferred": tbody found = ${!!document.querySelector('tbody[data-testid="Deferred-data-table-body"]')} | keys = ${Object.keys(sectionData).length}`);
     Object.assign(data, sectionData);
-  }
-
-  // Summary + validation
-  console.log(`[Nest Scanner] Extracted ${Object.keys(data).length} keys total`);
-  console.log('[Nest Scanner] Keys:', Object.keys(data).join(', '));
-  const invalidKeys = Object.entries(data).filter(([, v]) => v === undefined || v === null || isNaN(v as number));
-  if (invalidKeys.length > 0) {
-    console.warn('[Nest Scanner] WARNING: Invalid values found:', invalidKeys);
-  } else {
-    console.log('[Nest Scanner] All values are valid numbers ✓');
-  }
-  const negatives = Object.entries(data).filter(([, v]) => v < 0);
-  if (negatives.length > 0) {
-    console.log('[Nest Scanner] Negative values:', negatives.map(([k, v]) => `${k}: ${v}`).join(', '));
   }
 
   return data;
@@ -397,14 +361,11 @@ function scanSalesSummary(): Record<string, number> {
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
-  console.log('[Nest Scanner] Message received:', message.type);
   if (message.type === 'REQUEST_SCAN') {
     const url = window.location.href;
-    console.log('[Nest Scanner] REQUEST_SCAN received — URL:', url);
     const isSalesSummary = /\/restaurants\/admin\/reports\/sales\/sales-summary/.test(url);
 
     if (!isSalesSummary) {
-      console.warn('[Nest Scanner] Returning null — reason: wrong page');
       sendResponse({ data: null });
       return true;
     }
@@ -414,7 +375,6 @@ chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendRe
       .then((el) => {
         if (!el) {
           console.error('[Nest Scanner] Timed out waiting for Sales Summary page to load');
-          console.warn('[Nest Scanner] Returning null — reason: timeout');
           sendResponse({ data: null });
           return;
         }
@@ -422,15 +382,12 @@ chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendRe
           const scanData = scanSalesSummary();
           if (Object.keys(scanData).length === 0) {
             console.error('[Nest Scanner] Page loaded but no data extracted — selectors may be outdated');
-            console.warn('[Nest Scanner] Returning null — reason: empty scan');
             sendResponse({ data: null });
             return;
           }
-          console.log('[Nest Scanner] Sending response — keys:', Object.keys(scanData).length, '| JSON size:', JSON.stringify(scanData).length, 'bytes');
           sendResponse({ data: scanData });
         } catch (err) {
           console.error('[Nest Scanner] Scan failed:', err);
-          console.warn('[Nest Scanner] Returning null — reason: error');
           sendResponse({ data: null });
         }
       });

@@ -41,7 +41,9 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
       to: user.email,
       name: user.name,
       resetLink: `${process.env.APP_URL}/reset-password?token=${token}`,
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('[PasswordReset] Failed to send reset email:', err);
+    });
 
     return res.json(GENERIC_RESPONSE);
   } catch (err) {

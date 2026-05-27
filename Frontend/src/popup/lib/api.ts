@@ -176,7 +176,7 @@ export const api = {
     post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 
   // ── Locations ──────────────────────────────────────────────────────────────
-  getLocations: (jwt: string) => get<Location[]>('/api/locations', jwt),
+  getLocations: (jwt: string) => get<{ data: Location[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>('/api/locations', jwt),
 
   createLocation: (jwt: string, name: string, toastUrl: string) =>
     post<Location>('/api/locations', { name, toastUrl }, jwt),

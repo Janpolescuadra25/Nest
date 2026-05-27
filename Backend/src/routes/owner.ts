@@ -1,28 +1,36 @@
 import { Router, Response } from 'express';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 
 const router = Router();
 
 router.use(authenticate, requireRole('OWNER'));
 
 // ── GET /api/owner/admins ─────────────────────────────────────────────────────
-router.get('/admins', async (_req: AuthRequest, res: Response) => {
+router.get('/admins', async (req: AuthRequest, res: Response) => {
   try {
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        maxUsers: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { teamMembers: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const where = { role: 'ADMIN' as const };
+    const [total, admins] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          maxUsers: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { teamMembers: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
 
     // Join description/company from AdminRequest by email (no DB relation)
     const adminEmails = admins.map(a => a.email);
@@ -46,7 +54,7 @@ router.get('/admins', async (_req: AuthRequest, res: Response) => {
       company: requestMap.get(a.email)?.company ?? null,
     }));
 
-    return res.json({ admins: result });
+    return res.json({ admins: result, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAdmins error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -150,27 +158,34 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
     const admin = await prisma.user.findUnique({ where: { id } });
     if (!admin) return res.status(404).json({ error: 'Admin not found.' });
 
-    const users = await prisma.user.findMany({
-      where: { adminId: id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        canScan: true,
-        canMap: true,
-        canSync: true,
-        canManageLocs: true,
-        trialExpiresAt: true,
-        customExpiryMessage: true,
-        mustChangePassword: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const where = { adminId: id };
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          canScan: true,
+          canMap: true,
+          canSync: true,
+          canManageLocs: true,
+          trialExpiresAt: true,
+          customExpiryMessage: true,
+          mustChangePassword: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
 
-    return res.json({ users });
+    return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAdminTeam error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

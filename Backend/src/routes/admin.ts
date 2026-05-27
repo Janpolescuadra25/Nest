@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
 import { validate } from '../middleware/validate';
 import { teamInviteSchema, patchTeamMemberSchema } from '../lib/validators';
+import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 
 const router = Router();
 
@@ -15,26 +16,33 @@ router.use(authenticate, requireRole('OWNER', 'ADMIN'));
 // ── GET /api/admin/team  (ADMIN only) ─────────────────────────────────────────
 router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
   try {
-    const users = await prisma.user.findMany({
-      where: { adminId: req.user!.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        status: true,
-        canScan: true,
-        canMap: true,
-        canSync: true,
-        canManageLocs: true,
-        trialExpiresAt: true,
-        customExpiryMessage: true,
-        mustChangePassword: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
-    return res.json({ users });
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const where = { adminId: req.user!.userId };
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          canScan: true,
+          canMap: true,
+          canSync: true,
+          canManageLocs: true,
+          trialExpiresAt: true,
+          customExpiryMessage: true,
+          mustChangePassword: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+    return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Admin] getTeam error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

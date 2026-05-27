@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 
 const router = Router();
 
@@ -10,11 +11,18 @@ router.use(authenticate);
 // ── GET /api/locations ────────────────────────────────────────────────────────
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const locations = await prisma.location.findMany({
-      where: locationFilter(req.user!),
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json(locations);
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const where = locationFilter(req.user!);
+    const [total, data] = await Promise.all([
+      prisma.location.count({ where }),
+      prisma.location.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+    res.json({ data, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Locations] list error:', err);
     res.status(500).json({ error: 'Failed to fetch locations' });
