@@ -14,6 +14,7 @@ export interface AuthPayload {
   canMap: boolean;
   canSync: boolean;
   canManageLocs: boolean;
+  mustChangePassword: boolean;
   trialExpiresAt: Date | null;
   maxUsers: number | null;
 }

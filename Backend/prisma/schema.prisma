@@ -45,6 +45,7 @@ model User {
   canMap              Boolean     @default(false)
   canSync             Boolean     @default(false)
   canManageLocs       Boolean     @default(false)
+  mustChangePassword  Boolean     @default(false)
   trialExpiresAt      DateTime?
   customExpiryMessage String?
   maxUsers            Int?
@@ -72,7 +73,8 @@ model AdminRequest {
   requestedBy   String?
   approvedById  String?
   status        AdminRequestStatus @default(PENDING)
-  message       String?
+  description   String?
+  company        String?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 

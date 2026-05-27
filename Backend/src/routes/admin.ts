@@ -1,91 +1,211 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-// All admin routes require authentication + OWNER or ADMIN role
+// All admin routes require authentication + at least OWNER or ADMIN role
 router.use(authenticate, requireRole('OWNER', 'ADMIN'));
 
-// -- GET /api/admin/users
-router.get('/users', async (_req: Request, res: Response) => {
+// ── GET /api/admin/team  (ADMIN only) ─────────────────────────────────────────
+router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true, status: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
+      where: { adminId: req.user!.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        canScan: true,
+        canMap: true,
+        canSync: true,
+        canManageLocs: true,
+        trialExpiresAt: true,
+        customExpiryMessage: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
     });
     return res.json({ users });
   } catch (err) {
-    console.error('[Admin] getUsers error:', err);
+    console.error('[Admin] getTeam error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// -- GET /api/admin/requests
-router.get('/requests', async (_req: Request, res: Response) => {
+// ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
+router.post('/team/invite', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
   try {
-    const requests = await prisma.adminRequest.findMany({
-      where: { status: 'PENDING' },
-      orderBy: { createdAt: 'asc' },
-    });
-    return res.json({ requests });
-  } catch (err) {
-    console.error('[Admin] Get requests error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-});
+    const { email, role, name } = req.body as { email?: string; role?: string; name?: string };
 
-// -- POST /api/admin/requests/:id/approve
-router.post('/requests/:id/approve', async (req: AuthRequest, res: Response) => {
-  try {
-    const id = req.params['id'] as string;
-    const request = await prisma.adminRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found.' });
-    if (request.status !== 'PENDING') return res.status(409).json({ error: 'This request has already been processed.' });
-
-    await prisma.adminRequest.update({
-      where: { id },
-      data: { status: 'APPROVED', approvedById: req.user!.userId },
-    });
-
-    return res.json({ message: 'Request approved.' });
-  } catch (err) {
-    console.error('[Admin] Approve request error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-});
-
-// -- POST /api/admin/requests/:id/reject
-router.post('/requests/:id/reject', async (req: AuthRequest, res: Response) => {
-  try {
-    const id = req.params['id'] as string;
-    const request = await prisma.adminRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found.' });
-    if (request.status !== 'PENDING') return res.status(409).json({ error: 'This request has already been processed.' });
-    await prisma.adminRequest.update({
-      where: { id },
-      data: { status: 'REJECTED', approvedById: req.user!.userId },
-    });
-    return res.json({ message: 'Request rejected.' });
-  } catch (err) {
-    console.error('[Admin] Reject request error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
-  }
-});
-
-// -- DELETE /api/admin/users/:id
-router.delete('/users/:id', async (req: AuthRequest, res: Response) => {
-  try {
-    const id = req.params['id'] as string;
-    if (req.user!.userId === id) {
-      return res.status(403).json({ error: 'You cannot disable your own account.' });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email is required.' });
     }
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    const validRoles = ['STAFF', 'ACCOUNTANT', 'VIEWER'];
+    if (!role || !validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Role must be one of: STAFF, ACCOUNTANT, VIEWER.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) return res.status(409).json({ error: 'A user with this email already exists.' });
+
+    const admin = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { maxUsers: true },
+    });
+
+    if (admin && admin.maxUsers !== null) {
+      const teamSize = await prisma.user.count({ where: { adminId: req.user!.userId } });
+      if (teamSize >= admin.maxUsers) {
+        return res.status(403).json({ error: 'Team is full. Contact Nest support to increase your limit.' });
+      }
+    }
+
+    const permissionDefaultsMap: Record<string, { canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean }> = {
+      VIEWER:     { canScan: false, canMap: false, canSync: false, canManageLocs: false },
+      STAFF:      { canScan: true,  canMap: false, canSync: false, canManageLocs: false },
+      ACCOUNTANT: { canScan: true,  canMap: true,  canSync: true,  canManageLocs: false },
+    };
+    const perms = permissionDefaultsMap[role] ?? { canScan: false, canMap: false, canSync: false, canManageLocs: false };
+
+    const tempPassword = randomBytes(8).toString('hex');
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        name: name?.trim() ?? null,
+        password: hashedPassword,
+        role: role as 'STAFF' | 'ACCOUNTANT' | 'VIEWER',
+        adminId: req.user!.userId,
+        status: 'ACTIVE',
+        mustChangePassword: true,
+        ...perms,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user!.userId,
+        action: 'USER_INVITED',
+        targetId: newUser.id,
+        meta: { role, email: normalizedEmail },
+      },
+    });
+
+    return res.status(201).json({
+      user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, adminId: newUser.adminId },
+      tempPassword,
+    });
+  } catch (err) {
+    console.error('[Admin] inviteTeamMember error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── PATCH /api/admin/team/:id  (ADMIN only) ───────────────────────────────────
+router.patch('/team/:id', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const {
+      role, canScan, canMap, canSync, canManageLocs,
+      trialExpiresAt, customExpiryMessage, status,
+    } = req.body as {
+      role?: string;
+      canScan?: boolean;
+      canMap?: boolean;
+      canSync?: boolean;
+      canManageLocs?: boolean;
+      trialExpiresAt?: string | null;
+      customExpiryMessage?: string | null;
+      status?: string;
+    };
+
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.adminId !== req.user!.userId) {
+      return res.status(403).json({ error: 'You can only manage your own team members.' });
+    }
+    if (target.role === 'OWNER' || target.role === 'ADMIN') {
+      return res.status(403).json({ error: 'Cannot modify OWNER or ADMIN accounts.' });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (role !== undefined) updateData['role'] = role;
+    if (canScan !== undefined) updateData['canScan'] = canScan;
+    if (canMap !== undefined) updateData['canMap'] = canMap;
+    if (canSync !== undefined) updateData['canSync'] = canSync;
+    if (canManageLocs !== undefined) updateData['canManageLocs'] = canManageLocs;
+    if (trialExpiresAt !== undefined) updateData['trialExpiresAt'] = trialExpiresAt ? new Date(trialExpiresAt) : null;
+    if (customExpiryMessage !== undefined) updateData['customExpiryMessage'] = customExpiryMessage;
+    if (status !== undefined) updateData['status'] = status;
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true, email: true, name: true, role: true, status: true,
+        canScan: true, canMap: true, canSync: true, canManageLocs: true,
+        trialExpiresAt: true, customExpiryMessage: true, mustChangePassword: true,
+      },
+    });
+
+    const auditEntries: Array<{ actorId: string; action: string; targetId: string; meta?: object }> = [];
+    if (role !== undefined) {
+      auditEntries.push({ actorId: req.user!.userId, action: 'ROLE_CHANGED', targetId: id, meta: { newRole: role } });
+    }
+    const permKeys = (['canScan', 'canMap', 'canSync', 'canManageLocs'] as const).filter(k => req.body[k] !== undefined);
+    if (permKeys.length > 0) {
+      const changes: Record<string, unknown> = {};
+      permKeys.forEach(k => { changes[k] = req.body[k]; });
+      auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetId: id, meta: { changes } });
+    }
+    if (trialExpiresAt !== undefined || customExpiryMessage !== undefined) {
+      auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetId: id, meta: { trialExpiresAt, customExpiryMessage } });
+    }
+    if (status !== undefined) {
+      auditEntries.push({ actorId: req.user!.userId, action: 'USER_STATUS_CHANGED', targetId: id, meta: { newStatus: status } });
+    }
+
+    if (auditEntries.length > 0) {
+      await prisma.auditLog.createMany({ data: auditEntries });
+    }
+
+    return res.json({ user: updated });
+  } catch (err) {
+    console.error('[Admin] patchTeamMember error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── POST /api/admin/team/:id/disable  (ADMIN only) ───────────────────────────
+router.post('/team/:id/disable', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.adminId !== req.user!.userId) {
+      return res.status(403).json({ error: 'You can only manage your own team members.' });
+    }
+    if (target.role === 'OWNER' || target.role === 'ADMIN') {
+      return res.status(403).json({ error: 'Cannot disable OWNER or ADMIN accounts.' });
+    }
+
     await prisma.user.update({ where: { id }, data: { status: 'DISABLED' } });
+
+    await prisma.auditLog.create({
+      data: { actorId: req.user!.userId, action: 'USER_DISABLED', targetId: id },
+    });
+
     return res.json({ message: 'User disabled successfully.' });
   } catch (err) {
-    console.error('[Admin] Disable user error:', err);
+    console.error('[Admin] disableTeamMember error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });

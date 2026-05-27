@@ -1,0 +1,141 @@
+import { Router, Response } from 'express';
+import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
+
+const router = Router();
+
+router.use(authenticate, requireRole('OWNER'));
+
+// ── GET /api/owner/admins ─────────────────────────────────────────────────────
+router.get('/admins', async (_req: AuthRequest, res: Response) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        maxUsers: true,
+        status: true,
+        createdAt: true,
+        _count: { select: { teamMembers: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Join description/company from AdminRequest by email (no DB relation)
+    const adminEmails = admins.map(a => a.email);
+    const requests = await prisma.adminRequest.findMany({
+      where: { email: { in: adminEmails } },
+      select: { email: true, description: true, company: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const requestMap = new Map<string, { description: string | null; company: string | null }>();
+    for (const r of requests) {
+      if (!requestMap.has(r.email)) {
+        requestMap.set(r.email, { description: r.description, company: r.company });
+      }
+    }
+
+    const result = admins.map(a => ({
+      ...a,
+      currentTeamSize: a._count.teamMembers,
+      description: requestMap.get(a.email)?.description ?? null,
+      company: requestMap.get(a.email)?.company ?? null,
+    }));
+
+    return res.json({ admins: result });
+  } catch (err) {
+    console.error('[Owner] getAdmins error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────
+router.patch('/admins/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const { maxUsers, status } = req.body as { maxUsers?: number; status?: 'ACTIVE' | 'DISABLED' };
+
+    const admin = await prisma.user.findUnique({ where: { id } });
+    if (!admin) return res.status(404).json({ error: 'Admin not found.' });
+    if (admin.role === 'OWNER') return res.status(403).json({ error: 'Cannot modify OWNER accounts.' });
+
+    const updateData: Record<string, unknown> = {};
+    if (maxUsers !== undefined) updateData['maxUsers'] = maxUsers;
+    if (status !== undefined) updateData['status'] = status;
+
+    let updated;
+    if (status === 'DISABLED') {
+      // Soft cascade: disable all team members too
+      [updated] = await prisma.$transaction([
+        prisma.user.update({
+          where: { id },
+          data: updateData,
+          select: { id: true, email: true, name: true, maxUsers: true, status: true },
+        }),
+        prisma.user.updateMany({
+          where: { adminId: id },
+          data: { status: 'DISABLED' },
+        }),
+      ]);
+    } else {
+      updated = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: { id: true, email: true, name: true, maxUsers: true, status: true },
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user!.userId,
+        action: 'ADMIN_UPDATED',
+        targetId: id,
+        meta: { changes: { maxUsers, status } },
+      },
+    });
+
+    return res.json({ admin: updated });
+  } catch (err) {
+    console.error('[Owner] patchAdmin error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── GET /api/owner/admins/:id/team ────────────────────────────────────────────
+router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const admin = await prisma.user.findUnique({ where: { id } });
+    if (!admin) return res.status(404).json({ error: 'Admin not found.' });
+
+    const users = await prisma.user.findMany({
+      where: { adminId: id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        canScan: true,
+        canMap: true,
+        canSync: true,
+        canManageLocs: true,
+        trialExpiresAt: true,
+        customExpiryMessage: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return res.json({ users });
+  } catch (err) {
+    console.error('[Owner] getAdminTeam error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+export default router;

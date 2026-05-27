@@ -9,6 +9,8 @@ import ruleRoutes from './routes/rules';
 import scanRoutes from './routes/scans';
 import quickbooksRoutes from './routes/quickbooks';
 import adminRoutes from './routes/admin';
+import adminRequestRoutes from './routes/adminRequests';
+import ownerRoutes from './routes/owner';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
   origin: true,  // allow all origins (Chrome extension uses chrome-extension:// scheme)
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '5mb' }));
@@ -36,6 +38,8 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/quickbooks', quickbooksRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin-requests', adminRequestRoutes);
+app.use('/api/owner', ownerRoutes);
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {

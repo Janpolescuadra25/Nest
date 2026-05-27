@@ -31,6 +31,7 @@ router.post('/login', async (req: Request, res: Response) => {
         name: user.name,
         role: user.role,
         status: user.status,
+        mustChangePassword: user.mustChangePassword,
         canScan: user.canScan,
         canMap: user.canMap,
         canSync: user.canSync,
@@ -66,6 +67,7 @@ router.post('/register', async (req: Request, res: Response) => {
         password: hashedPassword,
         role: 'VIEWER',
         status: 'ACTIVE',
+        mustChangePassword: false,
       },
     });
 
@@ -78,6 +80,7 @@ router.post('/register', async (req: Request, res: Response) => {
         name: user.name,
         role: user.role,
         status: user.status,
+        mustChangePassword: user.mustChangePassword,
         canScan: user.canScan,
         canMap: user.canMap,
         canSync: user.canSync,
@@ -110,7 +113,7 @@ router.post('/change-password', authenticate, async (req: AuthRequest, res: Resp
     if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, mustChangePassword: false } });
 
     return res.json({ message: 'Password changed successfully.' });
   } catch (err) {
@@ -135,6 +138,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         canMap: true,
         canSync: true,
         canManageLocs: true,
+        mustChangePassword: true,
         trialExpiresAt: true,
         maxUsers: true,
         createdAt: true,
@@ -155,7 +159,7 @@ router.get('/session', authenticate, async (req: AuthRequest, res: Response) => 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true, name: true, status: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
+      select: { id: true, email: true, role: true, name: true, status: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });

@@ -1,0 +1,173 @@
+import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
+import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
+
+const router = Router();
+
+// ── POST /api/admin-requests  (public — no auth) ──────────────────────────────
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { email, name, description, company } = req.body as {
+      email?: string;
+      name?: string;
+      description?: string;
+      company?: string;
+    };
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email is required.' });
+    }
+    if (!description || description.trim().length < 10) {
+      return res.status(400).json({ error: 'Description must be at least 10 characters.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existing = await prisma.adminRequest.findFirst({
+      where: { email: normalizedEmail, status: 'PENDING' },
+    });
+    if (existing) return res.status(409).json({ error: 'You already have a pending request.' });
+
+    const existingAdmin = await prisma.user.findFirst({
+      where: { email: normalizedEmail, role: 'ADMIN' },
+    });
+    if (existingAdmin) return res.status(409).json({ error: 'An admin with this email already exists.' });
+
+    const request = await prisma.adminRequest.create({
+      data: {
+        email: normalizedEmail,
+        name: name?.trim() ?? null,
+        description: description.trim(),
+        company: company?.trim() ?? null,
+        status: 'PENDING',
+      },
+    });
+
+    return res.status(201).json({
+      id: request.id,
+      email: request.email,
+      status: request.status,
+      createdAt: request.createdAt,
+    });
+  } catch (err) {
+    console.error('[AdminRequests] create error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── GET /api/admin-requests  (OWNER only) ─────────────────────────────────────
+router.get('/', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10) || 20));
+    const status = req.query['status'] as string | undefined;
+
+    const where = status ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {};
+
+    const [requests, total] = await prisma.$transaction([
+      prisma.adminRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          approvedBy: { select: { id: true, name: true, email: true } },
+        },
+      }),
+      prisma.adminRequest.count({ where }),
+    ]);
+
+    return res.json({ requests, total, page, limit });
+  } catch (err) {
+    console.error('[AdminRequests] list error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── POST /api/admin-requests/:id/approve  (OWNER only) ───────────────────────
+router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const request = await prisma.adminRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    if (request.status !== 'PENDING') return res.status(400).json({ error: 'This request has already been processed.' });
+
+    const existingUser = await prisma.user.findUnique({ where: { email: request.email } });
+    if (existingUser) return res.status(409).json({ error: 'A user with this email already exists.' });
+
+    const tempPassword = randomBytes(8).toString('hex');
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    const [, newUser] = await prisma.$transaction([
+      prisma.adminRequest.update({
+        where: { id },
+        data: { status: 'APPROVED', approvedById: req.user!.userId },
+      }),
+      prisma.user.create({
+        data: {
+          email: request.email,
+          name: request.name ?? null,
+          password: hashedPassword,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+          maxUsers: 5,
+          canScan: true,
+          canMap: true,
+          canSync: true,
+          canManageLocs: true,
+          mustChangePassword: true,
+        },
+      }),
+    ]);
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user!.userId,
+        action: 'ADMIN_APPROVED',
+        targetId: newUser.id,
+        meta: { requestId: request.id, requestEmail: request.email },
+      },
+    });
+
+    return res.json({
+      user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+      tempPassword,
+    });
+  } catch (err) {
+    console.error('[AdminRequests] approve error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── POST /api/admin-requests/:id/reject  (OWNER only) ────────────────────────
+router.post('/:id/reject', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const request = await prisma.adminRequest.findUnique({ where: { id } });
+    if (!request) return res.status(404).json({ error: 'Request not found.' });
+    if (request.status !== 'PENDING') return res.status(400).json({ error: 'This request has already been processed.' });
+
+    await prisma.adminRequest.update({
+      where: { id },
+      data: { status: 'REJECTED', approvedById: req.user!.userId },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user!.userId,
+        action: 'ADMIN_REJECTED',
+        targetId: null,
+        meta: { requestId: request.id, requestEmail: request.email },
+      },
+    });
+
+    return res.json({ message: 'Request rejected.' });
+  } catch (err) {
+    console.error('[AdminRequests] reject error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+export default router;

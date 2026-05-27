@@ -39,6 +39,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
         canMap: true,
         canSync: true,
         canManageLocs: true,
+        mustChangePassword: true,
         trialExpiresAt: true,
         maxUsers: true,
       },
@@ -66,6 +67,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       canMap: user.canMap,
       canSync: user.canSync,
       canManageLocs: user.canManageLocs,
+      mustChangePassword: user.mustChangePassword,
       trialExpiresAt: user.trialExpiresAt,
       maxUsers: user.maxUsers,
     };

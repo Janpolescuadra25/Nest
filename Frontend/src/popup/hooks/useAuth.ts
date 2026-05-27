@@ -6,6 +6,12 @@ export interface UserInfo {
   email: string;
   role: string;
   name: string | null;
+  status: string;
+  mustChangePassword: boolean;
+  canScan: boolean;
+  canMap: boolean;
+  canSync: boolean;
+  canManageLocs: boolean;
 }
 
 export function useAuth() {

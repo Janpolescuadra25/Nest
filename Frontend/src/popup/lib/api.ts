@@ -46,6 +46,19 @@ async function put<T>(path: string, body: unknown, jwt?: string | null): Promise
   return res.json() as Promise<T>;
 }
 
+async function patch<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers: await headers(jwt),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+    throw new Error(err.error ?? `API ${path} failed`);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function del(path: string, jwt?: string | null): Promise<void> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'DELETE',
@@ -57,19 +70,67 @@ async function del(path: string, jwt?: string | null): Promise<void> {
   }
 }
 
+interface UserInfo {
+  id: string;
+  email: string;
+  role: string;
+  name: string | null;
+  status: string;
+  mustChangePassword: boolean;
+  canScan: boolean;
+  canMap: boolean;
+  canSync: boolean;
+  canManageLocs: boolean;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const api = {
   getSession: (jwt: string) =>
-    get<{ user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/session', jwt),
+    get<{ user: UserInfo }>('/api/auth/session', jwt),
 
   login: (email: string, password: string) =>
-    post<{ token: string; user: { id: string; email: string; role: string; name: string | null } }>('/api/auth/login', { email, password }),
+    post<{ token: string; user: UserInfo }>('/api/auth/login', { email, password }),
 
-  requestAccess: (email: string, name: string) =>
-    post<{ message: string }>('/api/auth/request-access', { email, name }),
+  changePassword: (jwt: string, currentPassword: string, newPassword: string) =>
+    post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, jwt),
 
-  forgotPassword: (email: string) =>
-    post<{ message: string }>('/api/auth/forgot-password', { email }),
+  // ── Admin Requests ─────────────────────────────────────────────────────────
+  submitAdminRequest: (email: string, name: string, description: string, company?: string) =>
+    post<{ id: string; email: string; status: string }>('/api/admin-requests', { email, name, description, company }),
+
+  getAdminRequests: (jwt: string, page = 1, status?: string) =>
+    get<{ requests: Array<{ id: string; email: string; name: string | null; description: string | null; company: string | null; status: string; createdAt: string; approvedBy?: { id: string; name: string | null } | null }>; total: number; page: number; limit: number }>(
+      `/api/admin-requests?page=${page}${status ? `&status=${status}` : ''}`, jwt
+    ),
+
+  approveAdminRequest: (jwt: string, id: string) =>
+    post<{ user: { id: string; email: string; name: string | null; role: string }; tempPassword: string }>(`/api/admin-requests/${id}/approve`, {}, jwt),
+
+  rejectAdminRequest: (jwt: string, id: string) =>
+    post<{ message: string }>(`/api/admin-requests/${id}/reject`, {}, jwt),
+
+  // ── Owner ──────────────────────────────────────────────────────────────────
+  getOwnerAdmins: (jwt: string) =>
+    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; currentTeamSize: number; description: string | null; company: string | null }> }>('/api/owner/admins', jwt),
+
+  patchOwnerAdmin: (jwt: string, id: string, data: { maxUsers?: number; status?: string }) =>
+    patch<{ admin: { id: string; email: string; name: string | null; maxUsers: number | null; status: string } }>(`/api/owner/admins/${id}`, data, jwt),
+
+  getOwnerAdminTeam: (jwt: string, adminId: string) =>
+    get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>(`/api/owner/admins/${adminId}/team`, jwt),
+
+  // ── Admin Team ─────────────────────────────────────────────────────────────
+  getAdminTeam: (jwt: string) =>
+    get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>('/api/admin/team', jwt),
+
+  inviteTeamMember: (jwt: string, email: string, role: string, name?: string) =>
+    post<{ user: { id: string; email: string; name: string | null; role: string; adminId: string }; tempPassword: string }>('/api/admin/team/invite', { email, role, name }, jwt),
+
+  patchTeamMember: (jwt: string, id: string, data: object) =>
+    patch<{ user: UserInfo }>(`/api/admin/team/${id}`, data, jwt),
+
+  disableTeamMember: (jwt: string, id: string) =>
+    post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 
   // ── Locations ──────────────────────────────────────────────────────────────
   getLocations: (jwt: string) => get<Location[]>('/api/locations', jwt),
@@ -145,27 +206,5 @@ export const api = {
   }>('/api/quickbooks/sync-all', jwt),
 
   // ── Admin ──────────────────────────────────────────────────────────────────
-  getRequests: (jwt: string) =>
-    get<{ requests: Array<{ id: string; email: string; name: string | null; type: string; status: string; createdAt: string }> }>('/api/admin/requests', jwt),
-
-  approveRequest: (id: string, jwt: string) =>
-    post<{ message: string }>(`/api/admin/requests/${id}/approve`, {}, jwt),
-
-  rejectRequest: (id: string, jwt: string) =>
-    post<{ message: string }>(`/api/admin/requests/${id}/reject`, {}, jwt),
-
-  getUsers: (jwt: string) =>
-    get<{ users: Array<{ id: string; email: string; name: string | null; role: string; createdAt: string }> }>('/api/admin/users', jwt),
-
-  deleteUser: async (id: string, jwt: string): Promise<{ message: string }> => {
-    const res = await fetch(`${BASE_URL}/api/admin/users/${id}`, {
-      method: 'DELETE',
-      headers: await headers(jwt),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-      throw new Error(err.error ?? 'Delete user failed');
-    }
-    return res.json();
-  },
 };
+
