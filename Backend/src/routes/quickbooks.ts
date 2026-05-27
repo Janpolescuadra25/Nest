@@ -4,6 +4,8 @@ import { authenticate, AuthRequest, locationFilter, requirePermission } from '..
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
 import { prisma } from '../lib/prisma';
+import { validate } from '../middleware/validate';
+import { journalEntrySchema } from '../lib/validators';
 
 const router = Router();
 
@@ -197,7 +199,7 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
 });
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, requirePermission('canSync'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;

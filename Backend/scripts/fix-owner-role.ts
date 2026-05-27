@@ -28,8 +28,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Step 2: The first user created should be the OWNER
-  const ownerEmail = topLevel[0].email;
+  // Step 2: Target specific email if provided, otherwise use first-created
+  const targetEmail = process.env.OWNER_EMAIL ?? topLevel[0].email;
+  const ownerEmail = targetEmail;
   console.log(`\nRestoring OWNER role for: ${ownerEmail}`);
 
   const updated = await prisma.user.update({

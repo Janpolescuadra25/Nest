@@ -15,8 +15,17 @@ import PartnersTab from './components/PartnersTab';
 import RequestsTab from './components/RequestsTab';
 import MyTeamTab from './components/MyTeamTab';
 import ActivityTab from './components/ActivityTab';
+import RulesView from './components/RulesView';
 import type { TabId, ScanData } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
+
+const ROLE_META: Record<string, { icon: string; color: string }> = {
+  OWNER: { icon: '👑', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-600' },
+  ADMIN: { icon: '🛡️', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-600' },
+  ACCOUNTANT: { icon: '📊', color: 'bg-blue-500/20 text-blue-300 border-blue-600' },
+  STAFF: { icon: '🧑‍💻', color: 'bg-green-500/20 text-green-300 border-green-600' },
+  VIEWER: { icon: '👁️', color: 'bg-gray-500/20 text-gray-300 border-gray-600' },
+};
 
 export default function App() {
   const { jwt, user, loading, login, logout } = useAuth();
@@ -90,17 +99,17 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('scan', 'mappings', 'preview', 'data', 'sync', 'partners', 'requests', 'activity', 'settings');
+    visibleTabs.push('scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'activity', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('my-team');
     if (user.canScan) visibleTabs.push('scan');
-    if (user.canMap) visibleTabs.push('mappings', 'preview');
+    if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
     visibleTabs.push('settings');
   } else {
     // STAFF / ACCOUNTANT / VIEWER
     if (user.canScan) visibleTabs.push('scan');
-    if (user.canMap) visibleTabs.push('mappings', 'preview');
+    if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
     visibleTabs.push('settings');
   }
@@ -121,7 +130,15 @@ export default function App() {
 
         {/* Header */}
         <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
-          <div />
+          <div className="flex items-center gap-1.5">
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${ROLE_META[user.role]?.color ?? 'bg-gray-500/20 text-gray-300 border-gray-600'}`}>
+              {ROLE_META[user.role]?.icon} {user.role}
+            </span>
+            {user.status === 'EXPIRED' && (
+              <span className="inline-flex items-center px-1 py-0.5 rounded border text-[10px] font-medium bg-yellow-900/40 text-yellow-400 border-yellow-600">⚠</span>
+            )}
+            <span className="text-[9px] text-gray-500 truncate max-w-[90px]">{user.email}</span>
+          </div>
           <div className="flex items-center justify-center gap-2">
             <span className="text-cyan-400 font-bold text-base tracking-tight">🪹 Nest</span>
             <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
@@ -183,6 +200,7 @@ export default function App() {
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
+          {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} />}
         </div>
 
         {/* Help overlay */}

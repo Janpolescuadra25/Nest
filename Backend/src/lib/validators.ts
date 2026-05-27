@@ -48,3 +48,33 @@ export const patchTeamMemberSchema = z.object({
   customExpiryMessage: z.string().max(500).optional().nullable(),
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),
 });
+
+export const journalEntrySchema = z.object({
+  txnDate: z.string().min(1, 'Transaction date is required'),
+  lines: z.array(z.object({
+    amount: z.number().positive('Amount must be positive'),
+    postingType: z.enum(['Debit', 'Credit']),
+    accountRef: z.object({
+      value: z.string().min(1, 'Account value is required'),
+      name: z.string().optional(),
+    }),
+    description: z.string().optional(),
+    classRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+    departmentRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+    entityRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+      type: z.string().optional(),
+    }).optional(),
+    memo: z.string().optional(),
+  })).min(1, 'At least one line item is required'),
+  scanRecordId: z.string().optional(),
+  privateNote: z.string().optional(),
+  docNumber: z.string().optional(),
+});

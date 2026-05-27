@@ -4,6 +4,7 @@ import type { TabId } from '../../types';
 const ALL_TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'scan', label: 'Scan', icon: '🔍' },
   { id: 'mappings', label: 'Map', icon: '🗺️' },
+  { id: 'rules', label: 'Rules', icon: '📐' },
   { id: 'preview', label: 'Preview', icon: '📋' },
   { id: 'data', label: 'Data', icon: '📊' },
   { id: 'sync', label: 'Sync', icon: '⚡' },
