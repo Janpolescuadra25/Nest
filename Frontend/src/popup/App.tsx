@@ -30,7 +30,7 @@ const ROLE_META: Record<string, { icon: string; color: string }> = {
 
 export default function App() {
   const { jwt, user, loading, login, logout } = useAuth();
-  const [currentTab, setCurrentTab] = useState<TabId>('scan');
+  const [currentTab, setCurrentTab] = useState<TabId>('dashboard');
   const [scanData, setScanData] = useState<ScanData | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [showHelp, setShowHelp] = useState(false);

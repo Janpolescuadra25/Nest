@@ -1,7 +1,3 @@
-// OWNER stats endpoint
-export async function getOwnerStats(jwt: string) {
-  return get<{ [key: string]: number }>(`/api/owner/stats`, jwt);
-}
 import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
@@ -120,6 +116,18 @@ export const api = {
     post<{ message: string }>(`/api/admin-requests/${id}/reject`, {}, jwt),
 
   // ── Owner ──────────────────────────────────────────────────────────────────
+  getOwnerStats: (jwt: string) =>
+    get<{
+      totalPartners: number;
+      totalTeamMembers: number;
+      totalLocations: number;
+      totalScans: number;
+      totalSynced: number;
+      totalFailed: number;
+      totalPendingRequests: number;
+      expiredMembers: number;
+    }>('/api/owner/stats', jwt),
+
   getAuditLog: (jwt: string, params?: { page?: number; limit?: number; action?: string; actorId?: string; dateFrom?: string; dateTo?: string }) => {
     const sp = new URLSearchParams();
     if (params?.page) sp.set('page', String(params.page));
@@ -133,7 +141,7 @@ export const api = {
   },
 
   getOwnerAdmins: (jwt: string) =>
-    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; currentTeamSize: number; description: string | null; company: string | null }> }>('/api/owner/admins', jwt),
+    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null }> }>('/api/owner/admins', jwt),
 
   patchOwnerAdmin: (jwt: string, id: string, data: { maxUsers?: number; status?: string }) =>
     patch<{ admin: { id: string; email: string; name: string | null; maxUsers: number | null; status: string } }>(`/api/owner/admins/${id}`, data, jwt),

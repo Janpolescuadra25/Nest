@@ -1,10 +1,321 @@
-import React from 'react';
-// TODO: Implement full dashboard UI and data fetching
-export default function DashboardView({ jwt }: { jwt: string }) {
+import React, { useCallback, useEffect, useState } from 'react';
+import { api } from '../lib/api';
+import { useToast } from './Toast';
+import type { QBStatus } from '../../types';
+
+interface Props {
+  jwt: string;
+}
+
+interface OwnerStats {
+  totalPartners: number;
+  totalTeamMembers: number;
+  totalLocations: number;
+  totalScans: number;
+  totalSynced: number;
+  totalFailed: number;
+  totalPendingRequests: number;
+  expiredMembers: number;
+}
+
+interface AdminRequest {
+  id: string;
+  email: string;
+  name: string | null;
+  description: string | null;
+  company: string | null;
+  status: string;
+  createdAt: string;
+}
+
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor: { id: string; name: string | null; email: string };
+}
+
+interface AdminPartner {
+  id: string;
+  email: string;
+  name: string | null;
+  maxUsers: number | null;
+  status: string;
+  currentTeamSize: number;
+  updatedAt: string;
+}
+
+const EMPTY_STATS: OwnerStats = {
+  totalPartners: 0,
+  totalTeamMembers: 0,
+  totalLocations: 0,
+  totalScans: 0,
+  totalSynced: 0,
+  totalFailed: 0,
+  totalPendingRequests: 0,
+  expiredMembers: 0,
+};
+
+function relativeTime(dateStr?: string): string {
+  if (!dateStr) return '-';
+  const then = new Date(dateStr).getTime();
+  if (Number.isNaN(then)) return '-';
+  const diffSec = Math.floor((Date.now() - then) / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  const diffMo = Math.floor(diffDay / 30);
+  if (diffMo < 12) return `${diffMo}mo ago`;
+  return `${Math.floor(diffMo / 12)}y ago`;
+}
+
+function formatAction(action: string): string {
+  return action
+    .toLowerCase()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+export default function DashboardView({ jwt }: Props) {
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+
+  const [stats, setStats] = useState<OwnerStats>(EMPTY_STATS);
+  const [qbStatus, setQbStatus] = useState<QBStatus>({ connected: false });
+  const [pendingRequests, setPendingRequests] = useState<AdminRequest[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AuditLogEntry[]>([]);
+  const [partners, setPartners] = useState<AdminPartner[]>([]);
+
+  const fetchPendingRequests = useCallback(async () => {
+    const data = await api.getAdminRequests(jwt, 1, 'PENDING');
+    setPendingRequests(data.requests as AdminRequest[]);
+  }, [jwt]);
+
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [statsData, qbData, requestsData, activityData, adminsData] = await Promise.all([
+        api.getOwnerStats(jwt),
+        api.getQBStatus(jwt),
+        api.getAdminRequests(jwt, 1, 'PENDING'),
+        api.getAuditLog(jwt, { page: 1, limit: 5 }),
+        api.getOwnerAdmins(jwt),
+      ]);
+      setStats(statsData);
+      setQbStatus(qbData);
+      setPendingRequests(requestsData.requests as AdminRequest[]);
+      setRecentActivity(activityData.logs as AuditLogEntry[]);
+      setPartners(adminsData.admins as AdminPartner[]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
+    }
+  }, [jwt]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  const handleApprove = async (id: string) => {
+    setActionLoading(prev => ({ ...prev, [`approve_${id}`]: true }));
+    try {
+      await api.approveAdminRequest(jwt, id);
+      showToast('Request approved', 'success');
+      await fetchPendingRequests();
+      const refreshedStats = await api.getOwnerStats(jwt);
+      setStats(refreshedStats);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to approve request', 'error');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`approve_${id}`]: false }));
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setActionLoading(prev => ({ ...prev, [`reject_${id}`]: true }));
+    try {
+      await api.rejectAdminRequest(jwt, id);
+      showToast('Request rejected', 'success');
+      await fetchPendingRequests();
+      const refreshedStats = await api.getOwnerStats(jwt);
+      setStats(refreshedStats);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reject request', 'error');
+    } finally {
+      setActionLoading(prev => ({ ...prev, [`reject_${id}`]: false }));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-3">
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+        </div>
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-24" />
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-28" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <div className="bg-red-900/40 border border-red-700 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-red-300">{error}</p>
+          <button
+            onClick={fetchDashboard}
+            className="px-3 py-1.5 rounded bg-red-800 text-red-100 text-xs hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 text-white">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">🏠 Dashboard <span className="text-xs font-normal text-gray-400">(stub)</span></h2>
-      <div className="text-gray-400">Dashboard content will appear here.</div>
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-white">🏠 Dashboard</h2>
+        {stats.expiredMembers > 0 && (
+          <span className="text-xs px-2 py-1 rounded bg-yellow-900/50 border border-yellow-700 text-yellow-300">
+            ⚠ {stats.expiredMembers} expired members
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">🤝 Partners</div>
+          <div className="text-2xl font-bold text-white mt-1">{stats.totalPartners}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">🔍 Scans</div>
+          <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">✅ Synced</div>
+          <div className="text-2xl font-bold text-green-400 mt-1">{stats.totalSynced}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">❌ Failed</div>
+          <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
+        </div>
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
+        <h3 className="text-sm font-medium text-cyan-300">QuickBooks Connection</h3>
+        {qbStatus.connected ? (
+          <>
+            <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
+            <p className="text-xs text-gray-400">Token expires: {qbStatus.expiresAt ? new Date(qbStatus.expiresAt).toLocaleString() : '-'}</p>
+          </>
+        ) : (
+          <p className="text-sm text-yellow-400">⚠ Not connected</p>
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-cyan-300">Pending Requests</h3>
+        {pendingRequests.length === 0 ? (
+          <p className="text-sm text-gray-500">No pending requests</p>
+        ) : (
+          pendingRequests.map(req => (
+            <div key={req.id} className="bg-slate-900 border border-slate-700 rounded p-2 space-y-1">
+              <div className="text-sm text-white truncate">📬 {req.email}</div>
+              <div className="text-xs text-gray-400">{req.company ?? 'No company provided'}</div>
+              <div className="text-xs text-gray-500">{req.description ?? 'No description provided'}</div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => handleApprove(req.id)}
+                  disabled={actionLoading[`approve_${req.id}`]}
+                  className="px-2 py-1 rounded bg-green-800 text-green-100 text-xs hover:bg-green-700 disabled:opacity-50"
+                >
+                  {actionLoading[`approve_${req.id}`] ? 'Approving...' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => handleReject(req.id)}
+                  disabled={actionLoading[`reject_${req.id}`]}
+                  className="px-2 py-1 rounded bg-red-900 text-red-200 text-xs hover:bg-red-800 disabled:opacity-50"
+                >
+                  {actionLoading[`reject_${req.id}`] ? 'Rejecting...' : 'Reject'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-cyan-300">Recent Activity</h3>
+        {recentActivity.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent activity</p>
+        ) : (
+          recentActivity.map(log => (
+            <div key={log.id} className="flex items-start justify-between gap-2 bg-slate-900 border border-slate-700 rounded p-2">
+              <div className="min-w-0">
+                <p className="text-sm text-gray-200 truncate">{formatAction(log.action)}</p>
+                <p className="text-xs text-gray-500 truncate">{log.actor.name ?? log.actor.email}</p>
+              </div>
+              <span className="text-xs text-gray-500 flex-shrink-0">{relativeTime(log.createdAt)}</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+        <h3 className="text-sm font-medium text-cyan-300 mb-2">Partners</h3>
+        {partners.length === 0 ? (
+          <p className="text-sm text-gray-500">No partners yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-slate-700">
+                  <th className="py-2 pr-2">Email</th>
+                  <th className="py-2 pr-2">Team</th>
+                  <th className="py-2 pr-2">Status</th>
+                  <th className="py-2">Last Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {partners.map(partner => (
+                  <tr key={partner.id} className="border-b border-slate-800/80 text-gray-200">
+                    <td className="py-2 pr-2 truncate max-w-[150px]">{partner.email}</td>
+                    <td className="py-2 pr-2">{partner.currentTeamSize}/{partner.maxUsers ?? '-'}</td>
+                    <td className="py-2 pr-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[11px] ${
+                        partner.status === 'ACTIVE'
+                          ? 'bg-green-900 text-green-400'
+                          : partner.status === 'DISABLED'
+                            ? 'bg-red-900 text-red-400'
+                            : 'bg-yellow-900 text-yellow-400'
+                      }`}>
+                        {partner.status}
+                      </span>
+                    </td>
+                    <td className="py-2 text-gray-400">{relativeTime(partner.updatedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
