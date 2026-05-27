@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { sendTrialExpired } from '../lib/email';
 
 async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
   try {
@@ -8,7 +9,7 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
         trialExpiresAt: { not: null, lt: new Date() },
         status: 'ACTIVE',
       },
-      select: { id: true, trialExpiresAt: true, role: true },
+      select: { id: true, email: true, name: true, trialExpiresAt: true, role: true, customExpiryMessage: true },
     });
 
     if (expiredUsers.length === 0) return;
@@ -25,9 +26,9 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
       },
     });
 
-    // Step 3 — Write audit log entries in parallel
-    try {
-      await Promise.all(
+    // Step 3 — Write audit log entries + send expiry emails in parallel (allSettled so one failure doesn't block the other)
+    await Promise.allSettled([
+      Promise.all(
         expiredUsers.map(user =>
           prisma.auditLog.create({
             data: {
@@ -42,10 +43,16 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
             },
           })
         )
-      );
-    } catch (auditErr) {
-      console.error('[TimeBomb] Failed to write audit logs:', auditErr);
-    }
+      ).catch((err) => console.error('[TimeBomb] Failed to write audit logs:', err)),
+      ...expiredUsers.map(user =>
+        sendTrialExpired({
+          to: user.email,
+          name: user.name,
+          trialExpiresAt: user.trialExpiresAt,
+          customExpiryMessage: user.customExpiryMessage,
+        })
+      ),
+    ]);
 
     // Step 4 — Log result
     console.log(`[TimeBomb] Expired ${expiredUsers.length} trial user${expiredUsers.length !== 1 ? 's' : ''}`);

@@ -20,7 +20,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "resend": "^6.12.3"
+    "resend": "^6.12.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

@@ -13,6 +13,7 @@ import adminRequestRoutes from './routes/adminRequests';
 import ownerRoutes from './routes/owner';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
+import { startTrialWarningCron } from './cron/trial-warnings';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,6 +57,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // ── Start ────────────────────────────────────────────────────────────────────
 startTimeBombCron(prisma);
+startTrialWarningCron(prisma);
 app.listen(PORT, () => {
   console.log(`[Nest] Server running on http://localhost:${PORT}`);
   console.log(`[Nest] Environment: ${process.env.NODE_ENV ?? 'development'}`);

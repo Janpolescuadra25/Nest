@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { sendWelcomeEmail } from '../lib/email';
 
 const router = Router();
 
@@ -130,6 +131,8 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: Auth
         meta: { requestId: request.id, requestEmail: request.email },
       },
     });
+
+    sendWelcomeEmail({ to: request.email, name: request.name, tempPassword }).catch(() => {});
 
     return res.json({
       user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
