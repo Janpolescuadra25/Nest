@@ -4,6 +4,8 @@ import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
+import { validate } from '../middleware/validate';
+import { teamInviteSchema, patchTeamMemberSchema } from '../lib/validators';
 
 const router = Router();
 
@@ -40,7 +42,7 @@ router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response
 });
 
 // ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
-router.post('/team/invite', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), async (req: AuthRequest, res: Response) => {
   try {
     const { email, role, name } = req.body as { email?: string; role?: string; name?: string };
 
@@ -113,7 +115,7 @@ router.post('/team/invite', requireRole('ADMIN'), async (req: AuthRequest, res: 
 });
 
 // ── PATCH /api/admin/team/:id  (ADMIN only) ───────────────────────────────────
-router.patch('/team/:id', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema), async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const {

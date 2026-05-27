@@ -3,12 +3,15 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { sendPasswordResetEmail } from '../lib/email';
+import { passwordResetLimiter } from '../middleware/rate-limit';
+import { validate } from '../middleware/validate';
+import { passwordResetRequestSchema, passwordResetVerifySchema } from '../lib/validators';
 
 const router = Router();
 
 // ── POST /api/password-reset/request ─────────────────────────────────────────
 
-router.post('/request', async (req, res) => {
+router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchema), async (req, res) => {
   const { email } = req.body as { email?: string };
 
   const GENERIC_RESPONSE = { message: 'If an account exists, a reset link has been sent.' };
@@ -49,7 +52,7 @@ router.post('/request', async (req, res) => {
 
 // ── POST /api/password-reset/verify ──────────────────────────────────────────
 
-router.post('/verify', async (req, res) => {
+router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema), async (req, res) => {
   const { token, newPassword } = req.body as { token?: string; newPassword?: string };
 
   if (!token || typeof token !== 'string') {

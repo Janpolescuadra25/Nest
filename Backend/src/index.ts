@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: true,  // allow all origins (Chrome extension uses chrome-extension:// scheme)
+  origin: process.env.CORS_ORIGIN || 'chrome-extension://*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

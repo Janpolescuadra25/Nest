@@ -4,11 +4,13 @@ import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail } from '../lib/email';
+import { validate } from '../middleware/validate';
+import { adminRequestSchema } from '../lib/validators';
 
 const router = Router();
 
 // ── POST /api/admin-requests  (public — no auth) ──────────────────────────────
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validate(adminRequestSchema), async (req: Request, res: Response) => {
   try {
     const { email, name, description, company } = req.body as {
       email?: string;

@@ -3,12 +3,15 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { authLimiter } from '../middleware/rate-limit';
+import { validate } from '../middleware/validate';
+import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authLimiter, validate(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -46,7 +49,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
 // POST /api/auth/register
 // Creates a new VIEWER account. No admin approval required.
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authLimiter, validate(registerSchema), async (req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body as { email?: string; password?: string; name?: string };
     if (!email || !password) {
@@ -94,7 +97,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/change-password  (requires authentication)
-router.post('/change-password', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/change-password', authenticate, validate(changePasswordSchema), async (req: AuthRequest, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
     if (!currentPassword || !newPassword) {
