@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 
 interface Admin {
   id: string;
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function PartnersTab({ jwt }: Props) {
+  const { showToast } = useToast();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,8 +76,10 @@ export default function PartnersTab({ jwt }: Props) {
     try {
       await api.patchOwnerAdmin(jwt, admin.id, { status: newStatus });
       await fetch();
+      showToast(newStatus === 'DISABLED' ? 'Admin disabled' : 'Admin updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update partner.');
+      showToast('Update failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [admin.id]: false }));
     }
@@ -89,8 +93,10 @@ export default function PartnersTab({ jwt }: Props) {
       await api.patchOwnerAdmin(jwt, admin.id, { maxUsers: val });
       setEditMaxUsers(p => { const n = { ...p }; delete n[admin.id]; return n; });
       await fetch();
+      showToast('Admin updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update limit.');
+      showToast('Update failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`mu_${admin.id}`]: false }));
     }
@@ -148,7 +154,7 @@ export default function PartnersTab({ jwt }: Props) {
                   disabled={actionLoading[`mu_${admin.id}`]}
                   className="px-2 py-1 bg-cyan-700 text-cyan-200 rounded text-xs hover:bg-cyan-600 disabled:opacity-50"
                 >
-                  {actionLoading[`mu_${admin.id}`] ? '...' : 'Update'}
+                  {actionLoading[`mu_${admin.id}`] ? 'Saving...' : 'Update'}
                 </button>
               </div>
               <button

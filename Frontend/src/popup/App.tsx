@@ -16,6 +16,7 @@ import RequestsTab from './components/RequestsTab';
 import MyTeamTab from './components/MyTeamTab';
 import ActivityTab from './components/ActivityTab';
 import type { TabId, ScanData } from '../types';
+import { ToastProvider, ToastContainer } from './components/Toast';
 
 export default function App() {
   const { jwt, user, loading, login, logout } = useAuth();
@@ -40,12 +41,15 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
-          <span className="text-sm font-semibold text-white">Nest</span>
+      <ToastProvider>
+        <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
+            <span className="text-sm font-semibold text-white">Nest</span>
+          </div>
+          <LoginView onLogin={login} />
         </div>
-        <LoginView onLogin={login} />
-      </div>
+        <ToastContainer />
+      </ToastProvider>
     );
   }
 
@@ -68,13 +72,16 @@ export default function App() {
   // Must change password — show password change flow
   if (user.mustChangePassword) {
     return (
-      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
-          <span className="text-sm font-semibold text-white">Nest</span>
-          <button onClick={logout} className="text-xs text-gray-500 hover:text-gray-300">Sign Out</button>
+      <ToastProvider>
+        <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
+            <span className="text-sm font-semibold text-white">Nest</span>
+            <button onClick={logout} className="text-xs text-gray-500 hover:text-gray-300">Sign Out</button>
+          </div>
+          <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
         </div>
-        <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
-      </div>
+        <ToastContainer />
+      </ToastProvider>
     );
   }
 
@@ -102,6 +109,7 @@ export default function App() {
   const effectiveTab = visibleTabs.includes(currentTab) ? currentTab : (visibleTabs[0] ?? 'settings');
 
   return (
+    <ToastProvider>
     <QBContextProvider jwt={jwt!}>
       <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         {/* Expired trial warning banner */}
@@ -181,6 +189,8 @@ export default function App() {
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
       </div>
     </QBContextProvider>
+    <ToastContainer />
+    </ToastProvider>
   );
 }
 

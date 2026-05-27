@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 
 interface Props {
   jwt: string;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function ChangePasswordView({ jwt, onDone }: Props) {
+  const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -27,9 +29,11 @@ export default function ChangePasswordView({ jwt, onDone }: Props) {
     setLoading(true);
     try {
       await api.changePassword(jwt, currentPassword, newPassword);
+      showToast('Password updated successfully', 'success');
       onDone();
     } catch (err: any) {
       setError(err.message || 'Failed to change password.');
+      showToast('Password change failed', 'error');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 
 interface AdminRequest {
   id: string;
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function RequestsTab({ jwt }: Props) {
+  const { showToast } = useToast();
   const [requests, setRequests] = useState<AdminRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,8 +53,10 @@ export default function RequestsTab({ jwt }: Props) {
       const result = await api.approveAdminRequest(jwt, id);
       setApproveResult(result);
       await fetchRequests();
+      showToast('Partner approved', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to approve request.');
+      showToast('Action failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [id]: false }));
     }
@@ -63,8 +67,10 @@ export default function RequestsTab({ jwt }: Props) {
     try {
       await api.rejectAdminRequest(jwt, id);
       await fetchRequests();
+      showToast('Request rejected', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to reject request.');
+      showToast('Action failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`r_${id}`]: false }));
     }
@@ -134,14 +140,14 @@ export default function RequestsTab({ jwt }: Props) {
                       disabled={actionLoading[req.id]}
                       className="flex-1 py-1.5 bg-green-800 text-green-200 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50"
                     >
-                      {actionLoading[req.id] ? '...' : 'Approve'}
+                      {actionLoading[req.id] ? 'Approving...' : 'Approve'}
                     </button>
                     <button
                       onClick={() => handleReject(req.id)}
                       disabled={actionLoading[`r_${req.id}`]}
                       className="flex-1 py-1.5 bg-red-900 text-red-300 rounded text-xs font-medium hover:bg-red-800 disabled:opacity-50"
                     >
-                      {actionLoading[`r_${req.id}`] ? '...' : 'Reject'}
+                      {actionLoading[`r_${req.id}`] ? 'Rejecting...' : 'Reject'}
                     </button>
                   </div>
                 )}

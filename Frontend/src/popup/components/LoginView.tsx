@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 import { UserInfo } from '../hooks/useAuth';
 
 type View = 'login' | 'forgot-password' | 'become-partner';
@@ -9,6 +10,7 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onLogin }: LoginViewProps) {
+  const { showToast } = useToast();
   const [view, setView] = useState<View>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +36,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
       onLogin(data.user, data.token);
     } catch (err: any) {
       setError(err.message || 'Login failed.');
+      showToast('Invalid email or password', 'error');
     } finally {
       setLoading(false);
     }
@@ -56,6 +59,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
       setDescription('');
     } catch (err: any) {
       setError(err.message || 'Submission failed.');
+      showToast('Registration failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -70,6 +74,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
       setResetSent(true);
     } catch {
       setResetError('Something went wrong. Please try again.');
+      showToast('Something went wrong', 'error');
     } finally {
       setResetLoading(false);
     }

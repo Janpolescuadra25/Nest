@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { useToast } from './Toast';
 
 interface TeamMember {
   id: string;
@@ -29,6 +30,7 @@ interface Props {
 const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT'];
 
 export default function MyTeamTab({ jwt }: Props) {
+  const { showToast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,8 +74,10 @@ export default function MyTeamTab({ jwt }: Props) {
       setInviteRole('STAFF');
       setShowInvite(false);
       await fetchTeam();
+      showToast('Invitation sent!', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to invite member.');
+      showToast('Failed to send invitation', 'error');
     } finally {
       setActionLoading(p => ({ ...p, invite: false }));
     }
@@ -84,8 +88,10 @@ export default function MyTeamTab({ jwt }: Props) {
     try {
       await api.disableTeamMember(jwt, id);
       await fetchTeam();
+      showToast('Member disabled', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to disable member.');
+      showToast('Failed to disable member', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [id]: false }));
     }
@@ -96,8 +102,10 @@ export default function MyTeamTab({ jwt }: Props) {
     try {
       await api.patchTeamMember(jwt, id, { [field]: value });
       await fetchTeam();
+      showToast('Member updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update permission.');
+      showToast('Update failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`p_${id}_${field}`]: false }));
     }
@@ -108,8 +116,10 @@ export default function MyTeamTab({ jwt }: Props) {
     try {
       await api.patchTeamMember(jwt, id, { role });
       await fetchTeam();
+      showToast('Member updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update role.');
+      showToast('Update failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`role_${id}`]: false }));
     }
@@ -134,14 +144,17 @@ export default function MyTeamTab({ jwt }: Props) {
     setTrialLoading(p => ({ ...p, [id]: true }));
     try {
       const enabled = trialEnabled[id];
+      const hasDate = enabled && !!trialDate[id];
       const data: Record<string, unknown> = {
-        trialExpiresAt: enabled && trialDate[id] ? new Date(trialDate[id]).toISOString() : null,
+        trialExpiresAt: hasDate ? new Date(trialDate[id]).toISOString() : null,
         customExpiryMessage: enabled && trialMsg[id] ? trialMsg[id] : null,
       };
       await api.patchTeamMember(jwt, id, data);
       await fetchTeam();
+      showToast(hasDate ? 'Trial period renewed' : 'Trial settings saved', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to save trial settings.');
+      showToast('Failed to save trial settings', 'error');
     } finally {
       setTrialLoading(p => ({ ...p, [id]: false }));
     }
