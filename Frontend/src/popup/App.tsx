@@ -14,6 +14,7 @@ import HelpPanel from './components/HelpPanel';
 import PartnersTab from './components/PartnersTab';
 import RequestsTab from './components/RequestsTab';
 import MyTeamTab from './components/MyTeamTab';
+import ActivityTab from './components/ActivityTab';
 import type { TabId, ScanData } from '../types';
 
 export default function App() {
@@ -82,7 +83,7 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('scan', 'mappings', 'preview', 'data', 'sync', 'partners', 'requests', 'settings');
+    visibleTabs.push('scan', 'mappings', 'preview', 'data', 'sync', 'partners', 'requests', 'activity', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('my-team');
     if (user.canScan) visibleTabs.push('scan');
@@ -173,6 +174,7 @@ export default function App() {
           {effectiveTab === 'partners' && <PartnersTab jwt={jwt!} />}
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
+          {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
         </div>
 
         {/* Help overlay */}

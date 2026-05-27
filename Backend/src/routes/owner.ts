@@ -138,4 +138,49 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ── GET /api/owner/audit-log ─────────────────────────────────────────────────
+router.get('/audit-log', async (req: AuthRequest, res: Response) => {
+  try {
+    const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '25'), 10) || 25));
+    const actionFilter = req.query['action'] ? String(req.query['action']) : undefined;
+    const actorIdFilter = req.query['actorId'] ? String(req.query['actorId']) : undefined;
+    const dateFrom = req.query['dateFrom'] ? String(req.query['dateFrom']) : undefined;
+    const dateTo = req.query['dateTo'] ? String(req.query['dateTo']) : undefined;
+
+    const where: Record<string, unknown> = {};
+    if (actionFilter) where['action'] = { contains: actionFilter };
+    if (actorIdFilter) where['actorId'] = actorIdFilter;
+    if (dateFrom || dateTo) {
+      const createdAt: Record<string, Date> = {};
+      if (dateFrom) createdAt['gte'] = new Date(dateFrom);
+      if (dateTo) createdAt['lte'] = new Date(dateTo);
+      where['createdAt'] = createdAt;
+    }
+
+    const [total, logs] = await prisma.$transaction([
+      prisma.auditLog.count({ where }),
+      prisma.auditLog.findMany({
+        where,
+        select: {
+          id: true,
+          action: true,
+          meta: true,
+          createdAt: true,
+          actor: { select: { id: true, name: true, email: true } },
+          target: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return res.json({ logs, total, page, limit });
+  } catch (err) {
+    console.error('[Owner] getAuditLog error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 export default router;

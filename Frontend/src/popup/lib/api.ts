@@ -70,6 +70,15 @@ async function del(path: string, jwt?: string | null): Promise<void> {
   }
 }
 
+interface AuditLogEntry {
+  id: string;
+  action: string;
+  meta: any;
+  createdAt: string;
+  actor: { id: string; name: string | null; email: string };
+  target: { id: string; name: string | null; email: string } | null;
+}
+
 interface UserInfo {
   id: string;
   email: string;
@@ -110,6 +119,18 @@ export const api = {
     post<{ message: string }>(`/api/admin-requests/${id}/reject`, {}, jwt),
 
   // ── Owner ──────────────────────────────────────────────────────────────────
+  getAuditLog: (jwt: string, params?: { page?: number; limit?: number; action?: string; actorId?: string; dateFrom?: string; dateTo?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.limit) sp.set('limit', String(params.limit));
+    if (params?.action) sp.set('action', params.action);
+    if (params?.actorId) sp.set('actorId', params.actorId);
+    if (params?.dateFrom) sp.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) sp.set('dateTo', params.dateTo);
+    const qs = sp.toString();
+    return get<{ logs: AuditLogEntry[]; total: number; page: number; limit: number }>(`/api/owner/audit-log${qs ? '?' + qs : ''}`, jwt);
+  },
+
   getOwnerAdmins: (jwt: string) =>
     get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; currentTeamSize: number; description: string | null; company: string | null }> }>('/api/owner/admins', jwt),
 

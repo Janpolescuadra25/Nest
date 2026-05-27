@@ -13,6 +13,8 @@ interface TeamMember {
   canManageLocs: boolean;
   mustChangePassword: boolean;
   createdAt?: string;
+  trialExpiresAt?: string | null;
+  customExpiryMessage?: string | null;
 }
 
 interface InviteResult {
@@ -37,6 +39,11 @@ export default function MyTeamTab({ jwt }: Props) {
   const [inviteRole, setInviteRole] = useState('STAFF');
   const [inviteName, setInviteName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // trial editing: keyed by member id
+  const [trialEnabled, setTrialEnabled] = useState<Record<string, boolean>>({});
+  const [trialDate, setTrialDate] = useState<Record<string, string>>({});
+  const [trialMsg, setTrialMsg] = useState<Record<string, string>>({});
+  const [trialLoading, setTrialLoading] = useState<Record<string, boolean>>({});
 
   const fetchTeam = useCallback(async () => {
     setLoading(true);
@@ -107,6 +114,51 @@ export default function MyTeamTab({ jwt }: Props) {
       setActionLoading(p => ({ ...p, [`role_${id}`]: false }));
     }
   };
+
+  const handleExpandMember = (member: TeamMember) => {
+    const isOpening = expandedId !== member.id;
+    setExpandedId(isOpening ? member.id : null);
+    if (isOpening) {
+      // Initialise trial state from current data
+      const hasTrial = !!member.trialExpiresAt;
+      setTrialEnabled(p => ({ ...p, [member.id]: hasTrial }));
+      setTrialDate(p => ({
+        ...p,
+        [member.id]: member.trialExpiresAt ? member.trialExpiresAt.slice(0, 10) : '',
+      }));
+      setTrialMsg(p => ({ ...p, [member.id]: member.customExpiryMessage ?? '' }));
+    }
+  };
+
+  const handleTrialSave = async (id: string) => {
+    setTrialLoading(p => ({ ...p, [id]: true }));
+    try {
+      const enabled = trialEnabled[id];
+      const data: Record<string, unknown> = {
+        trialExpiresAt: enabled && trialDate[id] ? new Date(trialDate[id]).toISOString() : null,
+        customExpiryMessage: enabled && trialMsg[id] ? trialMsg[id] : null,
+      };
+      await api.patchTeamMember(jwt, id, data);
+      await fetchTeam();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save trial settings.');
+    } finally {
+      setTrialLoading(p => ({ ...p, [id]: false }));
+    }
+  };
+
+  function trialCountdown(trialExpiresAt: string | null | undefined): React.ReactNode {
+    if (!trialExpiresAt) return null;
+    const now = Date.now();
+    const exp = new Date(trialExpiresAt).getTime();
+    const diffMs = exp - now;
+    if (diffMs <= 0) {
+      return <span className="text-xs text-red-400 font-medium">EXPIRED</span>;
+    }
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const color = days <= 3 ? 'text-red-400' : days <= 7 ? 'text-orange-400' : 'text-yellow-400';
+    return <span className={`text-xs font-medium ${color}`}>{days}d left</span>;
+  }
 
   const PermToggle = ({ memberId, field, value, label }: { memberId: string; field: string; value: boolean; label: string }) => (
     <button
@@ -193,9 +245,10 @@ export default function MyTeamTab({ jwt }: Props) {
                     {member.status}
                   </span>
                   {member.mustChangePassword && <span className="text-xs text-yellow-500">⚠ needs pw change</span>}
+                  {trialCountdown(member.trialExpiresAt)}
                 </div>
               </div>
-              <button onClick={() => setExpandedId(expandedId === member.id ? null : member.id)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">
+              <button onClick={() => handleExpandMember(member)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">
                 {expandedId === member.id ? '▲' : '▼'}
               </button>
             </div>
@@ -234,6 +287,49 @@ export default function MyTeamTab({ jwt }: Props) {
                     {actionLoading[member.id] ? 'Disabling...' : 'Disable Member'}
                   </button>
                 )}
+
+                {/* Trial Period */}
+                <div className="pt-2 border-t border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400 font-medium">Trial Period</p>
+                    <button
+                      onClick={() => setTrialEnabled(p => ({ ...p, [member.id]: !p[member.id] }))}
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[member.id] ? 'bg-yellow-800 text-yellow-300' : 'bg-slate-700 text-gray-500'}`}
+                    >
+                      {trialEnabled[member.id] ? 'Enabled' : 'Disabled'}
+                    </button>
+                  </div>
+                  {trialEnabled[member.id] && (
+                    <div className="space-y-1.5">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-0.5">Expiry date</label>
+                        <input
+                          type="date"
+                          value={trialDate[member.id] ?? ''}
+                          onChange={e => setTrialDate(p => ({ ...p, [member.id]: e.target.value }))}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-0.5">Custom message</label>
+                        <textarea
+                          value={trialMsg[member.id] ?? ''}
+                          onChange={e => setTrialMsg(p => ({ ...p, [member.id]: e.target.value }))}
+                          placeholder="Your trial has expired. Contact your admin to extend access."
+                          rows={2}
+                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleTrialSave(member.id)}
+                    disabled={trialLoading[member.id]}
+                    className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                  >
+                    {trialLoading[member.id] ? 'Saving...' : 'Save Trial Settings'}
+                  </button>
+                </div>
               </div>
             )}
           </div>

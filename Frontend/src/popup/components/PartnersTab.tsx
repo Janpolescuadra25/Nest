@@ -13,6 +13,14 @@ interface Admin {
   company: string | null;
 }
 
+interface TeamMemberSummary {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  status: string;
+}
+
 interface Props {
   jwt: string;
 }
@@ -24,6 +32,9 @@ export default function PartnersTab({ jwt }: Props) {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editMaxUsers, setEditMaxUsers] = useState<Record<string, string>>({});
+  const [teamMembers, setTeamMembers] = useState<Record<string, TeamMemberSummary[]>>({});
+  const [teamLoading, setTeamLoading] = useState<Record<string, boolean>>({});
+  const [teamError, setTeamError] = useState<Record<string, string>>({});
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -39,6 +50,23 @@ export default function PartnersTab({ jwt }: Props) {
   }, [jwt]);
 
   useEffect(() => { fetch(); }, [fetch]);
+
+  const handleToggleExpand = useCallback(async (adminId: string) => {
+    const isOpening = expandedId !== adminId;
+    setExpandedId(isOpening ? adminId : null);
+    if (isOpening && teamMembers[adminId] === undefined) {
+      setTeamLoading(p => ({ ...p, [adminId]: true }));
+      setTeamError(p => ({ ...p, [adminId]: '' }));
+      try {
+        const data = await api.getOwnerAdminTeam(jwt, adminId);
+        setTeamMembers(p => ({ ...p, [adminId]: data.users }));
+      } catch {
+        setTeamError(p => ({ ...p, [adminId]: 'Could not load team members.' }));
+      } finally {
+        setTeamLoading(p => ({ ...p, [adminId]: false }));
+      }
+    }
+  }, [expandedId, teamMembers, jwt]);
 
   const handleToggleStatus = async (admin: Admin) => {
     const newStatus = admin.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
@@ -94,7 +122,7 @@ export default function PartnersTab({ jwt }: Props) {
                 {admin.status}
               </span>
               <button
-                onClick={() => setExpandedId(expandedId === admin.id ? null : admin.id)}
+                onClick={() => handleToggleExpand(admin.id)}
                 className="text-gray-500 hover:text-gray-300 text-xs"
               >
                 {expandedId === admin.id ? '▲' : '▼'}
@@ -134,6 +162,35 @@ export default function PartnersTab({ jwt }: Props) {
               >
                 {actionLoading[admin.id] ? 'Updating...' : admin.status === 'ACTIVE' ? 'Disable Partner' : 'Re-enable Partner'}
               </button>
+
+              {/* Team members */}
+              <div className="pt-2 border-t border-slate-700">
+                <p className="text-xs text-gray-500 mb-1.5">Team Members</p>
+                {teamLoading[admin.id] ? (
+                  <p className="text-xs text-gray-500">Loading…</p>
+                ) : teamError[admin.id] ? (
+                  <p className="text-xs text-red-400">{teamError[admin.id]}</p>
+                ) : (teamMembers[admin.id] ?? []).length === 0 ? (
+                  <p className="text-xs text-gray-500">No team members yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {(teamMembers[admin.id] ?? []).map(m => (
+                      <div key={m.id} className="flex items-center justify-between gap-2 bg-slate-900 rounded px-2 py-1">
+                        <div className="min-w-0">
+                          <span className="text-xs text-white truncate">{m.name ?? m.email}</span>
+                          {m.name && <span className="text-xs text-gray-500 ml-1 truncate">({m.email})</span>}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="text-xs text-gray-500">{m.role}</span>
+                          <span className={`text-xs px-1 py-0.5 rounded ${m.status === 'ACTIVE' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                            {m.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
