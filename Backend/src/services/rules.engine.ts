@@ -1,3 +1,4 @@
+import { evaluate } from 'mathjs';
 import { RuleConfig } from '../types';
 
 export interface RuleDefinition {
@@ -68,13 +69,7 @@ export function applyRules(
           const evaluatable = formula.replace(/\[([^\]]+)\]/g, (_: string, field: string) => {
             return String(result[field] ?? 0);
           });
-          // Only allow basic math operators for security
-          if (/[^0-9+\-*/().\s]/.test(evaluatable)) {
-            console.warn(`[RulesEngine] FORMULA "${rule.name}": unsafe formula, skipping`);
-            break;
-          }
-          // eslint-disable-next-line no-eval
-          const value = Function(`"use strict"; return (${evaluatable})`)() as number;
+          const value = evaluate(evaluatable) as number;
           result[targetField] = value;
           console.log(`[RulesEngine] FORMULA "${rule.name}": ${evaluatable} = ${value} → ${targetField}`);
           break;
