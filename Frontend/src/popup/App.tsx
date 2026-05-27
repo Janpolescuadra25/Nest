@@ -17,6 +17,7 @@ import MyTeamTab from './components/MyTeamTab';
 import ActivityTab from './components/ActivityTab';
 import RulesView from './components/RulesView';
 import DashboardView from './components/DashboardView';
+import AdminDashboard from './components/AdminDashboard';
 import type { TabId, ScanData } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
@@ -102,7 +103,7 @@ export default function App() {
   if (role === 'OWNER') {
     visibleTabs.push('dashboard', 'scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'activity', 'settings');
   } else if (role === 'ADMIN') {
-    visibleTabs.push('my-team');
+    visibleTabs.push('dashboard', 'my-team');
     if (user.canScan) visibleTabs.push('scan');
     if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
@@ -202,7 +203,8 @@ export default function App() {
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
           {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} />}
-          {effectiveTab === 'dashboard' && <DashboardView jwt={jwt!} />}
+          {effectiveTab === 'dashboard' && role === 'OWNER' && <DashboardView jwt={jwt!} />}
+          {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}
         </div>
 
         {/* Help overlay */}

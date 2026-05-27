@@ -150,6 +150,19 @@ export const api = {
     get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>(`/api/owner/admins/${adminId}/team`, jwt),
 
   // ── Admin Team ─────────────────────────────────────────────────────────────
+  getAdminStats: (jwt: string) =>
+    get<{
+      teamSize: number;
+      maxUsers: number;
+      totalScans: number;
+      totalSynced: number;
+      totalFailed: number;
+      expiringSoon: number;
+    }>('/api/admin/stats', jwt),
+
+  getAdminAuditLog: (jwt: string, page?: number, limit?: number) =>
+    get<{ logs: Array<{ id: string; actorId: string; targetId: string | null; action: string; meta: any; createdAt: string; actor: { name: string | null; email: string } }>; total: number; page: number; limit: number }>(`/api/admin/audit-log?page=${page || 1}&limit=${limit || 10}`, jwt),
+
   getAdminTeam: (jwt: string) =>
     get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>('/api/admin/team', jwt),
 

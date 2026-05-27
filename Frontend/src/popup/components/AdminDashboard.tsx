@@ -1,0 +1,289 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { api } from '../lib/api';
+import type { QBStatus } from '../../types';
+
+interface Props {
+  jwt: string;
+}
+
+interface AdminStats {
+  teamSize: number;
+  maxUsers: number;
+  totalScans: number;
+  totalSynced: number;
+  totalFailed: number;
+  expiringSoon: number;
+}
+
+interface TeamMember {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  status: string;
+  trialExpiresAt?: string | null;
+}
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor: {
+    name: string | null;
+    email: string;
+  };
+}
+
+const EMPTY_STATS: AdminStats = {
+  teamSize: 0,
+  maxUsers: 0,
+  totalScans: 0,
+  totalSynced: 0,
+  totalFailed: 0,
+  expiringSoon: 0,
+};
+
+function formatAction(action: string): string {
+  return action
+    .toLowerCase()
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function relativeTime(dateStr?: string): string {
+  if (!dateStr) return '-';
+  const ts = new Date(dateStr).getTime();
+  if (Number.isNaN(ts)) return '-';
+  const diffSec = Math.floor((Date.now() - ts) / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  const diffMo = Math.floor(diffDay / 30);
+  if (diffMo < 12) return `${diffMo}mo ago`;
+  return `${Math.floor(diffMo / 12)}y ago`;
+}
+
+function trialCountdown(trialExpiresAt?: string | null): string {
+  if (!trialExpiresAt) return 'No trial set';
+  const exp = new Date(trialExpiresAt).getTime();
+  if (Number.isNaN(exp)) return 'No trial set';
+  const now = Date.now();
+  const diffMs = exp - now;
+  if (diffMs <= 0) return 'expired';
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return `${days} day${days === 1 ? '' : 's'} left`;
+}
+
+function isExpiringSoon(member: TeamMember): boolean {
+  if (member.status !== 'ACTIVE' || !member.trialExpiresAt) return false;
+  const now = Date.now();
+  const exp = new Date(member.trialExpiresAt).getTime();
+  const inThreeDays = now + 3 * 24 * 60 * 60 * 1000;
+  return exp >= now && exp <= inThreeDays;
+}
+
+export default function AdminDashboard({ jwt }: Props) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
+  const [qbStatus, setQbStatus] = useState<QBStatus>({ connected: false });
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [statsData, qbData, teamData, auditData] = await Promise.all([
+        api.getAdminStats(jwt),
+        api.getQBStatus(jwt),
+        api.getAdminTeam(jwt),
+        api.getAdminAuditLog(jwt, 1, 5),
+      ]);
+
+      setStats(statsData);
+      setQbStatus(qbData);
+      setTeamMembers(teamData.users as TeamMember[]);
+      setRecentActivity(auditData.logs as AuditEntry[]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load admin dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  }, [jwt]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const expiringMembers = useMemo(() => {
+    return teamMembers
+      .filter(isExpiringSoon)
+      .sort((a, b) => {
+        const aTs = a.trialExpiresAt ? new Date(a.trialExpiresAt).getTime() : Number.MAX_SAFE_INTEGER;
+        const bTs = b.trialExpiresAt ? new Date(b.trialExpiresAt).getTime() : Number.MAX_SAFE_INTEGER;
+        return aTs - bTs;
+      });
+  }, [teamMembers]);
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-3">
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+        </div>
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-24" />
+        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-36" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <div className="bg-red-900/40 border border-red-700 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-red-300">{error}</p>
+          <button
+            onClick={fetchData}
+            className="px-3 py-1.5 rounded bg-red-800 text-red-100 text-xs hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-white">🏠 Team Overview</h2>
+        {stats.expiringSoon > 0 && (
+          <span className="text-xs px-2 py-1 rounded bg-yellow-900/50 border border-yellow-700 text-yellow-300">
+            ⚠ {stats.expiringSoon} expiring soon
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">👥 Team</div>
+          <div className="text-2xl font-bold text-white mt-1">{stats.teamSize}/{stats.maxUsers || 0}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">🔍 Scans</div>
+          <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">✅ Synced</div>
+          <div className="text-2xl font-bold text-green-400 mt-1">{stats.totalSynced}</div>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">❌ Failed</div>
+          <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
+        </div>
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
+        <h3 className="text-sm font-medium text-cyan-300">QuickBooks Connection</h3>
+        {qbStatus.connected ? (
+          <>
+            <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
+            <p className="text-xs text-gray-400">Token expires: {qbStatus.expiresAt ? new Date(qbStatus.expiresAt).toLocaleString() : '-'}</p>
+          </>
+        ) : (
+          <p className="text-sm text-yellow-400">⚠ Not connected</p>
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-cyan-300">Expiring Soon</h3>
+        {expiringMembers.length === 0 ? (
+          <p className="text-sm text-gray-500">No team members expiring in the next 3 days</p>
+        ) : (
+          expiringMembers.map(member => (
+            <div key={member.id} className="bg-slate-900 border border-slate-700 rounded p-2 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm text-white truncate">⚠ {member.name ?? member.email}</p>
+                {member.name && <p className="text-xs text-gray-500 truncate">{member.email}</p>}
+              </div>
+              <span className="text-xs text-yellow-300 flex-shrink-0">{trialCountdown(member.trialExpiresAt)}</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+        <h3 className="text-sm font-medium text-cyan-300 mb-2">Team Members</h3>
+        {teamMembers.length === 0 ? (
+          <p className="text-sm text-gray-500">No team members yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-slate-700">
+                  <th className="py-2 pr-2">Name / Email</th>
+                  <th className="py-2 pr-2">Role</th>
+                  <th className="py-2 pr-2">Status</th>
+                  <th className="py-2">Trial</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamMembers.map(member => (
+                  <tr key={member.id} className="border-b border-slate-800/80 text-gray-200">
+                    <td className="py-2 pr-2">
+                      <div className="truncate max-w-[180px] text-gray-100">{member.name ?? member.email}</div>
+                      {member.name && <div className="text-gray-500 truncate max-w-[180px]">{member.email}</div>}
+                    </td>
+                    <td className="py-2 pr-2">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-cyan-900 text-cyan-300">{member.role}</span>
+                    </td>
+                    <td className="py-2 pr-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[11px] ${
+                        member.status === 'ACTIVE'
+                          ? 'bg-green-900 text-green-400'
+                          : member.status === 'DISABLED'
+                            ? 'bg-red-900 text-red-400'
+                            : 'bg-yellow-900 text-yellow-400'
+                      }`}>
+                        {member.status}
+                      </span>
+                    </td>
+                    <td className="py-2 text-gray-400">{trialCountdown(member.trialExpiresAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-cyan-300">Recent Activity</h3>
+        {recentActivity.length === 0 ? (
+          <p className="text-sm text-gray-500">No recent activity</p>
+        ) : (
+          recentActivity.map(log => (
+            <div key={log.id} className="flex items-start justify-between gap-2 bg-slate-900 border border-slate-700 rounded p-2">
+              <div className="min-w-0">
+                <p className="text-sm text-gray-200 truncate">{formatAction(log.action)}</p>
+                <p className="text-xs text-gray-500 truncate">{log.actor.name ?? log.actor.email}</p>
+              </div>
+              <span className="text-xs text-gray-500 flex-shrink-0">{relativeTime(log.createdAt)}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

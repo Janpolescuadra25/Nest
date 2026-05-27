@@ -41,6 +41,78 @@ router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response
   }
 });
 
+// ── GET /api/admin/stats  (ADMIN only) ───────────────────────────────────────
+router.get('/stats', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+  try {
+    const adminId = req.user!.userId;
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    const [teamSize, maxUsersValue, totalScans, totalSynced, totalFailed, expiringSoon] = await Promise.all([
+      prisma.user.count({ where: { adminId } }),
+      prisma.user.findUnique({ where: { id: adminId }, select: { maxUsers: true } }),
+      prisma.scanRecord.count({ where: { location: { adminId } } }),
+      prisma.syncLog.count({ where: { status: 'SUCCESS', scanRecord: { location: { adminId } } } }),
+      prisma.syncLog.count({ where: { status: 'FAILED', scanRecord: { location: { adminId } } } }),
+      prisma.user.count({
+        where: {
+          adminId,
+          status: 'ACTIVE',
+          trialExpiresAt: {
+            gte: now,
+            lte: threeDaysFromNow,
+          },
+        },
+      }),
+    ]);
+
+    return res.json({
+      teamSize,
+      maxUsers: maxUsersValue?.maxUsers ?? 0,
+      totalScans,
+      totalSynced,
+      totalFailed,
+      expiringSoon,
+    });
+  } catch (err) {
+    console.error('[Admin] stats error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── GET /api/admin/audit-log  (ADMIN only) ───────────────────────────────────
+router.get('/audit-log', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+  try {
+    const adminId = req.user!.userId;
+    const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '10'), 10) || 10));
+
+    const teamMembers = await prisma.user.findMany({
+      where: { adminId },
+      select: { id: true },
+    });
+    const actorIds = [adminId, ...teamMembers.map(member => member.id)];
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: { actorId: { in: actorIds } },
+        include: {
+          actor: { select: { name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.auditLog.count({ where: { actorId: { in: actorIds } } }),
+    ]);
+
+    return res.json({ logs, total, page, limit });
+  } catch (err) {
+    console.error('[Admin] audit-log error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 // ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
 router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), async (req: AuthRequest, res: Response) => {
   try {
