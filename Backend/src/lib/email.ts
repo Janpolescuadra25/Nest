@@ -217,3 +217,49 @@ export async function sendTrialRenewed({
     console.error('[Email] sendTrialRenewed failed:', err);
   }
 }
+
+// ── sendPasswordResetEmail ────────────────────────────────────────────────────
+
+export async function sendPasswordResetEmail({
+  to,
+  name,
+  resetLink,
+}: {
+  to: string;
+  name: string | null | undefined;
+  resetLink: string;
+}): Promise<void> {
+  if (!process.env.APP_URL) {
+    console.warn('[Email] APP_URL not configured — password reset links will be broken');
+  }
+  try {
+    const resend = getResendClient();
+    const displayName = name?.trim() || to;
+
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        We received a request to reset your Nest password. Click the link below to set a new password.
+      </p>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${resetLink}"
+           style="display:inline-block;background:#22d3ee;color:#0f172a;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;letter-spacing:0.02em;">
+          Reset Password
+        </a>
+      </div>
+      <p style="color:#94a3b8;font-size:13px;line-height:1.6;margin:0;">
+        This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+      </p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      to,
+      subject: 'Reset your Nest password',
+      html,
+    });
+    console.log(`[Email] Password reset email sent to ${to}`);
+  } catch (err) {
+    console.error('[Email] sendPasswordResetEmail failed:', err);
+  }
+}

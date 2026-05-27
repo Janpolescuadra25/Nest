@@ -11,6 +11,7 @@ import quickbooksRoutes from './routes/quickbooks';
 import adminRoutes from './routes/admin';
 import adminRequestRoutes from './routes/adminRequests';
 import ownerRoutes from './routes/owner';
+import passwordResetRoutes from './routes/password-reset';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
@@ -43,6 +44,7 @@ app.use('/api/quickbooks', quickbooksRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin-requests', adminRequestRoutes);
 app.use('/api/owner', ownerRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {

@@ -227,5 +227,8 @@ export const api = {
   }>('/api/quickbooks/sync-all', jwt),
 
   // ── Admin ──────────────────────────────────────────────────────────────────
+
+  requestPasswordReset: (email: string) =>
+    post<{ message: string }>('/api/password-reset/request', { email }),
 };
 

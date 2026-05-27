@@ -58,9 +58,10 @@ model User {
   managedLocations    Location[]     @relation("AdminLocations")
   qbTokens            QBToken[]
   oauthStates         OAuthState[]
-  approvedRequests    AdminRequest[] @relation("ApprovedAdminRequests")
-  auditLogs           AuditLog[]     @relation("AuditActor")
-  auditTargets        AuditLog[]     @relation("AuditTarget")
+  approvedRequests     AdminRequest[]       @relation("ApprovedAdminRequests")
+  auditLogs            AuditLog[]           @relation("AuditActor")
+  auditTargets         AuditLog[]           @relation("AuditTarget")
+  passwordResetTokens  PasswordResetToken[]
 
   @@index([adminId])
   @@map("users")
@@ -234,4 +235,18 @@ model OAuthState {
   @@index([state])
   @@index([userId])
   @@map("oauth_states")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
