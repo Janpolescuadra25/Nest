@@ -2,6 +2,7 @@ import React from 'react';
 import type { TabId } from '../../types';
 
 const ALL_TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
   { id: 'scan', label: 'Scan', icon: '🔍' },
   { id: 'mappings', label: 'Map', icon: '🗺️' },
   { id: 'rules', label: 'Rules', icon: '📐' },

@@ -18,6 +18,7 @@ router.get('/admins', async (_req: AuthRequest, res: Response) => {
         maxUsers: true,
         status: true,
         createdAt: true,
+        updatedAt: true,
         _count: { select: { teamMembers: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -48,6 +49,44 @@ router.get('/admins', async (_req: AuthRequest, res: Response) => {
     return res.json({ admins: result });
   } catch (err) {
     console.error('[Owner] getAdmins error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── GET /api/owner/stats ─────────────────────────────────────────────────────
+router.get('/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    const [
+      totalPartners,
+      totalTeamMembers,
+      totalLocations,
+      totalScans,
+      totalSynced,
+      totalFailed,
+      totalPendingRequests,
+      expiredMembers
+    ] = await Promise.all([
+      prisma.user.count({ where: { role: 'ADMIN' } }),
+      prisma.user.count({ where: { role: { in: ['ACCOUNTANT', 'STAFF', 'VIEWER'] } } }),
+      prisma.location.count({ where: { isActive: true } }),
+      prisma.scanRecord.count(),
+      prisma.syncLog.count({ where: { status: 'SUCCESS' } }),
+      prisma.syncLog.count({ where: { status: 'FAILED' } }),
+      prisma.adminRequest.count({ where: { status: 'PENDING' } }),
+      prisma.user.count({ where: { status: 'EXPIRED' } })
+    ]);
+    return res.json({
+      totalPartners,
+      totalTeamMembers,
+      totalLocations,
+      totalScans,
+      totalSynced,
+      totalFailed,
+      totalPendingRequests,
+      expiredMembers
+    });
+  } catch (err) {
+    console.error('[Owner] stats error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });

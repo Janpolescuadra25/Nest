@@ -1,3 +1,7 @@
+// OWNER stats endpoint
+export async function getOwnerStats(jwt: string) {
+  return get<{ [key: string]: number }>(`/api/owner/stats`, jwt);
+}
 import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
