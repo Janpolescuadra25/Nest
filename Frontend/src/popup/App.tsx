@@ -47,8 +47,8 @@ export default function App() {
             <span className="text-sm font-semibold text-white">Nest</span>
           </div>
           <LoginView onLogin={login} />
+          <ToastContainer />
         </div>
-        <ToastContainer />
       </ToastProvider>
     );
   }
@@ -79,8 +79,8 @@ export default function App() {
             <button onClick={logout} className="text-xs text-gray-500 hover:text-gray-300">Sign Out</button>
           </div>
           <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
+          <ToastContainer />
         </div>
-        <ToastContainer />
       </ToastProvider>
     );
   }
@@ -187,9 +187,9 @@ export default function App() {
 
         {/* Help overlay */}
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
+        <ToastContainer />
       </div>
     </QBContextProvider>
-    <ToastContainer />
     </ToastProvider>
   );
 }
