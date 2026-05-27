@@ -82,7 +82,7 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('partners', 'requests', 'settings');
+    visibleTabs.push('scan', 'mappings', 'preview', 'data', 'sync', 'partners', 'requests', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('my-team');
     if (user.canScan) visibleTabs.push('scan');
