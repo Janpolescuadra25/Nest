@@ -1,9 +1,6 @@
 import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
-
-// Backend URL — update this to your Render URL after deployment:
-// e.g. https://nest-backend-xxx.onrender.com
-const BASE_URL = 'https://nest-backend-mddn.onrender.com';
+import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
 async function headers(jwt?: string | null): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };

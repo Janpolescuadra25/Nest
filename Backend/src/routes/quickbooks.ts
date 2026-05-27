@@ -112,7 +112,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     });
 
     console.log('[QB] Exchanging code for tokens — POST', QB_TOKEN_URL);
-    console.log('[QB] Token exchange body:', tokenBody.toString());
 
     const tokenResponse = await fetch(QB_TOKEN_URL, {
       method: 'POST',
@@ -126,7 +125,6 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
 
     const responseText = await tokenResponse.text();
     console.log('[QB] Token exchange HTTP status:', tokenResponse.status);
-    console.log('[QB] Token exchange response body:', responseText);
 
     if (!tokenResponse.ok) {
       console.error('[QB] Token exchange FAILED — status:', tokenResponse.status, '| body:', responseText);

@@ -21,7 +21,16 @@ const PORT = process.env.PORT || 3000;
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'chrome-extension://*',
+  origin: (origin, callback) => {
+    // Allow no-origin requests (server-side, curl, OAuth redirects)
+    if (!origin) return callback(null, true);
+    // Allow Chrome extension origins
+    if (origin.startsWith('chrome-extension://')) return callback(null, true);
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return callback(null, true);
+    // Deny everything else
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

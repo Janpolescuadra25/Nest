@@ -1,6 +1,6 @@
 // Background service worker — Manifest V3 (floating window)
 
-const BACKEND_URL = 'https://nest-backend-mddn.onrender.com';
+import { BACKEND_URL } from '../lib/config';
 const WINDOW_WIDTH = 950;
 const WINDOW_HEIGHT = 750;
 
