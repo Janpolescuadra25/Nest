@@ -121,7 +121,7 @@ export interface AuditLogEntry {
   actorId: string;
   targetId: string | null;
   action: string;
-  meta: any;
+  meta: Record<string, unknown>;
   createdAt: string;
   actor: { name: string | null; email: string };
 }
@@ -129,7 +129,7 @@ export interface AuditLogEntry {
 export interface OwnerAuditLogEntry {
   id: string;
   action: string;
-  meta: any;
+  meta: Record<string, unknown>;
   createdAt: string;
   actor: { id: string; name: string | null; email: string };
   target: { id: string; name: string | null; email: string } | null;

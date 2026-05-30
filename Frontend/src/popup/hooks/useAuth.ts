@@ -1,18 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import type { UserInfo } from '../lib/api';
 
-export interface UserInfo {
-  id: string;
-  email: string;
-  role: string;
-  name: string | null;
-  status: string;
-  mustChangePassword: boolean;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
-}
+export type { UserInfo };
 
 export function useAuth() {
   const [jwt, setJwt] = useState<string | null>(null);

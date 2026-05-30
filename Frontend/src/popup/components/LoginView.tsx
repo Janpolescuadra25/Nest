@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
-import { UserInfo } from '../hooks/useAuth';
+import type { UserInfo } from '../lib/api';
 
 type View = 'login' | 'forgot-password' | 'become-partner';
 

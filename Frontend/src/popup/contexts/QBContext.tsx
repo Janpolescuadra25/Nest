@@ -45,11 +45,11 @@ export function QBContextProvider({
     if (!jwt || listsLoadingRef.current) return;
     listsLoadingRef.current = true;
     setListsError(null);
-    console.log('[QBContext] syncAllLists called, jwt present:', !!jwt);
+    if (process.env.NODE_ENV !== 'production') console.log('[QBContext] syncAllLists called, jwt present:', !!jwt);
     setListsLoading(true);
     try {
       const data = await api.syncQBAll(jwt);
-      console.log('[QBContext] syncAllLists received:', {
+      if (process.env.NODE_ENV !== 'production') console.log('[QBContext] syncAllLists received:', {
         accounts: data.accounts?.length ?? 0,
         classes: data.classes?.length ?? 0,
         employees: data.employees?.length ?? 0,
@@ -66,7 +66,7 @@ export function QBContextProvider({
       setListsLoaded(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh QuickBooks lists';
-      console.error('[QBContext] syncAllLists error:', err);
+      if (process.env.NODE_ENV !== 'production') console.error('[QBContext] syncAllLists error:', err);
       setListsError(message);
     } finally {
       listsLoadingRef.current = false;

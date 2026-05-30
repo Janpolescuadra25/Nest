@@ -13,7 +13,7 @@ export function useLocations(jwt: string | null) {
     setError(null);
     try {
       const res = await api.getLocations(jwt);
-      setLocations(Array.isArray(res.data) ? res.data : Array.isArray(res as any) ? (res as any) : []);
+      setLocations(res.data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load locations');
     } finally {

@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, QBStatus, AuditLogEntry } from '../../types';
+import type { Location, Mapping, Rule, ScanData, QBStatus, AuditLogEntry, OwnerAuditLogEntry } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -67,7 +67,7 @@ async function del(path: string, jwt?: string | null): Promise<void> {
   }
 }
 
-interface UserInfo {
+export interface UserInfo {
   id: string;
   email: string;
   role: string;
@@ -141,7 +141,7 @@ export const api = {
     if (params?.dateFrom) sp.set('dateFrom', params.dateFrom);
     if (params?.dateTo) sp.set('dateTo', params.dateTo);
     const qs = sp.toString();
-    return get<{ logs: AuditLogEntry[]; total: number; page: number; limit: number }>(`/api/owner/audit-log${qs ? '?' + qs : ''}`, jwt);
+    return get<{ logs: OwnerAuditLogEntry[]; total: number; page: number; limit: number }>(`/api/owner/audit-log${qs ? '?' + qs : ''}`, jwt);
   },
 
   getOwnerAdmins: (jwt: string) =>
@@ -165,7 +165,7 @@ export const api = {
     }>('/api/admin/stats', jwt),
 
   getAdminAuditLog: (jwt: string, page?: number, limit?: number) =>
-    get<{ logs: Array<{ id: string; actorId: string; targetId: string | null; action: string; meta: any; createdAt: string; actor: { name: string | null; email: string } }>; total: number; page: number; limit: number }>(`/api/admin/audit-log?page=${page || 1}&limit=${limit || 10}`, jwt),
+    get<{ logs: AuditLogEntry[]; total: number; page: number; limit: number }>(`/api/admin/audit-log?page=${page || 1}&limit=${limit || 10}`, jwt),
 
   getAdminTeam: (jwt: string) =>
     get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>('/api/admin/team', jwt),
