@@ -164,8 +164,9 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
 
     res.send(successPage(realmId));
   } catch (err) {
+    const errMessage = err instanceof Error ? err.message : String(err);
     console.error('[QB] Unexpected error during token exchange / DB write:', err);
-    res.status(500).send(errorPage('Unexpected error during authorization. Check server logs.'));
+    res.status(500).send(errorPage(errMessage));
   }
 });
 
@@ -278,11 +279,7 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
       }).catch(console.error);
     }
 
-    res.status(500).json({
-      error: process.env.NODE_ENV === 'production'
-        ? 'Failed to create Journal Entry'
-        : message,
-    });
+    res.status(500).json({ error: message });
   }
 });
 
@@ -402,9 +399,7 @@ router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);
-    res.status(500).json({
-      error: process.env.NODE_ENV === 'production' ? 'Failed to sync QB data' : message,
-    });
+    res.status(500).json({ error: message });
   }
 });
 
