@@ -216,7 +216,7 @@ export default function App() {
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
-          {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} />}
+          {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} scanData={scanData} />}
           {effectiveTab === 'dashboard' && role === 'OWNER' && <DashboardView jwt={jwt!} />}
           {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}
         </div>
