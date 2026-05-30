@@ -198,6 +198,7 @@ export default function MappingView({
   const [memoTemplate, setMemoTemplate] = useState('');
   const [docNumberTemplate, setDocNumberTemplate] = useState('');
   const [memoOpen, setMemoOpen] = useState(true);
+  const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -636,29 +637,44 @@ export default function MappingView({
             {/* Field chips */}
             {scanFieldChips.length > 0 ? (
               <div>
-                <div className="text-xs text-gray-500 mb-1.5">Available fields — click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {scanFieldChips.map((chip) => (
-                    <div key={chip.normalized} className="flex rounded overflow-hidden text-xs border border-gray-600">
-                      <button
-                        type="button"
-                        onClick={() => insertAtCursor(memoTextareaRef.current, `{${chip.normalized}}`, memoTemplate, setMemoTemplate)}
-                        className="px-2 py-0.5 bg-gray-700 hover:bg-cyan-800 text-gray-300 hover:text-white transition-colors"
-                        title={`Insert {${chip.normalized}} into Memo`}
-                      >
-                        {chip.original}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertAtCursor(docInputRef.current, `{${chip.normalized}}`, docNumberTemplate, setDocNumberTemplate)}
-                        className="px-1.5 py-0.5 bg-gray-800 hover:bg-purple-900 text-gray-500 hover:text-purple-300 transition-colors border-l border-gray-600"
-                        title={`Insert {${chip.normalized}} into Doc #`}
-                      >
-                        #
-                      </button>
+                <button
+                  type="button"
+                  onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                  className="text-xs text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 mb-1.5"
+                >
+                  <span className="text-xs">{fieldsExpanded ? '▾' : '▸'}</span>
+                  {fieldsExpanded
+                    ? 'Hide available fields'
+                    : `Show available fields (${scanFieldChips.length})`
+                  }
+                </button>
+                {fieldsExpanded && (
+                  <>
+                    <div className="text-xs text-gray-500 mb-1.5">Click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {scanFieldChips.map((chip) => (
+                        <div key={chip.normalized} className="flex rounded overflow-hidden text-xs border border-gray-600">
+                          <button
+                            type="button"
+                            onClick={() => insertAtCursor(memoTextareaRef.current, `{${chip.normalized}}`, memoTemplate, setMemoTemplate)}
+                            className="px-2 py-0.5 bg-gray-700 hover:bg-cyan-800 text-gray-300 hover:text-white transition-colors"
+                            title={`Insert {${chip.normalized}} into Memo`}
+                          >
+                            {chip.original}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => insertAtCursor(docInputRef.current, `{${chip.normalized}}`, docNumberTemplate, setDocNumberTemplate)}
+                            className="px-1.5 py-0.5 bg-gray-800 hover:bg-purple-900 text-gray-500 hover:text-purple-300 transition-colors border-l border-gray-600"
+                            title={`Insert {${chip.normalized}} into Doc #`}
+                          >
+                            #
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             ) : (
               <p className="text-xs text-gray-600">Scan a Toast report first to see available field chips.</p>

@@ -142,6 +142,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const [formulaText, setFormulaText] = useState('');
   const [targetField, setTargetField] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [formulaFieldsExpanded, setFormulaFieldsExpanded] = useState(false);
 
   const formulaInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,6 +200,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
     setFormulaText('');
     setTargetField('');
     setValidationErrors({});
+    setFormulaFieldsExpanded(false);
     setEditingRule(null);
     setShowForm(false);
   };
@@ -210,6 +212,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
     setThresholdValue(0);
     setFormulaText('');
     setValidationErrors({});
+    setFormulaFieldsExpanded(false);
   };
 
   const openCreateForm = () => {
@@ -480,19 +483,31 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
             {validationErrors['formula'] && (
               <p className="text-red-400 text-xs">{validationErrors['formula']}</p>
             )}
-            <p className="text-gray-500 text-xs mt-1">Click a field to append it:</p>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {availableFields.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => appendFormulaField(f)}
-                  className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-1.5 py-0.5 rounded"
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => setFormulaFieldsExpanded(!formulaFieldsExpanded)}
+              className="text-xs text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 mt-1"
+            >
+              <span className="text-xs">{formulaFieldsExpanded ? '▾' : '▸'}</span>
+              {formulaFieldsExpanded
+                ? 'Hide available fields'
+                : `Show available fields (${availableFields.length})`
+              }
+            </button>
+            {formulaFieldsExpanded && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {availableFields.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => appendFormulaField(f)}
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-1.5 py-0.5 rounded"
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         );
     }
