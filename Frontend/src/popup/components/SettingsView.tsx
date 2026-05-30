@@ -48,7 +48,7 @@ export default function SettingsView({ jwt, onLogout }: Props) {
       <div>
         <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">QuickBooks Online</div>
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-          {status.connected ? (
+          {status.connected && !status.tokenExpired ? (
             <>
               <div className="text-green-400 text-xs mb-1">✅ Connected</div>
               <div className="text-gray-400 text-xs">Company ID: <span className="text-white font-mono">{status.realmId}</span></div>
@@ -57,9 +57,12 @@ export default function SettingsView({ jwt, onLogout }: Props) {
                   Expires: {new Date(status.expiresAt).toLocaleString()}
                 </div>
               )}
-              {status.tokenExpired && (
-                <div className="text-orange-400 text-xs mt-1">⚠️ Token expired — reconnect below</div>
-              )}
+            </>
+          ) : status.connected && status.tokenExpired ? (
+            <>
+              <div className="text-orange-400 text-xs mb-1">⚠️ Token expired</div>
+              <div className="text-gray-400 text-xs">Company ID: <span className="text-white font-mono">{status.realmId}</span></div>
+              <div className="text-orange-400 text-xs mt-1">Reconnect to restore access</div>
             </>
           ) : (
             <div className="text-gray-400 text-xs mb-2">Not connected to QuickBooks</div>
