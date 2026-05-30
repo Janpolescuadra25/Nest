@@ -374,20 +374,20 @@ chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendRe
     waitForElement('tbody[data-testid="revenue-summary-table-body"]', 5000)
       .then((el) => {
         if (!el) {
-          console.error('[Nest Scanner] Timed out waiting for Sales Summary page to load');
+          if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Timed out waiting for Sales Summary page to load');
           sendResponse({ data: null });
           return;
         }
         try {
           const scanData = scanSalesSummary();
           if (Object.keys(scanData).length === 0) {
-            console.error('[Nest Scanner] Page loaded but no data extracted — selectors may be outdated');
+            if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Page loaded but no data extracted — selectors may be outdated');
             sendResponse({ data: null });
             return;
           }
           sendResponse({ data: scanData });
         } catch (err) {
-          console.error('[Nest Scanner] Scan failed:', err);
+          if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Scan failed:', err);
           sendResponse({ data: null });
         }
       });

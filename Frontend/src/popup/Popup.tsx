@@ -3,8 +3,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
-class ErrorBoundary extends React.Component<{}, { hasError: boolean; error: Error | null }> {
-  constructor(props: {}) {
+class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children?: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -14,7 +14,7 @@ class ErrorBoundary extends React.Component<{}, { hasError: boolean; error: Erro
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[Popup ErrorBoundary] Uncaught error:', error, info);
+    if (process.env.NODE_ENV !== 'production') console.error('[Popup ErrorBoundary] Uncaught error:', error, info);
   }
 
   handleReset = () => {

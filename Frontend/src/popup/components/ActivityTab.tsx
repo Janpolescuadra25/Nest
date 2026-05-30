@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { relativeTime } from '../lib/utils';
-import type { AuditLogEntry } from '../../types';
+import type { OwnerAuditLogEntry } from '../../types';
 
 interface Props {
   jwt: string;
@@ -33,7 +33,7 @@ const ACTION_COLORS: Record<string, string> = {
 
 
 export default function ActivityTab({ jwt }: Props) {
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [logs, setLogs] = useState<OwnerAuditLogEntry[]>([]);;
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -59,8 +59,8 @@ export default function ActivityTab({ jwt }: Props) {
       setLogs(data.logs);
       setTotal(data.total);
       setPage(data.page);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load activity.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load activity.');
     } finally {
       setLoading(false);
     }

@@ -30,7 +30,7 @@ export function useQuickBooks(jwt: string | null) {
       // Ask background to open the auth URL in a new tab
       chrome.runtime.sendMessage({ type: 'OPEN_QB_AUTH', payload: { authUrl } });
     } catch (err) {
-      console.error('[QB] Failed to get auth URL:', err);
+      if (process.env.NODE_ENV !== 'production') console.error('[QB] Failed to get auth URL:', err);
     }
   }, [jwt]);
 

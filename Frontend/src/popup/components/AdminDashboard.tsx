@@ -62,8 +62,9 @@ export default function AdminDashboard({ jwt }: Props) {
       setQbStatus(qbData);
       setTeamMembers(teamData.users as TeamMember[]);
       setRecentActivity(auditData.logs);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load admin dashboard.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load admin dashboard.';
+      setError(message);
     } finally {
       setLoading(false);
     }
