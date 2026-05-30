@@ -6,10 +6,11 @@ interface Props {
   jwt: string;
   scanData: ScanData | null;
   onScanData: (data: ScanData) => void;
+  onScanRecordId?: (id: string) => void;
   locationId: string | null;
 }
 
-export default function ScanView({ jwt, scanData, onScanData, locationId }: Props) {
+export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, locationId }: Props) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tabUrl, setTabUrl] = useState<string>('');
@@ -94,13 +95,16 @@ export default function ScanView({ jwt, scanData, onScanData, locationId }: Prop
         chrome.storage.local.set({ lastScanData: response.data });
         if (locationId) {
           try {
-            await api.saveScan(
+            const scanRecord = await api.saveScan(
               jwt,
               locationId,
               new Date().toISOString().split('T')[0],
               response.data
             );
             console.log('[Nest] Scan data saved to backend');
+            if (scanRecord?.id && onScanRecordId) {
+              onScanRecordId(scanRecord.id);
+            }
           } catch (saveErr) {
             console.error('[Nest] Failed to save scan to backend:', saveErr);
             // Don't block the UI — scan still worked locally

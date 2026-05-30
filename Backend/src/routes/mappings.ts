@@ -20,9 +20,9 @@ router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Re
       return;
     }
 
-    const { sourceField, targetAccount, targetClass, targetName, targetDescription, targetMemo, priority } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority } =
       req.body as {
-        sourceField?: string; targetAccount?: string; targetClass?: string;
+        sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean; targetClass?: string;
         targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number;
       };
 
@@ -31,6 +31,8 @@ router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Re
       data: {
         ...(sourceField !== undefined && { sourceField }),
         ...(targetAccount !== undefined && { targetAccount }),
+        ...(postingType !== undefined && { postingType }),
+        ...(keepSeparate !== undefined && { keepSeparate }),
         ...(targetClass !== undefined && { targetClass }),
         ...(targetName !== undefined && { targetName }),
         ...(targetDescription !== undefined && { targetDescription }),

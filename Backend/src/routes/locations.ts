@@ -169,10 +169,10 @@ router.post('/:id/mappings', requirePermission('canMap'), async (req: AuthReques
       return;
     }
 
-    const { sourceField, targetAccount, targetClass, targetName, targetDescription, targetMemo, priority } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority } =
       req.body as {
-        sourceField?: string; targetAccount?: string; targetClass?: string;
-        targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number;
+        sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean;
+        targetClass?: string; targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number;
       };
 
     if (!sourceField || !targetAccount) {
@@ -185,6 +185,8 @@ router.post('/:id/mappings', requirePermission('canMap'), async (req: AuthReques
         locationId: id,
         sourceField,
         targetAccount,
+        postingType: postingType ?? 'Credit',
+        keepSeparate: keepSeparate ?? false,
         targetClass,
         targetName,
         targetDescription,

@@ -1,22 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
-
-interface TeamMember {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  status: string;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
-  mustChangePassword: boolean;
-  createdAt?: string;
-  trialExpiresAt?: string | null;
-  customExpiryMessage?: string | null;
-}
+import { trialCountdown } from '../lib/utils';
+import type { TeamMember } from '../../types';
 
 interface InviteResult {
   user: { id: string; email: string; name: string | null; role: string };
@@ -160,18 +146,6 @@ export default function MyTeamTab({ jwt }: Props) {
     }
   };
 
-  function trialCountdown(trialExpiresAt: string | null | undefined): React.ReactNode {
-    if (!trialExpiresAt) return null;
-    const now = Date.now();
-    const exp = new Date(trialExpiresAt).getTime();
-    const diffMs = exp - now;
-    if (diffMs <= 0) {
-      return <span className="text-xs text-red-400 font-medium">EXPIRED</span>;
-    }
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    const color = days <= 3 ? 'text-red-400' : days <= 7 ? 'text-orange-400' : 'text-yellow-400';
-    return <span className={`text-xs font-medium ${color}`}>{days}d left</span>;
-  }
 
   const PermToggle = ({ memberId, field, value, label }: { memberId: string; field: string; value: boolean; label: string }) => (
     <button

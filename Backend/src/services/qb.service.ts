@@ -1,5 +1,11 @@
 import { CreateJournalEntryInput, JournalEntryResponse, QBJournalLineItem } from '../types';
 
+const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
+const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
+if (!QB_CLIENT_ID || !QB_CLIENT_SECRET) {
+  throw new Error('QB_CLIENT_ID and QB_CLIENT_SECRET environment variables are required');
+}
+
 const QB_API_BASE_URL = process.env.QB_API_BASE_URL ?? 'https://quickbooks.api.intuit.com/v3/company';
 
 // ── Internal QB response types ────────────────────────────────────────────────
@@ -48,7 +54,9 @@ interface QBTaxCode {
 // ── Generic QB query helper ───────────────────────────────────────────────────
 async function qbQuery<T>(realmId: string, accessToken: string, query: string): Promise<T> {
   const url = `${QB_API_BASE_URL}/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=75`;
-  console.log(`[QB Service] QUERY ${url}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] QUERY ${url}`);
+  }
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -141,7 +149,6 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
     };
 
     if (line.description) qbLine.Description = line.description;
-    if (line.memo) qbLine.LineNum = undefined; // memo is set on the transaction, not the line
 
     return qbLine;
   });
@@ -164,8 +171,10 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
   if (docNumber) payload.DocNumber = docNumber;
   if (privateNote) payload.PrivateNote = privateNote;
 
-  console.log('[QB Service] Journal Entry payload:');
-  console.log(JSON.stringify(payload, null, 2));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[QB Service] Journal Entry payload:');
+    console.log(JSON.stringify(payload, null, 2));
+  }
 
   return payload;
 }
@@ -181,7 +190,9 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
 
   const url = `${QB_API_BASE_URL}/${realmId}/journalentry?minorversion=65`;
 
-  console.log(`[QB Service] POST ${url}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] POST ${url}`);
+  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -219,8 +230,6 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   refreshToken: string;
   expiresIn: number;
 }> {
-  const QB_CLIENT_ID = process.env.QB_CLIENT_ID ?? '';
-  const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET ?? '';
   const QB_TOKEN_URL = process.env.QB_TOKEN_URL ?? 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 
   const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');

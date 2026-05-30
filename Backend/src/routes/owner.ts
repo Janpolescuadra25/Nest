@@ -1,7 +1,9 @@
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
+import { validate } from '../middleware/validate';
 
 const router = Router();
 
@@ -100,7 +102,12 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
 });
 
 // ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────
-router.patch('/admins/:id', async (req: AuthRequest, res: Response) => {
+const updateAdminSchema = z.object({
+  maxUsers: z.number().int().min(1).max(1000).optional().nullable(),
+  status: z.enum(['ACTIVE', 'DISABLED']).optional(),
+});
+
+router.patch('/admins/:id', validate(updateAdminSchema), async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { maxUsers, status } = req.body as { maxUsers?: number; status?: 'ACTIVE' | 'DISABLED' };

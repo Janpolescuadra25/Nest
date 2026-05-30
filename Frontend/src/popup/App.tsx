@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { QBContextProvider } from './contexts/QBContext';
 import LoginView from './components/LoginView';
@@ -33,6 +33,7 @@ export default function App() {
   const { jwt, user, loading, login, logout } = useAuth();
   const [currentTab, setCurrentTab] = useState<TabId>('dashboard');
   const [scanData, setScanData] = useState<ScanData | null>(null);
+  const [scanRecordId, setScanRecordId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [showHelp, setShowHelp] = useState(false);
 
@@ -41,6 +42,12 @@ export default function App() {
     // Force reload to re-run useAuth session fetch with updated mustChangePassword
     window.location.reload();
   }, []);
+
+  useEffect(() => {
+    if (scanData === null) {
+      setScanRecordId(null);
+    }
+  }, [scanData]);
 
   if (loading) {
     return (
@@ -164,7 +171,13 @@ export default function App() {
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', minHeight: 0 }}>
           {effectiveTab === 'scan' && (
-            <ScanView jwt={jwt!} scanData={scanData} onScanData={setScanData} locationId={selectedLocationId || null} />
+            <ScanView
+              jwt={jwt!}
+              scanData={scanData}
+              onScanData={setScanData}
+              onScanRecordId={setScanRecordId}
+              locationId={selectedLocationId || null}
+            />
           )}
           {effectiveTab === 'mappings' && (
             <MappingView
@@ -180,6 +193,7 @@ export default function App() {
               jwt={jwt!}
               scanData={scanData}
               selectedLocationId={selectedLocationId}
+              scanRecordId={scanRecordId}
             />
           )}
           {effectiveTab === 'data' && (

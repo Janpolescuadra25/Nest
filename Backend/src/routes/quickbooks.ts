@@ -6,11 +6,16 @@ import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { journalEntrySchema } from '../lib/validators';
+import { encrypt, decryptSafe } from '../lib/encryption';
 
 const router = Router();
 
-const QB_CLIENT_ID = process.env.QB_CLIENT_ID ?? '';
-const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET ?? '';
+const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
+const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
+if (!QB_CLIENT_ID || !QB_CLIENT_SECRET) {
+  throw new Error('QB_CLIENT_ID and QB_CLIENT_SECRET environment variables are required');
+}
+
 const QB_REDIRECT_URI = process.env.QB_REDIRECT_URI ?? '';
 const QB_AUTH_URL = process.env.QB_AUTH_URL ?? 'https://appcenter.intuit.com/connect/oauth2';
 const QB_TOKEN_URL = process.env.QB_TOKEN_URL ?? 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -136,21 +141,23 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     }
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+    const encryptedAccessToken = encrypt(tokens.access_token);
+    const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
     // ── Persist tokens in DB ─────────────────────────────────────────────────
     await prisma.qBToken.upsert({
       where: { userId },
       update: {
         realmId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         expiresAt,
       },
       create: {
         userId,
         realmId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
         expiresAt,
       },
     });
@@ -216,32 +223,14 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
       }
     }
 
-    const qbToken = await prisma.qBToken.findUnique({ where: { userId: req.user!.userId } });
-    if (!qbToken) {
-      res.status(400).json({ error: 'QuickBooks not connected. Please complete OAuth first via /api/quickbooks/auth-url' });
-      return;
-    }
-
-    let accessToken = qbToken.accessToken;
-    if (qbToken.expiresAt < new Date()) {
-      const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
-      await prisma.qBToken.update({
-        where: { userId: req.user!.userId },
-        data: {
-          accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken,
-          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
-        },
-      });
-      accessToken = refreshed.accessToken;
-    }
+    const { accessToken, realmId } = await getValidToken(req.user!.userId);
 
     const input: CreateJournalEntryInput = {
       txnDate,
       docNumber,
       lines,
       privateNote,
-      realmId: qbToken.realmId,
+      realmId,
       accessToken,
     };
 
@@ -289,7 +278,11 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
       }).catch(console.error);
     }
 
-    res.status(500).json({ error: 'Failed to create Journal Entry', message });
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production'
+        ? 'Failed to create Journal Entry'
+        : message,
+    });
   }
 });
 
@@ -299,23 +292,24 @@ async function getValidToken(userId: string): Promise<{ accessToken: string; rea
   if (!qbToken) throw new Error('QuickBooks not connected. Please complete OAuth first.');
 
   if (qbToken.expiresAt < new Date()) {
-    const refreshed = await qbService.refreshAccessToken(qbToken.refreshToken);
+    const refreshToken = decryptSafe(qbToken.refreshToken);
+    const refreshed = await qbService.refreshAccessToken(refreshToken);
     await prisma.qBToken.update({
       where: { userId },
       data: {
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
+        accessToken: encrypt(refreshed.accessToken),
+        refreshToken: encrypt(refreshed.refreshToken),
         expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
       },
     });
     return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
   }
 
-  return { accessToken: qbToken.accessToken, realmId: qbToken.realmId };
+  return { accessToken: decryptSafe(qbToken.accessToken), realmId: qbToken.realmId };
 }
 
 // ── GET /api/quickbooks/accounts ──────────────────────────────────────────────
-router.get('/accounts', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/accounts', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const accounts = await qbService.getAccounts(realmId, accessToken);
@@ -328,7 +322,7 @@ router.get('/accounts', authenticate, async (req: AuthRequest, res: Response): P
 });
 
 // ── GET /api/quickbooks/classes ───────────────────────────────────────────────
-router.get('/classes', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/classes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const classes = await qbService.getClasses(realmId, accessToken);
@@ -341,7 +335,7 @@ router.get('/classes', authenticate, async (req: AuthRequest, res: Response): Pr
 });
 
 // ── GET /api/quickbooks/employees ─────────────────────────────────────────────
-router.get('/employees', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/employees', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const employees = await qbService.getEmployees(realmId, accessToken);
@@ -354,7 +348,7 @@ router.get('/employees', authenticate, async (req: AuthRequest, res: Response): 
 });
 
 // ── GET /api/quickbooks/vendors ───────────────────────────────────────────────
-router.get('/vendors', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/vendors', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const vendors = await qbService.getVendors(realmId, accessToken);
@@ -367,7 +361,7 @@ router.get('/vendors', authenticate, async (req: AuthRequest, res: Response): Pr
 });
 
 // ── GET /api/quickbooks/customers ─────────────────────────────────────────────
-router.get('/customers', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/customers', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const customers = await qbService.getCustomers(realmId, accessToken);
@@ -380,7 +374,7 @@ router.get('/customers', authenticate, async (req: AuthRequest, res: Response): 
 });
 
 // ── GET /api/quickbooks/tax-codes ────────────────────────────────────────────
-router.get('/tax-codes', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accessToken, realmId } = await getValidToken(req.user!.userId);
     const taxCodes = await qbService.getTaxCodes(realmId, accessToken);
@@ -408,7 +402,9 @@ router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);
-    res.status(500).json({ error: 'Failed to sync QB data', message });
+    res.status(500).json({
+      error: process.env.NODE_ENV === 'production' ? 'Failed to sync QB data' : message,
+    });
   }
 });
 

@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
-import type { QBStatus } from '../../types';
+import { QBConnectionCard } from './QBConnectionCard';
+import { ScannerHealthCard } from './ScannerHealthCard';
+import { formatAction, relativeTime, trialCountdown } from '../lib/utils';
+import type { QBStatus, ScanHealth, TeamMember, AuditLogEntry } from '../../types';
 
 interface Props {
   jwt: string;
@@ -15,25 +18,6 @@ interface AdminStats {
   expiringSoon: number;
 }
 
-interface TeamMember {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  status: string;
-  trialExpiresAt?: string | null;
-}
-
-interface AuditEntry {
-  id: string;
-  action: string;
-  createdAt: string;
-  actor: {
-    name: string | null;
-    email: string;
-  };
-}
-
 const EMPTY_STATS: AdminStats = {
   teamSize: 0,
   maxUsers: 0,
@@ -43,41 +27,6 @@ const EMPTY_STATS: AdminStats = {
   expiringSoon: 0,
 };
 
-function formatAction(action: string): string {
-  return action
-    .toLowerCase()
-    .split('_')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function relativeTime(dateStr?: string): string {
-  if (!dateStr) return '-';
-  const ts = new Date(dateStr).getTime();
-  if (Number.isNaN(ts)) return '-';
-  const diffSec = Math.floor((Date.now() - ts) / 1000);
-  if (diffSec < 60) return 'just now';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  const diffMo = Math.floor(diffDay / 30);
-  if (diffMo < 12) return `${diffMo}mo ago`;
-  return `${Math.floor(diffMo / 12)}y ago`;
-}
-
-function trialCountdown(trialExpiresAt?: string | null): string {
-  if (!trialExpiresAt) return 'No trial set';
-  const exp = new Date(trialExpiresAt).getTime();
-  if (Number.isNaN(exp)) return 'No trial set';
-  const now = Date.now();
-  const diffMs = exp - now;
-  if (diffMs <= 0) return 'expired';
-  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  return `${days} day${days === 1 ? '' : 's'} left`;
-}
 
 function isExpiringSoon(member: TeamMember): boolean {
   if (member.status !== 'ACTIVE' || !member.trialExpiresAt) return false;
@@ -94,7 +43,9 @@ export default function AdminDashboard({ jwt }: Props) {
   const [stats, setStats] = useState<AdminStats>(EMPTY_STATS);
   const [qbStatus, setQbStatus] = useState<QBStatus>({ connected: false });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
+  const [recentActivity, setRecentActivity] = useState<AuditLogEntry[]>([]);
+  const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
+  const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -110,7 +61,7 @@ export default function AdminDashboard({ jwt }: Props) {
       setStats(statsData);
       setQbStatus(qbData);
       setTeamMembers(teamData.users as TeamMember[]);
-      setRecentActivity(auditData.logs as AuditEntry[]);
+      setRecentActivity(auditData.logs);
     } catch (err: any) {
       setError(err.message || 'Failed to load admin dashboard.');
     } finally {
@@ -118,9 +69,21 @@ export default function AdminDashboard({ jwt }: Props) {
     }
   }, [jwt]);
 
+  const fetchScanHealth = useCallback(async () => {
+    try {
+      const health = await api.getScanHealth(jwt);
+      setScanHealth(health);
+    } catch (err) {
+      setScanHealth(null);
+    } finally {
+      setScanHealthLoaded(true);
+    }
+  }, [jwt]);
+
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    void fetchData();
+    void fetchScanHealth();
+  }, [fetchData, fetchScanHealth]);
 
   const expiringMembers = useMemo(() => {
     return teamMembers
@@ -194,17 +157,15 @@ export default function AdminDashboard({ jwt }: Props) {
         </div>
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
-        <h3 className="text-sm font-medium text-cyan-300">QuickBooks Connection</h3>
-        {qbStatus.connected ? (
-          <>
-            <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
-            <p className="text-xs text-gray-400">Token expires: {qbStatus.expiresAt ? new Date(qbStatus.expiresAt).toLocaleString() : '-'}</p>
-          </>
-        ) : (
-          <p className="text-sm text-yellow-400">⚠ Not connected</p>
-        )}
-      </div>
+      <QBConnectionCard qbStatus={qbStatus} />
+      {scanHealthLoaded ? (
+        scanHealth ? <ScannerHealthCard scanHealth={scanHealth} /> : null
+      ) : (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+          <div className="h-4 bg-slate-900 rounded animate-pulse" />
+          <div className="h-3 bg-slate-900 rounded animate-pulse" />
+        </div>
+      )}
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-cyan-300">Expiring Soon</h3>

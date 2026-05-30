@@ -1,17 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
-
-interface AdminRequest {
-  id: string;
-  email: string;
-  name: string | null;
-  description: string | null;
-  company: string | null;
-  status: string;
-  createdAt: string;
-  approvedBy?: { id: string; name: string | null } | null;
-}
+import type { AdminRequest } from '../../types';
 
 interface ApproveResult {
   user: { id: string; email: string; name: string | null; role: string };

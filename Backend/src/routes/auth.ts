@@ -8,7 +8,10 @@ import { validate } from '../middleware/validate';
 import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 // POST /api/auth/login
 router.post('/login', authLimiter, validate(loginSchema), async (req: Request, res: Response) => {
@@ -166,8 +169,13 @@ router.get('/session', authenticate, async (req: AuthRequest, res: Response) => 
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token.' });
+  } catch (err) {
+    if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ error: 'Session expired' });
+    }
+    return res.status(500).json({
+      error: process.env.NODE_ENV === 'production' ? 'Session check failed' : ((err as Error).message || 'Unknown error'),
+    });
   }
 });
 

@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/auth';
 import locationRoutes from './routes/locations';
@@ -22,13 +24,16 @@ const PORT = process.env.PORT || 3000;
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow no-origin requests (server-side, curl, OAuth redirects)
-    if (!origin) return callback(null, true);
-    // Allow Chrome extension origins
-    if (origin.startsWith('chrome-extension://')) return callback(null, true);
-    // Allow localhost for development
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return callback(null, true);
-    // Deny everything else
+    const allowedExtensionId = process.env.ALLOWED_EXTENSION_ID;
+    if (!origin || origin === 'undefined') {
+      return callback(null, true);
+    }
+    if (allowedExtensionId && origin === `chrome-extension://${allowedExtensionId}`) {
+      return callback(null, true);
+    }
+    if (!allowedExtensionId && origin.startsWith('chrome-extension://')) {
+      return callback(null, true);
+    }
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -37,6 +42,23 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+app.use(helmet());
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+});
+app.use(globalLimiter);
+
+// ── Request Logger ─────────────────────────────────────────────────────────
+app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  console.log(`[${req.method}] ${req.path}`);
+  next();
+});
 
 // ── Health Check ────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -61,9 +83,12 @@ app.use((_req, res) => {
 });
 
 // ── Global Error Handler ────────────────────────────────────────────────────
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('[Error]', err.message);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[Express Error]', err.message);
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+  });
 });
 
 // ── Start ────────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ const CLASS_COLORS: Record<string, string> = {
 export default function QBDataView() {
   const {
     accounts, customers, vendors, employees, taxCodes, classes,
-    listsLoaded, listsLoading, syncAllLists,
+    listsLoaded, listsLoading, listsError, syncAllLists,
   } = useQBContext();
 
   const [openSection, setOpenSection] = useState<string>('accounts');
@@ -21,8 +21,8 @@ export default function QBDataView() {
 
   // Auto-trigger sync when tab is opened
   useEffect(() => {
-    if (!listsLoaded && !listsLoading) void syncAllLists();
-  }, [listsLoaded, listsLoading, syncAllLists]);
+    if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
+  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
 
   const setSearch = (key: string, val: string) =>
     setSearches((prev) => ({ ...prev, [key]: val }));

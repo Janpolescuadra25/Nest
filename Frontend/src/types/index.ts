@@ -15,6 +15,8 @@ export interface Mapping {
   locationId: string;
   sourceField: string;
   targetAccount: string;
+  postingType?: string;
+  keepSeparate?: boolean;
   targetClass?: string;
   targetName?: string;
   targetDescription?: string;
@@ -73,6 +75,64 @@ export type ScanData = Record<string, number>;
 export interface LocationConfig {
   memoTemplate?: string;
   docNumberTemplate?: string;
+}
+
+export interface ScanHealth {
+  totalScans: number;
+  successfulScans: number;
+  failedScans: number;
+  pendingScans: number;
+  mappedScans: number;
+  successRate: number;
+  lastScanAt: string | null;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+}
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  status: string;
+  canScan: boolean;
+  canMap: boolean;
+  canSync: boolean;
+  canManageLocs: boolean;
+  mustChangePassword: boolean;
+  createdAt?: string;
+  trialExpiresAt?: string | null;
+  customExpiryMessage?: string | null;
+}
+
+export interface AdminRequest {
+  id: string;
+  email: string;
+  name: string | null;
+  description: string | null;
+  company: string | null;
+  status: string;
+  createdAt: string;
+  approvedBy?: { id: string; name: string | null } | null;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  targetId: string | null;
+  action: string;
+  meta: any;
+  createdAt: string;
+  actor: { name: string | null; email: string };
+}
+
+export interface OwnerAuditLogEntry {
+  id: string;
+  action: string;
+  meta: any;
+  createdAt: string;
+  actor: { id: string; name: string | null; email: string };
+  target: { id: string; name: string | null; email: string } | null;
 }
 
 // Chrome extension message types

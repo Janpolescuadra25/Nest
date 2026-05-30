@@ -131,6 +131,8 @@ model Mapping {
   locationId        String
   sourceField       String   // e.g. "Food Sales", "Credit Card Tips"
   targetAccount     String   // QB Account name or ID
+  postingType       String   @default("Credit")
+  keepSeparate      Boolean  @default(false)
   targetClass       String?  // QB Class (optional)
   targetName        String?  // QB Name/Entity (optional)
   targetDescription String?

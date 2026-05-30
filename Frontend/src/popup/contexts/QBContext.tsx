@@ -13,6 +13,7 @@ interface QBContextType {
   taxCodes: QBTaxCode[];
   listsLoaded: boolean;
   listsLoading: boolean;
+  listsError: string | null;
   syncAllLists: () => Promise<void>;
   getAccountById: (id: string) => QBAccount | undefined;
   getClassById: (id: string) => QBClass | undefined;
@@ -37,11 +38,13 @@ export function QBContextProvider({
   const [taxCodes, setTaxCodes] = useState<QBTaxCode[]>([]);
   const [listsLoaded, setListsLoaded] = useState(false);
   const [listsLoading, setListsLoading] = useState(false);
+  const [listsError, setListsError] = useState<string | null>(null);
   const listsLoadingRef = useRef(false);
 
   const syncAllLists = useCallback(async () => {
     if (!jwt || listsLoadingRef.current) return;
     listsLoadingRef.current = true;
+    setListsError(null);
     console.log('[QBContext] syncAllLists called, jwt present:', !!jwt);
     setListsLoading(true);
     try {
@@ -62,7 +65,9 @@ export function QBContextProvider({
       setTaxCodes(data.taxCodes ?? []);
       setListsLoaded(true);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to refresh QuickBooks lists';
       console.error('[QBContext] syncAllLists error:', err);
+      setListsError(message);
     } finally {
       listsLoadingRef.current = false;
       setListsLoading(false);
@@ -123,6 +128,7 @@ export function QBContextProvider({
         taxCodes,
         listsLoaded,
         listsLoading,
+        listsError,
         syncAllLists,
         getAccountById,
         getClassById,

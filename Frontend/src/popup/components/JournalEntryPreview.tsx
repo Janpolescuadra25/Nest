@@ -132,19 +132,22 @@ interface DecodedMapping {
 }
 
 function decodeMapping(m: Mapping): DecodedMapping {
-  let postingType: 'Debit' | 'Credit' = 'Credit';
-  let classId: string | undefined;
-  let keepSeparate: boolean | undefined;
+  let postingType: 'Debit' | 'Credit' = (m.postingType === 'Debit' || m.postingType === 'Credit') ? m.postingType : 'Credit';
+  let classId: string | undefined = m.targetClass ?? undefined;
+  let keepSeparate: boolean = m.keepSeparate ?? false;
+
   try {
     if (m.targetMemo) {
       const extra = JSON.parse(m.targetMemo) as { postingType?: string; classId?: string; keepSeparate?: boolean };
-      if (extra.postingType === 'Debit' || extra.postingType === 'Credit') {
+      if (m.postingType === undefined && (extra.postingType === 'Debit' || extra.postingType === 'Credit')) {
         postingType = extra.postingType;
       }
-      classId = extra.classId;
-      keepSeparate = extra.keepSeparate;
+      if (m.keepSeparate === undefined && extra.keepSeparate !== undefined) {
+        keepSeparate = extra.keepSeparate;
+      }
     }
   } catch { /* ignore */ }
+
   return {
     sourceField: m.sourceField,
     accountId: m.targetAccount,
@@ -161,14 +164,15 @@ interface Props {
   jwt: string;
   scanData: ScanData | null;
   selectedLocationId: string;
+  scanRecordId?: string | null;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, selectedLocationId }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, selectedLocationId, scanRecordId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
     accounts, classes, employees, vendors, customers, taxCodes,
-    listsLoaded, listsLoading, syncAllLists,
+    listsLoaded, listsLoading, listsError, syncAllLists,
   } = useQBContext();
 
   const today = toYMD(new Date());
@@ -197,8 +201,8 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
 
   // Load QB lists on mount
   useEffect(() => {
-    if (!listsLoaded && !listsLoading) void syncAllLists();
-  }, [listsLoaded, listsLoading, syncAllLists]);
+    if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
+  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
 
   const locId = selectedLocationId || locations[0]?.id || '';
 
@@ -450,7 +454,10 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId 
         });
 
       const result = await api.createJournalEntry(
-        jwt, txnDate, jeLines, undefined,
+        jwt,
+        txnDate,
+        jeLines,
+        scanRecordId ?? undefined,
         privateNote || `Nest sync — ${txnDate} — ${locations[0]?.name ?? ''}`,
         docNumber || undefined,
       ) as { journalEntryId: string; txnDate: string };

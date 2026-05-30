@@ -55,6 +55,56 @@ router.post('/', requirePermission('canScan'), async (req: AuthRequest, res: Res
   }
 });
 
+// ── GET /api/scans/health ─────────────────────────────────────────────────────
+router.get('/health', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const locationWhere = locationFilter(req.user!);
+    const scopeFilter = Object.keys(locationWhere).length ? { location: locationWhere } : {};
+    const countWhere = {
+      createdAt: { gte: thirtyDaysAgo },
+      ...scopeFilter,
+    };
+
+    const [
+      totalScans,
+      successfulScans,
+      failedScans,
+      pendingScans,
+      mappedScans,
+      lastScan,
+      lastSuccess,
+      lastFailure,
+    ] = await Promise.all([
+      prisma.scanRecord.count({ where: countWhere }),
+      prisma.scanRecord.count({ where: { ...countWhere, status: 'SYNCED' } }),
+      prisma.scanRecord.count({ where: { ...countWhere, status: 'FAILED' } }),
+      prisma.scanRecord.count({ where: { ...countWhere, status: 'PENDING' } }),
+      prisma.scanRecord.count({ where: { ...countWhere, status: 'MAPPED' } }),
+      prisma.scanRecord.findFirst({ where: scopeFilter, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      prisma.scanRecord.findFirst({ where: { ...scopeFilter, status: 'SYNCED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      prisma.scanRecord.findFirst({ where: { ...scopeFilter, status: 'FAILED' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+    ]);
+
+    const successRate = totalScans > 0 ? (successfulScans / totalScans) * 100 : 0;
+
+    res.json({
+      totalScans,
+      successfulScans,
+      failedScans,
+      pendingScans,
+      mappedScans,
+      successRate,
+      lastScanAt: lastScan?.createdAt ?? null,
+      lastSuccessAt: lastSuccess?.createdAt ?? null,
+      lastFailureAt: lastFailure?.createdAt ?? null,
+    });
+  } catch (err) {
+    console.error('[Scans] health error:', err);
+    res.status(500).json({ error: 'Failed to fetch scan health' });
+  }
+});
+
 // ── GET /api/scans/:id ────────────────────────────────────────────────────────
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {

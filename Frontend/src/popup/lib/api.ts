@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, QBStatus } from '../../types';
+import type { Location, Mapping, Rule, ScanData, QBStatus, AuditLogEntry } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -67,15 +67,6 @@ async function del(path: string, jwt?: string | null): Promise<void> {
   }
 }
 
-interface AuditLogEntry {
-  id: string;
-  action: string;
-  meta: any;
-  createdAt: string;
-  actor: { id: string; name: string | null; email: string };
-  target: { id: string; name: string | null; email: string } | null;
-}
-
 interface UserInfo {
   id: string;
   email: string;
@@ -127,6 +118,19 @@ export const api = {
       totalPendingRequests: number;
       expiredMembers: number;
     }>('/api/owner/stats', jwt),
+
+  getScanHealth: (jwt: string) =>
+    get<{
+      totalScans: number;
+      successfulScans: number;
+      failedScans: number;
+      pendingScans: number;
+      mappedScans: number;
+      successRate: number;
+      lastScanAt: string | null;
+      lastSuccessAt: string | null;
+      lastFailureAt: string | null;
+    }>('/api/scans/health', jwt),
 
   getAuditLog: (jwt: string, params?: { page?: number; limit?: number; action?: string; actorId?: string; dateFrom?: string; dateTo?: string }) => {
     const sp = new URLSearchParams();
@@ -212,7 +216,7 @@ export const api = {
 
   // ── Scans ──────────────────────────────────────────────────────────────────
   saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData) =>
-    post('/api/scans', { locationId, scanDate, rawData }, jwt),
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData }, jwt),
 
   getScans: (jwt: string, locationId: string) =>
     get(`/api/locations/${locationId}/scans`, jwt),

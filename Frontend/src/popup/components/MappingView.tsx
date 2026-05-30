@@ -27,12 +27,12 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
   return {
     sourceField: m.sourceField,
     targetAccount: m.accountId,
+    postingType: m.postingType,
+    keepSeparate: m.keepSeparate,
     targetClass: m.classId || undefined,
     targetDescription: m.description || undefined,
     targetMemo: JSON.stringify({
-      postingType: m.postingType,
       amountRule: m.amountRule,
-      keepSeparate: m.keepSeparate || undefined,
       taxCodeId: m.taxCodeId || undefined,
       entityType: m.entityType || undefined,
       entityId: m.entityId || undefined,
@@ -42,6 +42,8 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
 }
 
 function decodeFromApi(m: Mapping): LocalMapping {
+  let postingType: 'Debit' | 'Credit' = (m.postingType === 'Debit' || m.postingType === 'Credit') ? m.postingType : 'Credit';
+  let keepSeparate: boolean = m.keepSeparate ?? false;
   let extra: {
     postingType?: string;
     amountRule?: string;
@@ -50,22 +52,32 @@ function decodeFromApi(m: Mapping): LocalMapping {
     entityType?: string;
     entityId?: string;
   } = {};
+
   try {
-    if (m.targetMemo) extra = JSON.parse(m.targetMemo) as typeof extra;
+    if (m.targetMemo) {
+      extra = JSON.parse(m.targetMemo) as typeof extra;
+      if (m.postingType === undefined && (extra.postingType === 'Debit' || extra.postingType === 'Credit')) {
+        postingType = extra.postingType;
+      }
+      if (m.keepSeparate === undefined && extra.keepSeparate !== undefined) {
+        keepSeparate = extra.keepSeparate;
+      }
+    }
   } catch { /* ignore */ }
+
   return {
     localId: m.id,
     remoteId: m.id,
     sourceField: m.sourceField,
     accountId: m.targetAccount,
-    postingType: (extra.postingType as 'Debit' | 'Credit') ?? 'Credit',
+    postingType,
     description: m.targetDescription ?? '',
     classId: m.targetClass ?? '',
     taxCodeId: extra.taxCodeId ?? '',
     entityType: (extra.entityType as LocalMapping['entityType']) ?? '',
     entityId: extra.entityId ?? '',
     amountRule: extra.amountRule ?? 'Direct Amount',
-    keepSeparate: extra.keepSeparate ?? false,
+    keepSeparate,
     isDirty: false,
     expanded: false,
   };
@@ -172,6 +184,7 @@ export default function MappingView({
     taxCodes,
     listsLoaded,
     listsLoading,
+    listsError,
     syncAllLists,
     searchEntities,
   } = useQBContext();
@@ -192,8 +205,8 @@ export default function MappingView({
 
   // Load QB lists on mount if not loaded
   useEffect(() => {
-    if (!listsLoaded && !listsLoading) void syncAllLists();
-  }, [listsLoaded, listsLoading, syncAllLists]);
+    if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
+  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
 
   const loadMappings = useCallback(async () => {
     if (!locId) return;

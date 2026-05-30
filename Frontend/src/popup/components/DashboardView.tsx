@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
-import type { QBStatus } from '../../types';
+import { QBConnectionCard } from './QBConnectionCard';
+import { ScannerHealthCard } from './ScannerHealthCard';
+import { formatAction, relativeTime } from '../lib/utils';
+import type { QBStatus, ScanHealth, AdminRequest, OwnerAuditLogEntry } from '../../types';
 
 interface Props {
   jwt: string;
@@ -16,23 +19,6 @@ interface OwnerStats {
   totalFailed: number;
   totalPendingRequests: number;
   expiredMembers: number;
-}
-
-interface AdminRequest {
-  id: string;
-  email: string;
-  name: string | null;
-  description: string | null;
-  company: string | null;
-  status: string;
-  createdAt: string;
-}
-
-interface AuditLogEntry {
-  id: string;
-  action: string;
-  createdAt: string;
-  actor: { id: string; name: string | null; email: string };
 }
 
 interface AdminPartner {
@@ -56,30 +42,6 @@ const EMPTY_STATS: OwnerStats = {
   expiredMembers: 0,
 };
 
-function relativeTime(dateStr?: string): string {
-  if (!dateStr) return '-';
-  const then = new Date(dateStr).getTime();
-  if (Number.isNaN(then)) return '-';
-  const diffSec = Math.floor((Date.now() - then) / 1000);
-  if (diffSec < 60) return 'just now';
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  const diffMo = Math.floor(diffDay / 30);
-  if (diffMo < 12) return `${diffMo}mo ago`;
-  return `${Math.floor(diffMo / 12)}y ago`;
-}
-
-function formatAction(action: string): string {
-  return action
-    .toLowerCase()
-    .split('_')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
 
 export default function DashboardView({ jwt }: Props) {
   const { showToast } = useToast();
@@ -90,8 +52,10 @@ export default function DashboardView({ jwt }: Props) {
   const [stats, setStats] = useState<OwnerStats>(EMPTY_STATS);
   const [qbStatus, setQbStatus] = useState<QBStatus>({ connected: false });
   const [pendingRequests, setPendingRequests] = useState<AdminRequest[]>([]);
-  const [recentActivity, setRecentActivity] = useState<AuditLogEntry[]>([]);
+  const [recentActivity, setRecentActivity] = useState<OwnerAuditLogEntry[]>([]);
   const [partners, setPartners] = useState<AdminPartner[]>([]);
+  const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
+  const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
 
   const fetchPendingRequests = useCallback(async () => {
     const data = await api.getAdminRequests(jwt, 1, 'PENDING');
@@ -112,7 +76,7 @@ export default function DashboardView({ jwt }: Props) {
       setStats(statsData);
       setQbStatus(qbData);
       setPendingRequests(requestsData.requests as AdminRequest[]);
-      setRecentActivity(activityData.logs as AuditLogEntry[]);
+      setRecentActivity(activityData.logs as OwnerAuditLogEntry[]);
       setPartners(adminsData.admins as AdminPartner[]);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data.');
@@ -121,9 +85,21 @@ export default function DashboardView({ jwt }: Props) {
     }
   }, [jwt]);
 
+  const fetchScanHealth = useCallback(async () => {
+    try {
+      const health = await api.getScanHealth(jwt);
+      setScanHealth(health);
+    } catch (err) {
+      setScanHealth(null);
+    } finally {
+      setScanHealthLoaded(true);
+    }
+  }, [jwt]);
+
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    void fetchDashboard();
+    void fetchScanHealth();
+  }, [fetchDashboard, fetchScanHealth]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(prev => ({ ...prev, [`approve_${id}`]: true }));
@@ -217,17 +193,15 @@ export default function DashboardView({ jwt }: Props) {
         </div>
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
-        <h3 className="text-sm font-medium text-cyan-300">QuickBooks Connection</h3>
-        {qbStatus.connected ? (
-          <>
-            <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
-            <p className="text-xs text-gray-400">Token expires: {qbStatus.expiresAt ? new Date(qbStatus.expiresAt).toLocaleString() : '-'}</p>
-          </>
-        ) : (
-          <p className="text-sm text-yellow-400">⚠ Not connected</p>
-        )}
-      </div>
+      <QBConnectionCard qbStatus={qbStatus} />
+      {scanHealthLoaded ? (
+        scanHealth ? <ScannerHealthCard scanHealth={scanHealth} /> : null
+      ) : (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
+          <div className="h-4 bg-slate-900 rounded animate-pulse" />
+          <div className="h-3 bg-slate-900 rounded animate-pulse" />
+        </div>
+      )}
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-cyan-300">Pending Requests</h3>
