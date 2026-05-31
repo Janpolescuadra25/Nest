@@ -78,11 +78,11 @@ const SECTIONS: Section[] = [
           <Step num={3} title="Set Up a Location">
             In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your Toast reports to a specific restaurant location. You can have multiple locations.
           </Step>
-          <Step num={4} title="Scan a Toast Report">
-            Navigate to your Toast POS <span className="text-cyan-400">Sales Summary</span> page in the browser (the URL should contain <code className="text-cyan-400 bg-gray-900 px-1 rounded text-[10px]">/restaurants/admin/reports/sales/sales-summary</code>). Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads all 17 sections of the report automatically.
+          <Step num={4} title="Scan a POS Report">
+            Navigate to a POS report page (Toast or SALIDO) in the browser. Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads the report fields automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
-            Go to the <span className="text-cyan-400">Mapping</span> tab. Each Toast field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
+            Go to the <span className="text-cyan-400">Mapping</span> tab. Each POS field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
           </Step>
           <Step num={6} title="Preview & Sync">
             Go to the <span className="text-cyan-400">Preview</span> tab. You'll see your journal entry with all mapped amounts. Verify the totals balance (Debits = Credits), then click <span className="text-cyan-400">"Sync to QuickBooks"</span>. Your journal entry is now in QuickBooks! 🎉
@@ -97,10 +97,10 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2">
         <TabInfo icon="🔍" name="Scan">
-          Scans the Toast Sales Summary page currently open in your browser. Must be on a Toast POS reports page. Shows a summary of all extracted fields and values.
+          Scans the POS report page currently open in your browser. Shows a summary of all extracted fields and values.
         </TabInfo>
         <TabInfo icon="🗺️" name="Mapping">
-          Links each Toast field to a QuickBooks account. This is where you tell Nest "Food Sales goes to the Sales Revenue account as a Credit." You can save, edit, and reuse mappings per location.
+          Links each POS field to a QuickBooks account. This is where you tell Nest "Food Sales goes to the Sales Revenue account as a Credit." You can save, edit, and reuse mappings per location.
         </TabInfo>
         <TabInfo icon="📊" name="Preview">
           Shows the final journal entry before syncing. You can edit amounts, change accounts, add entities (Customer/Vendor/Employee), assign classes, and toggle consolidation. The entry must balance before syncing.
@@ -122,11 +122,11 @@ const SECTIONS: Section[] = [
     icon: '🗺️',
     content: (
       <div className="space-y-3">
-        <p className="text-gray-300 text-xs font-medium">Mappings tell Nest which QuickBooks account each Toast field belongs to.</p>
+        <p className="text-gray-300 text-xs font-medium">Mappings tell Nest which QuickBooks account each POS field belongs to.</p>
 
         <SubHeading>How Mapping Works</SubHeading>
         <p className="text-[11px] text-gray-400">
-          Each mapping connects a <span className="text-cyan-400">source field</span> from Toast (left side) to a <span className="text-cyan-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-cyan-400">Debit</span> or <span className="text-cyan-400">Credit</span>.
+          Each mapping connects a <span className="text-cyan-400">source field</span> from your POS (left side) to a <span className="text-cyan-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-cyan-400">Debit</span> or <span className="text-cyan-400">Credit</span>.
         </p>
 
         <SubHeading>Quick Tips</SubHeading>
@@ -183,7 +183,7 @@ const SECTIONS: Section[] = [
           </div>
         </div>
 
-        <SubHeading>Toast-Specific Guide</SubHeading>
+        <SubHeading>POS-Specific Guide</SubHeading>
         <ul className="space-y-1.5">
           <Bullet><span className="text-green-400">Debit:</span> Payments section (Cash, Credit Card, etc.) — money received</Bullet>
           <Bullet><span className="text-green-400">Debit:</span> Cash Activity — cash coming in</Bullet>
@@ -274,7 +274,7 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-3">
         <div className="space-y-2">
-          <TroubleshootItem problem="Scan returns no data" solution="Make sure you're on the Toast Sales Summary page. The URL must contain /restaurants/admin/reports/sales/sales-summary. Wait for the page to fully load before scanning." />
+          <TroubleshootItem problem="Scan returns no data" solution="Make sure you're on a supported POS report page (Toast Sales Summary or SALIDO Accounting Summary). Wait for the page to fully load before scanning." />
           <TroubleshootItem problem="QB not connected" solution='Go to Settings and click "Connect to QuickBooks". Complete the Intuit authorization flow. If it fails, try again — the auth link expires after 15 minutes.' />
           <TroubleshootItem problem="Unbalanced entry" solution="Check that all fields are mapped. Unmapped fields won't have accounts assigned. Look for the red imbalance warning at the bottom of Preview. Nest auto-fixes rounding up to $0.02." />
           <TroubleshootItem problem="Account not found in dropdown" solution='Click the ↻ refresh button next to the account dropdown to re-fetch QB lists. You can also search by partial name or account number.' />
@@ -304,7 +304,7 @@ const SECTIONS: Section[] = [
     icon: '💬',
     content: (
       <div className="space-y-2.5">
-        <FAQItem q="Does Nest modify my Toast data?" a="No. Nest only reads data from the Toast page. It never writes, modifies, or deletes anything in Toast." />
+        <FAQItem q="Does Nest modify my POS data?" a="No. Nest only reads data from the POS page. It never writes, modifies, or deletes anything in your POS." />
         <FAQItem q="Can I undo a sync?" a="Nest doesn't have an undo button, but you can delete the journal entry directly in QuickBooks Online. Find it by the DocNumber or date." />
         <FAQItem q="How often should I sync?" a="Typically once per day — after your Toast Sales Summary report is finalized. Some restaurants sync weekly. It's up to your accounting workflow." />
         <FAQItem q="Can I sync multiple locations?" a="Yes! Add each location in Settings, select the active location, and sync separately for each. Mappings are per-location." />
@@ -439,7 +439,7 @@ export default function HelpPanel({ onClose }: Props) {
       {/* Footer */}
       <div className="px-4 py-2 border-t border-gray-700 text-center flex-shrink-0">
         <p className="text-[10px] text-gray-600">
-          Nest v0.1.0 — Toast POS → QuickBooks sync
+          Nest — POS → QuickBooks sync
         </p>
         <p className="text-[10px] text-gray-700">
           Created by John Paul O. Escuadra

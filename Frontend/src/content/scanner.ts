@@ -1,6 +1,7 @@
 // Content script — runs on *://*.toasttab.com/* pages
 // Real DOM scraper for Toast POS Sales Summary page
 // Sections 1–17 extracted via data-testid selectors
+export {};
 
 // ---------------------------------------------------------------------------
 // UTILITIES

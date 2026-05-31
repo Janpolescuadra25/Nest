@@ -1,4 +1,4 @@
-// Prisma schema for Nest — Toast POS to QuickBooks sync
+// Prisma schema for Nest — POS to QuickBooks sync
 
 generator client {
   provider = "prisma-client-js"

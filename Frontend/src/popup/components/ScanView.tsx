@@ -2,6 +2,20 @@ import React, { useEffect, useState } from 'react';
 import type { ScanData } from '../../types';
 import { api } from '../lib/api';
 
+const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
+  toast: { pattern: /toasttab\.com/, name: 'Toast' },
+  salido: { pattern: /salido\.com/, name: 'SALIDO' },
+};
+
+async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; posName: string } | null> {
+  const allTabs = await chrome.tabs.query({});
+  for (const [posType, { pattern, name }] of Object.entries(POS_URLS)) {
+    const tab = allTabs.find(t => t.url && pattern.test(t.url));
+    if (tab) return { tab, posType, posName: name };
+  }
+  return null;
+}
+
 interface Props {
   jwt: string;
   scanData: ScanData | null;
@@ -13,14 +27,13 @@ interface Props {
 export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, locationId }: Props) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tabUrl, setTabUrl] = useState<string>('');
+  const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
 
-  // Load cached scan data and current tab URL on mount
+  // Load cached scan data and detect POS tab on mount
   useEffect(() => {
     chrome.storage.local.get(['lastScanData'], (result) => {
       const cached = result['lastScanData'] as ScanData | undefined;
       if (cached) {
-        // If cached data has old mock keys, clear it
         if ('Food Sales' in cached || 'Beverage Sales' in cached) {
           chrome.storage.local.remove(['lastScanData']);
           console.log('[Nest] Cleared stale cached scan data (old mock format)');
@@ -29,13 +42,10 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
         if (!scanData) onScanData(cached);
       }
     });
-    // Search for Toast tabs across ALL windows (popup is in a floating window)
-    chrome.tabs.query({ url: '*://*.toasttab.com/*' }, (tabs) => {
-      if (tabs[0]?.url) setTabUrl(tabs[0].url);
+    findPOSTab().then(result => {
+      if (result) setDetectedPOS({ type: result.posType, name: result.posName });
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isToastTab = tabUrl.includes('toasttab.com');
 
   /** Send REQUEST_SCAN to a tab and return the response (or null on failure). */
   const sendScanMessage = (tabId: number): Promise<{ data?: ScanData } | null> => {
@@ -61,30 +71,34 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
     setScanning(true);
     setError(null);
     try {
-      // Query specifically for Toast tabs across ALL windows (popup is in a floating window)
-      const toastTabs = await chrome.tabs.query({ url: "*://*.toasttab.com/*" });
-      const tab = toastTabs[0];
-      console.log('[Nest Popup] Scan triggered — found Toast tab:', tab?.id, 'url:', tab?.url);
-      if (!tab?.id) throw new Error('No Toast tab found — navigate to a Toast POS page first');
+      // Find any open POS tab across ALL windows
+      const posResult = await findPOSTab();
+      const tab = posResult?.tab;
+      const posType = posResult?.posType ?? 'toast';
+      const posName = posResult?.posName ?? 'POS';
+      console.log(`[Nest Popup] Scan triggered — found ${posName} tab:`, tab?.id, 'url:', tab?.url);
+      if (!tab?.id) throw new Error('No POS report tab found — open a supported POS report page');
 
       // Try sending the scan message
       let response = await sendScanMessage(tab.id);
 
       // If content script isn't injected yet, inject it and retry
       if (!response) {
+        const scriptFile = posType === 'salido'
+          ? 'content/salido-scanner.js'
+          : 'content/scanner.js';
         console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            files: ['content/scanner.js']
+            files: [scriptFile],
           });
-          // Wait a moment for the script to initialize
           await new Promise(r => setTimeout(r, 500));
           console.log('[Nest Popup] Scanner injected — retrying scan...');
           response = await sendScanMessage(tab.id);
         } catch (injectErr) {
           console.error('[Nest Popup] Failed to inject content script:', injectErr);
-          throw new Error('Could not inject scanner into Toast tab — try refreshing the page');
+          throw new Error('Could not inject scanner into tab — try refreshing the page');
         }
       }
 
@@ -111,7 +125,7 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
           }
         }
       } else {
-        throw new Error('No data returned from scanner — try refreshing the Toast page');
+        throw new Error('No data returned from scanner — try refreshing the page');
       }
     } catch (err) {
       console.error('[Nest Popup] Scan error:', err);
@@ -126,9 +140,9 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
       {/* Status bar */}
       <div className="flex items-center justify-between mb-3">
         <div className={`text-xs px-2 py-1 rounded-full ${
-          isToastTab ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
+          detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
         }`}>
-          {isToastTab ? '🟢 Toast page detected' : '⚪ Not on Toast page'}
+          {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
         </div>
         <button
           onClick={handleRescan}
@@ -147,7 +161,7 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
 
       {scanData ? (
         <>
-          <div className="text-xs text-gray-500 mb-2">Extracted Toast fields ({Object.keys(scanData).length})</div>
+          <div className="text-xs text-gray-500 mb-2">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</div>
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -187,7 +201,7 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
           <div className="text-3xl mb-3">🍽️</div>
           <p className="text-gray-400 text-sm">No scan data yet</p>
           <p className="text-gray-600 text-xs mt-1">
-            Navigate to a Toast report page, then click Re-scan Page
+            Navigate to a POS report page, then click Re-scan Page
           </p>
         </div>
       )}

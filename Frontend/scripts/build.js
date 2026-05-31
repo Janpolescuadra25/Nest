@@ -56,7 +56,13 @@ async function build() {
     outfile: path.join(DIST, 'content', 'scanner.js'),
   });
   console.log('[Build] content/scanner.js');
-
+  // ── SALIDO content script ───────────────────────────────────────────────────
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: [path.join(ROOT, 'src', 'content', 'salido-scanner.ts')],
+    outfile: path.join(DIST, 'content', 'salido-scanner.js'),
+  });
+  console.log('[Build] content/salido-scanner.js');
   // ── Background service worker ────────────────────────────────────────────
   await esbuild.build({
     ...sharedConfig,

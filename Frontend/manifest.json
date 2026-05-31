@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Nest — Toast to QuickBooks Sync",
+  "name": "Nest — POS to QuickBooks Sync",
   "version": "0.1.0",
   "description": "Nest — Bridge between Toast POS and QuickBooks. Created by John Paul O. Escuadra. Scan sales reports, map fields to journal entries, and sync to QuickBooks seamlessly.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "windows"],
   "host_permissions": [
     "http://localhost:3000/*",
     "https://*.onrender.com/*",
-    "*://*.toasttab.com/*"
+    "*://*.toasttab.com/*",
+    "*://*.salido.com/*"
   ],
   "action": {
     "default_icon": {
@@ -25,6 +26,11 @@
     {
       "matches": ["*://*.toasttab.com/*"],
       "js": ["content/scanner.js"]
+    },
+    {
+      "matches": ["*://*.salido.com/*"],
+      "js": ["content/salido-scanner.js"],
+      "run_at": "document_idle"
     }
   ],
   "content_security_policy": {

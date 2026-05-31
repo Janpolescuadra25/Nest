@@ -164,7 +164,7 @@ export default function SettingsView({ jwt, onLogout }: Props) {
           <div>
             <div className="text-white font-bold text-sm">Nest</div>
             <div className="text-gray-400 text-xs">Version 1.0.0</div>
-            <div className="text-gray-500 text-xs mt-0.5">Bridge between Toast POS and QuickBooks</div>
+            <div className="text-gray-500 text-xs mt-0.5">Bridge between POS and QuickBooks</div>
           </div>
         </div>
 
@@ -174,7 +174,7 @@ export default function SettingsView({ jwt, onLogout }: Props) {
           <div className="text-white text-sm font-medium">John Paul O. Escuadra</div>
           <div className="text-gray-500 text-xs mt-1 leading-relaxed">
             John Paul is a full-stack developer specializing in restaurant technology and financial integrations.
-            Nest was built to solve the real-world challenge of bridging Toast POS sales data with QuickBooks accounting,
+            Nest was built to solve the real-world challenge of bridging POS sales data with QuickBooks accounting,
             making daily bookkeeping effortless for restaurant teams.
           </div>
         </div>
