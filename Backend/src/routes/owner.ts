@@ -1,6 +1,11 @@
 import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
+import { getEffectiveAccess, hasPermission, UserForAccess } from '../middleware/effective-role';
+import { ALL_FEATURES, ALL_ACTIONS, Feature, Action } from '../middleware/permissions';
+import { logAction } from '../middleware/audit';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validate } from '../middleware/validate';
@@ -158,6 +163,611 @@ router.patch('/admins/:id', validate(updateAdminSchema), async (req: AuthRequest
   }
 });
 
+function buildUserForAccess(user: { role: UserRole; status: UserStatus; blocked: boolean; timeBombAt: Date | string | null; gracePeriodHours: number; permissions: unknown; }): UserForAccess {
+  return {
+    role: user.role,
+    status: user.status,
+    blocked: user.blocked,
+    timeBombAt: user.timeBombAt,
+    gracePeriodHours: user.gracePeriodHours,
+    permissions: user.permissions,
+  };
+}
+
+router.get('/users', async (req: AuthRequest, res: Response) => {
+  try {
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const role = req.query['role'] ? String(req.query['role']) : undefined;
+    const status = req.query['status'] ? String(req.query['status']) : undefined;
+    const search = req.query['search'] ? String(req.query['search']).trim() : undefined;
+
+    const where: Record<string, unknown> = {};
+    if (role) where.role = role;
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, users] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          adminId: true,
+          blocked: true,
+          timeBombAt: true,
+          gracePeriodHours: true,
+          approvedAt: true,
+          approvedById: true,
+          createdAt: true,
+          admin: { select: { name: true } },
+          permissions: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+
+    const result = users.map(user => {
+      const effectiveAccess = getEffectiveAccess(buildUserForAccess(user));
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        adminId: user.adminId,
+        adminName: user.admin?.name ?? null,
+        blocked: user.blocked,
+        timeBombAt: user.timeBombAt,
+        gracePeriodHours: user.gracePeriodHours,
+        approvedAt: user.approvedAt,
+        approvedById: user.approvedById,
+        createdAt: user.createdAt,
+        effectiveAccess,
+      };
+    });
+
+    return res.json({ users: result, pagination: buildPaginationMeta(total, page, limit) });
+  } catch (err) {
+    console.error('[Owner] getUsers error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/users/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        blockedById: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+        admin: { select: { name: true } },
+        blockedBy: { select: { name: true } },
+        approvedBy: { select: { name: true } },
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const effectiveAccess = getEffectiveAccess(buildUserForAccess(user));
+    const effectivePermissions = ALL_FEATURES.map(feature => ({
+      feature,
+      actions: ALL_ACTIONS.filter(action => hasPermission(buildUserForAccess(user), feature, action)),
+    }));
+
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        adminId: user.adminId,
+        adminName: user.admin?.name ?? null,
+        blocked: user.blocked,
+        blockedById: user.blockedById,
+        blockedByName: user.blockedBy?.name ?? null,
+        timeBombAt: user.timeBombAt,
+        gracePeriodHours: user.gracePeriodHours,
+        approvedAt: user.approvedAt,
+        approvedById: user.approvedById,
+        approvedByName: user.approvedBy?.name ?? null,
+        permissions: user.permissions as Record<string, boolean> | null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        effectiveAccess,
+        effectivePermissions,
+      },
+    });
+  } catch (err) {
+    console.error('[Owner] getUser error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const { blocked } = req.body as { blocked: boolean };
+
+    if (typeof blocked !== 'boolean') {
+      return res.status(400).json({ error: 'blocked must be a boolean' });
+    }
+    if (id === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot modify your own account' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot block an owner' });
+
+    let updateData: Record<string, unknown>;
+    if (blocked) {
+      updateData = { blocked: true, status: 'BLOCKED', blockedById: req.user!.userId };
+      await logAction({ actorId: req.user!.userId, action: 'USER_BLOCKED', targetUserId: id, details: { blockedById: req.user!.userId } });
+    } else {
+      if (target.status !== 'BLOCKED') {
+        return res.status(400).json({ error: 'User is not blocked' });
+      }
+      updateData = { blocked: false, status: 'ACTIVE', blockedById: null };
+      await logAction({ actorId: req.user!.userId, action: 'USER_UNBLOCKED', targetUserId: id, details: {} });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
+  } catch (err) {
+    console.error('[Owner] blockUser error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const { timeBombAt, gracePeriodHours } = req.body as { timeBombAt?: string; gracePeriodHours?: number };
+
+    if (typeof timeBombAt !== 'string') {
+      return res.status(400).json({ error: 'timeBombAt is required' });
+    }
+    if (id === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot modify your own account' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot modify an owner account' });
+
+    const bombDate = new Date(timeBombAt);
+    if (isNaN(bombDate.getTime()) || bombDate <= new Date()) {
+      return res.status(400).json({ error: 'timeBombAt must be a future date' });
+    }
+    if (gracePeriodHours !== undefined && (typeof gracePeriodHours !== 'number' || gracePeriodHours <= 0)) {
+      return res.status(400).json({ error: 'gracePeriodHours must be a positive number' });
+    }
+
+    const updateData: Record<string, unknown> = { timeBombAt: bombDate };
+    if (gracePeriodHours !== undefined) updateData.gracePeriodHours = gracePeriodHours;
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'TIME_BOMB_SET',
+      targetUserId: id,
+      details: { timeBombAt: bombDate, gracePeriodHours: updated.gracePeriodHours, targetRole: updated.role },
+    });
+
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
+  } catch (err) {
+    console.error('[Owner] setTimeBomb error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.patch('/users/:id/timebomb/clear', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    if (id === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot modify your own account' });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, timeBombAt: true, status: true, role: true },
+    });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target.timeBombAt) {
+      return res.status(400).json({ error: 'No time bomb set' });
+    }
+
+    const updateData: Record<string, unknown> = { timeBombAt: null };
+    if (target.status === 'GRACE_PERIOD' || target.status === 'TIME_BOMBED') {
+      updateData.status = 'ACTIVE';
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'TIME_BOMB_CLEARED',
+      targetUserId: id,
+      details: { previousStatus: target.status },
+    });
+
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
+  } catch (err) {
+    console.error('[Owner] clearTimeBomb error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const { role } = req.body as { role?: string };
+
+    if (!role || typeof role !== 'string') {
+      return res.status(400).json({ error: 'Role is required' });
+    }
+    if (id === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot modify your own account' });
+    }
+
+    const validRoles = Object.values(UserRole) as string[];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    if (role === 'OWNER') {
+      return res.status(400).json({ error: 'Cannot assign OWNER role here' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.role === 'OWNER') {
+      return res.status(400).json({ error: 'Cannot modify an owner account' });
+    }
+
+    const updateData: Record<string, unknown> = { role };
+    if (target.status === 'PENDING_APPROVAL') {
+      updateData.approvedAt = new Date();
+      updateData.approvedById = req.user!.userId;
+      updateData.status = 'ACTIVE';
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'ROLE_CHANGE',
+      targetUserId: id,
+      details: { previousRole: target.role, newRole: role },
+    });
+
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
+  } catch (err) {
+    console.error('[Owner] changeUserRole error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.patch('/users/:id/permissions', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const permissions = req.body?.permissions;
+
+    if (typeof permissions !== 'object' || permissions === null || Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'permissions must be an object' });
+    }
+    if (id === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot modify your own account' });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.role === 'OWNER') {
+      return res.status(400).json({ error: 'Cannot modify an owner account' });
+    }
+
+    const validKeys = new Set<string>();
+    for (const f of ALL_FEATURES) {
+      for (const a of ALL_ACTIONS) {
+        validKeys.add(`${f}:${a}`);
+      }
+    }
+
+    const invalidKeys = Object.keys(permissions).filter(key => !validKeys.has(key));
+    if (invalidKeys.length > 0) {
+      return res.status(400).json({ error: 'Invalid permission keys', invalidKeys });
+    }
+
+    for (const [key, value] of Object.entries(permissions)) {
+      if (typeof value !== 'boolean') {
+        return res.status(400).json({ error: 'Permission values must be boolean' });
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { permissions },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'PERMISSION_OVERRIDE',
+      targetUserId: id,
+      details: { overrideCount: Object.keys(permissions).length, permissions },
+    });
+
+    return res.json({ user: updated });
+  } catch (err) {
+    console.error('[Owner] setPermissionOverrides error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.post('/users/:id/approve', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, status: true, email: true, role: true, blocked: true, timeBombAt: true, gracePeriodHours: true, permissions: true, adminId: true, approvedAt: true, approvedById: true, createdAt: true, updatedAt: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.status !== 'PENDING_APPROVAL') {
+      return res.status(400).json({ error: 'User is not pending approval' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { approvedAt: new Date(), approvedById: req.user!.userId, status: 'ACTIVE' },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'APPROVAL_GRANTED',
+      targetUserId: id,
+      details: { targetEmail: target.email, targetRole: target.role },
+    });
+
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
+  } catch (err) {
+    console.error('[Owner] approveUser error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.post('/users/:id/reject', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, status: true, email: true, role: true } });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.status !== 'PENDING_APPROVAL') {
+      return res.status(400).json({ error: 'User is not pending approval' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { status: 'DISABLED' },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        adminId: true,
+        blocked: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        approvedAt: true,
+        approvedById: true,
+        permissions: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'APPROVAL_REJECTED',
+      targetUserId: id,
+      details: { targetEmail: target.email, targetRole: target.role },
+    });
+
+    return res.json({ user: updated, message: 'User rejected and disabled' });
+  } catch (err) {
+    console.error('[Owner] rejectUser error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.post('/transfer', async (req: AuthRequest, res: Response) => {
+  try {
+    const { targetUserId, confirmPassword } = req.body as { targetUserId?: string; confirmPassword?: string };
+    if (!targetUserId || typeof targetUserId !== 'string' || !confirmPassword || typeof confirmPassword !== 'string') {
+      return res.status(400).json({ error: 'targetUserId and confirmPassword are required' });
+    }
+    if (targetUserId === req.user!.userId) {
+      return res.status(400).json({ error: 'Cannot transfer ownership to yourself' });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, email: true, role: true } });
+    if (!targetUser) return res.status(404).json({ error: 'Target user not found.' });
+    if (targetUser.role !== 'ADMIN') {
+      return res.status(400).json({ error: 'Target user must be an admin or higher' });
+    }
+
+    const owner = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { id: true, email: true, password: true } });
+    if (!owner || !owner.password) {
+      return res.status(404).json({ error: 'Owner not found' });
+    }
+
+    const passwordMatch = await bcrypt.compare(confirmPassword, owner.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const [previousOwner, newOwner] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: owner.id },
+        data: { role: 'ADMIN' },
+        select: { id: true, email: true, role: true, status: true, adminId: true },
+      }),
+      prisma.user.update({
+        where: { id: targetUser.id },
+        data: { role: 'OWNER', adminId: null, transferredFromId: owner.id },
+        select: { id: true, email: true, role: true, status: true, adminId: true },
+      }),
+    ]);
+
+    await logAction({
+      actorId: owner.id,
+      action: 'OWNER_TRANSFER',
+      targetUserId: targetUser.id,
+      details: {
+        previousOwnerId: owner.id,
+        newOwnerId: targetUser.id,
+        previousOwnerEmail: owner.email,
+        newOwnerEmail: targetUser.email,
+      },
+    });
+
+    return res.json({ previousOwner, newOwner });
+  } catch (err) {
+    console.error('[Owner] transferOwnership error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 // ── GET /api/owner/admins/:id/team ────────────────────────────────────────────
 router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
   try {
@@ -202,42 +812,42 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
 // ── GET /api/owner/audit-log ─────────────────────────────────────────────────
 router.get('/audit-log', async (req: AuthRequest, res: Response) => {
   try {
-    const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '25'), 10) || 25));
-    const actionFilter = req.query['action'] ? String(req.query['action']) : undefined;
-    const actorIdFilter = req.query['actorId'] ? String(req.query['actorId']) : undefined;
-    const dateFrom = req.query['dateFrom'] ? String(req.query['dateFrom']) : undefined;
-    const dateTo = req.query['dateTo'] ? String(req.query['dateTo']) : undefined;
+    const { page, limit: parsedLimit } = parsePagination(req.query);
+    const limit = req.query['limit'] !== undefined ? Math.min(parsedLimit, 200) : 50;
+    const skip = (page - 1) * limit;
+
+    const action = req.query['action'] ? String(req.query['action']) : undefined;
+    const actorId = req.query['actorId'] ? String(req.query['actorId']) : undefined;
+    const targetUserId = req.query['targetUserId'] ? String(req.query['targetUserId']) : undefined;
+    const fromDate = req.query['from'] ?? req.query['dateFrom'];
+    const toDate = req.query['to'] ?? req.query['dateTo'];
 
     const where: Record<string, unknown> = {};
-    if (actionFilter) where['action'] = { contains: actionFilter };
-    if (actorIdFilter) where['actorId'] = actorIdFilter;
-    if (dateFrom || dateTo) {
-      const createdAt: Record<string, Date> = {};
-      if (dateFrom) createdAt['gte'] = new Date(dateFrom);
-      if (dateTo) createdAt['lte'] = new Date(dateTo);
-      where['createdAt'] = createdAt;
+    if (action) where.action = { equals: action };
+    if (actorId) where.actorId = actorId;
+    if (targetUserId) where.targetUserId = targetUserId;
+    if (fromDate || toDate) {
+      const createdAt: Record<string, unknown> = {};
+      if (fromDate) createdAt['gt'] = new Date(String(fromDate));
+      if (toDate) createdAt['lt'] = new Date(String(toDate));
+      where.createdAt = createdAt;
     }
 
     const [total, logs] = await prisma.$transaction([
       prisma.auditLog.count({ where }),
       prisma.auditLog.findMany({
         where,
-        select: {
-          id: true,
-          action: true,
-          details: true,
-          createdAt: true,
+        include: {
           actor: { select: { id: true, name: true, email: true } },
           targetUser: { select: { id: true, name: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
       }),
     ]);
 
-    return res.json({ logs, total, page, limit });
+    return res.json({ logs, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAuditLog error:', err);
     return res.status(500).json({ error: 'Internal server error.' });

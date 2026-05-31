@@ -24,14 +24,14 @@ export type Feature =
 export type Action = 'read' | 'write' | 'execute';
 export type PermissionKey = `${Feature}:${Action}`;
 
-const ALL_FEATURES: Feature[] = [
+export const ALL_FEATURES: Feature[] = [
   'dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
   'locations', 'settings', 'templates', 'sopUpload', 'sopView',
   'manageUsers', 'approveUsers', 'setPermissions', 'blockUsers',
   'setTimeBomb', 'setUserLimits', 'transferOwnership', 'viewAuditLog',
 ];
 
-const ALL_ACTIONS: Action[] = ['read', 'write', 'execute'];
+export const ALL_ACTIONS: Action[] = ['read', 'write', 'execute'];
 
 function allPermissions(): Set<PermissionKey> {
   const perms = new Set<PermissionKey>();
