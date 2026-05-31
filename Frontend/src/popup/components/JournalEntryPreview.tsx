@@ -221,17 +221,14 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId,
       });
   }, [jwt, locId]);
 
-  // Apply memo/docNumber templates from localStorage when scan data loads
+  // Apply memo/docNumber templates from location data when scan data loads
   useEffect(() => {
     if (!scanData || !locId) return;
-    try {
-      const raw = localStorage.getItem(`nest_templates_${locId}`);
-      if (!raw) return;
-      const config = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
-      if (config.memoTemplate) setPrivateNote(resolveMemoTemplate(config.memoTemplate, scanData));
-      if (config.docNumberTemplate) setDocNumber(resolveMemoTemplate(config.docNumberTemplate, scanData));
-    } catch { /* ignore */ }
-  }, [scanData, locId]);
+    const loc = locations.find(l => l.id === locId);
+    if (!loc) return;
+    if (loc.memoTemplate) setPrivateNote(resolveMemoTemplate(loc.memoTemplate, scanData));
+    if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
+  }, [scanData, locId, locations]);
 
   // Build lines from scan data, applying saved mappings
   useEffect(() => {

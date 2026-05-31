@@ -201,8 +201,18 @@ export default function MappingView({
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
+
+  const debouncedSaveTemplates = useCallback((memo: string, doc: string) => {
+    if (!locId || !jwt) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      api.updateLocation(jwt, locId, { memoTemplate: memo || undefined, docNumberTemplate: doc || undefined })
+        .catch(() => { /* silent — will retry on next change */ });
+    }, 1500);
+  }, [locId, jwt]);
 
   // Load QB lists on mount if not loaded
   useEffect(() => {
@@ -224,27 +234,50 @@ export default function MappingView({
 
   useEffect(() => { void loadMappings(); }, [loadMappings]);
 
-  // Load templates from localStorage when location changes
+  // Load templates from location data (DB-backed)
   useEffect(() => {
     if (!locId) return;
-    try {
-      const raw = localStorage.getItem(`nest_templates_${locId}`);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
-        setMemoTemplate(parsed.memoTemplate ?? '');
-        setDocNumberTemplate(parsed.docNumberTemplate ?? '');
-      } else {
-        setMemoTemplate('');
-        setDocNumberTemplate('');
-      }
-    } catch { /* ignore */ }
-  }, [locId]);
+    const loc = locations.find(l => l.id === locId);
+    if (loc) {
+      setMemoTemplate(loc.memoTemplate ?? '');
+      setDocNumberTemplate(loc.docNumberTemplate ?? '');
+    } else {
+      setMemoTemplate('');
+      setDocNumberTemplate('');
+    }
+  }, [locId, locations]);
 
-  // Persist templates
+  // One-time migration: port localStorage templates → DB
   useEffect(() => {
-    if (!locId) return;
-    localStorage.setItem(`nest_templates_${locId}`, JSON.stringify({ memoTemplate, docNumberTemplate }));
-  }, [locId, memoTemplate, docNumberTemplate]);
+    if (!locId || !jwt) return;
+    const lsKey = `nest_templates_${locId}`;
+    const raw = localStorage.getItem(lsKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
+      const loc = locations.find(l => l.id === locId);
+      if (loc && !loc.memoTemplate && !loc.docNumberTemplate && (parsed.memoTemplate || parsed.docNumberTemplate)) {
+        api.updateLocation(jwt, locId, {
+          memoTemplate: parsed.memoTemplate || undefined,
+          docNumberTemplate: parsed.docNumberTemplate || undefined,
+        }).then(() => {
+          localStorage.removeItem(lsKey);
+        }).catch(() => { /* silent fail — data is safe in localStorage, will retry next load */ });
+      } else {
+        localStorage.removeItem(lsKey);
+      }
+    } catch {
+      localStorage.removeItem(lsKey);
+    }
+  }, [locId, jwt, locations]);
+
+  // Debounced save templates to DB
+  useEffect(() => {
+    debouncedSaveTemplates(memoTemplate, docNumberTemplate);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [memoTemplate, docNumberTemplate, debouncedSaveTemplates]);
 
   useEffect(() => {
     if (!selectedLocationId && locations[0]) onLocationChange(locations[0].id);

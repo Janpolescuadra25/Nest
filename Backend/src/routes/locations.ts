@@ -90,8 +90,9 @@ router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, 
       return;
     }
 
-    const { name, toastUrl, isActive } = req.body as {
+    const { name, toastUrl, isActive, memoTemplate, docNumberTemplate } = req.body as {
       name?: string; toastUrl?: string; isActive?: boolean;
+      memoTemplate?: string; docNumberTemplate?: string;
     };
 
     const updated = await prisma.location.update({
@@ -100,6 +101,8 @@ router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, 
         ...(name !== undefined && { name }),
         ...(toastUrl !== undefined && { toastUrl }),
         ...(isActive !== undefined && { isActive }),
+        ...(memoTemplate !== undefined && { memoTemplate }),
+        ...(docNumberTemplate !== undefined && { docNumberTemplate }),
       },
     });
 

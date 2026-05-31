@@ -6,6 +6,8 @@ export interface Location {
   name: string;
   toastUrl: string;
   isActive: boolean;
+  memoTemplate?: string;
+  docNumberTemplate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,11 +73,6 @@ export interface JournalLineItem {
 export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'data' | 'sync' | 'settings' | 'partners' | 'requests' | 'my-team' | 'activity';
 
 export type ScanData = Record<string, number>;
-
-export interface LocationConfig {
-  memoTemplate?: string;
-  docNumberTemplate?: string;
-}
 
 export interface ScanHealth {
   totalScans: number;
