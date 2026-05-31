@@ -46,6 +46,7 @@ export default function AdminDashboard({ jwt }: Props) {
   const [recentActivity, setRecentActivity] = useState<AuditLogEntry[]>([]);
   const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
   const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
+  const [healthDays, setHealthDays] = useState(3);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -72,14 +73,14 @@ export default function AdminDashboard({ jwt }: Props) {
 
   const fetchScanHealth = useCallback(async () => {
     try {
-      const health = await api.getScanHealth(jwt);
+      const health = await api.getScanHealth(jwt, healthDays);
       setScanHealth(health);
     } catch (err) {
       setScanHealth(null);
     } finally {
       setScanHealthLoaded(true);
     }
-  }, [jwt]);
+  }, [jwt, healthDays]);
 
   const handleReconnect = useCallback(async () => {
     try {
@@ -169,7 +170,7 @@ export default function AdminDashboard({ jwt }: Props) {
 
       <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} />
       {scanHealthLoaded ? (
-        scanHealth ? <ScannerHealthCard scanHealth={scanHealth} /> : null
+        scanHealth ? <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} /> : null
       ) : (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
           <div className="h-4 bg-slate-900 rounded animate-pulse" />

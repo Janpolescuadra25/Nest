@@ -181,6 +181,7 @@ model ScanRecord {
 
   @@index([locationId])
   @@index([status])
+  @@index([createdAt])
   @@map("scan_records")
 }
 

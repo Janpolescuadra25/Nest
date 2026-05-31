@@ -1,11 +1,21 @@
 import type { ScanHealth } from '../../types';
 import { relativeTime } from '../lib/utils';
 
+const DAY_OPTIONS = [
+  { label: '1d', value: 1 },
+  { label: '3d', value: 3 },
+  { label: '7d', value: 7 },
+  { label: '30d', value: 30 },
+  { label: 'All', value: 0 },
+];
+
 interface ScannerHealthCardProps {
   scanHealth: ScanHealth;
+  days: number;
+  onDaysChange: (days: number) => void;
 }
 
-export function ScannerHealthCard({ scanHealth }: ScannerHealthCardProps) {
+export function ScannerHealthCard({ scanHealth, days, onDaysChange }: ScannerHealthCardProps) {
   const statusLabel = scanHealth.totalScans === 0
     ? '⚪ No Data'
     : scanHealth.successRate >= 80
@@ -32,7 +42,23 @@ export function ScannerHealthCard({ scanHealth }: ScannerHealthCardProps) {
     <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-cyan-300">Scanner Health</h3>
-        <span className={`text-[11px] px-2 py-1 rounded ${badgeClass}`}>{statusLabel}</span>
+        <div className="flex items-center gap-1">
+          {DAY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onDaysChange(opt.value)}
+              className={`text-[11px] px-1.5 py-0.5 rounded ${
+                opt.value === days
+                  ? 'bg-cyan-700 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <span className={`text-[11px] px-2 py-0.5 rounded ml-1 ${badgeClass}`}>{statusLabel}</span>
+        </div>
       </div>
       <div className="text-sm text-gray-300">Last scan: {scanHealth.lastScanAt ? relativeTime(scanHealth.lastScanAt) : 'Never'}</div>
       <div className="h-3 bg-slate-900 rounded overflow-hidden">

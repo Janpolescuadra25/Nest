@@ -58,11 +58,12 @@ router.post('/', requirePermission('canScan'), async (req: AuthRequest, res: Res
 // ── GET /api/scans/health ─────────────────────────────────────────────────────
 router.get('/health', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const days = Math.max(0, Math.min(365, Math.round(Number(req.query['days']) || 3)));
     const locationWhere = locationFilter(req.user!);
     const scopeFilter = Object.keys(locationWhere).length ? { location: locationWhere } : {};
+    const cutoff = days > 0 ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
     const countWhere = {
-      createdAt: { gte: thirtyDaysAgo },
+      ...(cutoff && { createdAt: { gte: cutoff } }),
       ...scopeFilter,
     };
 

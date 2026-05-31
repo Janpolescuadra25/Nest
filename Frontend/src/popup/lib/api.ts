@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, QBStatus, AuditLogEntry, OwnerAuditLogEntry } from '../../types';
+import type { Location, Mapping, Rule, ScanData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -119,18 +119,8 @@ export const api = {
       expiredMembers: number;
     }>('/api/owner/stats', jwt),
 
-  getScanHealth: (jwt: string) =>
-    get<{
-      totalScans: number;
-      successfulScans: number;
-      failedScans: number;
-      pendingScans: number;
-      mappedScans: number;
-      successRate: number;
-      lastScanAt: string | null;
-      lastSuccessAt: string | null;
-      lastFailureAt: string | null;
-    }>('/api/scans/health', jwt),
+  getScanHealth: (jwt: string, days: number = 3) =>
+    get<ScanHealth>(`/api/scans/health?days=${days}`, jwt),
 
   getAuditLog: (jwt: string, params?: { page?: number; limit?: number; action?: string; actorId?: string; dateFrom?: string; dateTo?: string }) => {
     const sp = new URLSearchParams();
