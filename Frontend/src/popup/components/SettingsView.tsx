@@ -60,19 +60,20 @@ export default function SettingsView({ jwt, onLogout }: Props) {
             </>
           ) : status.connected && status.tokenExpired ? (
             <>
-              <div className="text-orange-400 text-xs mb-1">⚠️ Token expired</div>
+              <div className="text-orange-400 text-xs mb-1">⚠️ Token Expired — Reconnect required</div>
               <div className="text-gray-400 text-xs">Company ID: <span className="text-white font-mono">{status.realmId}</span></div>
-              <div className="text-orange-400 text-xs mt-1">Reconnect to restore access</div>
             </>
           ) : (
-            <div className="text-gray-400 text-xs mb-2">Not connected to QuickBooks</div>
+            <div className="text-red-400 text-xs mb-2">❌ Not connected to QuickBooks</div>
           )}
           <button
             onClick={connect}
             className={`mt-2 w-full py-2 text-xs font-semibold rounded-lg transition-colors ${
-              status.connected
-                ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                : 'bg-cyan-700 hover:bg-cyan-600 text-white'
+              status.tokenExpired
+                ? 'bg-orange-700 hover:bg-orange-600 text-white'
+                : status.connected
+                  ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  : 'bg-cyan-700 hover:bg-cyan-600 text-white'
             }`}
           >
             {status.connected ? '↻ Reconnect to QuickBooks' : '🔗 Connect to QuickBooks'}

@@ -81,6 +81,15 @@ export default function AdminDashboard({ jwt }: Props) {
     }
   }, [jwt]);
 
+  const handleReconnect = useCallback(async () => {
+    try {
+      const { authUrl } = await api.getQBAuthUrl(jwt);
+      chrome.runtime.sendMessage({ type: 'OPEN_QB_AUTH', payload: { authUrl } });
+    } catch (err) {
+      // silently fail — user can retry from Settings
+    }
+  }, [jwt]);
+
   useEffect(() => {
     void fetchData();
     void fetchScanHealth();
@@ -158,7 +167,7 @@ export default function AdminDashboard({ jwt }: Props) {
         </div>
       </div>
 
-      <QBConnectionCard qbStatus={qbStatus} />
+      <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} />
       {scanHealthLoaded ? (
         scanHealth ? <ScannerHealthCard scanHealth={scanHealth} /> : null
       ) : (

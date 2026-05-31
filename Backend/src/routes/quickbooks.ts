@@ -166,7 +166,13 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   } catch (err) {
     const errMessage = err instanceof Error ? err.message : String(err);
     console.error('[QB] Unexpected error during token exchange / DB write:', err);
-    res.status(500).send(errorPage(errMessage));
+    res.status(500).send(
+      errorPage(
+        process.env.NODE_ENV !== 'production'
+          ? errMessage
+          : 'An unexpected error occurred. Please try again.'
+      )
+    );
   }
 });
 
@@ -279,7 +285,11 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
       }).catch(console.error);
     }
 
-    res.status(500).json({ error: message });
+    res.status(500).json({
+      error: process.env.NODE_ENV !== 'production'
+        ? message
+        : 'An unexpected error occurred. Please try again.',
+    });
   }
 });
 
@@ -314,7 +324,10 @@ router.get('/accounts', authenticate, requirePermission('canSync'), async (req: 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] accounts error:', message);
-    res.status(500).json({ error: 'Failed to fetch accounts', message });
+    res.status(500).json({
+      error: 'Failed to fetch accounts',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -327,7 +340,10 @@ router.get('/classes', authenticate, requirePermission('canSync'), async (req: A
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] classes error:', message);
-    res.status(500).json({ error: 'Failed to fetch classes', message });
+    res.status(500).json({
+      error: 'Failed to fetch classes',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -340,7 +356,10 @@ router.get('/employees', authenticate, requirePermission('canSync'), async (req:
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] employees error:', message);
-    res.status(500).json({ error: 'Failed to fetch employees', message });
+    res.status(500).json({
+      error: 'Failed to fetch employees',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -353,7 +372,10 @@ router.get('/vendors', authenticate, requirePermission('canSync'), async (req: A
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] vendors error:', message);
-    res.status(500).json({ error: 'Failed to fetch vendors', message });
+    res.status(500).json({
+      error: 'Failed to fetch vendors',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -366,7 +388,10 @@ router.get('/customers', authenticate, requirePermission('canSync'), async (req:
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] customers error:', message);
-    res.status(500).json({ error: 'Failed to fetch customers', message });
+    res.status(500).json({
+      error: 'Failed to fetch customers',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -379,7 +404,10 @@ router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req:
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] tax-codes error:', message);
-    res.status(500).json({ error: 'Failed to fetch tax codes', message });
+    res.status(500).json({
+      error: 'Failed to fetch tax codes',
+      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
+    });
   }
 });
 
@@ -399,7 +427,11 @@ router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);
-    res.status(500).json({ error: message });
+    res.status(500).json({
+      error: process.env.NODE_ENV !== 'production'
+        ? message
+        : 'An unexpected error occurred. Please try again.',
+    });
   }
 });
 
