@@ -175,6 +175,7 @@ export default function App() {
               jwt={jwt!}
               scanData={scanData}
               onScanData={setScanData}
+              onClearScanData={() => setScanData(null)}
               onScanRecordId={setScanRecordId}
               locationId={selectedLocationId || null}
             />

@@ -20,11 +20,12 @@ interface Props {
   jwt: string;
   scanData: ScanData | null;
   onScanData: (data: ScanData) => void;
+  onClearScanData: () => void;
   onScanRecordId?: (id: string) => void;
   locationId: string | null;
 }
 
-export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, locationId }: Props) {
+export default function ScanView({ jwt, scanData, onScanData, onClearScanData, onScanRecordId, locationId }: Props) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
@@ -65,6 +66,11 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
         }
       });
     });
+  };
+
+  const handleClear = () => {
+    onClearScanData();
+    chrome.storage.local.remove(['lastScanData']);
   };
 
   const handleRescan = async () => {
@@ -161,7 +167,15 @@ export default function ScanView({ jwt, scanData, onScanData, onScanRecordId, lo
 
       {scanData ? (
         <>
-          <div className="text-xs text-gray-500 mb-2">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-500">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</span>
+            <button
+              onClick={handleClear}
+              className="text-xs text-gray-400 hover:text-red-400 border border-gray-600 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
+            >
+              ✕ Clear
+            </button>
+          </div>
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
