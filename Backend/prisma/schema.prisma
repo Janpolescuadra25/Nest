@@ -23,6 +23,10 @@ enum UserStatus {
   ACTIVE
   EXPIRED
   DISABLED
+  PENDING_APPROVAL
+  GRACE_PERIOD
+  TIME_BOMBED
+  BLOCKED
 }
 
 enum AdminRequestStatus {
@@ -52,6 +56,16 @@ model User {
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
+  permissions         Json?
+  timeBombAt          DateTime?
+  gracePeriodHours    Int         @default(48)
+  blocked             Boolean     @default(false)
+  blockedById         String?
+  approvedById        String?
+  approvedAt          DateTime?
+  invitedById         String?
+  transferredFromId   String?
+
   admin               User?          @relation("AdminUsers", fields: [adminId], references: [id])
   teamMembers         User[]         @relation("AdminUsers")
   locations           Location[]     @relation("UserLocations")
@@ -61,8 +75,21 @@ model User {
   approvedRequests     AdminRequest[]       @relation("ApprovedAdminRequests")
   auditLogs            AuditLog[]           @relation("AuditActor")
   auditTargets         AuditLog[]           @relation("AuditTarget")
-  passwordResetTokens  PasswordResetToken[]
+  passwordResetTokens   PasswordResetToken[]
+  blockedBy             User?          @relation("BlockedBy", fields: [blockedById], references: [id])
+  blockedUsers          User[]         @relation("BlockedBy")
+  approvedBy            User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvedUsers         User[]         @relation("ApprovedBy")
+  invitedBy             User?          @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedUsers          User[]         @relation("InvitedBy")
+  transferredFrom       User?          @relation("TransferredFrom", fields: [transferredFromId], references: [id])
+  transferredTo         User[]         @relation("TransferredFrom")
+  inviteLinks           InviteLink[]   @relation("InviteCreator")
 
+  @@index([blockedById])
+  @@index([approvedById])
+  @@index([invitedById])
+  @@index([transferredFromId])
   @@index([adminId])
   @@map("users")
 }
@@ -86,20 +113,39 @@ model AdminRequest {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  actorId   String
-  targetId  String?
-  action    String
-  meta      Json?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  actorId      String
+  action       String
+  targetUserId String?
+  details      Json?
+  createdAt    DateTime @default(now())
 
-  actor     User     @relation("AuditActor", fields: [actorId], references: [id])
-  target    User?    @relation("AuditTarget", fields: [targetId], references: [id])
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  targetUser User?    @relation("AuditTarget", fields: [targetUserId], references: [id])
 
   @@index([actorId])
-  @@index([targetId])
+  @@index([action])
+  @@index([targetUserId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model InviteLink {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  createdBy String
+  roleHint  UserRole?
+  expiresAt DateTime
+  usedAt    DateTime?
+  maxUses   Int       @default(1)
+  useCount  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  creator   User      @relation("InviteCreator", fields: [createdBy], references: [id])
+
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@map("invite_links")
 }
 
 // Kept for backward compatibility — old access-request flow data may still exist

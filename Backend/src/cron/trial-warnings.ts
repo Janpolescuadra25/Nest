@@ -34,9 +34,9 @@ async function checkTrialWarnings(prisma: PrismaClient): Promise<void> {
           // Check if this warning was already sent
           const existing = await prisma.auditLog.findFirst({
             where: {
-              targetId: user.id,
+              targetUserId: user.id,
               action: 'TRIAL_EXPIRY_WARNING',
-              meta: { path: ['daysBefore'], equals: threshold },
+              details: { path: ['daysBefore'], equals: threshold },
             },
           });
 
@@ -54,9 +54,9 @@ async function checkTrialWarnings(prisma: PrismaClient): Promise<void> {
             await prisma.auditLog.create({
               data: {
                 actorId: user.id,
-                targetId: user.id,
+                targetUserId: user.id,
                 action: 'TRIAL_EXPIRY_WARNING',
-                meta: { daysBefore: threshold, daysRemaining, trialExpiresAt: user.trialExpiresAt },
+                details: { daysBefore: threshold, daysRemaining, trialExpiresAt: user.trialExpiresAt },
               },
             });
 

@@ -103,9 +103,9 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
     await prisma.auditLog.create({
       data: {
         actorId: userId,
-        targetId: userId,
+        targetUserId: userId,
         action: 'PASSWORD_RESET',
-        meta: { method: 'magic_link' },
+        details: { method: 'magic_link' },
       },
     });
 

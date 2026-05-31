@@ -177,8 +177,8 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
       data: {
         actorId: req.user!.userId,
         action: 'USER_INVITED',
-        targetId: newUser.id,
-        meta: { role, email: normalizedEmail },
+        targetUserId: newUser.id,
+        details: { role, email: normalizedEmail },
       },
     });
 
@@ -268,22 +268,22 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     });
 
     // ── Standard audit entries ────────────────────────────────────────────────
-    const auditEntries: Array<{ actorId: string; action: string; targetId: string; meta?: object }> = [];
+    const auditEntries: Array<{ actorId: string; action: string; targetUserId: string; details?: object }> = [];
     if (role !== undefined) {
-      auditEntries.push({ actorId: req.user!.userId, action: 'ROLE_CHANGED', targetId: id, meta: { newRole: role } });
+      auditEntries.push({ actorId: req.user!.userId, action: 'ROLE_CHANGED', targetUserId: id, details: { newRole: role } });
     }
     if (!isTrialReset) {
       const permKeys = (['canScan', 'canMap', 'canSync', 'canManageLocs'] as const).filter(k => req.body[k] !== undefined);
       if (permKeys.length > 0) {
         const changes: Record<string, unknown> = {};
         permKeys.forEach(k => { changes[k] = req.body[k]; });
-        auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetId: id, meta: { changes } });
+        auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetUserId: id, details: { changes } });
       }
       if (trialExpiresAt !== undefined || customExpiryMessage !== undefined) {
-        auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetId: id, meta: { trialExpiresAt, customExpiryMessage } });
+        auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetUserId: id, details: { trialExpiresAt, customExpiryMessage } });
       }
       if (status !== undefined) {
-        auditEntries.push({ actorId: req.user!.userId, action: 'USER_STATUS_CHANGED', targetId: id, meta: { newStatus: status } });
+        auditEntries.push({ actorId: req.user!.userId, action: 'USER_STATUS_CHANGED', targetUserId: id, details: { newStatus: status } });
       }
     }
     if (auditEntries.length > 0) {
@@ -294,15 +294,15 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     if (isTrialReset && newExpiryDate) {
       // Always delete old warning logs so the cron re-fires for the new expiry
       await prisma.auditLog.deleteMany({
-        where: { targetId: id, action: 'TRIAL_EXPIRY_WARNING' },
+        where: { targetUserId: id, action: 'TRIAL_EXPIRY_WARNING' },
       });
 
       await prisma.auditLog.create({
         data: {
           actorId: req.user!.userId,
-          targetId: id,
+          targetUserId: id,
           action: 'TRIAL_RESET',
-          meta: {
+          details: {
             previousStatus: target.status,
             previousTrialExpiresAt: target.trialExpiresAt,
             newTrialExpiresAt: newExpiryDate,
@@ -347,7 +347,7 @@ router.post('/team/:id/disable', requireRole('ADMIN'), async (req: AuthRequest, 
     await prisma.user.update({ where: { id }, data: { status: 'DISABLED' } });
 
     await prisma.auditLog.create({
-      data: { actorId: req.user!.userId, action: 'USER_DISABLED', targetId: id },
+      data: { actorId: req.user!.userId, action: 'USER_DISABLED', targetUserId: id },
     });
 
     return res.json({ message: 'User disabled successfully.' });

@@ -146,8 +146,8 @@ router.patch('/admins/:id', validate(updateAdminSchema), async (req: AuthRequest
       data: {
         actorId: req.user!.userId,
         action: 'ADMIN_UPDATED',
-        targetId: id,
-        meta: { changes: { maxUsers, status } },
+        targetUserId: id,
+        details: { changes: { maxUsers, status } },
       },
     });
 
@@ -226,10 +226,10 @@ router.get('/audit-log', async (req: AuthRequest, res: Response) => {
         select: {
           id: true,
           action: true,
-          meta: true,
+          details: true,
           createdAt: true,
           actor: { select: { id: true, name: true, email: true } },
-          target: { select: { id: true, name: true, email: true } },
+          targetUser: { select: { id: true, name: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

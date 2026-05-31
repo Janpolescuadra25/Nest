@@ -8,7 +8,7 @@ export interface AuthPayload {
   email: string;
   name?: string | null;
   role: string;       // UserRole: OWNER | ADMIN | ACCOUNTANT | STAFF | VIEWER
-  status: string;     // UserStatus: ACTIVE | EXPIRED | DISABLED
+  status: string;     // UserStatus: ACTIVE | EXPIRED | DISABLED | PENDING_APPROVAL | GRACE_PERIOD | TIME_BOMBED | BLOCKED
   adminId: string | null;
   canScan: boolean;
   canMap: boolean;
@@ -17,6 +17,16 @@ export interface AuthPayload {
   mustChangePassword: boolean;
   trialExpiresAt: Date | null;
   maxUsers: number | null;
+  // RBAC extension fields
+  permissions: Record<string, boolean> | null;
+  timeBombAt: Date | null;
+  gracePeriodHours: number;
+  blocked: boolean;
+  blockedById: string | null;
+  approvedById: string | null;
+  approvedAt: Date | null;
+  invitedById: string | null;
+  transferredFromId: string | null;
 }
 
 export interface QBTokens {

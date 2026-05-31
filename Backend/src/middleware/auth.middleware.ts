@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AuthPayload } from '../types';
+import { getEffectiveAccess, hasPermission, UserForAccess, EffectiveAccess } from './effective-role';
+import { Feature, Action } from './permissions';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -10,6 +13,7 @@ if (!JWT_SECRET) {
 
 export interface AuthRequest extends Request {
   user?: AuthPayload;
+  effectiveAccess?: EffectiveAccess;
 }
 
 /**
@@ -45,6 +49,15 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
         mustChangePassword: true,
         trialExpiresAt: true,
         maxUsers: true,
+        permissions: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        blocked: true,
+        blockedById: true,
+        approvedById: true,
+        approvedAt: true,
+        invitedById: true,
+        transferredFromId: true,
       },
     });
 
@@ -73,6 +86,15 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       mustChangePassword: user.mustChangePassword,
       trialExpiresAt: user.trialExpiresAt,
       maxUsers: user.maxUsers,
+      permissions: user.permissions as Record<string, boolean> | null,
+      timeBombAt: user.timeBombAt,
+      gracePeriodHours: user.gracePeriodHours,
+      blocked: user.blocked,
+      blockedById: user.blockedById,
+      approvedById: user.approvedById,
+      approvedAt: user.approvedAt,
+      invitedById: user.invitedById,
+      transferredFromId: user.transferredFromId,
     };
 
     next();
@@ -88,14 +110,51 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
 /**
  * Middleware factory — requires the authenticated user to have one of the given roles.
+ * Uses getEffectiveAccess to account for time bombs, blocked status, and pending approval.
  * Place after `authenticate`.
+ *
+ * Note: DISABLED users are blocked by `authenticate` before reaching here.
  */
 export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    if (!req.user) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const userForAccess: UserForAccess = {
+      role: req.user.role as UserRole,
+      status: req.user.status as UserStatus,
+      blocked: req.user.blocked,
+      timeBombAt: req.user.timeBombAt ?? null,
+      gracePeriodHours: req.user.gracePeriodHours,
+      permissions: req.user.permissions,
+    };
+
+    const effectiveAccess = getEffectiveAccess(userForAccess);
+
+    if (effectiveAccess.isBlocked) {
+      res.status(403).json({ error: 'Account suspended' });
+      return;
+    }
+
+    if (effectiveAccess.status === 'PENDING_APPROVAL') {
+      res.status(403).json({ error: 'Account pending approval' });
+      return;
+    }
+
+    if (!roles.includes(effectiveAccess.role)) {
       res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
+
+    req.effectiveAccess = effectiveAccess;
+
+    if (effectiveAccess.isInGracePeriod && effectiveAccess.gracePeriodEndsAt) {
+      res.setHeader('X-Access-Warning', 'GRACE_PERIOD');
+      res.setHeader('X-Grace-Period-Ends', effectiveAccess.gracePeriodEndsAt.toISOString());
+    }
+
     next();
   };
 }
@@ -135,18 +194,77 @@ export function locationFilter(user: AuthPayload): Record<string, unknown> {
 }
 
 /**
- * Middleware factory — requires the authenticated user to have a specific
- * boolean permission flag set to true. OWNER always passes.
+ * Middleware factory — requires a specific permission.
+ * Supports both the legacy boolean fields (canScan, canMap, canSync, canManageLocs)
+ * and the new Feature-based permission model.
+ * OWNER always passes.
  * Place after `authenticate`.
  */
-export const requirePermission = (field: 'canScan' | 'canMap' | 'canSync' | 'canManageLocs') => {
+export const requirePermission = (field: 'canScan' | 'canMap' | 'canSync' | 'canManageLocs' | Feature) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    const user = req.user!;
-    if (user.role === 'OWNER') { next(); return; }
-    if (!user[field]) {
+    if (!req.user) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    if (req.user.role === 'OWNER') { next(); return; }
+
+    // Legacy boolean permission check
+    if (field === 'canScan' || field === 'canMap' || field === 'canSync' || field === 'canManageLocs') {
+      if (!req.user[field]) {
+        res.status(403).json({ error: 'Permission denied: ' + field });
+        return;
+      }
+      next();
+      return;
+    }
+
+    // Feature-based permission check — defaults to 'read' action
+    const userForAccess: UserForAccess = {
+      role: req.user.role as UserRole,
+      status: req.user.status as UserStatus,
+      blocked: req.user.blocked,
+      timeBombAt: req.user.timeBombAt ?? null,
+      gracePeriodHours: req.user.gracePeriodHours,
+      permissions: req.user.permissions,
+    };
+
+    if (!hasPermission(userForAccess, field as Feature, 'read')) {
       res.status(403).json({ error: 'Permission denied: ' + field });
       return;
     }
+
+    next();
+  };
+};
+
+/**
+ * Middleware factory — requires a specific Feature:Action permission.
+ * Use this for new routes that need fine-grained permission checks.
+ * OWNER always passes.
+ * Place after `authenticate`.
+ */
+export const requireFeaturePermission = (feature: Feature, action: Action) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
+    }
+
+    const userForAccess: UserForAccess = {
+      role: req.user.role as UserRole,
+      status: req.user.status as UserStatus,
+      blocked: req.user.blocked,
+      timeBombAt: req.user.timeBombAt ?? null,
+      gracePeriodHours: req.user.gracePeriodHours,
+      permissions: req.user.permissions,
+    };
+
+    if (!hasPermission(userForAccess, feature, action)) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
     next();
   };
 };

@@ -137,7 +137,7 @@ router.delete('/:id', requirePermission('canManageLocs'), async (req: AuthReques
 // ── POST /api/locations/:id/import-template ──────────────────────────────────
 router.post('/:id/import-template', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const lf = locationFilter(req.user!);
 
     const location = await prisma.location.findFirst({
@@ -216,7 +216,7 @@ router.post('/:id/import-template', requirePermission('canMap'), async (req: Aut
               ruleType: ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'].includes(String(r['ruleType']))
                 ? String(r['ruleType']) as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA'
                 : 'COMBINE',
-              config,
+              config: config as unknown as Record<string, string | number | boolean | null>,
               isActive: r['isActive'] === false ? false : true,
             },
           });

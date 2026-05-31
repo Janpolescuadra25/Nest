@@ -33,9 +33,9 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
           prisma.auditLog.create({
             data: {
               actorId: user.id,
-              targetId: user.id,
+              targetUserId: user.id,
               action: 'TRIAL_EXPIRED',
-              meta: {
+              details: {
                 previousRole: user.role,
                 trialExpiresAt: user.trialExpiresAt,
                 permissionsRevoked: ['canScan', 'canMap', 'canSync', 'canManageLocs'],
@@ -64,7 +64,76 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
 export function startTimeBombCron(prisma: PrismaClient): void {
   // Run immediately on startup
   checkTrialExpiry(prisma);
+  checkTimeBombs(prisma);
 
   // Then every 60 minutes
-  setInterval(() => checkTrialExpiry(prisma), 3_600_000);
+  setInterval(() => {
+    checkTrialExpiry(prisma);
+    checkTimeBombs(prisma);
+  }, 3_600_000);
+}
+
+async function checkTimeBombs(prisma: PrismaClient): Promise<void> {
+  try {
+    const now = new Date();
+
+    // Find users whose timeBombAt has passed but are not already TIME_BOMBED/BLOCKED
+    const detonatedUsers = await prisma.user.findMany({
+      where: {
+        timeBombAt: { not: null, lt: now },
+        status: { notIn: ['TIME_BOMBED', 'BLOCKED', 'DISABLED'] },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        timeBombAt: true,
+        gracePeriodHours: true,
+        role: true,
+      },
+    });
+
+    if (detonatedUsers.length === 0) return;
+
+    for (const user of detonatedUsers) {
+      if (!user.timeBombAt) continue;
+
+      const gracePeriodEndsAt = new Date(
+        user.timeBombAt.getTime() + user.gracePeriodHours * 3_600_000,
+      );
+      const isInGracePeriod = now < gracePeriodEndsAt;
+      const newStatus = isInGracePeriod ? 'GRACE_PERIOD' : 'TIME_BOMBED';
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: newStatus,
+          ...(isInGracePeriod ? {} : {
+            canScan: false,
+            canMap: false,
+            canSync: false,
+            canManageLocs: false,
+          }),
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          actorId: user.id,
+          targetUserId: user.id,
+          action: isInGracePeriod ? 'GRACE_PERIOD_STARTED' : 'TIMEBOMB_TRIGGERED',
+          details: {
+            role: user.role,
+            timeBombAt: user.timeBombAt,
+            gracePeriodHours: user.gracePeriodHours,
+            gracePeriodEndsAt,
+          },
+        },
+      });
+    }
+
+    console.log(`[TimeBomb] checkTimeBombs: processed ${detonatedUsers.length} user(s)`);
+  } catch (err) {
+    console.error('[TimeBomb] checkTimeBombs error:', err);
+  }
 }

@@ -129,8 +129,8 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: Auth
       data: {
         actorId: req.user!.userId,
         action: 'ADMIN_APPROVED',
-        targetId: newUser.id,
-        meta: { requestId: request.id, requestEmail: request.email },
+        targetUserId: newUser.id,
+        details: { requestId: request.id, requestEmail: request.email },
       },
     });
 
@@ -163,8 +163,8 @@ router.post('/:id/reject', authenticate, requireRole('OWNER'), async (req: AuthR
       data: {
         actorId: req.user!.userId,
         action: 'ADMIN_REJECTED',
-        targetId: null,
-        meta: { requestId: request.id, requestEmail: request.email },
+        targetUserId: null,
+        details: { requestId: request.id, requestEmail: request.email },
       },
     });
 
