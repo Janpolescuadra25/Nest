@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
   toast: { pattern: /toasttab\.com/, name: 'Toast' },
   salido: { pattern: /salido\.com/, name: 'SALIDO' },
+  oracle: { pattern: /oraclerestaurants\.com/, name: 'Oracle' },
 };
 
 async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; posName: string } | null> {
@@ -92,7 +93,9 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
       if (!response) {
         const scriptFile = posType === 'salido'
           ? 'content/salido-scanner.js'
-          : 'content/scanner.js';
+          : posType === 'oracle'
+            ? 'content/oracle-scanner.js'
+            : 'content/scanner.js';
         console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
         try {
           await chrome.scripting.executeScript({

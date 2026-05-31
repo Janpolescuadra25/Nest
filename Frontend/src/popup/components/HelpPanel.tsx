@@ -79,7 +79,7 @@ const SECTIONS: Section[] = [
             In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your POS reports to a specific restaurant location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
-            Navigate to a POS report page (Toast or SALIDO) in the browser. Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads the report fields automatically.
+            Navigate to a POS report page (Toast, SALIDO, or Oracle) in the browser. Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads the report fields automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
             Go to the <span className="text-cyan-400">Mapping</span> tab. Each POS field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
@@ -274,7 +274,7 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-3">
         <div className="space-y-2">
-          <TroubleshootItem problem="Scan returns no data" solution="Make sure you're on a supported POS report page (Toast Sales Summary or SALIDO Accounting Summary). Wait for the page to fully load before scanning." />
+          <TroubleshootItem problem="Scan returns no data" solution="Make sure you're on a supported POS report page (Toast Sales Summary, SALIDO Accounting Summary, or Oracle Daily Operations). Wait for the page to fully load before scanning." />
           <TroubleshootItem problem="QB not connected" solution='Go to Settings and click "Connect to QuickBooks". Complete the Intuit authorization flow. If it fails, try again — the auth link expires after 15 minutes.' />
           <TroubleshootItem problem="Unbalanced entry" solution="Check that all fields are mapped. Unmapped fields won't have accounts assigned. Look for the red imbalance warning at the bottom of Preview. Nest auto-fixes rounding up to $0.02." />
           <TroubleshootItem problem="Account not found in dropdown" solution='Click the ↻ refresh button next to the account dropdown to re-fetch QB lists. You can also search by partial name or account number.' />
