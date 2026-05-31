@@ -76,7 +76,7 @@ const SECTIONS: Section[] = [
             Go to the <span className="text-cyan-400">Settings</span> tab and click <span className="text-cyan-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize Nest to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
           </Step>
           <Step num={3} title="Set Up a Location">
-            In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your Toast reports to a specific restaurant location. You can have multiple locations.
+            In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your POS reports to a specific restaurant location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
             Navigate to a POS report page (Toast or SALIDO) in the browser. Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads the report fields automatically.
@@ -210,7 +210,7 @@ const SECTIONS: Section[] = [
 
         <SubHeading>Header Fields</SubHeading>
         <ul className="space-y-1.5">
-          <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the Toast report date.</Bullet>
+          <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the POS report date.</Bullet>
           <Bullet><span className="text-cyan-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
           <Bullet><span className="text-cyan-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
         </ul>
@@ -306,7 +306,7 @@ const SECTIONS: Section[] = [
       <div className="space-y-2.5">
         <FAQItem q="Does Nest modify my POS data?" a="No. Nest only reads data from the POS page. It never writes, modifies, or deletes anything in your POS." />
         <FAQItem q="Can I undo a sync?" a="Nest doesn't have an undo button, but you can delete the journal entry directly in QuickBooks Online. Find it by the DocNumber or date." />
-        <FAQItem q="How often should I sync?" a="Typically once per day — after your Toast Sales Summary report is finalized. Some restaurants sync weekly. It's up to your accounting workflow." />
+        <FAQItem q="How often should I sync?" a="Typically once per day — after your POS report is finalized. Some restaurants sync weekly. It's up to your accounting workflow." />
         <FAQItem q="Can I sync multiple locations?" a="Yes! Add each location in Settings, select the active location, and sync separately for each. Mappings are per-location." />
         <FAQItem q="What QB plan do I need?" a="Any QuickBooks Online plan that supports Journal Entries (Plus, Advanced). Simple Start and Essentials don't support journal entries." />
         <FAQItem q="Is my data secure?" a="Nest uses JWT authentication, encrypted OAuth tokens, and never stores your QuickBooks credentials. All API calls use HTTPS. Tokens are stored in your PostgreSQL database." />
