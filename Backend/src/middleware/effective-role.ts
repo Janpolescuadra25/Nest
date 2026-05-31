@@ -1,15 +1,5 @@
-// Effective-access utilities for the Nest RBAC system
 import { UserRole, UserStatus } from '@prisma/client';
-import { Feature, Action, PermissionKey, ROLE_PERMISSIONS } from './permissions';
-
-export interface UserForAccess {
-  role: UserRole;
-  status: UserStatus;
-  blocked: boolean;
-  timeBombAt: Date | string | null;
-  gracePeriodHours: number;
-  permissions: unknown;  // Json? from Prisma — treated as Record<string, boolean> overrides
-}
+import { ROLE_PERMISSIONS, Feature, Action, PermissionKey } from './permissions';
 
 export interface EffectiveAccess {
   role: UserRole;
@@ -17,114 +7,117 @@ export interface EffectiveAccess {
   isBlocked: boolean;
   isInGracePeriod: boolean;
   gracePeriodEndsAt: Date | null;
-  permissionSet: Set<PermissionKey>;
+}
+
+export interface UserForAccess {
+  role: UserRole;
+  status: UserStatus;
+  blocked: boolean;
+  timeBombAt: Date | string | null;
+  gracePeriodHours: number;
+  permissions: unknown;
 }
 
 /**
- * Resolves the runtime access profile for a user.
- *
- * Priority order:
- *  1. BLOCKED flag → deny everything (isBlocked = true)
- *  2. PENDING_APPROVAL / TIME_BOMBED statuses → return as-is (restricted by status checks upstream)
- *  3. timeBombAt in the past → treat as TIME_BOMBED + compute grace period window
- *  4. Normal path → apply role defaults + per-user permission overrides
+ * NOTE: EXPIRED users pass through with their original role intact.
+ * This matches existing behavior — EXPIRED users are not blocked at
+ * the middleware level; they have read access to some features.
+ * DISABLED users are blocked by `authenticate` before reaching this function.
  */
 export function getEffectiveAccess(user: UserForAccess): EffectiveAccess {
-  const now = new Date();
-
-  // 1. Hard block
-  if (user.blocked || user.status === 'BLOCKED') {
+  // 1. Blocked — absolute override (only checks user.blocked boolean)
+  if (user.blocked) {
     return {
       role: user.role,
-      status: 'BLOCKED' as UserStatus,
+      status: 'BLOCKED',
       isBlocked: true,
       isInGracePeriod: false,
       gracePeriodEndsAt: null,
-      permissionSet: new Set(),
     };
   }
 
-  // 2. PENDING_APPROVAL
+  // 2. Pending approval — no access
   if (user.status === 'PENDING_APPROVAL') {
     return {
       role: user.role,
-      status: 'PENDING_APPROVAL' as UserStatus,
+      status: 'PENDING_APPROVAL',
       isBlocked: false,
       isInGracePeriod: false,
       gracePeriodEndsAt: null,
-      permissionSet: new Set(),
     };
   }
 
-  // 3. Time-bombed check (timeBombAt in the past)
+  // 3. Time bomb check
   if (user.timeBombAt) {
-    const bombDate = typeof user.timeBombAt === 'string'
-      ? new Date(user.timeBombAt)
-      : user.timeBombAt;
-
-    if (bombDate <= now) {
-      const gracePeriodEndsAt = new Date(bombDate.getTime() + user.gracePeriodHours * 3_600_000);
-      const isInGracePeriod = now < gracePeriodEndsAt;
-
+    const now = new Date();
+    const bombDate = new Date(user.timeBombAt as string | Date);
+    if (now < bombDate) {
+      // Bomb hasn't fired yet — normal access
       return {
         role: user.role,
-        status: isInGracePeriod ? ('GRACE_PERIOD' as UserStatus) : ('TIME_BOMBED' as UserStatus),
-        isBlocked: !isInGracePeriod,
-        isInGracePeriod,
-        gracePeriodEndsAt: isInGracePeriod ? gracePeriodEndsAt : null,
-        permissionSet: isInGracePeriod ? buildPermissionSet(user) : new Set(),
+        status: user.status,
+        isBlocked: false,
+        isInGracePeriod: false,
+        gracePeriodEndsAt: null,
       };
     }
+    const graceEnd = new Date(bombDate.getTime() + (user.gracePeriodHours * 60 * 60 * 1000));
+    if (now < graceEnd) {
+      // In grace period — full access with warning
+      return {
+        role: user.role,
+        status: 'GRACE_PERIOD',
+        isBlocked: false,
+        isInGracePeriod: true,
+        gracePeriodEndsAt: graceEnd,
+      };
+    }
+    // Past grace period — downgraded to VIEWER, NOT blocked
+    return {
+      role: 'VIEWER',
+      status: 'TIME_BOMBED',
+      isBlocked: false,    // ← CRITICAL: NOT blocked, just downgraded
+      isInGracePeriod: false,
+      gracePeriodEndsAt: null,
+    };
   }
 
-  // 4. Normal path — resolve from role + overrides
+  // 4. Normal — use assigned role and status
   return {
     role: user.role,
     status: user.status,
     isBlocked: false,
     isInGracePeriod: false,
     gracePeriodEndsAt: null,
-    permissionSet: buildPermissionSet(user),
   };
 }
 
 /**
- * Checks if a user has a specific Feature:Action permission.
- * OWNER always returns true.
+ * Check if a user has a specific permission.
+ * Checks Owner-set JSON overrides first, then falls back to role defaults.
  */
-export function hasPermission(user: UserForAccess, feature: Feature, action: Action): boolean {
-  if (user.role === 'OWNER') return true;
+export function hasPermission(
+  user: UserForAccess,
+  feature: Feature,
+  action: Action,
+): boolean {
+  const access = getEffectiveAccess(user);
 
-  const effective = getEffectiveAccess(user);
-  if (effective.isBlocked) return false;
-
-  const key: PermissionKey = `${feature}:${action}`;
-  return effective.permissionSet.has(key);
-}
-
-/**
- * Builds the effective permission set for a user by applying per-user overrides
- * on top of their role defaults.
- *
- * The `permissions` Json column stores an object like:
- *   { "scan:write": true, "sync:write": false }
- * `true` grants a key not in the role defaults; `false` revokes a key that is.
- */
-function buildPermissionSet(user: UserForAccess): Set<PermissionKey> {
-  const base = new Set(ROLE_PERMISSIONS[user.role] ?? []);
-
-  if (!user.permissions || typeof user.permissions !== 'object' || Array.isArray(user.permissions)) {
-    return base;
+  // Blocked and pending users have no permissions
+  if (access.isBlocked || access.status === 'PENDING_APPROVAL') {
+    return false;
   }
 
-  const overrides = user.permissions as Record<string, boolean>;
-  for (const [key, granted] of Object.entries(overrides)) {
-    if (granted) {
-      base.add(key as PermissionKey);
-    } else {
-      base.delete(key as PermissionKey);
+  // Check if user has an Owner-set override for this specific feature
+  const overrides = user.permissions as Record<string, boolean> | null;
+  if (overrides) {
+    const key: PermissionKey = `${feature}:${action}`;
+    if (key in overrides) {
+      return overrides[key];
     }
   }
 
-  return base;
+  // Fall back to role defaults (uses access.role, which is VIEWER for TIME_BOMBED)
+  const rolePerms = ROLE_PERMISSIONS[access.role];
+  return rolePerms?.has(`${feature}:${action}` as PermissionKey) ?? false;
 }

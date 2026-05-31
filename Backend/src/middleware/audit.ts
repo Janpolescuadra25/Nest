@@ -1,51 +1,49 @@
-// Centralized audit logging helper for the Nest backend
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 
-export type AuditAction =
-  | 'TRIAL_EXPIRED'
-  | 'TRIAL_EXPIRY_WARNING'
-  | 'TRIAL_RESET'
-  | 'USER_INVITED'
-  | 'USER_DISABLED'
-  | 'USER_STATUS_CHANGED'
-  | 'ROLE_CHANGED'
-  | 'PERMISSION_UPDATED'
-  | 'TIMEBOMB_SET'
-  | 'TIMEBOMB_TRIGGERED'
-  | 'GRACE_PERIOD_ENDED'
+type AuditAction =
+  | 'USER_CREATED'
+  | 'ROLE_CHANGE'
+  | 'STATUS_CHANGE'
+  | 'TIME_BOMB_SET'
+  | 'TIME_BOMB_CLEARED'
+  | 'USER_BLOCKED'
+  | 'USER_UNBLOCKED'
+  | 'USER_DELETED'
+  | 'APPROVAL_GRANTED'
+  | 'APPROVAL_REJECTED'
+  | 'PERMISSION_OVERRIDE'
+  | 'OWNER_TRANSFER'
+  | 'USER_LIMIT_SET'
+  | 'INVITE_CREATED'
+  | 'INVITE_USED'
   | 'ADMIN_UPDATED'
   | 'ADMIN_APPROVED'
   | 'ADMIN_REJECTED'
-  | 'PASSWORD_RESET'
-  | 'INVITE_CREATED'
-  | 'INVITE_USED'
-  | 'USER_BLOCKED'
-  | 'USER_UNBLOCKED'
-  | 'PERMISSIONS_OVERRIDDEN';
+  | 'USER_INVITED'
+  | 'USER_DISABLED'
+  | 'TRIAL_EXPIRED'
+  | 'TRIAL_RESET'
+  | 'TRIAL_EXPIRY_WARNING'
+  | 'PASSWORD_RESET';
 
-interface LogActionParams {
+export async function logAction(params: {
   actorId: string;
-  action: AuditAction | string;  // string allows legacy callers to pass their own names
-  targetUserId?: string | null;
+  action: AuditAction;
+  targetUserId?: string;
   details?: Prisma.InputJsonValue | null;
-}
-
-/**
- * Writes a single audit log entry.
- * Never throws — logs errors to console and resolves silently.
- */
-export async function logAction({ actorId, action, targetUserId, details }: LogActionParams): Promise<void> {
+}): Promise<void> {
   try {
     await prisma.auditLog.create({
       data: {
-        actorId,
-        action,
-        targetUserId: targetUserId ?? null,
-        details: details ?? null,
+        actorId: params.actorId,
+        action: params.action,
+        targetUserId: params.targetUserId ?? null,
+        details: params.details ?? null,
       },
     });
   } catch (err) {
-    console.error('[Audit] Failed to write audit log:', { actorId, action, targetUserId }, err);
+    console.error('[Audit] Failed to log action:', params.action, err);
+    // Audit logging should never block the main operation
   }
 }

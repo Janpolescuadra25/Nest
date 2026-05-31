@@ -25,10 +25,8 @@ ALTER TABLE "audit_logs" DROP CONSTRAINT "audit_logs_targetId_fkey";
 DROP INDEX "audit_logs_targetId_idx";
 
 -- AlterTable
-ALTER TABLE "audit_logs" DROP COLUMN "meta",
-DROP COLUMN "targetId",
-ADD COLUMN     "details" JSONB,
-ADD COLUMN     "targetUserId" TEXT;
+ALTER TABLE "audit_logs" RENAME COLUMN "targetId" TO "targetUserId";
+ALTER TABLE "audit_logs" RENAME COLUMN "meta" TO "details";
 
 -- AlterTable
 ALTER TABLE "locations" ADD COLUMN     "docNumberTemplate" TEXT,

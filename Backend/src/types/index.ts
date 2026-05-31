@@ -19,7 +19,7 @@ export interface AuthPayload {
   maxUsers: number | null;
   // RBAC extension fields
   permissions: Record<string, boolean> | null;
-  timeBombAt: Date | null;
+  timeBombAt: Date | string | null;
   gracePeriodHours: number;
   blocked: boolean;
   blockedById: string | null;
