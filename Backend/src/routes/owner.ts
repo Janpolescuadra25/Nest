@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { getEffectiveAccess, hasPermission, UserForAccess } from '../middleware/effective-role';
@@ -326,15 +326,17 @@ router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
     if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot block an owner' });
 
     let updateData: Record<string, unknown>;
+    const actionDetails: { action: 'USER_BLOCKED' | 'USER_UNBLOCKED'; details: Prisma.InputJsonValue } = blocked
+      ? { action: 'USER_BLOCKED', details: { blockedById: req.user!.userId } }
+      : { action: 'USER_UNBLOCKED', details: {} };
+
     if (blocked) {
       updateData = { blocked: true, status: 'BLOCKED', blockedById: req.user!.userId };
-      await logAction({ actorId: req.user!.userId, action: 'USER_BLOCKED', targetUserId: id, details: { blockedById: req.user!.userId } });
     } else {
       if (target.status !== 'BLOCKED') {
         return res.status(400).json({ error: 'User is not blocked' });
       }
       updateData = { blocked: false, status: 'ACTIVE', blockedById: null };
-      await logAction({ actorId: req.user!.userId, action: 'USER_UNBLOCKED', targetUserId: id, details: {} });
     }
 
     const updated = await prisma.user.update({
@@ -356,6 +358,13 @@ router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
         createdAt: true,
         updatedAt: true,
       },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: actionDetails.action,
+      targetUserId: id,
+      details: actionDetails.details,
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -615,7 +624,7 @@ router.patch('/users/:id/permissions', async (req: AuthRequest, res: Response) =
       details: { overrideCount: Object.keys(permissions).length, permissions },
     });
 
-    return res.json({ user: updated });
+    return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] setPermissionOverrides error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -723,7 +732,7 @@ router.post('/transfer', async (req: AuthRequest, res: Response) => {
     const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, email: true, role: true } });
     if (!targetUser) return res.status(404).json({ error: 'Target user not found.' });
     if (targetUser.role !== 'ADMIN') {
-      return res.status(400).json({ error: 'Target user must be an admin or higher' });
+      return res.status(400).json({ error: 'Target user must be an admin' });
     }
 
     const owner = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { id: true, email: true, password: true } });
@@ -812,8 +821,8 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
 // ── GET /api/owner/audit-log ─────────────────────────────────────────────────
 router.get('/audit-log', async (req: AuthRequest, res: Response) => {
   try {
-    const { page, limit: parsedLimit } = parsePagination(req.query);
-    const limit = req.query['limit'] !== undefined ? Math.min(parsedLimit, 200) : 50;
+    const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query['limit'] ?? '50'), 10) || 50));
     const skip = (page - 1) * limit;
 
     const action = req.query['action'] ? String(req.query['action']) : undefined;
@@ -828,8 +837,8 @@ router.get('/audit-log', async (req: AuthRequest, res: Response) => {
     if (targetUserId) where.targetUserId = targetUserId;
     if (fromDate || toDate) {
       const createdAt: Record<string, unknown> = {};
-      if (fromDate) createdAt['gt'] = new Date(String(fromDate));
-      if (toDate) createdAt['lt'] = new Date(String(toDate));
+      if (fromDate) createdAt['gte'] = new Date(String(fromDate));
+      if (toDate) createdAt['lte'] = new Date(String(toDate));
       where.createdAt = createdAt;
     }
 
