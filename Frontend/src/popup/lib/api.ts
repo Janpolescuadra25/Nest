@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry } from '../../types';
+import type { Location, Mapping, Rule, ScanData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -203,6 +203,10 @@ export const api = {
     put<Rule>(`/api/rules/${id}`, data, jwt),
 
   deleteRule: (jwt: string, id: string) => del(`/api/rules/${id}`, jwt),
+
+  // ── Template Import ────────────────────────────────────────────────────────
+  importTemplate: (jwt: string, locationId: string, data: Omit<ExportTemplate, 'version' | 'exportedAt' | 'sourceLocationName' | 'sourceRealmId'> & { mode: 'replace' | 'merge' }) =>
+    post<ImportResult>(`/api/locations/${locationId}/import-template`, data, jwt),
 
   // ── Scans ──────────────────────────────────────────────────────────────────
   saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData) =>

@@ -143,3 +143,36 @@ export interface ExtMessage {
     | 'CLEAR_JWT';
   payload?: unknown;
 }
+
+export interface ExportTemplate {
+  version: number;
+  exportedAt: string;
+  sourceLocationName: string;
+  sourceRealmId: string;
+  memoTemplate: string;
+  docNumberTemplate: string;
+  mappings: Array<{
+    sourceField: string;
+    targetAccount: string;
+    postingType: string;
+    keepSeparate: boolean;
+    targetClass?: string;
+    targetName?: string;
+    targetDescription?: string;
+    targetMemo?: string;
+    priority: number;
+  }>;
+  rules: Array<{
+    name: string;
+    ruleType: string;
+    config: Record<string, unknown>;
+    isActive: boolean;
+  }>;
+}
+
+export interface ImportResult {
+  success: boolean;
+  createdMappings: number;
+  createdRules: number;
+  templatesUpdated: boolean;
+}

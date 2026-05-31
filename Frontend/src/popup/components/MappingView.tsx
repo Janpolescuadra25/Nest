@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQBContext } from '../contexts/QBContext';
+import { useQuickBooks } from '../hooks/useQuickBooks';
+import { useToast } from './Toast';
 import SearchableSelect from './SearchableSelect';
-import type { Mapping, ScanData, TabId } from '../../types';
+import type { Mapping, ScanData, TabId, ExportTemplate } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 
 interface LocalMapping {
@@ -189,6 +191,9 @@ export default function MappingView({
     searchEntities,
   } = useQBContext();
 
+  const { status: qbStatus } = useQuickBooks(jwt);
+  const { showToast } = useToast();
+
   const [localMappings, setLocalMappings] = useState<LocalMapping[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -202,6 +207,12 @@ export default function MappingView({
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
+  const [importWarning, setImportWarning] = useState<string | null>(null);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [pendingImport, setPendingImport] = useState<ExportTemplate | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
 
@@ -521,6 +532,110 @@ export default function MappingView({
     setTimeout(() => setAutoMsg(null), 4000);
   };
 
+  const handleExport = useCallback(async () => {
+    if (!locId || !jwt) return;
+    try {
+      const [mappings, rules] = await Promise.all([
+        api.getMappings(jwt, locId),
+        api.getRules(jwt, locId),
+      ]);
+      const loc = locations.find(l => l.id === locId);
+      const exportData: ExportTemplate = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        sourceLocationName: loc?.name ?? 'Unknown',
+        sourceRealmId: qbStatus?.realmId ?? '',
+        memoTemplate: memoTemplate,
+        docNumberTemplate: docNumberTemplate,
+        mappings: mappings.map(m => ({
+          sourceField: m.sourceField,
+          targetAccount: m.targetAccount,
+          postingType: m.postingType ?? 'Credit',
+          keepSeparate: m.keepSeparate ?? false,
+          targetClass: m.targetClass ?? undefined,
+          targetName: m.targetName ?? undefined,
+          targetDescription: m.targetDescription ?? undefined,
+          targetMemo: m.targetMemo ?? undefined,
+          priority: m.priority,
+        })),
+        rules: rules.map(r => ({
+          name: r.name,
+          ruleType: r.ruleType,
+          config: r.config as Record<string, unknown>,
+          isActive: r.isActive,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nest-template-${(loc?.name ?? 'location').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${mappings.length} mappings + ${rules.length} rules`, 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Export failed', 'error');
+    }
+  }, [locId, jwt, locations, memoTemplate, docNumberTemplate, qbStatus, showToast]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string) as ExportTemplate;
+        if (!data.version || !data.mappings || !data.rules) {
+          showToast('Invalid template file format', 'error');
+          return;
+        }
+        if (data.version !== 1) {
+          showToast('Unsupported template version', 'error');
+          return;
+        }
+        const currentRealmId = qbStatus?.realmId;
+        if (data.sourceRealmId && currentRealmId && data.sourceRealmId !== currentRealmId) {
+          setImportWarning('This template was exported from a different QuickBooks company. Some account references may not match. Verify mappings after import.');
+        } else {
+          setImportWarning(null);
+        }
+        setPendingImport(data);
+        setShowImportConfirm(true);
+      } catch {
+        showToast('Failed to read template file', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [showToast, qbStatus]);
+
+  const handleImportConfirm = useCallback(async () => {
+    if (!pendingImport || !locId || !jwt) return;
+    try {
+      const result = await api.importTemplate(jwt, locId, {
+        mappings: pendingImport.mappings,
+        rules: pendingImport.rules,
+        memoTemplate: pendingImport.memoTemplate,
+        docNumberTemplate: pendingImport.docNumberTemplate,
+        mode: importMode,
+      });
+      showToast(`Imported ${result.createdMappings} mappings + ${result.createdRules} rules${result.templatesUpdated ? ' + templates' : ''}`, 'success');
+      void loadMappings();
+      const loc = locations.find(l => l.id === locId);
+      if (loc) {
+        setMemoTemplate(pendingImport.memoTemplate ?? loc.memoTemplate ?? '');
+        setDocNumberTemplate(pendingImport.docNumberTemplate ?? loc.docNumberTemplate ?? '');
+      }
+      setShowImportConfirm(false);
+      setPendingImport(null);
+      setImportWarning(null);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Import failed', 'error');
+    }
+  }, [pendingImport, locId, jwt, importMode, showToast, loadMappings, locations]);
+
   // Balance indicator using scan data
   const totalDebits = localMappings
     .filter((m) => m.postingType === 'Debit')
@@ -555,12 +670,101 @@ export default function MappingView({
           ))}
         </select>
         <button
+          type="button"
+          onClick={handleExport}
+          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
+          title="Export this location's configuration as a JSON file"
+        >
+          📤 Export
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
+          title="Import a configuration template from a JSON file"
+        >
+          📥 Import
+        </button>
+        <button
           onClick={addMapping}
           className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1.5 rounded whitespace-nowrap transition-colors"
         >
           + Add
         </button>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
+      {showImportConfirm && pendingImport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 w-80 space-y-3">
+            <h3 className="text-sm font-semibold text-white">Import Template</h3>
+            <p className="text-xs text-gray-400">
+              Import from: <span className="text-gray-200">{pendingImport.sourceLocationName || 'Unknown'}</span>
+            </p>
+            <div className="text-xs text-gray-400 space-y-1">
+              <p>{pendingImport.mappings.length} mappings, {pendingImport.rules.length} rules</p>
+              <p>Templates: {(pendingImport.memoTemplate || pendingImport.docNumberTemplate) ? 'Yes' : 'No'}</p>
+            </div>
+            {importWarning && (
+              <div className="bg-orange-900/30 border border-orange-700 text-orange-300 text-xs rounded px-3 py-2">
+                ⚠️ {importWarning}
+              </div>
+            )}
+            <div className="space-y-2">
+              <div className="text-xs text-gray-400">Mode:</div>
+              <div className="flex gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="importMode"
+                    checked={importMode === 'merge'}
+                    onChange={() => setImportMode('merge')}
+                    className="accent-cyan-500"
+                  />
+                  Merge (add to existing)
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="importMode"
+                    checked={importMode === 'replace'}
+                    onChange={() => setImportMode('replace')}
+                    className="accent-red-500"
+                  />
+                  Replace all
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportConfirm(false);
+                  setPendingImport(null);
+                  setImportWarning(null);
+                }}
+                className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleImportConfirm()}
+                className="flex-1 text-xs bg-cyan-700 hover:bg-cyan-600 text-white py-2 rounded-lg transition-colors"
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex gap-1.5 flex-wrap">

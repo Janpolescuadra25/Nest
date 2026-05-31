@@ -134,6 +134,128 @@ router.delete('/:id', requirePermission('canManageLocs'), async (req: AuthReques
   }
 });
 
+// ── POST /api/locations/:id/import-template ──────────────────────────────────
+router.post('/:id/import-template', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const lf = locationFilter(req.user!);
+
+    const location = await prisma.location.findFirst({
+      where: { id, ...lf },
+    });
+    if (!location) {
+      res.status(404).json({ error: 'Location not found' });
+      return;
+    }
+
+    const body = req.body as {
+      mappings?: Array<Record<string, unknown>>;
+      rules?: Array<Record<string, unknown>>;
+      memoTemplate?: string;
+      docNumberTemplate?: string;
+      mode?: 'replace' | 'merge';
+    };
+
+    const mode = body.mode || 'merge';
+
+    if (!body.mappings?.length && !body.rules?.length && body.memoTemplate === undefined && body.docNumberTemplate === undefined) {
+      res.status(400).json({ error: 'No template data provided' });
+      return;
+    }
+    if (body.mappings && !Array.isArray(body.mappings)) {
+      res.status(400).json({ error: 'mappings must be an array' });
+      return;
+    }
+    if (body.rules && !Array.isArray(body.rules)) {
+      res.status(400).json({ error: 'rules must be an array' });
+      return;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      let createdMappings = 0;
+      let createdRules = 0;
+
+      if (body.mappings && body.mappings.length > 0) {
+        if (mode === 'replace') {
+          await tx.mapping.deleteMany({ where: { locationId: id } });
+        }
+        for (const m of body.mappings) {
+          const sf = String(m['sourceField'] ?? '');
+          const ta = String(m['targetAccount'] ?? '');
+          if (!sf || !ta) continue;
+          await tx.mapping.create({
+            data: {
+              locationId: id,
+              sourceField: sf,
+              targetAccount: ta,
+              postingType: m['postingType'] === 'Debit' ? 'Debit' : 'Credit',
+              keepSeparate: Boolean(m['keepSeparate']),
+              targetClass: m['targetClass'] ? String(m['targetClass']) : null,
+              targetName: m['targetName'] ? String(m['targetName']) : null,
+              targetDescription: m['targetDescription'] ? String(m['targetDescription']) : null,
+              targetMemo: m['targetMemo'] ? String(m['targetMemo']) : null,
+              priority: Number(m['priority']) || 0,
+            },
+          });
+          createdMappings++;
+        }
+      } else if (mode === 'replace') {
+        await tx.mapping.deleteMany({ where: { locationId: id } });
+      }
+
+      if (body.rules && body.rules.length > 0) {
+        if (mode === 'replace') {
+          await tx.rule.deleteMany({ where: { locationId: id } });
+        }
+        for (const r of body.rules) {
+          const config = typeof r['config'] === 'object' && r['config'] !== null ? r['config'] as Record<string, unknown> : {};
+          await tx.rule.create({
+            data: {
+              locationId: id,
+              name: String(r['name'] ?? 'Imported rule'),
+              ruleType: ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'].includes(String(r['ruleType']))
+                ? String(r['ruleType']) as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA'
+                : 'COMBINE',
+              config,
+              isActive: r['isActive'] === false ? false : true,
+            },
+          });
+          createdRules++;
+        }
+      } else if (mode === 'replace') {
+        await tx.rule.deleteMany({ where: { locationId: id } });
+      }
+
+      if (body.memoTemplate !== undefined || body.docNumberTemplate !== undefined) {
+        await tx.location.update({
+          where: { id },
+          data: {
+            ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
+            ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
+          },
+        });
+      }
+
+      return {
+        success: true,
+        createdMappings,
+        createdRules,
+        templatesUpdated: !!(body.memoTemplate || body.docNumberTemplate),
+      };
+    });
+
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Import failed';
+    console.error('[import-template]', message);
+    res.status(500).json({
+      error: process.env.NODE_ENV !== 'production'
+        ? message
+        : 'Template import failed. Please try again.',
+    });
+  }
+});
+
 // ── GET /api/locations/:id/mappings ───────────────────────────────────────────
 router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
