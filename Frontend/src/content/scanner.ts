@@ -361,39 +361,44 @@ function scanSalesSummary(): Record<string, number> {
 // MESSAGE LISTENER
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
-  if (message.type === 'REQUEST_SCAN') {
-    const url = window.location.href;
-    const isSalesSummary = /\/restaurants\/admin\/reports\/sales\/sales-summary/.test(url);
+if ((globalThis as unknown as Record<string, boolean>).__toastScannerLoaded) {
+  console.log('[Toast Scanner] Already loaded, skipping duplicate registration');
+} else {
+  (globalThis as unknown as Record<string, boolean>).__toastScannerLoaded = true;
+  chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
+    if (message.type === 'REQUEST_SCAN') {
+      const url = window.location.href;
+      const isSalesSummary = /\/restaurants\/admin\/reports\/sales\/sales-summary/.test(url);
 
-    if (!isSalesSummary) {
-      sendResponse({ data: null });
-      return true;
-    }
+      if (!isSalesSummary) {
+        sendResponse({ data: null });
+        return true;
+      }
 
-    // Wait for the revenue summary table (confirms page is fully loaded)
-    waitForElement('tbody[data-testid="revenue-summary-table-body"]', 5000)
-      .then((el) => {
-        if (!el) {
-          if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Timed out waiting for Sales Summary page to load');
-          sendResponse({ data: null });
-          return;
-        }
-        try {
-          const scanData = scanSalesSummary();
-          if (Object.keys(scanData).length === 0) {
-            if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Page loaded but no data extracted — selectors may be outdated');
+      // Wait for the revenue summary table (confirms page is fully loaded)
+      waitForElement('tbody[data-testid="revenue-summary-table-body"]', 5000)
+        .then((el) => {
+          if (!el) {
+            if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Timed out waiting for Sales Summary page to load');
             sendResponse({ data: null });
             return;
           }
-          sendResponse({ data: scanData });
-        } catch (err) {
-          if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Scan failed:', err);
-          sendResponse({ data: null });
-        }
-      });
+          try {
+            const scanData = scanSalesSummary();
+            if (Object.keys(scanData).length === 0) {
+              if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Page loaded but no data extracted — selectors may be outdated');
+              sendResponse({ data: null });
+              return;
+            }
+            sendResponse({ data: scanData });
+          } catch (err) {
+            if (process.env.NODE_ENV !== 'production') console.error('[Nest Scanner] Scan failed:', err);
+            sendResponse({ data: null });
+          }
+        });
 
-    return true; // Keep message channel open for async response
-  }
-  return false;
-});
+      return true; // Keep message channel open for async response
+    }
+    return false;
+  });
+}

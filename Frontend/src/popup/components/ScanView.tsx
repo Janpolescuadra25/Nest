@@ -99,7 +99,7 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
             target: { tabId: tab.id },
             files: [scriptFile],
           });
-          await new Promise(r => setTimeout(r, 500));
+          await new Promise(r => setTimeout(r, 1500));
           console.log('[Nest Popup] Scanner injected — retrying scan...');
           response = await sendScanMessage(tab.id);
         } catch (injectErr) {

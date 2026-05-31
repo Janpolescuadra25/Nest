@@ -193,22 +193,27 @@ async function scanAccountingSummary(): Promise<Record<string, number>> {
 // MESSAGE LISTENER
 // ---------------------------------------------------------------------------
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== 'REQUEST_SCAN') return false;
+if ((globalThis as unknown as Record<string, boolean>).__salidoScannerLoaded) {
+  console.log('[SALIDO Scanner] Already loaded, skipping duplicate registration');
+} else {
+  (globalThis as unknown as Record<string, boolean>).__salidoScannerLoaded = true;
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== 'REQUEST_SCAN') return false;
 
-  console.log('[SALIDO Scanner] REQUEST_SCAN received');
+    console.log('[SALIDO Scanner] REQUEST_SCAN received');
 
-  scanAccountingSummary()
-    .then(data => {
-      console.log(`[SALIDO Scanner] Extracted ${Object.keys(data).length} fields`);
-      sendResponse({ data });
-    })
-    .catch(err => {
-      console.error('[SALIDO Scanner] Scan error:', err);
-      sendResponse({ data: {} });
-    });
+    scanAccountingSummary()
+      .then(data => {
+        console.log(`[SALIDO Scanner] Extracted ${Object.keys(data).length} fields`);
+        sendResponse({ data });
+      })
+      .catch(err => {
+        console.error('[SALIDO Scanner] Scan error:', err);
+        sendResponse({ data: {} });
+      });
 
-  return true; // keep message channel open for async response
-});
+    return true; // keep message channel open for async response
+  });
+}
 
 console.log('[SALIDO Scanner] Content script loaded on', window.location.href);
