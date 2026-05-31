@@ -54,7 +54,7 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
       const timeout = setTimeout(() => {
         console.warn('[Nest Popup] Scan timed out for tab', tabId);
         resolve(null);
-      }, 10000);
+      }, 30000);
 
       chrome.tabs.sendMessage(tabId, { type: 'REQUEST_SCAN' }, (resp) => {
         clearTimeout(timeout);
