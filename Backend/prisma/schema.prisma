@@ -156,7 +156,7 @@ model Location {
   userId      String
   adminId     String?
   name        String
-  posUrl      String
+  posUrl      String       @default("")
   isActive    Boolean      @default(true)
   memoTemplate      String?
   docNumberTemplate String?
