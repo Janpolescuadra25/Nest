@@ -23,6 +23,10 @@ import { startTrialWarningCron } from './cron/trial-warnings';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust the first proxy hop so req.ip reflects the real client IP (needed for
+// accurate rate limiting behind Render's load balancer).
+app.set('trust proxy', 1);
+
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
@@ -54,6 +58,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(helmet());
 
+// ── Health Check — before globalLimiter so Render's poller is never 429'd ──
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'nest-backend', timestamp: new Date().toISOString() });
+});
+
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -69,10 +78,6 @@ app.use((req: express.Request, _res: express.Response, next: express.NextFunctio
   next();
 });
 
-// ── Health Check ────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'nest-backend', timestamp: new Date().toISOString() });
-});
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);

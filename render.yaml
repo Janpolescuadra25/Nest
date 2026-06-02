@@ -34,3 +34,5 @@ services:
         value: https://quickbooks.api.intuit.com/v3/company
       - key: QB_ENVIRONMENT
         value: production
+      - key: APP_URL
+        value: "https://nest-backend-mddn.onrender.com"
