@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -13,6 +14,7 @@ import quickbooksRoutes from './routes/quickbooks';
 import adminRoutes from './routes/admin';
 import adminRequestRoutes from './routes/adminRequests';
 import ownerRoutes from './routes/owner';
+import inviteRoutes from './routes/invite';
 import passwordResetRoutes from './routes/password-reset';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
@@ -32,6 +34,13 @@ app.use(cors({
       return callback(null, true);
     }
     if (!allowedExtensionId && origin.startsWith('chrome-extension://')) {
+      return callback(null, true);
+    }
+    const appUrl = process.env.APP_URL;
+    if (appUrl && origin === appUrl) {
+      return callback(null, true);
+    }
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
       return callback(null, true);
     }
     callback(new Error('Not allowed by CORS'));
@@ -73,9 +82,15 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/quickbooks', quickbooksRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/invite', inviteRoutes);
 app.use('/api/admin-requests', adminRequestRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+
+// ── Web Pages ───────────────────────────────────────────────────────────────
+app.get('/reset-password', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/reset-password/index.html'));
+});
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {

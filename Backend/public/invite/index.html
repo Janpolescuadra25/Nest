@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nest — Accept Invite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 480px;
+    }
+    .card-header {
+      background: #0f172a;
+      padding: 24px 32px;
+    }
+    .card-header span {
+      color: #22d3ee;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .card-body { padding: 32px; }
+    .card-footer {
+      background: #f8fafc;
+      padding: 16px 32px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .card-footer p {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    .status-msg {
+      padding: 20px 0;
+      text-align: center;
+    }
+    .status-msg .icon { font-size: 40px; margin-bottom: 12px; }
+    .status-msg h2 { color: #1e293b; font-size: 20px; margin-bottom: 8px; }
+    .status-msg p { color: #64748b; font-size: 14px; line-height: 1.6; }
+
+    .invite-meta {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+    }
+    .invite-meta p { color: #475569; font-size: 13px; line-height: 1.7; }
+    .invite-meta strong { color: #0f172a; }
+
+    h2.form-title {
+      color: #1e293b;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    p.form-sub {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .field { margin-bottom: 16px; }
+    label {
+      display: block;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #22d3ee; }
+
+    .error-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      color: #b91c1c;
+      font-size: 14px;
+      display: none;
+    }
+    .error-box.visible { display: block; }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      background: #22d3ee;
+      color: #0f172a;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s;
+    }
+    button[type="submit"]:hover { opacity: 0.9; }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .success-box {
+      background: #f0fdff;
+      border-left: 4px solid #22d3ee;
+      border-radius: 0 8px 8px 0;
+      padding: 20px;
+      color: #0e7490;
+      font-size: 15px;
+      line-height: 1.6;
+      display: none;
+    }
+    .success-box.visible { display: block; }
+    .success-box strong { display: block; font-size: 17px; margin-bottom: 6px; color: #0f172a; }
+
+    #loading { text-align: center; padding: 32px 0; color: #94a3b8; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header"><span>Nest</span></div>
+    <div class="card-body">
+      <div id="loading">Loading invite…</div>
+      <div id="content" style="display:none;"></div>
+    </div>
+    <div class="card-footer"><p>This invite was sent from the Nest platform. If you didn't expect it, you can safely ignore this page.</p></div>
+  </div>
+
+  <script>
+    (function () {
+      const token = window.location.pathname.split('/').pop();
+      const loading = document.getElementById('loading');
+      const content = document.getElementById('content');
+
+      function showContent(html) {
+        loading.style.display = 'none';
+        content.style.display = 'block';
+        content.innerHTML = html;
+      }
+
+      function statusPage(icon, title, body) {
+        showContent(`
+          <div class="status-msg">
+            <div class="icon">${icon}</div>
+            <h2>${title}</h2>
+            <p>${body}</p>
+          </div>`);
+      }
+
+      function showForm(invite) {
+        const role = invite.roleHint || 'member';
+        const creator = invite.creatorName ? `Invited by <strong>${invite.creatorName}</strong>` : 'You have been invited';
+        const expiresAt = new Date(invite.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        showContent(`
+          <h2 class="form-title">Create your account</h2>
+          <p class="form-sub">You've been invited to join Nest.</p>
+          <div class="invite-meta">
+            <p>${creator} &nbsp;·&nbsp; Role: <strong>${role}</strong> &nbsp;·&nbsp; Expires: <strong>${expiresAt}</strong></p>
+          </div>
+          <div id="err" class="error-box"></div>
+          <div id="success" class="success-box"></div>
+          <form id="signup-form">
+            <div class="field">
+              <label for="name">Full Name</label>
+              <input type="text" id="name" name="name" required minlength="2" placeholder="Jane Smith" autocomplete="name">
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" required placeholder="jane@example.com" autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="password">Password</label>
+              <input type="password" id="password" name="password" required minlength="8" placeholder="At least 8 characters" autocomplete="new-password">
+            </div>
+            <div class="field">
+              <label for="confirm">Confirm Password</label>
+              <input type="password" id="confirm" name="confirm" required minlength="8" placeholder="Repeat password" autocomplete="new-password">
+            </div>
+            <button type="submit" id="submit-btn">Create Account</button>
+          </form>`);
+
+        document.getElementById('signup-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          const errBox = document.getElementById('err');
+          const successBox = document.getElementById('success');
+          const submitBtn = document.getElementById('submit-btn');
+          errBox.classList.remove('visible');
+          successBox.classList.remove('visible');
+
+          const name = document.getElementById('name').value.trim();
+          const email = document.getElementById('email').value.trim();
+          const password = document.getElementById('password').value;
+          const confirm = document.getElementById('confirm').value;
+
+          if (password !== confirm) {
+            errBox.textContent = 'Passwords do not match.';
+            errBox.classList.add('visible');
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Creating account…';
+
+          try {
+            const res = await fetch('/api/invite/signup/' + token, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({ name, email, password }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+              document.getElementById('signup-form').style.display = 'none';
+              successBox.innerHTML = '<strong>Account created!</strong>You can now log in from the Chrome extension.';
+              successBox.classList.add('visible');
+            } else {
+              if (res.status === 409) {
+                errBox.textContent = 'An account with this email already exists.';
+              } else {
+                errBox.textContent = data.error || 'Something went wrong. Please try again.';
+              }
+              errBox.classList.add('visible');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Create Account';
+            }
+          } catch (err) {
+            errBox.textContent = 'Network error. Please check your connection and try again.';
+            errBox.classList.add('visible');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
+          }
+        });
+      }
+
+      async function init() {
+        if (!token) {
+          statusPage('❌', 'Invalid invite link', 'This link does not look right. Please request a new invite.');
+          return;
+        }
+        try {
+          const res = await fetch('/api/invite/' + token, {
+            headers: { 'Accept': 'application/json' },
+          });
+          const data = await res.json();
+
+          if (res.status === 404) {
+            statusPage('🔍', 'Invalid invite link', 'This invite link could not be found. It may have been revoked or never existed.');
+            return;
+          }
+          if (res.status === 410) {
+            const msg = (data.error || '').toLowerCase();
+            if (msg.includes('expired')) {
+              statusPage('⏰', 'This invite has expired', 'The invite link is no longer valid. Please contact your administrator for a new one.');
+            } else {
+              statusPage('✋', 'This invite has already been used', 'This invite link has reached its usage limit. Please contact your administrator for a new one.');
+            }
+            return;
+          }
+          if (!res.ok) {
+            statusPage('⚠️', 'Something went wrong', data.error || 'Unable to load invite. Please try again later.');
+            return;
+          }
+
+          showForm(data.invite);
+        } catch (err) {
+          statusPage('⚠️', 'Connection error', 'Could not reach the server. Please check your connection and try again.');
+        }
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
