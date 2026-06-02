@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
 import { trialCountdown } from '../lib/utils';
-import type { TeamMember } from '../../types';
+import { BACKEND_URL } from '../../lib/config';
+import type { TeamMember, InviteLink } from '../../types';
 
 interface InviteResult {
   user: { id: string; email: string; name: string | null; role: string };
@@ -33,6 +34,19 @@ export default function MyTeamTab({ jwt }: Props) {
   const [trialMsg, setTrialMsg] = useState<Record<string, string>>({});
   const [trialLoading, setTrialLoading] = useState<Record<string, boolean>>({});
 
+  // Time bomb state: keyed by member id
+  const [bombDate, setBombDate] = useState<Record<string, string>>({});
+  const [bombGrace, setBombGrace] = useState<Record<string, string>>({});
+  const [showBombForm, setShowBombForm] = useState<Record<string, boolean>>({});
+
+  // Invite links state
+  const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([]);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkRoleHint, setLinkRoleHint] = useState('VIEWER');
+  const [linkExpiry, setLinkExpiry] = useState('72');
+  const [linkMaxUses, setLinkMaxUses] = useState('1');
+  const [createdLink, setCreatedLink] = useState<InviteLink | null>(null);
+
   const fetchTeam = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -46,7 +60,16 @@ export default function MyTeamTab({ jwt }: Props) {
     }
   }, [jwt]);
 
-  useEffect(() => { fetchTeam(); }, [fetchTeam]);
+  const fetchInviteLinks = useCallback(async () => {
+    try {
+      const data = await api.listInviteLinks(jwt);
+      setInviteLinks(data.invites);
+    } catch {
+      // silent — non-critical
+    }
+  }, [jwt]);
+
+  useEffect(() => { fetchTeam(); fetchInviteLinks(); }, [fetchTeam, fetchInviteLinks]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +123,9 @@ export default function MyTeamTab({ jwt }: Props) {
   const handleRoleChange = async (id: string, role: string) => {
     setActionLoading(p => ({ ...p, [`role_${id}`]: true }));
     try {
-      await api.patchTeamMember(jwt, id, { role });
+      await api.changeUserRole(jwt, id, role);
       await fetchTeam();
-      showToast('Member updated', 'success');
+      showToast('Role updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update role.');
       showToast('Update failed', 'error');
@@ -115,7 +138,6 @@ export default function MyTeamTab({ jwt }: Props) {
     const isOpening = expandedId !== member.id;
     setExpandedId(isOpening ? member.id : null);
     if (isOpening) {
-      // Initialise trial state from current data
       const hasTrial = !!member.trialExpiresAt;
       setTrialEnabled(p => ({ ...p, [member.id]: hasTrial }));
       setTrialDate(p => ({
@@ -123,6 +145,10 @@ export default function MyTeamTab({ jwt }: Props) {
         [member.id]: member.trialExpiresAt ? member.trialExpiresAt.slice(0, 10) : '',
       }));
       setTrialMsg(p => ({ ...p, [member.id]: member.customExpiryMessage ?? '' }));
+      // Init bomb state
+      setBombDate(p => ({ ...p, [member.id]: '' }));
+      setBombGrace(p => ({ ...p, [member.id]: '24' }));
+      setShowBombForm(p => ({ ...p, [member.id]: false }));
     }
   };
 
@@ -146,6 +172,89 @@ export default function MyTeamTab({ jwt }: Props) {
     }
   };
 
+  const handleSetTimeBomb = async (id: string) => {
+    const dateVal = bombDate[id];
+    if (!dateVal) { showToast('Select a date', 'error'); return; }
+    const grace = bombGrace[id] ? Number(bombGrace[id]) : undefined;
+    setActionLoading(p => ({ ...p, [`bomb_${id}`]: true }));
+    try {
+      await api.setTimeBomb(jwt, id, new Date(dateVal).toISOString(), grace);
+      await fetchTeam();
+      setShowBombForm(p => ({ ...p, [id]: false }));
+      showToast('Time bomb set', 'success');
+    } catch (err: any) {
+      setError(err.message || 'Failed to set time bomb.');
+      showToast('Failed to set time bomb', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`bomb_${id}`]: false }));
+    }
+  };
+
+  const handleClearTimeBomb = async (id: string) => {
+    setActionLoading(p => ({ ...p, [`bomb_${id}`]: true }));
+    try {
+      await api.clearTimeBomb(jwt, id);
+      await fetchTeam();
+      showToast('Time bomb cleared', 'success');
+    } catch (err: any) {
+      setError(err.message || 'Failed to clear time bomb.');
+      showToast('Failed to clear time bomb', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`bomb_${id}`]: false }));
+    }
+  };
+
+  const handleCreateLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(p => ({ ...p, linkCreate: true }));
+    try {
+      const result = await api.createInviteLink(jwt, {
+        roleHint: linkRoleHint,
+        expiresInHours: Number(linkExpiry) || 72,
+        maxUses: Number(linkMaxUses) || 1,
+      });
+      setCreatedLink(result.invite);
+      setLinkRoleHint('VIEWER');
+      setLinkExpiry('72');
+      setLinkMaxUses('1');
+      setShowLinkForm(false);
+      await fetchInviteLinks();
+      showToast('Invite link created!', 'success');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create link.');
+      showToast('Failed to create link', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, linkCreate: false }));
+    }
+  };
+
+  const handleRevokeLink = async (id: string) => {
+    setActionLoading(p => ({ ...p, [`revoke_${id}`]: true }));
+    try {
+      await api.revokeInviteLink(jwt, id);
+      await fetchInviteLinks();
+      showToast('Link revoked', 'success');
+    } catch (err: any) {
+      showToast('Failed to revoke link', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`revoke_${id}`]: false }));
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => showToast('Link copied!', 'success'),
+      () => showToast('Failed to copy', 'error')
+    );
+  };
+
+  const effectiveBadge = (member: TeamMember) => {
+    const st = member.status;
+    if (st === 'GRACE_PERIOD') return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-300">⏳ Grace</span>;
+    if (st === 'TIME_BOMBED') return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-300">🚫 Restricted</span>;
+    if (st === 'PENDING_APPROVAL') return <span className="text-xs px-1 py-0.5 rounded bg-orange-900 text-orange-300">⏳ Pending</span>;
+    return null;
+  };
 
   const PermToggle = ({ memberId, field, value, label }: { memberId: string; field: string; value: boolean; label: string }) => (
     <button
@@ -161,12 +270,20 @@ export default function MyTeamTab({ jwt }: Props) {
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-semibold text-white">My Team</h2>
-        <button
-          onClick={() => setShowInvite(!showInvite)}
-          className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600"
-        >
-          + Invite
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowLinkForm(!showLinkForm)}
+            className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+          >
+            🔗 Link
+          </button>
+          <button
+            onClick={() => setShowInvite(!showInvite)}
+            className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600"
+          >
+            + Invite
+          </button>
+        </div>
       </div>
 
       {inviteResult && (
@@ -176,6 +293,23 @@ export default function MyTeamTab({ jwt }: Props) {
           <p className="text-gray-300 text-xs">Temp password: <span className="font-mono text-yellow-400">{inviteResult.tempPassword}</span></p>
           <p className="text-gray-500 text-xs mt-1">Share this password securely — they'll be prompted to change it on first login.</p>
           <button onClick={() => setInviteResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
+        </div>
+      )}
+
+      {createdLink && (
+        <div className="bg-green-900/40 border border-green-700 rounded-lg p-3 text-sm">
+          <p className="text-green-400 font-medium">Invite link created!</p>
+          <div className="flex items-center gap-2 mt-1">
+            <code className="flex-1 text-xs text-gray-300 bg-slate-800 px-2 py-1 rounded break-all">{BACKEND_URL}/api/invite/{createdLink.token}</code>
+            <button
+              onClick={() => copyToClipboard(`${BACKEND_URL}/api/invite/${createdLink.token}`)}
+              className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600 flex-shrink-0"
+            >
+              Copy
+            </button>
+          </div>
+          <p className="text-gray-500 text-xs mt-1">Share this link — it expires {new Date(createdLink.expiresAt).toLocaleString()}</p>
+          <button onClick={() => setCreatedLink(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
         </div>
       )}
 
@@ -214,6 +348,80 @@ export default function MyTeamTab({ jwt }: Props) {
         </form>
       )}
 
+      {showLinkForm && (
+        <form onSubmit={handleCreateLink} className="bg-slate-800 rounded-lg p-3 space-y-2">
+          <p className="text-xs text-gray-400 font-medium">Create Invite Link</p>
+          <select
+            value={linkRoleHint}
+            onChange={e => setLinkRoleHint(e.target.value)}
+            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-gray-300 focus:outline-none"
+          >
+            {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-0.5">Expires (hours)</label>
+              <input
+                type="number"
+                min={1}
+                max={720}
+                value={linkExpiry}
+                onChange={e => setLinkExpiry(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-0.5">Max uses</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={linkMaxUses}
+                onChange={e => setLinkMaxUses(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={actionLoading['linkCreate']} className="flex-1 py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50">
+              {actionLoading['linkCreate'] ? 'Creating...' : 'Create Link'}
+            </button>
+            <button type="button" onClick={() => setShowLinkForm(false)} className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600">
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Invite Links List */}
+      {inviteLinks.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 font-medium">Invite Links</p>
+          {inviteLinks.map(link => (
+            <div key={link.id} className="bg-slate-800 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-300">{link.roleHint}</span>
+                  <span className={`text-xs px-1 py-0.5 rounded ${link.isActive ? 'bg-green-900 text-green-400' : 'bg-gray-700 text-gray-500'}`}>
+                    {link.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Uses: {link.useCount}/{link.maxUses} · Expires: {new Date(link.expiresAt).toLocaleDateString()}
+                </div>
+              </div>
+              <button
+                onClick={() => handleRevokeLink(link.id)}
+                disabled={actionLoading[`revoke_${link.id}`]}
+                className="text-xs px-2 py-1 bg-red-900 text-red-300 rounded hover:bg-red-800 disabled:opacity-50 flex-shrink-0"
+              >
+                Revoke
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {error && <p className="text-red-400 text-sm">{error}</p>}
       {loading ? (
         <p className="text-gray-500 text-sm">Loading…</p>
@@ -226,11 +434,18 @@ export default function MyTeamTab({ jwt }: Props) {
               <div className="min-w-0">
                 <div className="text-sm font-medium text-white truncate">{member.name ?? member.email}</div>
                 {member.name && <div className="text-xs text-gray-400 truncate">{member.email}</div>}
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span className="text-xs text-gray-500">{member.role}</span>
-                  <span className={`text-xs px-1 py-0.5 rounded ${member.status === 'ACTIVE' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                  <span className={`text-xs px-1 py-0.5 rounded ${
+                    member.status === 'ACTIVE' ? 'bg-green-900 text-green-400' :
+                    member.status === 'EXPIRED' ? 'bg-yellow-900 text-yellow-400' :
+                    member.status === 'GRACE_PERIOD' ? 'bg-yellow-900 text-yellow-400' :
+                    member.status === 'PENDING_APPROVAL' ? 'bg-orange-900 text-orange-400' :
+                    'bg-red-900 text-red-400'
+                  }`}>
                     {member.status}
                   </span>
+                  {effectiveBadge(member)}
                   {member.mustChangePassword && <span className="text-xs text-yellow-500">⚠ needs pw change</span>}
                   {trialCountdown(member.trialExpiresAt)}
                 </div>
@@ -274,6 +489,83 @@ export default function MyTeamTab({ jwt }: Props) {
                     {actionLoading[member.id] ? 'Disabling...' : 'Disable Member'}
                   </button>
                 )}
+
+                {/* Time Bomb */}
+                <div className="pt-2 border-t border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400 font-medium">Time Bomb</p>
+                    {member.timeBombAt && (
+                      <span className="text-xs text-yellow-400">💣 {new Date(member.timeBombAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  {member.status === 'GRACE_PERIOD' && (
+                    <div className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-800 rounded px-2 py-1">
+                      ⏳ Grace period — access restricted soon
+                    </div>
+                  )}
+                  {member.status === 'TIME_BOMBED' && (
+                    <div className="text-xs text-red-300 bg-red-900/30 border border-red-800 rounded px-2 py-1">
+                      🚫 Access restricted (downgraded to VIEWER)
+                    </div>
+                  )}
+                  {member.timeBombAt ? (
+                    <button
+                      onClick={() => handleClearTimeBomb(member.id)}
+                      disabled={actionLoading[`bomb_${member.id}`]}
+                      className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                    >
+                      {actionLoading[`bomb_${member.id}`] ? 'Clearing...' : 'Clear Time Bomb'}
+                    </button>
+                  ) : (
+                    <>
+                      {!showBombForm[member.id] ? (
+                        <button
+                          onClick={() => setShowBombForm(p => ({ ...p, [member.id]: true }))}
+                          className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600"
+                        >
+                          Set Time Bomb
+                        </button>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-0.5">Bomb date</label>
+                            <input
+                              type="datetime-local"
+                              value={bombDate[member.id] ?? ''}
+                              onChange={e => setBombDate(p => ({ ...p, [member.id]: e.target.value }))}
+                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-0.5">Grace period (hours)</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={bombGrace[member.id] ?? '24'}
+                              onChange={e => setBombGrace(p => ({ ...p, [member.id]: e.target.value }))}
+                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSetTimeBomb(member.id)}
+                              disabled={actionLoading[`bomb_${member.id}`]}
+                              className="flex-1 py-1.5 bg-yellow-800 text-yellow-200 rounded text-xs font-medium hover:bg-yellow-700 disabled:opacity-50"
+                            >
+                              {actionLoading[`bomb_${member.id}`] ? 'Setting...' : 'Set Bomb'}
+                            </button>
+                            <button
+                              onClick={() => setShowBombForm(p => ({ ...p, [member.id]: false }))}
+                              className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {/* Trial Period */}
                 <div className="pt-2 border-t border-slate-700 space-y-2">
@@ -325,3 +617,4 @@ export default function MyTeamTab({ jwt }: Props) {
     </div>
   );
 }
+

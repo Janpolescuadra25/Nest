@@ -1,5 +1,7 @@
+import { Request, Response, NextFunction } from 'express';
 import { UserRole, UserStatus } from '@prisma/client';
 import { ROLE_PERMISSIONS, Feature, Action, PermissionKey } from './permissions';
+import { AuthPayload } from '../types';
 
 export interface EffectiveAccess {
   role: UserRole;
@@ -120,4 +122,66 @@ export function hasPermission(
   // Fall back to role defaults (uses access.role, which is VIEWER for TIME_BOMBED)
   const rolePerms = ROLE_PERMISSIONS[access.role];
   return rolePerms?.has(`${feature}:${action}` as PermissionKey) ?? false;
+}
+
+/**
+ * Express middleware that blocks write operations (POST, PATCH, PUT, DELETE)
+ * from users whose effective access is restricted.
+ * Read operations (GET, HEAD, OPTIONS) are always allowed.
+ *
+ * MUST be placed AFTER authenticate() so req.user exists.
+ *
+ * Blocks writes when:
+ * - effective.isBlocked === true (BLOCKED users)
+ * - effective.status === 'TIME_BOMBED' (past grace period, downgraded to VIEWER)
+ * - effective.status === 'PENDING_APPROVAL' (not yet approved)
+ *
+ * Does NOT block:
+ * - GRACE_PERIOD users (still have full access per getEffectiveAccess)
+ * - EXPIRED users (existing behavior — they have read access)
+ * - Normal ACTIVE users with any role (including VIEWER — they may have
+ *   legitimate write access on some routes via stored booleans)
+ */
+interface RequestWithUser extends Request {
+  user?: AuthPayload;
+}
+
+export function enforceEffectiveRole(req: RequestWithUser, res: Response, next: NextFunction): void {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  // Build UserForAccess from req.user (same pattern as requireRole in auth.middleware.ts)
+  const userForAccess: UserForAccess = {
+    role: user.role as UserRole,
+    status: user.status as UserStatus,
+    blocked: user.blocked,
+    timeBombAt: user.timeBombAt ?? null,
+    gracePeriodHours: user.gracePeriodHours,
+    permissions: user.permissions,
+  };
+
+  const effective = getEffectiveAccess(userForAccess);
+
+  const writeMethods = ['POST', 'PATCH', 'PUT', 'DELETE'];
+  if (writeMethods.includes(req.method)) {
+    if (effective.isBlocked) {
+      res.status(403).json({ error: 'Your account has been blocked. Contact your administrator.' });
+      return;
+    }
+    if (effective.status === 'PENDING_APPROVAL') {
+      res.status(403).json({ error: 'Your account is pending approval.' });
+      return;
+    }
+    if (effective.status === 'TIME_BOMBED') {
+      res.status(403).json({
+        error: 'Your write access has been restricted. Contact your administrator to restore full access.',
+      });
+      return;
+    }
+  }
+
+  next();
 }

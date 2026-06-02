@@ -1,8 +1,8 @@
 /*
   Warnings:
 
-  - You are about to drop the column `meta` on the `audit_logs` table. All the data in the column will be lost.
-  - You are about to drop the column `targetId` on the `audit_logs` table. All the data in the column will be lost.
+  - Renaming column `targetId` → `targetUserId` on the `audit_logs` table (no data loss).
+  - Renaming column `meta` → `details` on the `audit_logs` table (no data loss).
 
 */
 -- AlterEnum

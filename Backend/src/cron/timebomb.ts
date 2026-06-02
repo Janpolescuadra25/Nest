@@ -77,62 +77,91 @@ async function checkTimeBombs(prisma: PrismaClient): Promise<void> {
   try {
     const now = new Date();
 
-    // Find users whose timeBombAt has passed but are not already TIME_BOMBED/BLOCKED
-    const detonatedUsers = await prisma.user.findMany({
+    // Step 1 — Users whose timeBombAt has been reached but status is still ACTIVE
+    const gracePeriodEntries = await prisma.user.findMany({
       where: {
-        timeBombAt: { not: null, lt: now },
-        status: { notIn: ['TIME_BOMBED', 'BLOCKED', 'DISABLED'] },
+        timeBombAt: { not: null, lte: now },
+        status: 'ACTIVE',
+        blocked: false,
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        timeBombAt: true,
-        gracePeriodHours: true,
-        role: true,
-      },
+      select: { id: true, email: true, name: true, timeBombAt: true, role: true, gracePeriodHours: true },
     });
 
-    if (detonatedUsers.length === 0) return;
+    if (gracePeriodEntries.length > 0) {
+      await prisma.user.updateMany({
+        where: { id: { in: gracePeriodEntries.map(u => u.id) } },
+        data: { status: 'GRACE_PERIOD' },
+      });
 
-    for (const user of detonatedUsers) {
-      if (!user.timeBombAt) continue;
-
-      const gracePeriodEndsAt = new Date(
-        user.timeBombAt.getTime() + user.gracePeriodHours * 3_600_000,
+      await Promise.allSettled(
+        gracePeriodEntries.map(user =>
+          prisma.auditLog.create({
+            data: {
+              actorId: user.id,
+              targetUserId: user.id,
+              action: 'STATUS_CHANGE',
+              details: {
+                previousStatus: 'ACTIVE',
+                newStatus: 'GRACE_PERIOD',
+                trigger: 'timeBombAt reached',
+                timeBombAt: user.timeBombAt,
+                gracePeriodHours: user.gracePeriodHours,
+              },
+            },
+          })
+        )
       );
-      const isInGracePeriod = now < gracePeriodEndsAt;
-      const newStatus = isInGracePeriod ? 'GRACE_PERIOD' : 'TIME_BOMBED';
 
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          status: newStatus,
-          ...(isInGracePeriod ? {} : {
-            canScan: false,
-            canMap: false,
-            canSync: false,
-            canManageLocs: false,
-          }),
-        },
-      });
-
-      await prisma.auditLog.create({
-        data: {
-          actorId: user.id,
-          targetUserId: user.id,
-          action: isInGracePeriod ? 'GRACE_PERIOD_STARTED' : 'TIMEBOMB_TRIGGERED',
-          details: {
-            role: user.role,
-            timeBombAt: user.timeBombAt,
-            gracePeriodHours: user.gracePeriodHours,
-            gracePeriodEndsAt,
-          },
-        },
-      });
+      console.log(`[TimeBomb] ${gracePeriodEntries.length} user(s) entered grace period`);
     }
 
-    console.log(`[TimeBomb] checkTimeBombs: processed ${detonatedUsers.length} user(s)`);
+    // Step 2 — Users in GRACE_PERIOD whose grace period has expired
+    const graceExpired = await prisma.user.findMany({
+      where: {
+        status: 'GRACE_PERIOD',
+        timeBombAt: { not: null },
+        blocked: false,
+      },
+      select: { id: true, email: true, name: true, timeBombAt: true, role: true, gracePeriodHours: true },
+    });
+
+    const fullyExpired = graceExpired.filter(user => {
+      if (!user.timeBombAt) return false;
+      const graceEnd = new Date(
+        new Date(user.timeBombAt).getTime() + (user.gracePeriodHours * 60 * 60 * 1000)
+      );
+      return now >= graceEnd;
+    });
+
+    if (fullyExpired.length > 0) {
+      await prisma.user.updateMany({
+        where: { id: { in: fullyExpired.map(u => u.id) } },
+        data: { status: 'TIME_BOMBED' },
+      });
+
+      await Promise.allSettled(
+        fullyExpired.map(user =>
+          prisma.auditLog.create({
+            data: {
+              actorId: user.id,
+              targetUserId: user.id,
+              action: 'STATUS_CHANGE',
+              details: {
+                previousStatus: 'GRACE_PERIOD',
+                newStatus: 'TIME_BOMBED',
+                trigger: 'grace period expired',
+                timeBombAt: user.timeBombAt,
+                gracePeriodHours: user.gracePeriodHours,
+                previousRole: user.role,
+                effectiveRole: 'VIEWER',
+              },
+            },
+          })
+        )
+      );
+
+      console.log(`[TimeBomb] ${fullyExpired.length} user(s) fully expired (TIME_BOMBED)`);
+    }
   } catch (err) {
     console.error('[TimeBomb] checkTimeBombs error:', err);
   }

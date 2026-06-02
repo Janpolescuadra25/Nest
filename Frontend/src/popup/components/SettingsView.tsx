@@ -12,7 +12,7 @@ export default function SettingsView({ jwt, onLogout }: Props) {
   const { locations, refetch } = useLocations(jwt);
   const { status, connect } = useQuickBooks(jwt);
   const [showAddLoc, setShowAddLoc] = useState(false);
-  const [locForm, setLocForm] = useState({ name: '', toastUrl: '' });
+  const [locForm, setLocForm] = useState({ name: '', posUrl: '' });
   const [locError, setLocError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -20,8 +20,8 @@ export default function SettingsView({ jwt, onLogout }: Props) {
     e.preventDefault();
     if (!locForm.name) return;
     try {
-      await api.createLocation(jwt, locForm.name, locForm.toastUrl);
-      setLocForm({ name: '', toastUrl: '' });
+      await api.createLocation(jwt, locForm.name, locForm.posUrl);
+      setLocForm({ name: '', posUrl: '' });
       setShowAddLoc(false);
       await refetch();
     } catch (err) {
@@ -105,9 +105,9 @@ export default function SettingsView({ jwt, onLogout }: Props) {
               required
             />
             <input
-              value={locForm.toastUrl}
-              onChange={(e) => setLocForm({ ...locForm, toastUrl: e.target.value })}
-              placeholder="Toast URL (optional)"
+              value={locForm.posUrl}
+              onChange={(e) => setLocForm({ ...locForm, posUrl: e.target.value })}
+              placeholder="POS URL (optional)"
               className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
             />
             <div className="flex gap-2 justify-end">
@@ -125,7 +125,7 @@ export default function SettingsView({ jwt, onLogout }: Props) {
               <div key={l.id} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
                 <div>
                   <div className="text-white text-xs">{l.name}</div>
-                  {l.toastUrl && <div className="text-gray-500 text-xs truncate max-w-48">{l.toastUrl}</div>}
+                  {l.posUrl && <div className="text-gray-500 text-xs truncate max-w-48">{l.posUrl}</div>}
                 </div>
                 <button
                   onClick={() => void handleDeleteLoc(l.id)}

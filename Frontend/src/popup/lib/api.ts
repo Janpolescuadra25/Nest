@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult } from '../../types';
+import type { Location, Mapping, Rule, ScanData, ScanRecord, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -117,6 +117,7 @@ export const api = {
       totalFailed: number;
       totalPendingRequests: number;
       expiredMembers: number;
+      totalPending: number;
     }>('/api/owner/stats', jwt),
 
   getScanHealth: (jwt: string, days: number = 3) =>
@@ -152,6 +153,7 @@ export const api = {
       totalSynced: number;
       totalFailed: number;
       expiringSoon: number;
+      totalPending: number;
     }>('/api/admin/stats', jwt),
 
   getAdminAuditLog: (jwt: string, page?: number, limit?: number) =>
@@ -169,11 +171,38 @@ export const api = {
   disableTeamMember: (jwt: string, id: string) =>
     post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 
+  // ── Invite Links ──────────────────────────────────────────────────────────
+  createInviteLink: (jwt: string, data: { roleHint?: string; expiresInHours?: number; maxUses?: number }) =>
+    post<{ invite: InviteLink }>('/api/admin/invite', data, jwt),
+
+  listInviteLinks: (jwt: string, page = 1) =>
+    get<{ invites: InviteLink[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>(`/api/admin/invites?page=${page}`, jwt),
+
+  revokeInviteLink: (jwt: string, id: string) =>
+    del(`/api/admin/invites/${id}`, jwt),
+
+  listOwnerInviteLinks: (jwt: string, page?: number) =>
+    get<{ invites: InviteLink[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>(`/api/owner/invites${page ? `?page=${page}` : ''}`, jwt),
+
+  revokeOwnerInviteLink: (jwt: string, id: string) =>
+    del(`/api/owner/invites/${id}`, jwt),
+
+  // ── Time Bombs ────────────────────────────────────────────────────────────
+  setTimeBomb: (jwt: string, userId: string, timeBombAt: string, gracePeriodHours?: number) =>
+    patch<{ user: TeamMember }>(`/api/admin/users/${userId}/timebomb`, { timeBombAt, gracePeriodHours }, jwt),
+
+  clearTimeBomb: (jwt: string, userId: string) =>
+    patch<{ user: TeamMember }>(`/api/admin/users/${userId}/timebomb/clear`, {}, jwt),
+
+  // ── Role Change ───────────────────────────────────────────────────────────
+  changeUserRole: (jwt: string, userId: string, role: string) =>
+    patch<{ user: TeamMember }>(`/api/admin/users/${userId}/role`, { role }, jwt),
+
   // ── Locations ──────────────────────────────────────────────────────────────
   getLocations: (jwt: string) => get<{ data: Location[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>('/api/locations', jwt),
 
-  createLocation: (jwt: string, name: string, toastUrl: string) =>
-    post<Location>('/api/locations', { name, toastUrl }, jwt),
+  createLocation: (jwt: string, name: string, posUrl: string) =>
+    post<Location>('/api/locations', { name, posUrl }, jwt),
 
   updateLocation: (jwt: string, id: string, data: Partial<Location>) =>
     put<Location>(`/api/locations/${id}`, data, jwt),
@@ -212,14 +241,24 @@ export const api = {
   saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData) =>
     post<{ id: string }>('/api/scans', { locationId, scanDate, rawData }, jwt),
 
-  getScans: (jwt: string, locationId: string) =>
-    get(`/api/locations/${locationId}/scans`, jwt),
+  getScans: (jwt: string, locationId: string, page?: number, limit?: number) => {
+    const sp = new URLSearchParams();
+    sp.set('page', String(page || 1));
+    sp.set('limit', String(limit || 20));
+    const qs = sp.toString();
+    return get<{ scans: ScanRecord[]; hasMore: boolean }>(
+      `/api/locations/${locationId}/scans${qs ? '?' + qs : ''}`,
+      jwt
+    );
+  },
 
   // ── QuickBooks ─────────────────────────────────────────────────────────────
   getQBAuthUrl: (jwt: string) =>
     get<{ authUrl: string; state: string }>('/api/quickbooks/auth-url', jwt),
 
   getQBStatus: (jwt: string) => get<QBStatus>('/api/quickbooks/status', jwt),
+
+  deleteQBToken: (jwt: string) => del('/api/quickbooks/token', jwt),
 
   createJournalEntry: (
     jwt: string,
@@ -230,6 +269,13 @@ export const api = {
     docNumber?: string
   ) =>
     post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote, docNumber }, jwt),
+
+  syncBatch: (jwt: string, items: BatchSyncItem[]) =>
+    post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(
+      '/api/quickbooks/sync-batch',
+      { items },
+      jwt,
+    ),
 
   getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
   getQBClasses: (jwt: string) => get<{ classes: QBClass[] }>('/api/quickbooks/classes', jwt),

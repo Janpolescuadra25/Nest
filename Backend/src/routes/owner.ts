@@ -79,7 +79,8 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       totalSynced,
       totalFailed,
       totalPendingRequests,
-      expiredMembers
+      expiredMembers,
+      totalPending
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'ADMIN' } }),
       prisma.user.count({ where: { role: { in: ['ACCOUNTANT', 'STAFF', 'VIEWER'] } } }),
@@ -88,7 +89,8 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       prisma.syncLog.count({ where: { status: 'SUCCESS' } }),
       prisma.syncLog.count({ where: { status: 'FAILED' } }),
       prisma.adminRequest.count({ where: { status: 'PENDING' } }),
-      prisma.user.count({ where: { status: 'EXPIRED' } })
+      prisma.user.count({ where: { status: 'EXPIRED' } }),
+      prisma.scanRecord.count({ where: { status: { in: ['PENDING', 'MAPPED'] } } }),
     ]);
     return res.json({
       totalPartners,
@@ -98,10 +100,79 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
       totalSynced,
       totalFailed,
       totalPendingRequests,
-      expiredMembers
+      expiredMembers,
+      totalPending,
     });
   } catch (err) {
     console.error('[Owner] stats error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── GET /api/owner/invites  (OWNER only) ──────────────────────────────────────
+router.get('/invites', async (req: AuthRequest, res: Response) => {
+  try {
+    const { page, limit, skip, take } = parsePagination(req.query);
+    const createdBy = req.query.createdBy as string | undefined;
+
+    // Build where clause — optional createdBy filter
+    const where: Record<string, unknown> = {};
+    if (createdBy) {
+      where.createdBy = createdBy;
+    }
+
+    const [total, inviteLinks] = await Promise.all([
+      prisma.inviteLink.count({ where }),
+      prisma.inviteLink.findMany({
+        where,
+        include: { creator: { select: { name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+
+    // Compute isActive per invite — Owner can see full token
+    const invites = inviteLinks.map((inv) => ({
+      id: inv.id,
+      token: inv.token,              // Owner can see the full token for debugging/resending
+      roleHint: inv.roleHint,
+      expiresAt: inv.expiresAt,
+      usedAt: inv.usedAt,
+      maxUses: inv.maxUses,
+      useCount: inv.useCount,
+      createdAt: inv.createdAt,
+      isActive: new Date() <= inv.expiresAt && inv.useCount < inv.maxUses,
+      creatorName: inv.creator?.name ?? null,
+      creatorEmail: inv.creator?.email ?? '',
+    }));
+
+    return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
+  } catch (err) {
+    console.error('[Owner] listInviteLinks error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// ── DELETE /api/owner/invites/:id  (OWNER only) ──────────────────────────────
+router.delete('/invites/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const inviteId = req.params['id'] as string;
+    const invite = await prisma.inviteLink.findUnique({ where: { id: inviteId } });
+    if (!invite) return res.status(404).json({ error: 'Invite not found.' });
+
+    // Hard delete — Owner can revoke anyone's invite, no ownership check
+    await prisma.inviteLink.delete({ where: { id: inviteId } });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'INVITE_REVOKED',
+      details: { inviteId: invite.id, revokedBy: 'owner', useCountAtRevocation: invite.useCount },
+    });
+
+    return res.json({ message: 'Invite revoked' });
+  } catch (err) {
+    console.error('[Owner] revokeInviteLink error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });

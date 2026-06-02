@@ -1,12 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { journalEntrySchema } from '../lib/validators';
 import { encrypt, decryptSafe } from '../lib/encryption';
+import { QBApiError } from '../lib/qb-errors';
 
 const router = Router();
 
@@ -181,15 +183,30 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
   try {
     const token = await prisma.qBToken.findUnique({ where: { userId: req.user!.userId } });
     if (!token) {
-      res.json({ connected: false });
+      res.json({
+        connected: false,
+        reason: 'not_connected',
+        environment: process.env.QB_ENVIRONMENT ?? 'production',
+      });
       return;
     }
-    const tokenExpired = token.expiresAt < new Date();
+    if (token.stale || token.expiresAt < new Date()) {
+      res.json({
+        connected: false,
+        reason: 'token_expired',
+        realmId: token.realmId,
+        tokenExpired: true,
+        expiresAt: token.expiresAt.toISOString(),
+        environment: process.env.QB_ENVIRONMENT ?? 'production',
+      });
+      return;
+    }
     res.json({
       connected: true,
       realmId: token.realmId,
-      expiresAt: token.expiresAt,
-      tokenExpired,
+      tokenExpired: false,
+      expiresAt: token.expiresAt.toISOString(),
+      environment: process.env.QB_ENVIRONMENT ?? 'production',
     });
   } catch (err) {
     console.error('[QB] status error:', err);
@@ -198,7 +215,7 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
 });
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, requirePermission('canSync'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, enforceEffectiveRole, requirePermission('canSync'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;
@@ -228,63 +245,64 @@ router.post('/journal-entry', authenticate, requirePermission('canSync'), valida
           return;
         }
       }
+
+      const result = await syncSingleScan(req.user!.userId, scanRecordId, txnDate, lines, privateNote, docNumber);
+
+      if (result.status === 'SKIPPED') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
+      if (result.status === 'FAILED') {
+        console.error('[QB] journal-entry error:', result.errorMessage);
+        res.status(500).json({
+          error: process.env.NODE_ENV !== 'production'
+            ? result.errorMessage
+            : 'An unexpected error occurred. Please try again.',
+        });
+        return;
+      }
+
+      // SYNCED
+      res.json({
+        message: 'Journal Entry created successfully',
+        journalEntryId: result.qbJournalEntryId,
+        txnDate: result.txnDate,
+        totalAmount: result.totalAmount,
+        docNumber: result.docNumber,
+      });
+      return;
     }
 
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-
-    const input: CreateJournalEntryInput = {
-      txnDate,
-      docNumber,
-      lines,
-      privateNote,
-      realmId,
-      accessToken,
-    };
-
-    const result = await qbService.createJournalEntry(input);
-
-    if (scanRecordId) {
-      await prisma.syncLog.create({
-        data: {
-          scanRecordId,
-          qbJournalEntryId: result.id,
-          status: 'SUCCESS',
-        },
-      });
-
-      await prisma.scanRecord.update({
-        where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
-      });
-    }
+    // No scanRecordId — direct sync without dedup or SyncLog
+    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
+    const result = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.createJournalEntry({
+        txnDate,
+        docNumber: finalDocNumber,
+        lines,
+        privateNote,
+        realmId,
+        accessToken,
+      }),
+    );
 
     res.json({
       message: 'Journal Entry created successfully',
       journalEntryId: result.id,
       txnDate: result.txnDate,
       totalAmount: result.totalAmount,
+      docNumber: finalDocNumber,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] journal-entry error:', message);
-
-    // Log failure if scanRecordId was provided
-    const { scanRecordId } = req.body as { scanRecordId?: string };
-    if (scanRecordId) {
-      await prisma.syncLog.create({
-        data: {
-          scanRecordId,
-          status: 'FAILED',
-          errorMessage: message,
-        },
-      }).catch(console.error);
-
-      await prisma.scanRecord.update({
-        where: { id: scanRecordId },
-        data: { status: 'FAILED' },
-      }).catch(console.error);
-    }
-
     res.status(500).json({
       error: process.env.NODE_ENV !== 'production'
         ? message
@@ -300,26 +318,348 @@ async function getValidToken(userId: string): Promise<{ accessToken: string; rea
 
   if (qbToken.expiresAt < new Date()) {
     const refreshToken = decryptSafe(qbToken.refreshToken);
-    const refreshed = await qbService.refreshAccessToken(refreshToken);
-    await prisma.qBToken.update({
-      where: { userId },
-      data: {
-        accessToken: encrypt(refreshed.accessToken),
-        refreshToken: encrypt(refreshed.refreshToken),
-        expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
-      },
-    });
-    return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
+    try {
+      const refreshed = await qbService.refreshAccessToken(refreshToken);
+      await prisma.qBToken.update({
+        where: { userId },
+        data: {
+          accessToken: encrypt(refreshed.accessToken),
+          refreshToken: encrypt(refreshed.refreshToken),
+          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+        },
+      });
+      return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
+    } catch (refreshError) {
+      await prisma.qBToken.update({
+        where: { userId },
+        data: { stale: true },
+      }).catch(() => {});
+      throw refreshError;
+    }
   }
 
   return { accessToken: decryptSafe(qbToken.accessToken), realmId: qbToken.realmId };
 }
 
+// ── QB retry wrapper ──────────────────────────────────────────────────────────
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function forceRefreshToken(userId: string): Promise<string> {
+  const tokenRow = await prisma.qBToken.findUnique({ where: { userId } });
+  if (!tokenRow) throw new QBApiError('No QB token found', 401);
+  if (tokenRow.stale) throw new QBApiError('QB token is stale — reconnect required', 401);
+
+  const decryptedRefresh = decryptSafe(tokenRow.refreshToken);
+  try {
+    const result = await qbService.refreshAccessToken(decryptedRefresh);
+    await prisma.qBToken.update({
+      where: { userId },
+      data: {
+        accessToken: encrypt(result.accessToken),
+        refreshToken: encrypt(result.refreshToken),
+        expiresAt: new Date(Date.now() + result.expiresIn * 1000),
+        stale: false,
+      },
+    });
+    return result.accessToken;
+  } catch (err: unknown) {
+    await prisma.qBToken.update({ where: { userId }, data: { stale: true } });
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new QBApiError(`QB token refresh failed: ${msg}`, 401);
+  }
+}
+
+async function callQB<T>(
+  userId: string,
+  fn: (creds: { accessToken: string; realmId: string }) => Promise<T>,
+): Promise<T> {
+  let { accessToken, realmId } = await getValidToken(userId);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await fn({ accessToken, realmId });
+    } catch (err: unknown) {
+      if (!(err instanceof QBApiError)) throw err;
+
+      if (err.statusCode === 401 && attempt === 0) {
+        accessToken = await forceRefreshToken(userId);
+        continue;
+      }
+
+      if (err.statusCode === 429 && attempt < 2) {
+        await sleep(1000 * Math.pow(2, attempt));
+        continue;
+      }
+
+      throw err;
+    }
+  }
+
+  throw new QBApiError('Max QB retry attempts exceeded', 429);
+}
+
+// ── syncSingleScan helper ─────────────────────────────────────────────────────
+
+interface SyncSingleResult {
+  status: 'SYNCED' | 'SKIPPED' | 'FAILED';
+  qbJournalEntryId?: string;
+  docNumber?: string;
+  txnDate?: string;
+  totalAmount?: number;
+  reason?: string;
+  errorType?: string;
+  errorMessage?: string;
+}
+
+async function syncSingleScan(
+  userId: string,
+  scanRecordId: string,
+  txnDate: string,
+  lines: QBJournalLineItem[],
+  privateNote?: string,
+  docNumber?: string,
+): Promise<SyncSingleResult> {
+  // Dedup check
+  const existingSync = await prisma.syncLog.findFirst({
+    where: { scanRecordId, status: 'SUCCESS' },
+  });
+  if (existingSync) {
+    return {
+      status: 'SKIPPED',
+      reason: 'already_synced',
+      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
+      docNumber: existingSync.docNumber ?? undefined,
+    };
+  }
+
+  // DocNumber generation
+  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+  try {
+    const result = await callQB(userId, ({ accessToken, realmId }) =>
+      qbService.createJournalEntry({
+        txnDate,
+        docNumber: finalDocNumber,
+        lines,
+        privateNote,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        qbJournalEntryId: result.id,
+        docNumber: finalDocNumber,
+        status: 'SUCCESS',
+      },
+    });
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'SYNCED' },
+    });
+
+    return {
+      status: 'SYNCED',
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmount,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        status: 'FAILED',
+        errorMessage: message,
+        errorType,
+      },
+    }).catch(console.error);
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'FAILED' },
+    }).catch(console.error);
+
+    return { status: 'FAILED', errorType, errorMessage: message };
+  }
+}
+
+// ── POST /api/quickbooks/sync-batch ──────────────────────────────────────────
+router.post('/sync-batch', authenticate, enforceEffectiveRole, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { items } = req.body as {
+      items?: Array<{
+        scanRecordId: string;
+        txnDate: string;
+        lines: QBJournalLineItem[];
+        privateNote?: string;
+        docNumber?: string;
+      }>;
+    };
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: 'items must be a non-empty array' });
+      return;
+    }
+
+    if (items.length > 100) {
+      res.status(400).json({ error: 'Batch size cannot exceed 100 items' });
+      return;
+    }
+
+    for (const item of items) {
+      if (!item.scanRecordId || !item.txnDate || !Array.isArray(item.lines) || item.lines.length === 0) {
+        res.status(400).json({ error: 'Each item must have scanRecordId, txnDate, and lines[]' });
+        return;
+      }
+    }
+
+    // Verify all scans belong to accessible locations
+    const scanRecordIds = items.map((i) => i.scanRecordId);
+    const scans = await prisma.scanRecord.findMany({
+      where: { id: { in: scanRecordIds } },
+      select: { id: true, locationId: true, status: true },
+    });
+
+    const accessibleLocations = await prisma.location.findMany({
+      where: locationFilter(req.user!),
+      select: { id: true },
+    });
+    const accessibleLocationIds = new Set(accessibleLocations.map((l) => l.id));
+    const scanMap = new Map(scans.map((s) => [s.id, s]));
+
+    type BatchResult = {
+      scanRecordId: string;
+      status: 'SYNCED' | 'SKIPPED' | 'FAILED';
+      qbJournalEntryId?: string;
+      docNumber?: string;
+      reason?: string;
+      errorType?: string;
+      errorMessage?: string;
+    };
+
+    const results: BatchResult[] = [];
+    let authAborted = false;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      const scan = scanMap.get(item.scanRecordId);
+
+      if (!scan || !accessibleLocationIds.has(scan.locationId)) {
+        results.push({
+          scanRecordId: item.scanRecordId,
+          status: 'FAILED',
+          errorType: 'VALIDATION',
+          errorMessage: 'Scan not found or access denied',
+        });
+        continue;
+      }
+
+      if (authAborted) {
+        results.push({
+          scanRecordId: item.scanRecordId,
+          status: 'FAILED',
+          errorType: 'AUTH',
+          errorMessage: 'QB connection expired — batch aborted',
+        });
+        await prisma.syncLog.create({
+          data: {
+            scanRecordId: item.scanRecordId,
+            status: 'FAILED',
+            errorType: 'AUTH',
+            errorMessage: 'QB connection expired — batch aborted',
+          },
+        }).catch(console.error);
+        await prisma.scanRecord.update({
+          where: { id: item.scanRecordId },
+          data: { status: 'FAILED' },
+        }).catch(console.error);
+        continue;
+      }
+
+      const result = await syncSingleScan(
+        req.user!.userId,
+        item.scanRecordId,
+        item.txnDate,
+        item.lines,
+        item.privateNote,
+        item.docNumber,
+      );
+
+      results.push({ scanRecordId: item.scanRecordId, ...result });
+
+      if (result.status === 'FAILED' && result.errorType === 'AUTH') {
+        authAborted = true;
+      }
+
+      if (i < items.length - 1 && !authAborted) {
+        await sleep(200);
+      }
+    }
+
+    const summary = {
+      total: results.length,
+      synced: results.filter((r) => r.status === 'SYNCED').length,
+      skipped: results.filter((r) => r.status === 'SKIPPED').length,
+      failed: results.filter((r) => r.status === 'FAILED').length,
+    };
+
+    res.json({ results, summary });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] sync-batch error:', message);
+    res.status(500).json({ error: 'Batch sync failed' });
+  }
+});
+
+// ── DELETE /api/quickbooks/token ──────────────────────────────────────────────
+router.delete('/token', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const tokenRow = await prisma.qBToken.findUnique({ where: { userId } });
+
+    if (tokenRow) {
+      // Best-effort Intuit revocation — failure does NOT block deletion
+      try {
+        const decryptedAccess = decryptSafe(tokenRow.accessToken);
+        const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');
+        await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ token: decryptedAccess }),
+        });
+      } catch {
+        console.warn('[QB] Intuit token revocation failed (best-effort, proceeding with local deletion)');
+      }
+
+      await prisma.qBToken.delete({ where: { userId } });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[QB] disconnect error:', err);
+    res.status(500).json({ error: 'Failed to disconnect QuickBooks' });
+  }
+});
+
 // ── GET /api/quickbooks/accounts ──────────────────────────────────────────────
 router.get('/accounts', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const accounts = await qbService.getAccounts(realmId, accessToken);
+    const accounts = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getAccounts(realmId, accessToken),
+    );
     res.json({ accounts });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -334,8 +674,9 @@ router.get('/accounts', authenticate, requirePermission('canSync'), async (req: 
 // ── GET /api/quickbooks/classes ───────────────────────────────────────────────
 router.get('/classes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const classes = await qbService.getClasses(realmId, accessToken);
+    const classes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getClasses(realmId, accessToken),
+    );
     res.json({ classes });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -350,8 +691,9 @@ router.get('/classes', authenticate, requirePermission('canSync'), async (req: A
 // ── GET /api/quickbooks/employees ─────────────────────────────────────────────
 router.get('/employees', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const employees = await qbService.getEmployees(realmId, accessToken);
+    const employees = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getEmployees(realmId, accessToken),
+    );
     res.json({ employees });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -366,8 +708,9 @@ router.get('/employees', authenticate, requirePermission('canSync'), async (req:
 // ── GET /api/quickbooks/vendors ───────────────────────────────────────────────
 router.get('/vendors', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const vendors = await qbService.getVendors(realmId, accessToken);
+    const vendors = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getVendors(realmId, accessToken),
+    );
     res.json({ vendors });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -382,8 +725,9 @@ router.get('/vendors', authenticate, requirePermission('canSync'), async (req: A
 // ── GET /api/quickbooks/customers ─────────────────────────────────────────────
 router.get('/customers', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const customers = await qbService.getCustomers(realmId, accessToken);
+    const customers = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getCustomers(realmId, accessToken),
+    );
     res.json({ customers });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -398,8 +742,9 @@ router.get('/customers', authenticate, requirePermission('canSync'), async (req:
 // ── GET /api/quickbooks/tax-codes ────────────────────────────────────────────
 router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const taxCodes = await qbService.getTaxCodes(realmId, accessToken);
+    const taxCodes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getTaxCodes(realmId, accessToken),
+    );
     res.json({ taxCodes });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -414,16 +759,18 @@ router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req:
 // ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
 router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { accessToken, realmId } = await getValidToken(req.user!.userId);
-    const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([
-      qbService.getAccounts(realmId, accessToken),
-      qbService.getClasses(realmId, accessToken),
-      qbService.getEmployees(realmId, accessToken),
-      qbService.getVendors(realmId, accessToken),
-      qbService.getCustomers(realmId, accessToken),
-      qbService.getTaxCodes(realmId, accessToken),
-    ]);
-    res.json({ accounts, classes, employees, vendors, customers, taxCodes });
+    const entities = await callQB(req.user!.userId, async ({ accessToken, realmId }) => {
+      const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([
+        qbService.getAccounts(realmId, accessToken),
+        qbService.getClasses(realmId, accessToken),
+        qbService.getEmployees(realmId, accessToken),
+        qbService.getVendors(realmId, accessToken),
+        qbService.getCustomers(realmId, accessToken),
+        qbService.getTaxCodes(realmId, accessToken),
+      ]);
+      return { accounts, classes, employees, vendors, customers, taxCodes };
+    });
+    res.json(entities);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);

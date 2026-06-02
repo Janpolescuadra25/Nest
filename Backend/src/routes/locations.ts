@@ -1,12 +1,13 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 
 const router = Router();
 
-// All location routes require authentication
-router.use(authenticate);
+// All location routes require authentication + effective role enforcement
+router.use(authenticate, enforceEffectiveRole);
 
 // ── GET /api/locations ────────────────────────────────────────────────────────
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -32,10 +33,10 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 // ── POST /api/locations ───────────────────────────────────────────────────────
 router.post('/', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, toastUrl } = req.body as { name?: string; toastUrl?: string };
+    const { name, posUrl } = req.body as { name?: string; posUrl?: string };
 
-    if (!name || !toastUrl) {
-      res.status(400).json({ error: 'name and toastUrl are required' });
+    if (!name || !posUrl) {
+      res.status(400).json({ error: 'name and posUrl are required' });
       return;
     }
 
@@ -46,7 +47,7 @@ router.post('/', requirePermission('canManageLocs'), async (req: AuthRequest, re
       : user.adminId ?? null;
 
     const location = await prisma.location.create({
-      data: { userId: user.userId, adminId, name, toastUrl },
+      data: { userId: user.userId, adminId, name, posUrl },
     });
 
     res.status(201).json(location);
@@ -90,8 +91,8 @@ router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, 
       return;
     }
 
-    const { name, toastUrl, isActive, memoTemplate, docNumberTemplate } = req.body as {
-      name?: string; toastUrl?: string; isActive?: boolean;
+    const { name, posUrl, isActive, memoTemplate, docNumberTemplate } = req.body as {
+      name?: string; posUrl?: string; isActive?: boolean;
       memoTemplate?: string; docNumberTemplate?: string;
     };
 
@@ -99,7 +100,7 @@ router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, 
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(toastUrl !== undefined && { toastUrl }),
+        ...(posUrl !== undefined && { posUrl }),
         ...(isActive !== undefined && { isActive }),
         ...(memoTemplate !== undefined && { memoTemplate }),
         ...(docNumberTemplate !== undefined && { docNumberTemplate }),
@@ -410,13 +411,21 @@ router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const scans = await prisma.scanRecord.findMany({
+    const { page, limit, skip } = parsePagination(req.query);
+    const take = limit + 1;
+
+    const rows = await prisma.scanRecord.findMany({
       where: { locationId: id },
       orderBy: { scanDate: 'desc' },
       include: { syncLogs: true },
+      skip,
+      take,
     });
 
-    res.json(scans);
+    const hasMore = rows.length > limit;
+    const scans = hasMore ? rows.slice(0, limit) : rows;
+
+    res.json({ scans, hasMore });
   } catch (err) {
     console.error('[Locations] scans list error:', err);
     res.status(500).json({ error: 'Failed to fetch scans' });

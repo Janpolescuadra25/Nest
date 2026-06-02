@@ -1,10 +1,11 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, enforceEffectiveRole);
 
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
 router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {

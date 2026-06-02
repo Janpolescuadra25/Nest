@@ -19,6 +19,7 @@ interface OwnerStats {
   totalFailed: number;
   totalPendingRequests: number;
   expiredMembers: number;
+  totalPending: number;
 }
 
 interface AdminPartner {
@@ -40,6 +41,7 @@ const EMPTY_STATS: OwnerStats = {
   totalFailed: 0,
   totalPendingRequests: 0,
   expiredMembers: 0,
+  totalPending: 0,
 };
 
 
@@ -106,6 +108,16 @@ export default function DashboardView({ jwt }: Props) {
     }
   }, [jwt]);
 
+  const handleDisconnect = useCallback(async () => {
+    try {
+      await api.deleteQBToken(jwt);
+      showToast('QuickBooks disconnected', 'success');
+      setQbStatus({ connected: false, reason: 'not_connected' });
+    } catch (err: any) {
+      showToast(err.message || 'Failed to disconnect', 'error');
+    }
+  }, [jwt]);
+
   useEffect(() => {
     void fetchDashboard();
     void fetchScanHealth();
@@ -145,7 +157,9 @@ export default function DashboardView({ jwt }: Props) {
     return (
       <div className="p-4 space-y-3">
         <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
@@ -184,7 +198,11 @@ export default function DashboardView({ jwt }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+          <div className="text-xs text-gray-400">📍 Locations</div>
+          <div className="text-2xl font-bold text-white mt-1">{stats.totalLocations}</div>
+        </div>
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">🤝 Partners</div>
           <div className="text-2xl font-bold text-white mt-1">{stats.totalPartners}</div>
@@ -192,6 +210,10 @@ export default function DashboardView({ jwt }: Props) {
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">🔍 Scans</div>
           <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        </div>
+        <div className="bg-slate-800 border border-amber-900 rounded-lg p-3">
+          <div className="text-xs text-amber-400">⏳ Pending</div>
+          <div className="text-2xl font-bold text-amber-400 mt-1">{stats.totalPending}</div>
         </div>
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">✅ Synced</div>
@@ -203,7 +225,7 @@ export default function DashboardView({ jwt }: Props) {
         </div>
       </div>
 
-      <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} />
+      <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} onDisconnect={() => void handleDisconnect()} />
       {scanHealthLoaded ? (
         scanHealth ? <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} /> : null
       ) : (

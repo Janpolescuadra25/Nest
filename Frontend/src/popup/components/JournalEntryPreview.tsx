@@ -8,6 +8,7 @@ import SmartDatePicker from './SmartDatePicker';
 import type { ScanData, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
+import { guessPostingType, decodeMapping } from '../lib/je-builder';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,44 +73,6 @@ function toYMD(d: Date): string {
   return d.toISOString().split('T')[0]!;
 }
 
-function guessPostingType(field: string): 'debit' | 'credit' {
-  const section = field.toLowerCase().split('.')[0]?.trim() ?? '';
-  const lower = field.toLowerCase();
-
-  // Cash Activity: most items are Debit (cash coming in), but tips paid out are Credit
-  if (section === 'cash activity') {
-    if (/credit.*tip|non-cash tip|tip.*paid/i.test(lower)) return 'credit';
-    return 'debit';
-  }
-
-  // Tips: most items are Credit (tips received), but tips paid out are Debit
-  if (section === 'tips') {
-    if (/paid out|paid.*out|cash.*tip/i.test(lower)) return 'debit';
-    return 'credit';
-  }
-
-  // Payments: always Debit (money coming IN)
-  if (/^(payments|cash summary)$/.test(section)) return 'debit';
-
-  // Revenue / Sales: always Credit
-  if (/^(revenue|net sales|sales category|revenue center|service daypart|dining option|service mode|deferred)$/.test(section)) return 'credit';
-
-  // Tax, Service Charge: Credit
-  if (/^(tax|service charge)$/.test(section)) return 'credit';
-
-  // Discount, Void: Debit (contra-revenue)
-  if (/^(discount|void)$/.test(section)) return 'debit';
-
-  // Unpaid Orders: Debit (Accounts Receivable)
-  if (/^(unpaid orders)$/.test(section)) return 'debit';
-
-  // Fallback: keyword matching on the full field name
-  if (/cash|credit card|debit card|gift card|discount|comp\b|net sales|total/.test(lower)) return 'debit';
-  if (/sales|revenue|tax|tip|gratuity|fee|charge/.test(lower)) return 'credit';
-
-  return 'debit';
-}
-
 function resolveMemoTemplate(template: string, data: ScanData | null): string {
   if (!template || !data) return '';
   return template.replace(/\{(\w+)\}/g, (match, field: string) => {
@@ -118,44 +81,6 @@ function resolveMemoTemplate(template: string, data: ScanData | null): string {
     );
     return key !== undefined ? String(data[key]) : match;
   });
-}
-
-// ── Mapping decoder ───────────────────────────────────────────────────────────
-
-interface DecodedMapping {
-  sourceField: string;
-  accountId: string;
-  postingType: 'Debit' | 'Credit';
-  classId?: string;
-  description?: string;
-  keepSeparate?: boolean;
-}
-
-function decodeMapping(m: Mapping): DecodedMapping {
-  let postingType: 'Debit' | 'Credit' = (m.postingType === 'Debit' || m.postingType === 'Credit') ? m.postingType : 'Credit';
-  let classId: string | undefined = m.targetClass ?? undefined;
-  let keepSeparate: boolean = m.keepSeparate ?? false;
-
-  try {
-    if (m.targetMemo) {
-      const extra = JSON.parse(m.targetMemo) as { postingType?: string; classId?: string; keepSeparate?: boolean };
-      if (m.postingType === undefined && (extra.postingType === 'Debit' || extra.postingType === 'Credit')) {
-        postingType = extra.postingType;
-      }
-      if (m.keepSeparate === undefined && extra.keepSeparate !== undefined) {
-        keepSeparate = extra.keepSeparate;
-      }
-    }
-  } catch { /* ignore */ }
-
-  return {
-    sourceField: m.sourceField,
-    accountId: m.targetAccount,
-    postingType,
-    classId,
-    description: m.targetDescription ?? undefined,
-    keepSeparate,
-  };
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -705,8 +630,24 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId,
         </div>
       )}
       {syncResult && (
-        <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2">
-          ✅ Journal Entry created — ID: <span className="font-mono">{syncResult.id}</span> ({syncResult.txnDate})
+        <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
+          <div>✅ Journal Entry created — <span className="font-mono">{syncResult.id}</span> ({syncResult.txnDate})</div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
+              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
+            >
+              Copy ID
+            </button>
+            <a
+              href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/journal?txnId=${syncResult.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-cyan-400 hover:underline"
+            >
+              View in QuickBooks ↗
+            </a>
+          </div>
         </div>
       )}
 

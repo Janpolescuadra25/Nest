@@ -1,5 +1,7 @@
-import { evaluate } from 'mathjs';
+import { create, all } from 'mathjs';
 import { RuleConfig } from '../types';
+
+const safeMath = create(all);
 
 export interface RuleDefinition {
   id: string;
@@ -69,7 +71,8 @@ export function applyRules(
           const evaluatable = formula.replace(/\[([^\]]+)\]/g, (_: string, field: string) => {
             return String(result[field] ?? 0);
           });
-          const value = evaluate(evaluatable) as number;
+          const compiled = safeMath.compile(evaluatable);
+          const value = compiled.evaluate() as number;
           result[targetField] = value;
           console.log(`[RulesEngine] FORMULA "${rule.name}": ${evaluatable} = ${value} → ${targetField}`);
           break;

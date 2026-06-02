@@ -137,6 +137,20 @@ export default function App() {
           </div>
         )}
 
+        {/* Grace period warning banner */}
+        {user.status === 'GRACE_PERIOD' && (
+          <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 text-center flex-shrink-0">
+            ⚠ Your write access expires soon. Contact your administrator.
+          </div>
+        )}
+
+        {/* Time-bombed restricted banner */}
+        {user.status === 'TIME_BOMBED' && (
+          <div className="px-4 py-2 bg-red-900/60 border-b border-red-700 text-xs text-red-300 text-center flex-shrink-0">
+            🚫 Your write access has been restricted. You have view-only access. Contact your administrator.
+          </div>
+        )}
+
         {/* Header */}
         <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           <div className="flex items-center gap-1.5">
@@ -150,7 +164,7 @@ export default function App() {
           </div>
           <div className="flex items-center justify-center gap-2">
             <span className="text-cyan-400 font-bold text-base tracking-tight">🪹 Nest</span>
-            <span className="text-gray-500 text-xs">Toast → QuickBooks</span>
+            <span className="text-gray-500 text-xs">POS → QuickBooks</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
           </div>
           <div className="flex justify-end">
@@ -167,6 +181,37 @@ export default function App() {
 
         {/* Tab Nav */}
         <TabNav currentTab={effectiveTab} onTabChange={setCurrentTab} visibleTabs={visibleTabs} />
+
+        {/* Pipeline progress indicator — shown when scan data is loaded */}
+        {scanData !== null && (() => {
+          const steps: { id: string; label: string }[] = [
+            { id: 'scan', label: '① Scan' },
+            { id: 'mappings', label: '② Map' },
+            { id: 'rules', label: '③ Rules' },
+            { id: 'preview', label: '④ Preview' },
+            { id: 'sync', label: '⑤ Sync' },
+          ];
+          const currentIdx = steps.findIndex((s) => s.id === effectiveTab);
+          return (
+            <div className="flex items-center justify-center gap-1 px-4 py-1 bg-gray-800/50 border-b border-gray-700 flex-shrink-0">
+              {steps.map((step, i) => {
+                const stepIdx = steps.findIndex((s) => s.id === step.id);
+                const isCurrent = effectiveTab === step.id;
+                const isCompleted = currentIdx > stepIdx;
+                return (
+                  <React.Fragment key={step.id}>
+                    <span className={`text-[10px] font-medium px-1 rounded ${
+                      isCurrent ? 'text-cyan-400' : isCompleted ? 'text-green-400' : 'text-gray-600'
+                    }`}>
+                      {step.label}
+                    </span>
+                    {i < steps.length - 1 && <span className="text-gray-700 text-[10px]">→</span>}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden', minHeight: 0 }}>
@@ -205,6 +250,8 @@ export default function App() {
               jwt={jwt!}
               selectedLocationId={selectedLocationId}
               onLocationChange={setSelectedLocationId}
+              onTabChange={(tab) => setCurrentTab(tab as TabId)}
+              onScanRecordId={setScanRecordId}
             />
           )}
           {effectiveTab === 'settings' && (

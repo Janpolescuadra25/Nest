@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
+import { useToast } from './Toast';
 import { formatAction, relativeTime, trialCountdown } from '../lib/utils';
 import type { QBStatus, ScanHealth, TeamMember, AuditLogEntry } from '../../types';
 
@@ -16,6 +17,7 @@ interface AdminStats {
   totalSynced: number;
   totalFailed: number;
   expiringSoon: number;
+  totalPending: number;
 }
 
 const EMPTY_STATS: AdminStats = {
@@ -25,6 +27,7 @@ const EMPTY_STATS: AdminStats = {
   totalSynced: 0,
   totalFailed: 0,
   expiringSoon: 0,
+  totalPending: 0,
 };
 
 
@@ -37,6 +40,7 @@ function isExpiringSoon(member: TeamMember): boolean {
 }
 
 export default function AdminDashboard({ jwt }: Props) {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -91,6 +95,16 @@ export default function AdminDashboard({ jwt }: Props) {
     }
   }, [jwt]);
 
+  const handleDisconnect = useCallback(async () => {
+    try {
+      await api.deleteQBToken(jwt);
+      showToast('QuickBooks disconnected', 'success');
+      setQbStatus({ connected: false, reason: 'not_connected' });
+    } catch (err: any) {
+      showToast(err.message || 'Failed to disconnect', 'error');
+    }
+  }, [jwt]);
+
   useEffect(() => {
     void fetchData();
     void fetchScanHealth();
@@ -110,7 +124,9 @@ export default function AdminDashboard({ jwt }: Props) {
     return (
       <div className="p-4 space-y-3">
         <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
           <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
@@ -149,7 +165,7 @@ export default function AdminDashboard({ jwt }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">👥 Team</div>
           <div className="text-2xl font-bold text-white mt-1">{stats.teamSize}/{stats.maxUsers || 0}</div>
@@ -157,6 +173,10 @@ export default function AdminDashboard({ jwt }: Props) {
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">🔍 Scans</div>
           <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        </div>
+        <div className="bg-slate-800 border border-amber-900 rounded-lg p-3">
+          <div className="text-xs text-amber-400">⏳ Pending</div>
+          <div className="text-2xl font-bold text-amber-400 mt-1">{stats.totalPending}</div>
         </div>
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">✅ Synced</div>
@@ -166,9 +186,13 @@ export default function AdminDashboard({ jwt }: Props) {
           <div className="text-xs text-gray-400">❌ Failed</div>
           <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
         </div>
+        <div className="bg-slate-800 border border-yellow-900 rounded-lg p-3">
+          <div className="text-xs text-yellow-400">⚠ Expiring Soon</div>
+          <div className="text-2xl font-bold text-yellow-400 mt-1">{stats.expiringSoon}</div>
+        </div>
       </div>
 
-      <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} />
+      <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} onDisconnect={() => void handleDisconnect()} />
       {scanHealthLoaded ? (
         scanHealth ? <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} /> : null
       ) : (

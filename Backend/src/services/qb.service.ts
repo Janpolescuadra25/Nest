@@ -1,4 +1,5 @@
 import { CreateJournalEntryInput, JournalEntryResponse, QBJournalLineItem } from '../types';
+import { QBApiError } from '../lib/qb-errors';
 
 const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
 const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
@@ -65,7 +66,8 @@ async function qbQuery<T>(realmId: string, accessToken: string, query: string): 
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`QB query failed (${response.status}): ${text}`);
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    throw new QBApiError(`QB query failed (${response.status}): ${text}`, response.status, undefined, intuitTid);
   }
   return response.json() as Promise<T>;
 }
@@ -208,8 +210,11 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
 
   if (!response.ok) {
     const fault = responseBody.Fault as Record<string, unknown> | undefined;
-    const errMsg = fault ? JSON.stringify(fault) : `QB API error ${response.status}`;
-    throw new Error(errMsg);
+    const faultErrors = fault?.Error as Array<Record<string, unknown>> | undefined;
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    const errMsg = faultErrors?.[0]?.Message as string | undefined ?? JSON.stringify(fault ?? responseBody);
+    const errCode = faultErrors?.[0]?.code as string | undefined;
+    throw new QBApiError(`QB journal entry failed (${response.status}): ${errMsg}`, response.status, errCode, intuitTid);
   }
 
   const je = responseBody.JournalEntry as Record<string, unknown>;

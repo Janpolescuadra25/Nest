@@ -15,6 +15,16 @@ export function getResendClient(): Resend {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function escapeHtml(text: string | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return 'unknown';
   return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -44,7 +54,7 @@ function customMessageBlock(customExpiryMessage: string | null | undefined): str
   if (!customExpiryMessage || !customExpiryMessage.trim()) return '';
   return `
     <div style="border-left:4px solid #22d3ee;background:#f0fdff;border-radius:0 8px 8px 0;padding:16px;margin:20px 0;">
-      <p style="color:#0e7490;font-size:14px;margin:0;line-height:1.6;">${customExpiryMessage.trim()}</p>
+      <p style="color:#0e7490;font-size:14px;margin:0;line-height:1.6;">${escapeHtml(customExpiryMessage.trim())}</p>
     </div>`;
 }
 
@@ -64,7 +74,7 @@ export async function sendWelcomeEmail({
     const displayName = name?.trim() || to;
 
     const html = emailWrapper(`
-      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
         Your Nest account has been created. You can log in with the email address this was sent to.
       </p>
@@ -111,7 +121,7 @@ export async function sendTrialWarning({
     const dayLabel = daysRemaining === 1 ? 'day' : 'days';
 
     const html = emailWrapper(`
-      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
         Your Nest trial access will expire on <strong style="color:#0f172a;">${formattedDate}</strong>.
         After expiry, your permissions will be revoked — scan, map, sync, and location management.
@@ -153,7 +163,7 @@ export async function sendTrialExpired({
     const formattedDate = formatDate(trialExpiresAt);
 
     const html = emailWrapper(`
-      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
         Your Nest trial access expired on <strong style="color:#0f172a;">${formattedDate}</strong>.
         Your permissions have been revoked. Your role is unchanged — contact your administrator to regain access.
@@ -195,7 +205,7 @@ export async function sendTrialRenewed({
     const formattedDate = formatDate(newExpiryDate);
 
     const html = emailWrapper(`
-      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
         Your Nest trial has been renewed by your administrator.
         Your new access expiry date is <strong style="color:#0f172a;">${formattedDate}</strong>.
@@ -237,7 +247,7 @@ export async function sendPasswordResetEmail({
     const displayName = name?.trim() || to;
 
     const html = emailWrapper(`
-      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${displayName},</p>
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
         We received a request to reset your Nest password. Click the link below to set a new password.
       </p>
