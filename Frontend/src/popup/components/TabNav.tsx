@@ -14,6 +14,9 @@ const ALL_TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'partners', label: 'Partners', icon: '🤝' },
   { id: 'requests', label: 'Requests', icon: '📬' },
   { id: 'activity', label: 'Activity', icon: '📜' },
+  { id: 'admins', label: 'Admins', icon: '🛡️' },
+  { id: 'users', label: 'Users', icon: '👤' },
+  { id: 'locations', label: 'Locations', icon: '📍' },
 ];
 
 interface Props {

@@ -78,6 +78,8 @@ export interface UserInfo {
   canMap: boolean;
   canSync: boolean;
   canManageLocs: boolean;
+  trialExpiresAt: string | null;
+  customExpiryMessage: string | null;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

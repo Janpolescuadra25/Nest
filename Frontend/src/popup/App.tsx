@@ -18,6 +18,9 @@ import ActivityTab from './components/ActivityTab';
 import RulesView from './components/RulesView';
 import DashboardView from './components/DashboardView';
 import AdminDashboard from './components/AdminDashboard';
+import AdminsTab from './components/AdminsTab';
+import UsersTab from './components/UsersTab';
+import LocationsTab from './components/LocationsTab';
 import type { TabId, ScanData } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
@@ -108,18 +111,20 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('dashboard', 'scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'activity', 'settings');
+    visibleTabs.push('dashboard', 'scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('dashboard', 'my-team');
     if (user.canScan) visibleTabs.push('scan');
     if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
+    if (user.canManageLocs) visibleTabs.push('locations');
     visibleTabs.push('settings');
   } else {
     // STAFF / ACCOUNTANT / VIEWER
     if (user.canScan) visibleTabs.push('scan');
     if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
+    if (user.canManageLocs) visibleTabs.push('locations');
     visibleTabs.push('settings');
   }
 
@@ -133,7 +138,11 @@ export default function App() {
         {/* Expired trial warning banner */}
         {user.status === 'EXPIRED' && (
           <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 text-center flex-shrink-0">
-            ⚠ Your trial has expired. Contact support to continue.
+            <p className="font-medium">Your access has expired.</p>
+            {user.customExpiryMessage && (
+              <p className="mt-1">{user.customExpiryMessage}</p>
+            )}
+            <p className="mt-1">Contact your admin or owner for renewal.</p>
           </div>
         )}
 
@@ -264,6 +273,9 @@ export default function App() {
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
+          {effectiveTab === 'admins' && <AdminsTab jwt={jwt!} />}
+          {effectiveTab === 'users' && <UsersTab jwt={jwt!} />}
+          {effectiveTab === 'locations' && <LocationsTab jwt={jwt!} />}
           {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} scanData={scanData} />}
           {effectiveTab === 'dashboard' && role === 'OWNER' && <DashboardView jwt={jwt!} />}
           {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}

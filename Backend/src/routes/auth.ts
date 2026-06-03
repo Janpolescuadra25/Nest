@@ -146,6 +146,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         canManageLocs: true,
         mustChangePassword: true,
         trialExpiresAt: true,
+        customExpiryMessage: true,
         maxUsers: true,
         createdAt: true,
         _count: { select: { teamMembers: true } },
@@ -165,7 +166,7 @@ router.get('/session', authenticate, async (req: AuthRequest, res: Response) => 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true, name: true, status: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
+      select: { id: true, email: true, role: true, name: true, status: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true, trialExpiresAt: true, customExpiryMessage: true },
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });

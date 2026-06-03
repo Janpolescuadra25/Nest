@@ -110,7 +110,7 @@ export interface BatchSyncSummary {
   failed: number;
 }
 
-export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'data' | 'sync' | 'settings' | 'partners' | 'requests' | 'my-team' | 'activity';
+export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'data' | 'sync' | 'settings' | 'partners' | 'requests' | 'my-team' | 'activity' | 'admins' | 'users' | 'locations';
 
 export type ScanData = Record<string, number>;
 
