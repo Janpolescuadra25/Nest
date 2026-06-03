@@ -146,6 +146,25 @@ export const api = {
   getOwnerAdminTeam: (jwt: string, adminId: string) =>
     get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>(`/api/owner/admins/${adminId}/team`, jwt),
 
+  getOwnerUsers: (jwt: string, params?: { role?: string; status?: string; search?: string; page?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.role) sp.set('role', params.role);
+    if (params?.status) sp.set('status', params.status);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.page) sp.set('page', String(params.page));
+    const qs = sp.toString();
+    return get<{ users: Array<{ id: string; email: string; name: string | null; role: string; status: string; adminId: string | null; adminName: string | null; adminEmail: string | null; blocked: boolean; trialExpiresAt: string | null; customExpiryMessage: string | null; canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean; createdAt: string }> }>(`/api/owner/users${qs ? '?' + qs : ''}`, jwt);
+  },
+
+  blockOwnerUser: (jwt: string, id: string, blocked: boolean) =>
+    patch<{ user: { id: string; email: string; role: string; status: string; blocked: boolean } }>(`/api/owner/users/${id}/block`, { blocked }, jwt),
+
+  ownerResetTrial: (jwt: string, id: string, data: { trialExpiresAt?: string; status?: string }) =>
+    patch<{ message?: string; user: { id: string; email: string; role: string; status: string; trialExpiresAt: string | null } }>(`/api/owner/users/${id}/timebomb`, data, jwt),
+
+  ownerClearTimebomb: (jwt: string, id: string) =>
+    patch<{ user: { id: string; email: string; role: string; status: string } }>(`/api/owner/users/${id}/timebomb/clear`, {}, jwt),
+
   // ── Admin Team ─────────────────────────────────────────────────────────────
   getAdminStats: (jwt: string) =>
     get<{
