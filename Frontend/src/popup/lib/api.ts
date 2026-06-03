@@ -183,8 +183,8 @@ export const api = {
   getAdminTeam: (jwt: string) =>
     get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>('/api/admin/team', jwt),
 
-  inviteTeamMember: (jwt: string, email: string, role: string, name?: string) =>
-    post<{ user: { id: string; email: string; name: string | null; role: string; adminId: string }; tempPassword: string }>('/api/admin/team/invite', { email, role, name }, jwt),
+  inviteTeamMember: (jwt: string, email: string, role: string, name?: string, trialDays?: number, customExpiryMessage?: string) =>
+    post<{ user: { id: string; email: string; name: string | null; role: string; adminId: string }; tempPassword: string }>('/api/admin/team/invite', { email, role, name, ...(trialDays ? { trialDays } : {}), ...(customExpiryMessage ? { customExpiryMessage } : {}) }, jwt),
 
   patchTeamMember: (jwt: string, id: string, data: object) =>
     patch<{ user: UserInfo }>(`/api/admin/team/${id}`, data, jwt),

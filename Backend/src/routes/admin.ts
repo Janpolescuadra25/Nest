@@ -157,7 +157,7 @@ router.get('/audit-log', requireRole('ADMIN'), async (req: AuthRequest, res: Res
 // ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
 router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), async (req: AuthRequest, res: Response) => {
   try {
-    const { email, role, name } = req.body as { email?: string; role?: string; name?: string };
+    const { email, role, name, trialDays, customExpiryMessage } = req.body as { email?: string; role?: string; name?: string; trialDays?: number; customExpiryMessage?: string };
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Valid email is required.' });
@@ -188,6 +188,8 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
     const tempPassword = randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
+    const trialExpiresAt = trialDays ? new Date(Date.now() + trialDays * 86_400_000) : undefined;
+
     const newUser = await prisma.user.create({
       data: {
         email: normalizedEmail,
@@ -197,6 +199,8 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
         adminId: req.user!.userId,
         status: 'ACTIVE',
         mustChangePassword: true,
+        ...(trialExpiresAt !== undefined && { trialExpiresAt }),
+        ...(customExpiryMessage ? { customExpiryMessage: customExpiryMessage.trim() } : {}),
         ...perms,
       },
     });

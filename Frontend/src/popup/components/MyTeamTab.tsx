@@ -27,6 +27,8 @@ export default function MyTeamTab({ jwt }: Props) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('STAFF');
   const [inviteName, setInviteName] = useState('');
+  const [inviteTrialDays, setInviteTrialDays] = useState('');
+  const [inviteExpiryMsg, setInviteExpiryMsg] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // trial editing: keyed by member id
   const [trialEnabled, setTrialEnabled] = useState<Record<string, boolean>>({});
@@ -76,11 +78,14 @@ export default function MyTeamTab({ jwt }: Props) {
     setActionLoading(p => ({ ...p, invite: true }));
     setError('');
     try {
-      const result = await api.inviteTeamMember(jwt, inviteEmail, inviteRole, inviteName || undefined);
+      const trialDaysNum = inviteTrialDays ? parseInt(inviteTrialDays, 10) : undefined;
+      const result = await api.inviteTeamMember(jwt, inviteEmail, inviteRole, inviteName || undefined, trialDaysNum, inviteExpiryMsg.trim() || undefined);
       setInviteResult(result);
       setInviteEmail('');
       setInviteName('');
       setInviteRole('STAFF');
+      setInviteTrialDays('');
+      setInviteExpiryMsg('');
       setShowInvite(false);
       await fetchTeam();
       showToast('Invitation sent!', 'success');
@@ -337,6 +342,29 @@ export default function MyTeamTab({ jwt }: Props) {
           >
             {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Trial period (days)</label>
+            <input
+              type="number"
+              min={1}
+              max={365}
+              placeholder="e.g. 30"
+              value={inviteTrialDays}
+              onChange={e => setInviteTrialDays(e.target.value)}
+              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-0.5">Expiry message (shown to user when trial ends)</label>
+            <textarea
+              placeholder="e.g. Contact me to renew your access"
+              value={inviteExpiryMsg}
+              onChange={e => setInviteExpiryMsg(e.target.value)}
+              maxLength={200}
+              rows={2}
+              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+            />
+          </div>
           <div className="flex gap-2">
             <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50">
               {actionLoading['invite'] ? 'Inviting...' : 'Send Invite'}

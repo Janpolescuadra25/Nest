@@ -36,6 +36,8 @@ export const teamInviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   role: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER']),
+  trialDays: z.number().int().min(1).max(365).optional(),
+  customExpiryMessage: z.string().max(200).optional(),
 });
 
 export const inviteLinkSchema = z.object({
