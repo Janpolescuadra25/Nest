@@ -56,7 +56,9 @@ app.use(cors({
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 
 // ── Health Check — before globalLimiter so Render's poller is never 429'd ──
 app.get('/health', (_req, res) => {
