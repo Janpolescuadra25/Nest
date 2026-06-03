@@ -26,6 +26,7 @@ type AuditAction =
   | 'TRIAL_EXPIRED'
   | 'TRIAL_RESET'
   | 'TRIAL_EXPIRY_WARNING'
+  | 'OWNER_RESET_TRIAL'
   | 'PASSWORD_RESET';
 
 export async function logAction(params: {

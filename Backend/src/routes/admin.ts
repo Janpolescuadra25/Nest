@@ -11,14 +11,9 @@ import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { logAction } from '../middleware/audit';
 import { createInviteLink } from '../utils/invite.utils';
 import { enforceEffectiveRole, UserForAccess, EffectiveAccess, getEffectiveAccess } from '../middleware/effective-role';
+import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
-
-const permissionDefaultsMap: Record<string, { canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean }> = {
-  VIEWER:     { canScan: false, canMap: false, canSync: false, canManageLocs: false },
-  STAFF:      { canScan: true,  canMap: false, canSync: false, canManageLocs: false },
-  ACCOUNTANT: { canScan: true,  canMap: true,  canSync: true, canManageLocs: false },
-};
 
 function buildUserForAccess(user: {
   role: string;

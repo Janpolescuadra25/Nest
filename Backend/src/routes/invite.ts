@@ -8,6 +8,7 @@ import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
+import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
 
@@ -67,19 +68,25 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     const adminId = invite.creator.role === 'ADMIN' ? invite.createdBy : null;
 
     // Create user + increment invite in a transaction (atomic)
+    const role = invite.roleHint ?? 'VIEWER';
+    const perms = permissionDefaultsMap[role] || permissionDefaultsMap.VIEWER;
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           name: req.body.name,
           email,
           password: hashedPassword,
-          role: invite.roleHint ?? 'VIEWER',
+          role,
           status,
           adminId,
           invitedById: invite.createdBy,
           approvedAt: isOwnerInvite ? new Date() : null,
           approvedById: isOwnerInvite ? invite.createdBy : null,
           mustChangePassword: false,
+          canScan: perms.canScan,
+          canMap: perms.canMap,
+          canSync: perms.canSync,
+          canManageLocs: perms.canManageLocs,
         },
       });
 

@@ -448,29 +448,64 @@ router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
 router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
-    const { timeBombAt, gracePeriodHours } = req.body as { timeBombAt?: string; gracePeriodHours?: number };
+    const { timeBombAt, gracePeriodHours, trialExpiresAt, status } = req.body as {
+      timeBombAt?: string;
+      gracePeriodHours?: number;
+      trialExpiresAt?: string;
+      status?: string;
+    };
 
-    if (typeof timeBombAt !== 'string') {
-      return res.status(400).json({ error: 'timeBombAt is required' });
-    }
     if (id === req.user!.userId) {
       return res.status(400).json({ error: 'Cannot modify your own account' });
     }
 
-    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
     if (!target) return res.status(404).json({ error: 'User not found.' });
     if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot modify an owner account' });
 
-    const bombDate = new Date(timeBombAt);
-    if (isNaN(bombDate.getTime()) || bombDate <= new Date()) {
-      return res.status(400).json({ error: 'timeBombAt must be a future date' });
-    }
-    if (gracePeriodHours !== undefined && (typeof gracePeriodHours !== 'number' || gracePeriodHours <= 0)) {
-      return res.status(400).json({ error: 'gracePeriodHours must be a positive number' });
+    const updateData: Record<string, unknown> = {};
+    let bombDate: Date | undefined;
+
+    // ── timeBombAt (optional) ────────────────────────────────────────────
+    if (timeBombAt !== undefined) {
+      bombDate = new Date(timeBombAt);
+      if (isNaN(bombDate.getTime()) || bombDate <= new Date()) {
+        return res.status(400).json({ error: 'timeBombAt must be a future date' });
+      }
+      if (gracePeriodHours !== undefined && (typeof gracePeriodHours !== 'number' || gracePeriodHours <= 0)) {
+        return res.status(400).json({ error: 'gracePeriodHours must be a positive number' });
+      }
+      updateData.timeBombAt = bombDate;
+      if (gracePeriodHours !== undefined) updateData.gracePeriodHours = gracePeriodHours;
     }
 
-    const updateData: Record<string, unknown> = { timeBombAt: bombDate };
-    if (gracePeriodHours !== undefined) updateData.gracePeriodHours = gracePeriodHours;
+    // ── trialExpiresAt (optional) ────────────────────────────────────────
+    let isTrial = false;
+    if (trialExpiresAt !== undefined) {
+      const expiryDate = new Date(trialExpiresAt);
+      if (isNaN(expiryDate.getTime())) {
+        return res.status(400).json({ error: 'trialExpiresAt must be a valid ISO date' });
+      }
+      updateData.trialExpiresAt = expiryDate;
+      isTrial = true;
+    }
+
+    // ── status = 'ACTIVE' reactivates an EXPIRED user ───────────────────
+    if (status === 'ACTIVE') {
+      if (target.status !== 'EXPIRED') {
+        return res.status(400).json({ error: 'Can only reactivate EXPIRED users' });
+      }
+      updateData.status = 'ACTIVE';
+      updateData.canScan = true;
+      updateData.canMap = true;
+      updateData.canSync = true;
+      updateData.canManageLocs = true;
+      isTrial = true;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Provide at least one of: timeBombAt, trialExpiresAt, status' });
+    }
 
     const updated = await prisma.user.update({
       where: { id },
@@ -485,6 +520,7 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
         blocked: true,
         timeBombAt: true,
         gracePeriodHours: true,
+        trialExpiresAt: true,
         approvedAt: true,
         approvedById: true,
         permissions: true,
@@ -493,12 +529,29 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    await logAction({
-      actorId: req.user!.userId,
-      action: 'TIME_BOMB_SET',
-      targetUserId: id,
-      details: { timeBombAt: bombDate, gracePeriodHours: updated.gracePeriodHours, targetRole: updated.role },
-    });
+    if (timeBombAt !== undefined) {
+      await logAction({
+        actorId: req.user!.userId,
+        action: 'TIME_BOMB_SET',
+        targetUserId: id,
+        details: { timeBombAt: bombDate, gracePeriodHours: updated.gracePeriodHours, targetRole: updated.role },
+      });
+    }
+    if (isTrial) {
+      await logAction({
+        actorId: req.user!.userId,
+        action: 'OWNER_RESET_TRIAL',
+        targetUserId: id,
+        details: { trialExpiresAt: updated.trialExpiresAt, previousStatus: target.status },
+      });
+    }
+
+    if (isTrial) {
+      return res.json({
+        message: 'Trial reset successfully',
+        user: { id: updated.id, email: updated.email, role: updated.role, status: updated.status, trialExpiresAt: updated.trialExpiresAt },
+      });
+    }
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
