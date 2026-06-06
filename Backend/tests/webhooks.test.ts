@@ -24,6 +24,7 @@ jest.mock('../src/lib/stripe', () => {
       if (planKey === 'enterprise') return { maxUsers: 50, maxLocations: 500 };
       return { maxUsers: 1, maxLocations: 10 };
     }),
+    isStripeConfigured: true,
     __stripeMocks: {
       mockConstructEvent,
       mockRetrieveSubscription,

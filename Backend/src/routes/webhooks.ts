@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import { stripe, type PlanKey, getPlanLimits } from '../lib/stripe';
+import { stripe, isStripeConfigured, type PlanKey, getPlanLimits } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 
@@ -32,6 +32,9 @@ type InvoicePayload = {
 router.post(
   '/stripe',
   asyncHandler(async (req, res) => {
+    if (!isStripeConfigured || !stripe) {
+      throw new AppError('Stripe is not configured. Contact support.', 503);
+    }
     const sig = req.headers['stripe-signature'] as string | undefined;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 

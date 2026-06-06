@@ -1,8 +1,15 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-05-27.dahlia',
-});
+export const isStripeConfigured = !!process.env.STRIPE_SECRET_KEY;
+export const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2026-05-27.dahlia',
+    })
+  : null;
+
+if (!isStripeConfigured) {
+  console.warn('[Stripe] STRIPE_SECRET_KEY not configured. Stripe features will be unavailable.');
+}
 
 export const PLANS = {
   solo: {

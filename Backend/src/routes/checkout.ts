@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { stripe, PLANS, type PlanKey } from '../lib/stripe';
+import { stripe, PLANS, isStripeConfigured, type PlanKey } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { authenticate, type AuthRequest } from '../middleware/auth.middleware';
@@ -10,6 +10,9 @@ router.post(
   '/create-session',
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
+    if (!isStripeConfigured || !stripe) {
+      throw new AppError('Stripe is not configured. Contact support.', 503);
+    }
     const { plan } = req.body as { plan?: string };
     const planKey = plan as PlanKey;
 
@@ -60,6 +63,9 @@ router.post(
   '/create-portal-session',
   authenticate,
   asyncHandler(async (req: AuthRequest, res) => {
+    if (!isStripeConfigured || !stripe) {
+      throw new AppError('Stripe is not configured. Contact support.', 503);
+    }
     const teamId = req.user!.adminId ?? req.user!.userId;
     const team = await prisma.user.findUnique({ where: { id: teamId } });
     if (!team) throw new AppError('Team not found', 404);
