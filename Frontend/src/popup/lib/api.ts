@@ -165,6 +165,9 @@ export const api = {
   ownerClearTimebomb: (jwt: string, id: string) =>
     patch<{ user: { id: string; email: string; role: string; status: string } }>(`/api/owner/users/${id}/timebomb/clear`, {}, jwt),
 
+  ownerResetCanX: (jwt: string, userId: string) =>
+    patch<{ user: { id: string; canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean } }>(`/api/owner/users/${userId}/canx-reset`, {}, jwt),
+
   // ── Admin Team ─────────────────────────────────────────────────────────────
   getAdminStats: (jwt: string) =>
     get<{

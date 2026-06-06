@@ -42,6 +42,8 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
         canMap: user.canMap,
         canSync: user.canSync,
         canManageLocs: user.canManageLocs,
+        trialExpiresAt: user.trialExpiresAt,
+        customExpiryMessage: user.customExpiryMessage,
       },
     });
   } catch (err) {

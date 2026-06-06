@@ -124,6 +124,22 @@ export default function UsersTab({ jwt }: Props) {
     }
   };
 
+  const handleResetCanX = async (user: OwnerUser) => {
+    if (!window.confirm(`Reset ${user.name ?? user.email}'s operational permissions to role defaults?`)) {
+      return;
+    }
+    setActionLoading(p => ({ ...p, [`reset_${user.id}`]: true }));
+    try {
+      await api.ownerResetCanX(jwt, user.id);
+      showToast('Permissions reset to role defaults', 'success');
+      await fetchUsers();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to reset permissions', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`reset_${user.id}`]: false }));
+    }
+  };
+
   const handleTrialSave = async (user: OwnerUser) => {
     setActionLoading(p => ({ ...p, [`trial_${user.id}`]: true }));
     try {
@@ -234,6 +250,15 @@ export default function UsersTab({ jwt }: Props) {
                     >
                       {actionLoading[`block_${user.id}`] ? '…' : user.blocked ? 'Unblock User' : 'Block User'}
                     </button>
+                    {user.role === 'ADMIN' && (
+                      <button
+                        onClick={() => handleResetCanX(user)}
+                        disabled={actionLoading[`reset_${user.id}`]}
+                        className="w-full py-1.5 bg-cyan-900/50 border border-cyan-800 text-cyan-300 rounded text-xs font-medium hover:bg-cyan-800 disabled:opacity-50"
+                      >
+                        {actionLoading[`reset_${user.id}`] ? 'Resetting…' : 'Reset CanX'}
+                      </button>
+                    )}
 
                     {/* Trial reset */}
                     <div className="pt-2 border-t border-slate-700 space-y-2">

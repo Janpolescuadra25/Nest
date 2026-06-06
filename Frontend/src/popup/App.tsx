@@ -18,6 +18,7 @@ import ActivityTab from './components/ActivityTab';
 import RulesView from './components/RulesView';
 import DashboardView from './components/DashboardView';
 import AdminDashboard from './components/AdminDashboard';
+import { UserDashboard } from './components/UserDashboard';
 import AdminsTab from './components/AdminsTab';
 import UsersTab from './components/UsersTab';
 import LocationsTab from './components/LocationsTab';
@@ -121,6 +122,7 @@ export default function App() {
     visibleTabs.push('settings');
   } else {
     // STAFF / ACCOUNTANT / VIEWER
+    visibleTabs.push('dashboard');
     if (user.canScan) visibleTabs.push('scan');
     if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
     if (user.canSync) visibleTabs.push('data', 'sync');
@@ -279,6 +281,7 @@ export default function App() {
           {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} scanData={scanData} />}
           {effectiveTab === 'dashboard' && role === 'OWNER' && <DashboardView jwt={jwt!} />}
           {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}
+          {effectiveTab === 'dashboard' && role !== 'OWNER' && role !== 'ADMIN' && <UserDashboard jwt={jwt!} user={user} />}
         </div>
 
         {/* Help overlay */}

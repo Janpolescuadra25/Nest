@@ -9,6 +9,7 @@ import { logAction } from '../middleware/audit';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validate } from '../middleware/validate';
+import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
 
@@ -693,6 +694,50 @@ router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] changeUserRole error:', err);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// PATCH /api/owner/users/:id/canx-reset — reset canX booleans to role defaults
+router.patch('/users/:id/canx-reset', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params['id'] as string;
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true },
+    });
+    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (target.role === 'OWNER') {
+      return res.status(400).json({ error: 'Cannot modify owner permissions.' });
+    }
+
+    const defaults = permissionDefaultsMap[target.role];
+    if (!defaults) {
+      return res.status(400).json({ error: `No permission defaults for role ${target.role}.` });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        canScan: defaults.canScan,
+        canMap: defaults.canMap,
+        canSync: defaults.canSync,
+        canManageLocs: defaults.canManageLocs,
+      },
+      select: { id: true, email: true, role: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'CANX_RESET',
+      targetUserId: id,
+      details: { role: target.role, defaults },
+    });
+
+    return res.json({ user: updated });
+  } catch (err) {
+    console.error('[Owner] canx-reset error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
