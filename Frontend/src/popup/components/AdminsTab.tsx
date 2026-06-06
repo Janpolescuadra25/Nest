@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
+import { ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
 
 interface Admin {
   id: string;
@@ -24,13 +25,6 @@ interface TeamMemberRow {
 
 interface Props {
   jwt: string;
-}
-
-function statusBadge(status: string) {
-  if (status === 'ACTIVE') return <span className="text-xs px-1 py-0.5 rounded bg-green-900 text-green-400">Active</span>;
-  if (status === 'DISABLED') return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-400">Disabled</span>;
-  if (status === 'EXPIRED') return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-400">Expired</span>;
-  return <span className="text-xs px-1 py-0.5 rounded bg-gray-700 text-gray-400">{status}</span>;
 }
 
 export default function AdminsTab({ jwt }: Props) {
@@ -115,11 +109,17 @@ export default function AdminsTab({ jwt }: Props) {
         <button onClick={fetchAdmins} className="text-xs text-gray-500 hover:text-gray-300">↻ Refresh</button>
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <ErrorCard message={error} onDismiss={() => setError('')} />
+      )}
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <DashboardSkeleton type="list" rows={4} />
       ) : admins.length === 0 ? (
-        <p className="text-gray-500 text-sm">No admins found.</p>
+        <EmptyState
+          icon="👤"
+          title="No admins found"
+          description="Add an admin to start managing teams."
+        />
       ) : (
         admins.map(admin => (
           <div key={admin.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
@@ -129,7 +129,7 @@ export default function AdminsTab({ jwt }: Props) {
                 {admin.name && <div className="text-xs text-gray-400 truncate">{admin.email}</div>}
                 {admin.company && <div className="text-xs text-gray-500 truncate">{admin.company}</div>}
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  {statusBadge(admin.status)}
+                  <StatusBadge status={admin.status} />
                   <span className="text-xs text-gray-500">
                     {admin.currentTeamSize}/{admin.maxUsers ?? '∞'} members
                   </span>
@@ -213,7 +213,7 @@ export default function AdminsTab({ jwt }: Props) {
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                             <span className="text-xs text-gray-500">{m.role}</span>
-                            {statusBadge(m.status)}
+                            <StatusBadge status={m.status} />
                           </div>
                         </div>
                       ))}

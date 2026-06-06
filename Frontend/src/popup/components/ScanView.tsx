@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ScanData } from '../../types';
 import { api } from '../lib/api';
+import { ErrorCard, EmptyState } from './shared';
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
   toast: { pattern: /toasttab\.com/, name: 'Toast' },
@@ -163,9 +164,7 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
       </div>
 
       {error && (
-        <div className="mb-3 bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
-          {error}
-        </div>
+        <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
       )}
 
       {scanData ? (
@@ -214,13 +213,12 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="text-3xl mb-3">🍽️</div>
-          <p className="text-gray-400 text-sm">No scan data yet</p>
-          <p className="text-gray-600 text-xs mt-1">
-            Navigate to a POS report page, then click Re-scan Page
-          </p>
-        </div>
+        <EmptyState
+          icon="🍽️"
+          title="No scan data yet"
+          description="Navigate to a POS report page, then click Re-scan Page."
+          action={{ label: 'Re-scan Page', onClick: handleRescan }}
+        />
       )}
     </div>
   );

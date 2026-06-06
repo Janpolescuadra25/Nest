@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
 import { useToast } from './Toast';
+import { ErrorCard, DashboardSkeleton } from './shared';
 import { formatAction, relativeTime, trialCountdown } from '../lib/utils';
 import type { QBStatus, ScanHealth, TeamMember, AuditLogEntry } from '../../types';
 
@@ -123,17 +124,8 @@ export default function AdminDashboard({ jwt }: Props) {
   if (loading) {
     return (
       <div className="p-4 space-y-3">
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-          <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-        </div>
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-24" />
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-36" />
+        <DashboardSkeleton type="cards" rows={6} />
+        <DashboardSkeleton type="list" rows={2} />
       </div>
     );
   }
@@ -141,15 +133,7 @@ export default function AdminDashboard({ jwt }: Props) {
   if (error) {
     return (
       <div className="p-4">
-        <div className="bg-red-900/40 border border-red-700 rounded-lg p-4 space-y-3">
-          <p className="text-sm text-red-300">{error}</p>
-          <button
-            onClick={fetchData}
-            className="px-3 py-1.5 rounded bg-red-800 text-red-100 text-xs hover:bg-red-700"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorCard message={error} onRetry={fetchData} />
       </div>
     );
   }

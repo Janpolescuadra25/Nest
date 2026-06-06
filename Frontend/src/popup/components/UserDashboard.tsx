@@ -5,6 +5,7 @@ import type { UserInfo } from '../lib/api';
 import type { QBStatus, ScanHealth } from '../../types';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
+import { DashboardSkeleton } from './shared';
 
 interface UserDashboardProps {
   jwt: string;
@@ -63,10 +64,7 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
   if (loading) {
     return (
       <div className="p-4 space-y-3">
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
-        <div className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
+        <DashboardSkeleton type="list" rows={4} />
       </div>
     );
   }

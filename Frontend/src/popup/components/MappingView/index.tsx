@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { api } from '../lib/api';
-import { useLocations } from '../hooks/useLocations';
-import { useQBContext } from '../contexts/QBContext';
-import { useQuickBooks } from '../hooks/useQuickBooks';
-import { useToast } from './Toast';
-import SearchableSelect from './SearchableSelect';
+import { api } from '../../lib/api';
+import { useLocations } from '../../hooks/useLocations';
+import { useQBContext } from '../../contexts/QBContext';
+import { useQuickBooks } from '../../hooks/useQuickBooks';
+import { useToast } from '../Toast';
+import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
+import MappingFilters from './MappingFilters';
+import MappingTable from './MappingTable';
 import type { Mapping, ScanData, TabId, ExportTemplate } from '../../types';
-import type { SelectOption } from './SearchableSelect';
+import type { SelectOption } from '../SearchableSelect';
 
-interface LocalMapping {
+export interface LocalMapping {
   localId: string;
   remoteId?: string;
   sourceField: string;
@@ -23,6 +25,46 @@ interface LocalMapping {
   keepSeparate: boolean;
   isDirty: boolean;
   expanded: boolean;
+}
+
+const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountHint: string }[] = [
+  { patterns: /Revenue\.Net Sales/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Revenue\.Gratuity/i, postingType: 'Credit', accountHint: 'Tips' },
+  { patterns: /Revenue\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Net Sales\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Tips\./i, postingType: 'Credit', accountHint: 'Tips' },
+  { patterns: /Cash Activity\.Cash tips/i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Cash Activity\.Credit/i, postingType: 'Credit', accountHint: 'Tips' },
+  { patterns: /Cash Activity\./i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Cash Summary\./i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Payments\.Cash\./i, postingType: 'Debit', accountHint: 'Cash' },
+  { patterns: /Payments\.(Credit|Amex|Discover|Mastercard|Visa)\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  { patterns: /Payments\.Gift Card\./i, postingType: 'Debit', accountHint: 'Gift Card' },
+  { patterns: /Payments\.House Account\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
+  { patterns: /Payments\.Other\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  { patterns: /Payments\./i, postingType: 'Debit', accountHint: 'Undeposited' },
+  { patterns: /Sales Category\.Food/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\.(Liquor|Beer|Wine|Beverage|Bar)/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\.Merchandise/i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Sales Category\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Tax\./i, postingType: 'Credit', accountHint: 'Sales Tax' },
+  { patterns: /Discount\./i, postingType: 'Debit', accountHint: 'Discounts' },
+  { patterns: /Service Charge\./i, postingType: 'Credit', accountHint: 'Other Income' },
+  { patterns: /Void\./i, postingType: 'Debit', accountHint: 'Discounts' },
+  { patterns: /Unpaid Orders\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
+  { patterns: /Revenue Center\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Service Daypart\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Dining Option\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Service Mode\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
+  { patterns: /Deferred\./i, postingType: 'Credit', accountHint: 'Deferred Revenue' },
+];
+
+interface Props {
+  jwt: string;
+  selectedLocationId: string;
+  onLocationChange: (id: string) => void;
+  scanData: ScanData | null;
+  onTabChange: (tab: TabId) => void;
 }
 
 function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'locationId' | 'createdAt'> {
@@ -45,7 +87,7 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
 
 function decodeFromApi(m: Mapping): LocalMapping {
   let postingType: 'Debit' | 'Credit' = (m.postingType === 'Debit' || m.postingType === 'Credit') ? m.postingType : 'Credit';
-  let keepSeparate: boolean = m.keepSeparate ?? false;
+  let keepSeparate = m.keepSeparate ?? false;
   let extra: {
     postingType?: string;
     amountRule?: string;
@@ -65,7 +107,9 @@ function decodeFromApi(m: Mapping): LocalMapping {
         keepSeparate = extra.keepSeparate;
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    // ignore
+  }
 
   return {
     localId: m.id,
@@ -84,58 +128,6 @@ function decodeFromApi(m: Mapping): LocalMapping {
     expanded: false,
   };
 }
-
-// Auto-detect patterns: matches scan field names to QB account name fragments + posting type
-const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountHint: string }[] = [
-  // Revenue section
-  { patterns: /Revenue\.Net Sales/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /Revenue\.Gratuity/i, postingType: 'Credit', accountHint: 'Tips' },
-  { patterns: /Revenue\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Net Sales section
-  { patterns: /Net Sales\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Tips section
-  { patterns: /Tips\./i, postingType: 'Credit', accountHint: 'Tips' },
-  // Cash Activity section
-  { patterns: /Cash Activity\.Cash tips/i, postingType: 'Debit', accountHint: 'Cash' },
-  { patterns: /Cash Activity\.Credit/i, postingType: 'Credit', accountHint: 'Tips' },
-  { patterns: /Cash Activity\./i, postingType: 'Debit', accountHint: 'Cash' },
-  // Cash Summary section
-  { patterns: /Cash Summary\./i, postingType: 'Debit', accountHint: 'Cash' },
-  // Payments section — debit side (money coming IN)
-  { patterns: /Payments\.Cash\./i, postingType: 'Debit', accountHint: 'Cash' },
-  { patterns: /Payments\.(Credit|Amex|Discover|Mastercard|Visa)\./i, postingType: 'Debit', accountHint: 'Undeposited' },
-  { patterns: /Payments\.Gift Card\./i, postingType: 'Debit', accountHint: 'Gift Card' },
-  { patterns: /Payments\.House Account\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
-  { patterns: /Payments\.Other\./i, postingType: 'Debit', accountHint: 'Undeposited' },
-  { patterns: /Payments\./i, postingType: 'Debit', accountHint: 'Undeposited' },
-  // Sales Category section
-  { patterns: /Sales Category\.Food/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /Sales Category\.(Liquor|Beer|Wine|Beverage|Bar)/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /Sales Category\.Merchandise/i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  { patterns: /Sales Category\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Tax section
-  { patterns: /Tax\./i, postingType: 'Credit', accountHint: 'Sales Tax' },
-  // Discount section — debit (contra-revenue)
-  { patterns: /Discount\./i, postingType: 'Debit', accountHint: 'Discounts' },
-  // Service Charge section
-  { patterns: /Service Charge\./i, postingType: 'Credit', accountHint: 'Other Income' },
-  // Void section
-  { patterns: /Void\./i, postingType: 'Debit', accountHint: 'Discounts' },
-  // Unpaid Orders section
-  { patterns: /Unpaid Orders\./i, postingType: 'Debit', accountHint: 'Accounts Receivable' },
-  // Revenue Center section
-  { patterns: /Revenue Center\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Service Daypart section
-  { patterns: /Service Daypart\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Dining Option section
-  { patterns: /Dining Option\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Service Mode section
-  { patterns: /Service Mode\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
-  // Deferred section
-  { patterns: /Deferred\./i, postingType: 'Credit', accountHint: 'Deferred Revenue' },
-];
-
-const AMOUNT_RULES = ['Direct Amount', 'Percentage of Total', 'Static Value'];
 
 function resolveMemoTemplate(template: string, data: Record<string, number> | null): string {
   if (!template || !data) return '';
@@ -164,14 +156,6 @@ function insertAtCursor(
   });
 }
 
-interface Props {
-  jwt: string;
-  selectedLocationId: string;
-  onLocationChange: (id: string) => void;
-  scanData: ScanData | null;
-  onTabChange: (tab: TabId) => void;
-}
-
 export default function MappingView({
   jwt,
   selectedLocationId,
@@ -190,7 +174,6 @@ export default function MappingView({
     syncAllLists,
     searchEntities,
   } = useQBContext();
-
   const { status: qbStatus } = useQuickBooks(jwt);
   const { showToast } = useToast();
 
@@ -216,85 +199,6 @@ export default function MappingView({
 
   const locId = selectedLocationId || locations[0]?.id || '';
 
-  const debouncedSaveTemplates = useCallback((memo: string, doc: string) => {
-    if (!locId || !jwt) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      api.updateLocation(jwt, locId, { memoTemplate: memo || undefined, docNumberTemplate: doc || undefined })
-        .catch(() => { /* silent — will retry on next change */ });
-    }, 1500);
-  }, [locId, jwt]);
-
-  // Load QB lists on mount if not loaded
-  useEffect(() => {
-    if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
-  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
-
-  const loadMappings = useCallback(async () => {
-    if (!locId) return;
-    setLoading(true);
-    try {
-      const data = await api.getMappings(jwt, locId);
-      setLocalMappings(data.map(decodeFromApi));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load mappings');
-    } finally {
-      setLoading(false);
-    }
-  }, [jwt, locId]);
-
-  useEffect(() => { void loadMappings(); }, [loadMappings]);
-
-  // Load templates from location data (DB-backed)
-  useEffect(() => {
-    if (!locId) return;
-    const loc = locations.find(l => l.id === locId);
-    if (loc) {
-      setMemoTemplate(loc.memoTemplate ?? '');
-      setDocNumberTemplate(loc.docNumberTemplate ?? '');
-    } else {
-      setMemoTemplate('');
-      setDocNumberTemplate('');
-    }
-  }, [locId, locations]);
-
-  // One-time migration: port localStorage templates → DB
-  useEffect(() => {
-    if (!locId || !jwt) return;
-    const lsKey = `nest_templates_${locId}`;
-    const raw = localStorage.getItem(lsKey);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
-      const loc = locations.find(l => l.id === locId);
-      if (loc && !loc.memoTemplate && !loc.docNumberTemplate && (parsed.memoTemplate || parsed.docNumberTemplate)) {
-        api.updateLocation(jwt, locId, {
-          memoTemplate: parsed.memoTemplate || undefined,
-          docNumberTemplate: parsed.docNumberTemplate || undefined,
-        }).then(() => {
-          localStorage.removeItem(lsKey);
-        }).catch(() => { /* silent fail — data is safe in localStorage, will retry next load */ });
-      } else {
-        localStorage.removeItem(lsKey);
-      }
-    } catch {
-      localStorage.removeItem(lsKey);
-    }
-  }, [locId, jwt, locations]);
-
-  // Debounced save templates to DB
-  useEffect(() => {
-    debouncedSaveTemplates(memoTemplate, docNumberTemplate);
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [memoTemplate, docNumberTemplate, debouncedSaveTemplates]);
-
-  useEffect(() => {
-    if (!selectedLocationId && locations[0]) onLocationChange(locations[0].id);
-  }, [locations, selectedLocationId, onLocationChange]);
-
-  // Build account options grouped by classification
   const accountOptions = useMemo((): SelectOption[] =>
     accounts
       .filter((a) => a.Active)
@@ -325,7 +229,6 @@ export default function MappingView({
     [taxCodes],
   );
 
-  // Scan field options for source dropdown
   const scanFieldOptions = useMemo((): SelectOption[] => {
     if (!scanData) return [];
     return Object.entries(scanData).map(([field, amount]) => ({
@@ -346,20 +249,94 @@ export default function MappingView({
   const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
 
+  const debouncedSaveTemplates = useCallback((memo: string, doc: string) => {
+    if (!locId || !jwt) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      api.updateLocation(jwt, locId, { memoTemplate: memo || undefined, docNumberTemplate: doc || undefined })
+        .catch(() => { /* silent — will retry on next change */ });
+    }, 1500);
+  }, [locId, jwt]);
+
+  useEffect(() => {
+    if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
+  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
+
+  const loadMappings = useCallback(async () => {
+    if (!locId) return;
+    setLoading(true);
+    try {
+      const data = await api.getMappings(jwt, locId);
+      setLocalMappings(data.map(decodeFromApi));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load mappings');
+    } finally {
+      setLoading(false);
+    }
+  }, [jwt, locId]);
+
+  useEffect(() => { void loadMappings(); }, [loadMappings]);
+
+  useEffect(() => {
+    if (!locId) return;
+    const loc = locations.find((l) => l.id === locId);
+    if (loc) {
+      setMemoTemplate(loc.memoTemplate ?? '');
+      setDocNumberTemplate(loc.docNumberTemplate ?? '');
+    } else {
+      setMemoTemplate('');
+      setDocNumberTemplate('');
+    }
+  }, [locId, locations]);
+
+  useEffect(() => {
+    if (!locId || !jwt) return;
+    const lsKey = `nest_templates_${locId}`;
+    const raw = localStorage.getItem(lsKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
+      const loc = locations.find((l) => l.id === locId);
+      if (loc && !loc.memoTemplate && !loc.docNumberTemplate && (parsed.memoTemplate || parsed.docNumberTemplate)) {
+        api.updateLocation(jwt, locId, {
+          memoTemplate: parsed.memoTemplate || undefined,
+          docNumberTemplate: parsed.docNumberTemplate || undefined,
+        }).then(() => {
+          localStorage.removeItem(lsKey);
+        }).catch(() => { /* silent fail — data is safe in localStorage, will retry next load */ });
+      } else {
+        localStorage.removeItem(lsKey);
+      }
+    } catch {
+      localStorage.removeItem(lsKey);
+    }
+  }, [locId, jwt, locations]);
+
+  useEffect(() => {
+    debouncedSaveTemplates(memoTemplate, docNumberTemplate);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [memoTemplate, docNumberTemplate, debouncedSaveTemplates]);
+
+  useEffect(() => {
+    if (!selectedLocationId && locations[0]) onLocationChange(locations[0].id);
+  }, [locations, selectedLocationId, onLocationChange]);
+
   const updateMapping = (localId: string, patch: Partial<LocalMapping>) => {
-    setLocalMappings((prev) =>
-      prev.map((m) => (m.localId === localId ? { ...m, ...patch, isDirty: true } : m)),
-    );
+    setLocalMappings((prev) => prev.map((mapping) => (
+      mapping.localId === localId ? { ...mapping, ...patch, isDirty: true } : mapping
+    )));
   };
 
   const toggleExpand = (localId: string) => {
-    setLocalMappings((prev) =>
-      prev.map((m) => (m.localId === localId ? { ...m, expanded: !m.expanded } : m)),
-    );
+    setLocalMappings((prev) => prev.map((mapping) => (
+      mapping.localId === localId ? { ...mapping, expanded: !mapping.expanded } : mapping
+    )));
   };
 
   const addMapping = () => {
-    const newM: LocalMapping = {
+    const newMapping: LocalMapping = {
       localId: `new-${Date.now()}`,
       remoteId: undefined,
       sourceField: '',
@@ -375,34 +352,32 @@ export default function MappingView({
       isDirty: true,
       expanded: true,
     };
-    setLocalMappings((prev) => [...prev, newM]);
+    setLocalMappings((prev) => [...prev, newMapping]);
   };
 
-  const saveMapping = async (m: LocalMapping, priority: number) => {
-    if (!m.sourceField || !m.accountId) {
+  const saveMapping = async (mapping: LocalMapping, priority: number) => {
+    if (!mapping.sourceField || !mapping.accountId) {
       setError('Source field and QB Account are required');
       return;
     }
-    setSaving(m.localId);
+    setSaving(mapping.localId);
     setError(null);
     try {
-      const payload = encodeToApi(m, priority);
-      if (m.remoteId) {
-        await api.updateMapping(jwt, m.remoteId, payload);
+      const payload = encodeToApi(mapping, priority);
+      if (mapping.remoteId) {
+        await api.updateMapping(jwt, mapping.remoteId, payload);
       } else {
         const created = await api.createMapping(jwt, locId, payload);
-        setLocalMappings((prev) =>
-          prev.map((x) =>
-            x.localId === m.localId
-              ? { ...x, remoteId: created.id, localId: created.id, isDirty: false }
-              : x,
-          ),
-        );
+        setLocalMappings((prev) => prev.map((item) => (
+          item.localId === mapping.localId
+            ? { ...item, remoteId: created.id, localId: created.id, isDirty: false }
+            : item
+        )));
         return;
       }
-      setLocalMappings((prev) =>
-        prev.map((x) => (x.localId === m.localId ? { ...x, isDirty: false } : x)),
-      );
+      setLocalMappings((prev) => prev.map((item) => (
+        item.localId === mapping.localId ? { ...item, isDirty: false } : item
+      )));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -410,16 +385,16 @@ export default function MappingView({
     }
   };
 
-  const deleteMapping = async (m: LocalMapping) => {
-    if (m.remoteId && !window.confirm('Delete this mapping?')) return;
-    if (!m.remoteId) {
-      setLocalMappings((prev) => prev.filter((x) => x.localId !== m.localId));
+  const deleteMapping = async (mapping: LocalMapping) => {
+    if (mapping.remoteId && !window.confirm('Delete this mapping?')) return;
+    if (!mapping.remoteId) {
+      setLocalMappings((prev) => prev.filter((item) => item.localId !== mapping.localId));
       return;
     }
-    setDeleting(m.localId);
+    setDeleting(mapping.localId);
     try {
-      await api.deleteMapping(jwt, m.remoteId);
-      setLocalMappings((prev) => prev.filter((x) => x.localId !== m.localId));
+      await api.deleteMapping(jwt, mapping.remoteId);
+      setLocalMappings((prev) => prev.filter((item) => item.localId !== mapping.localId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
@@ -432,16 +407,17 @@ export default function MappingView({
       setAutoMsg('No scan data or QB accounts loaded');
       return;
     }
+
     let applied = 0;
-    const scanFields = Object.keys(scanData);
     const newMappings: LocalMapping[] = [];
+    const scanFields = Object.keys(scanData);
 
     scanFields.forEach((field) => {
-      if (localMappings.some((m) => m.sourceField === field)) return; // already mapped
-      const rule = AUTO_DETECT.find((r) => r.patterns.test(field));
+      if (localMappings.some((mapping) => mapping.sourceField === field)) return;
+      const rule = AUTO_DETECT.find((rule) => rule.patterns.test(field));
       if (!rule) return;
       const matchedAccount = accounts.find(
-        (a) => a.Active && a.FullyQualifiedName.toLowerCase().includes(rule.accountHint.toLowerCase()),
+        (account) => account.Active && account.FullyQualifiedName.toLowerCase().includes(rule.accountHint.toLowerCase()),
       );
       if (!matchedAccount) return;
       newMappings.push({
@@ -460,7 +436,7 @@ export default function MappingView({
         isDirty: true,
         expanded: false,
       });
-      applied++;
+      applied += 1;
     });
 
     setLocalMappings((prev) => [...prev, ...newMappings]);
@@ -504,18 +480,18 @@ export default function MappingView({
     if (!tpl || accounts.length === 0) return;
 
     const newMappings = tpl
-      .filter((t) => !localMappings.some((m) => m.sourceField === t.field))
-      .map((t): LocalMapping => {
+      .filter((item) => !localMappings.some((mapping) => mapping.sourceField === item.field))
+      .map((item) => {
         const matchedAccount = accounts.find(
-          (a) => a.Active && a.FullyQualifiedName.toLowerCase().includes(t.accountHint.toLowerCase()),
+          (account) => account.Active && account.FullyQualifiedName.toLowerCase().includes(item.accountHint.toLowerCase()),
         );
         return {
-          localId: `tpl-${Date.now()}-${t.field}`,
+          localId: `tpl-${Date.now()}-${item.field}`,
           remoteId: undefined,
-          sourceField: t.field,
+          sourceField: item.field,
           accountId: matchedAccount?.Id ?? '',
-          postingType: t.postingType,
-          description: t.field,
+          postingType: item.postingType,
+          description: item.field,
           classId: '',
           taxCodeId: '',
           entityType: '',
@@ -539,46 +515,46 @@ export default function MappingView({
         api.getMappings(jwt, locId),
         api.getRules(jwt, locId),
       ]);
-      const loc = locations.find(l => l.id === locId);
+      const loc = locations.find((l) => l.id === locId);
       const exportData: ExportTemplate = {
         version: 1,
         exportedAt: new Date().toISOString(),
         sourceLocationName: loc?.name ?? 'Unknown',
         sourceRealmId: qbStatus?.realmId ?? '',
-        memoTemplate: memoTemplate,
-        docNumberTemplate: docNumberTemplate,
-        mappings: mappings.map(m => ({
-          sourceField: m.sourceField,
-          targetAccount: m.targetAccount,
-          postingType: m.postingType ?? 'Credit',
-          keepSeparate: m.keepSeparate ?? false,
-          targetClass: m.targetClass ?? undefined,
-          targetName: m.targetName ?? undefined,
-          targetDescription: m.targetDescription ?? undefined,
-          targetMemo: m.targetMemo ?? undefined,
-          priority: m.priority,
+        memoTemplate,
+        docNumberTemplate,
+        mappings: mappings.map((mapping) => ({
+          sourceField: mapping.sourceField,
+          targetAccount: mapping.targetAccount,
+          postingType: mapping.postingType ?? 'Credit',
+          keepSeparate: mapping.keepSeparate ?? false,
+          targetClass: mapping.targetClass ?? undefined,
+          targetName: mapping.targetName ?? undefined,
+          targetDescription: mapping.targetDescription ?? undefined,
+          targetMemo: mapping.targetMemo ?? undefined,
+          priority: mapping.priority,
         })),
-        rules: rules.map(r => ({
-          name: r.name,
-          ruleType: r.ruleType,
-          config: r.config as Record<string, unknown>,
-          isActive: r.isActive,
+        rules: rules.map((rule) => ({
+          name: rule.name,
+          ruleType: rule.ruleType,
+          config: rule.config as Record<string, unknown>,
+          isActive: rule.isActive,
         })),
       };
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `nest-template-${(loc?.name ?? 'location').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `nest-template-${(loc?.name ?? 'location').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
       showToast(`Exported ${mappings.length} mappings + ${rules.length} rules`, 'success');
-    } catch (err: unknown) {
+    } catch (err) {
       showToast(err instanceof Error ? err.message : 'Export failed', 'error');
     }
-  }, [locId, jwt, locations, memoTemplate, docNumberTemplate, qbStatus, showToast]);
+  }, [jwt, locId, locations, memoTemplate, docNumberTemplate, qbStatus, showToast]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -609,7 +585,7 @@ export default function MappingView({
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, [showToast, qbStatus]);
+  }, [qbStatus, showToast]);
 
   const handleImportConfirm = useCallback(async () => {
     if (!pendingImport || !locId || !jwt) return;
@@ -623,7 +599,7 @@ export default function MappingView({
       });
       showToast(`Imported ${result.createdMappings} mappings + ${result.createdRules} rules${result.templatesUpdated ? ' + templates' : ''}`, 'success');
       void loadMappings();
-      const loc = locations.find(l => l.id === locId);
+      const loc = locations.find((l) => l.id === locId);
       if (loc) {
         setMemoTemplate(pendingImport.memoTemplate ?? loc.memoTemplate ?? '');
         setDocNumberTemplate(pendingImport.docNumberTemplate ?? loc.docNumberTemplate ?? '');
@@ -631,67 +607,43 @@ export default function MappingView({
       setShowImportConfirm(false);
       setPendingImport(null);
       setImportWarning(null);
-    } catch (err: unknown) {
+    } catch (err) {
       showToast(err instanceof Error ? err.message : 'Import failed', 'error');
     }
   }, [pendingImport, locId, jwt, importMode, showToast, loadMappings, locations]);
 
-  // Balance indicator using scan data
   const totalDebits = localMappings
-    .filter((m) => m.postingType === 'Debit')
-    .reduce((sum, m) => sum + Math.abs(scanData?.[m.sourceField] ?? 0), 0);
+    .filter((mapping) => mapping.postingType === 'Debit')
+    .reduce((sum, mapping) => sum + Math.abs(scanData?.[mapping.sourceField] ?? 0), 0);
   const totalCredits = localMappings
-    .filter((m) => m.postingType === 'Credit')
-    .reduce((sum, m) => sum + Math.abs(scanData?.[m.sourceField] ?? 0), 0);
+    .filter((mapping) => mapping.postingType === 'Credit')
+    .reduce((sum, mapping) => sum + Math.abs(scanData?.[mapping.sourceField] ?? 0), 0);
   const diff = totalCredits - totalDebits;
   const isBalanced = Math.abs(diff) < 0.01;
 
-  // Entity options (combined customers + vendors + employees)
   const buildEntityOptions = useCallback((query: string): SelectOption[] => {
-    return searchEntities(query || '').map((e) => ({
-      value: `${e.type}:${e.id}`,
-      label: e.displayName,
-      subtitle: e.type,
+    return searchEntities(query || '').map((entity) => ({
+      value: `${entity.type}:${entity.id}`,
+      label: entity.displayName,
+      subtitle: entity.type,
     }));
   }, [searchEntities]);
 
   return (
     <div className="p-3 space-y-3">
-      {/* Header row */}
-      <div className="flex items-center gap-2">
-        <select
-          value={locId}
-          onChange={(e) => onLocationChange(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
-        >
-          {locations.length === 0 && <option value="">No locations</option>}
-          {locations.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}</option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={handleExport}
-          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
-          title="Export this location's configuration as a JSON file"
-        >
-          📤 Export
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
-          title="Import a configuration template from a JSON file"
-        >
-          📥 Import
-        </button>
-        <button
-          onClick={addMapping}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1.5 rounded whitespace-nowrap transition-colors"
-        >
-          + Add
-        </button>
-      </div>
+      <MappingFilters
+        locId={locId}
+        locations={locations}
+        onLocationChange={onLocationChange}
+        onExport={handleExport}
+        onImport={() => fileInputRef.current?.click()}
+        onAddMapping={addMapping}
+        onAutoDetect={autoDetect}
+        onApplyTemplate={applyTemplate}
+        onSyncLists={() => void syncAllLists()}
+        listsLoading={listsLoading}
+        accountsLoaded={accounts.length > 0}
+      />
 
       <input
         ref={fileInputRef}
@@ -766,65 +718,17 @@ export default function MappingView({
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="flex gap-1.5 flex-wrap">
-        <button
-          onClick={autoDetect}
-          disabled={!scanData || accounts.length === 0}
-          className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded transition-colors"
-        >
-          🔍 Auto-Detect
-        </button>
-        {(['Standard Daily', 'Full Service', 'Quick Service'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => applyTemplate(t)}
-            disabled={accounts.length === 0}
-            className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded transition-colors"
-          >
-            📋 {t}
-          </button>
-        ))}
-        <button
-          onClick={() => void syncAllLists()}
-          disabled={listsLoading}
-          className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded transition-colors ml-auto"
-          title="Refresh QB lists"
-        >
-          {listsLoading ? '…' : '↻'}
-        </button>
-      </div>
-
-      {/* QB loading state */}
-      {listsLoading && (
-        <div className="text-xs text-cyan-400 text-center py-1 animate-pulse">
-          Loading QB accounts…
-        </div>
-      )}
-      {!listsLoaded && !listsLoading && accounts.length === 0 && (
-        <div className="bg-amber-900/30 border border-amber-700 text-amber-300 text-xs rounded-lg px-3 py-2">
-          ⚠️ QB accounts not loaded. Make sure QuickBooks is connected in Settings.
-        </div>
-      )}
-
-      {/* Messages */}
       {autoMsg && (
         <div className="bg-green-900/30 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2">
           {autoMsg}
         </div>
       )}
-      {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2 flex justify-between">
-          {error}
-          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-300">✕</button>
-        </div>
-      )}
+      {error && <ErrorCard message={error} onDismiss={() => setError(null)} />}
 
-      {/* Memo & Doc Number Templates */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         <button
           type="button"
-          onClick={() => setMemoOpen((x) => !x)}
+          onClick={() => setMemoOpen((current) => !current)}
           className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
         >
           <span className="text-xs font-semibold text-gray-300">
@@ -838,7 +742,6 @@ export default function MappingView({
               Use <code className="text-cyan-400 bg-gray-900 px-1 rounded">{'{field_name}'}</code> placeholders to insert scan values. Click a chip to insert at cursor.
             </p>
 
-            {/* Memo textarea */}
             <div>
               <div className="text-xs text-gray-500 mb-1">Private Note / Memo</div>
               <textarea
@@ -854,7 +757,6 @@ export default function MappingView({
               )}
             </div>
 
-            {/* Doc number input */}
             <div>
               <div className="text-xs text-gray-500 mb-1">
                 Doc Number <span className="text-gray-600">(leave blank for QB auto-generate)</span>
@@ -871,7 +773,6 @@ export default function MappingView({
               )}
             </div>
 
-            {/* Field chips */}
             {scanFieldChips.length > 0 ? (
               <div>
                 <button
@@ -880,14 +781,13 @@ export default function MappingView({
                   className="text-xs text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 mb-1.5"
                 >
                   <span className="text-xs">{fieldsExpanded ? '▾' : '▸'}</span>
-                  {fieldsExpanded
-                    ? 'Hide available fields'
-                    : `Show available fields (${scanFieldChips.length})`
-                  }
+                  {fieldsExpanded ? 'Hide available fields' : `Show available fields (${scanFieldChips.length})`}
                 </button>
                 {fieldsExpanded && (
                   <>
-                    <div className="text-xs text-gray-500 mb-1.5">Click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:</div>
+                    <div className="text-xs text-gray-500 mb-1.5">
+                      Click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
                       {scanFieldChips.map((chip) => (
                         <div key={chip.normalized} className="flex rounded overflow-hidden text-xs border border-gray-600">
@@ -920,46 +820,34 @@ export default function MappingView({
         )}
       </div>
 
-      {/* Loading */}
       {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-10 bg-gray-800 rounded-lg animate-pulse" />
-          ))}
-        </div>
+        <DashboardSkeleton type="list" rows={3} />
       ) : localMappings.length === 0 ? (
-        <div className="text-center py-10">
-          <div className="text-3xl mb-2">🗂️</div>
-          <p className="text-gray-400 text-sm mb-1">No mappings yet</p>
-          <p className="text-gray-600 text-xs">Add a mapping or use Auto-Detect to get started</p>
-        </div>
+        <EmptyState
+          icon="🗂️"
+          title="No mappings yet"
+          description="Add a mapping or use Auto-Detect to get started."
+          action={{ label: 'Add mapping', onClick: addMapping }}
+        />
       ) : (
-        <div className="space-y-2">
-          {localMappings.map((m, idx) => (
-            <MappingCard
-              key={m.localId}
-              mapping={m}
-              index={idx}
-              accountOptions={accountOptions}
-              classOptions={classOptions}
-              taxCodeOptions={taxCodeOptions}
-              scanFieldOptions={scanFieldOptions}
-              entityOptions={buildEntityOptions('')}
-              isSaving={saving === m.localId}
-              isDeleting={deleting === m.localId}
-              onUpdate={(patch) => updateMapping(m.localId, patch)}
-              onSave={() => void saveMapping(m, idx)}
-              onDelete={() => void deleteMapping(m)}
-              onToggleExpand={() => toggleExpand(m.localId)}
-            />
-          ))}
-        </div>
+        <MappingTable
+          localMappings={localMappings}
+          accountOptions={accountOptions}
+          classOptions={classOptions}
+          taxCodeOptions={taxCodeOptions}
+          scanFieldOptions={scanFieldOptions}
+          entityOptions={buildEntityOptions('')}
+          saving={saving}
+          deleting={deleting}
+          onUpdate={updateMapping}
+          onSave={saveMapping}
+          onDelete={deleteMapping}
+          onToggleExpand={toggleExpand}
+        />
       )}
 
-      {/* Bottom toolbar */}
       {localMappings.length > 0 && (
         <div className="border-t border-gray-700 pt-3 space-y-2">
-          {/* Balance indicator */}
           <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
             isBalanced ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'
           }`}>
@@ -974,10 +862,9 @@ export default function MappingView({
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const dirty = localMappings.filter((m) => m.isDirty);
-                dirty.forEach((m, i) => void saveMapping(m, i));
+                localMappings.filter((mapping) => mapping.isDirty).forEach((mapping, index) => void saveMapping(mapping, index));
               }}
-              disabled={!localMappings.some((m) => m.isDirty)}
+              disabled={!localMappings.some((mapping) => mapping.isDirty)}
               className="flex-1 text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white py-2 rounded-lg transition-colors"
             >
               💾 Save All Changes
@@ -994,206 +881,3 @@ export default function MappingView({
     </div>
   );
 }
-
-// ── MappingCard sub-component ─────────────────────────────────────────────────
-
-interface CardProps {
-  mapping: LocalMapping;
-  index: number;
-  accountOptions: SelectOption[];
-  classOptions: SelectOption[];
-  taxCodeOptions: SelectOption[];
-  scanFieldOptions: SelectOption[];
-  entityOptions: SelectOption[];
-  isSaving: boolean;
-  isDeleting: boolean;
-  onUpdate: (patch: Partial<LocalMapping>) => void;
-  onSave: () => void;
-  onDelete: () => void;
-  onToggleExpand: () => void;
-}
-
-function MappingCard({
-  mapping: m,
-  accountOptions,
-  classOptions,
-  taxCodeOptions,
-  scanFieldOptions,
-  entityOptions,
-  isSaving,
-  isDeleting,
-  onUpdate,
-  onSave,
-  onDelete,
-  onToggleExpand,
-}: CardProps) {
-  const selectedAccount = accountOptions.find((a) => a.value === m.accountId);
-
-  return (
-    <div className={`bg-gray-800 border rounded-lg overflow-hidden transition-all ${
-      m.isDirty ? 'border-cyan-700' : 'border-gray-700'
-    }`}>
-      {/* Card header */}
-      <div className="flex items-center gap-2 px-3 py-2">
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          className="text-gray-500 hover:text-gray-300 text-xs shrink-0"
-        >
-          {m.expanded ? '▼' : '▶'}
-        </button>
-        <div className="flex-1 min-w-0">
-          {scanFieldOptions.length > 0 ? (
-            <SearchableSelect
-              options={scanFieldOptions}
-              value={m.sourceField}
-              onChange={(v) => onUpdate({ sourceField: v, description: v || m.description })}
-              placeholder="Toast field…"
-            />
-          ) : (
-            <input
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
-              value={m.sourceField}
-              onChange={(e) => onUpdate({ sourceField: e.target.value })}
-              placeholder="Toast field name…"
-            />
-          )}
-        </div>
-        {/* D/C toggle */}
-        <div className="flex rounded overflow-hidden border border-gray-600 shrink-0">
-          <button
-            type="button"
-            onClick={() => onUpdate({ postingType: 'Debit' })}
-            className={`text-xs px-2 py-0.5 transition-colors ${
-              m.postingType === 'Debit'
-                ? 'bg-blue-700 text-blue-100'
-                : 'bg-gray-900 text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            Dr
-          </button>
-          <button
-            type="button"
-            onClick={() => onUpdate({ postingType: 'Credit' })}
-            className={`text-xs px-2 py-0.5 transition-colors ${
-              m.postingType === 'Credit'
-                ? 'bg-emerald-700 text-emerald-100'
-                : 'bg-gray-900 text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            Cr
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isDeleting}
-          className="text-gray-600 hover:text-red-400 text-xs transition-colors shrink-0"
-          title="Delete mapping"
-        >
-          🗑️
-        </button>
-      </div>
-
-      {/* Account row (always visible) */}
-      <div className="px-3 pb-2">
-        <SearchableSelect
-          options={accountOptions}
-          value={m.accountId}
-          onChange={(v) => onUpdate({ accountId: v })}
-          placeholder="QB Account…"
-        />
-        {selectedAccount && (
-          <div className="text-xs text-gray-600 mt-0.5 truncate">{selectedAccount.subtitle}</div>
-        )}
-      </div>
-
-      {/* Expanded body */}
-      {m.expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-gray-700/60 pt-2">
-          {/* Description */}
-          <div>
-            <div className="text-xs text-gray-500 mb-0.5">Description</div>
-            <input
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
-              value={m.description}
-              onChange={(e) => onUpdate({ description: e.target.value })}
-              placeholder="Line description…"
-            />
-          </div>
-
-          {/* Class + Tax Code */}
-          <div className="grid grid-cols-2 gap-2">
-            <SearchableSelect
-              label="Class"
-              options={classOptions}
-              value={m.classId}
-              onChange={(v) => onUpdate({ classId: v })}
-              placeholder={classOptions.length === 0 ? 'None' : 'Class…'}
-              disabled={classOptions.length === 0}
-            />
-            <SearchableSelect
-              label="Tax Code"
-              options={taxCodeOptions}
-              value={m.taxCodeId}
-              onChange={(v) => onUpdate({ taxCodeId: v })}
-              placeholder={taxCodeOptions.length === 0 ? 'None' : 'Tax code…'}
-              disabled={taxCodeOptions.length === 0}
-            />
-          </div>
-
-          {/* Entity + Amount Rule */}
-          <div className="grid grid-cols-2 gap-2">
-            <SearchableSelect
-              label="Entity (opt)"
-              options={entityOptions}
-              value={m.entityType ? `${m.entityType}:${m.entityId}` : ''}
-              onChange={(v) => {
-                if (!v) { onUpdate({ entityType: '', entityId: '' }); return; }
-                const [type, id] = v.split(':') as [LocalMapping['entityType'], string];
-                onUpdate({ entityType: type, entityId: id });
-              }}
-              placeholder="Customer/Vendor…"
-              disabled={entityOptions.length === 0}
-            />
-            <div>
-              <div className="text-xs text-gray-500 mb-0.5">Amount Rule</div>
-              <select
-                value={m.amountRule}
-                onChange={(e) => onUpdate({ amountRule: e.target.value })}
-                className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
-              >
-                {AMOUNT_RULES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Keep separate toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={m.keepSeparate}
-              onChange={(e) => onUpdate({ keepSeparate: e.target.checked, isDirty: true })}
-              className="rounded border-gray-600"
-            />
-            <span className="text-xs text-gray-400">🔒 Keep separate</span>
-            <span className="text-xs text-gray-600">— don't merge with other lines</span>
-          </label>
-
-          {/* Save button */}
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || !m.isDirty}
-            className="w-full text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white py-1.5 rounded transition-colors"
-          >
-            {isSaving ? 'Saving…' : m.isDirty ? '💾 Save' : '✓ Saved'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-

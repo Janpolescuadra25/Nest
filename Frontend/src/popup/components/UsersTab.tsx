@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
+import { ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
 import { trialCountdown } from '../lib/utils';
 
 interface OwnerUser {
@@ -22,16 +23,6 @@ interface OwnerUser {
 
 interface Props {
   jwt: string;
-}
-
-function statusBadge(status: string, blocked: boolean) {
-  if (blocked) return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-400">Blocked</span>;
-  if (status === 'ACTIVE') return <span className="text-xs px-1 py-0.5 rounded bg-green-900 text-green-400">Active</span>;
-  if (status === 'EXPIRED') return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-400">Expired</span>;
-  if (status === 'GRACE_PERIOD') return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-400">Grace</span>;
-  if (status === 'PENDING_APPROVAL') return <span className="text-xs px-1 py-0.5 rounded bg-orange-900 text-orange-400">Pending</span>;
-  if (status === 'DISABLED') return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-400">Disabled</span>;
-  return <span className="text-xs px-1 py-0.5 rounded bg-gray-700 text-gray-400">{status}</span>;
 }
 
 function roleBadge(role: string) {
@@ -194,11 +185,17 @@ export default function UsersTab({ jwt }: Props) {
         </select>
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <ErrorCard message={error} onDismiss={() => setError('')} />
+      )}
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <DashboardSkeleton type="list" rows={4} />
       ) : filtered.length === 0 ? (
-        <p className="text-gray-500 text-sm">No users found.</p>
+        <EmptyState
+          icon="👤"
+          title="No users found"
+          description="Adjust your filters or add a user to see results."
+        />
       ) : (
         groupEntries.map(([groupKey, group]) => (
           <div key={groupKey} className="space-y-1.5">
@@ -219,7 +216,7 @@ export default function UsersTab({ jwt }: Props) {
                     {user.name && <div className="text-xs text-gray-400 truncate">{user.email}</div>}
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {roleBadge(user.role)}
-                      {statusBadge(user.status, user.blocked)}
+                      <StatusBadge status={user.blocked ? 'BLOCKED' : user.status} />
                       {trialBadge(user.trialExpiresAt)}
                     </div>
                     <div className="flex items-center gap-1 mt-1 flex-wrap">

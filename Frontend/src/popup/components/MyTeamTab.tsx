@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
+import { ErrorCard, StatusBadge, PermissionToggle, DashboardSkeleton, EmptyState } from './shared';
 import { trialCountdown } from '../lib/utils';
 import { BACKEND_URL } from '../../lib/config';
 import type { TeamMember, InviteLink } from '../../types';
@@ -256,21 +257,11 @@ export default function MyTeamTab({ jwt }: Props) {
 
   const effectiveBadge = (member: TeamMember) => {
     const st = member.status;
-    if (st === 'GRACE_PERIOD') return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-300">⏳ Grace</span>;
-    if (st === 'TIME_BOMBED') return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-300">🚫 Restricted</span>;
-    if (st === 'PENDING_APPROVAL') return <span className="text-xs px-1 py-0.5 rounded bg-orange-900 text-orange-300">⏳ Pending</span>;
+    if (st === 'GRACE_PERIOD') return <StatusBadge status="GRACE_PERIOD" />;
+    if (st === 'TIME_BOMBED') return <StatusBadge status="TIME_BOMBED" />;
+    if (st === 'PENDING_APPROVAL') return <StatusBadge status="PENDING_APPROVAL" />;
     return null;
   };
-
-  const PermToggle = ({ memberId, permissionKey, value, label }: { memberId: string; permissionKey: string; value: boolean; label: string }) => (
-    <button
-      onClick={() => handlePatchPerm(memberId, permissionKey, !value)}
-      disabled={actionLoading[`p_${memberId}_${permissionKey}`]}
-      className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${value ? 'bg-cyan-800 text-cyan-300' : 'bg-slate-700 text-gray-500'}`}
-    >
-      {label}
-    </button>
-  );
 
   return (
     <div className="p-4 space-y-3">
@@ -451,11 +442,18 @@ export default function MyTeamTab({ jwt }: Props) {
         </div>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <ErrorCard message={error} onRetry={fetchTeam} onDismiss={() => setError('')} />
+      )}
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <DashboardSkeleton type="list" rows={3} />
       ) : members.length === 0 ? (
-        <p className="text-gray-500 text-sm">No team members yet. Invite someone!</p>
+        <EmptyState
+          icon="👥"
+          title="No team members yet"
+          description="Invite someone to get your team started."
+          action={{ label: 'Invite member', onClick: () => setShowInvite(true) }}
+        />
       ) : (
         members.map(member => (
           <div key={member.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
@@ -465,15 +463,7 @@ export default function MyTeamTab({ jwt }: Props) {
                 {member.name && <div className="text-xs text-gray-400 truncate">{member.email}</div>}
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span className="text-xs text-gray-500">{member.role}</span>
-                  <span className={`text-xs px-1 py-0.5 rounded ${
-                    member.status === 'ACTIVE' ? 'bg-green-900 text-green-400' :
-                    member.status === 'EXPIRED' ? 'bg-yellow-900 text-yellow-400' :
-                    member.status === 'GRACE_PERIOD' ? 'bg-yellow-900 text-yellow-400' :
-                    member.status === 'PENDING_APPROVAL' ? 'bg-orange-900 text-orange-400' :
-                    'bg-red-900 text-red-400'
-                  }`}>
-                    {member.status}
-                  </span>
+                  <StatusBadge status={member.blocked ? 'BLOCKED' : member.status} />
                   {effectiveBadge(member)}
                   {member.mustChangePassword && <span className="text-xs text-yellow-500">⚠ needs pw change</span>}
                   {trialCountdown(member.trialExpiresAt)}
@@ -503,10 +493,34 @@ export default function MyTeamTab({ jwt }: Props) {
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Permissions</p>
                   <div className="flex gap-1 flex-wrap">
-                    <PermToggle memberId={member.id} permissionKey="scan:write" value={hasPerm(member, 'scan', 'write')} label="Scan" />
-                    <PermToggle memberId={member.id} permissionKey="map:write" value={hasPerm(member, 'map', 'write')} label="Map" />
-                    <PermToggle memberId={member.id} permissionKey="sync:execute" value={hasPerm(member, 'sync', 'execute')} label="Sync" />
-                    <PermToggle memberId={member.id} permissionKey="locations:write" value={hasPerm(member, 'locations', 'write')} label="Locations" />
+                    <PermissionToggle
+                      feature="scan"
+                      action="write"
+                      enabled={hasPerm(member, 'scan', 'write')}
+                      disabled={actionLoading[`p_${member.id}_scan:write`]}
+                      onChange={(feature, action, enabled) => handlePatchPerm(member.id, `${feature}:${action}`, enabled)}
+                    />
+                    <PermissionToggle
+                      feature="map"
+                      action="write"
+                      enabled={hasPerm(member, 'map', 'write')}
+                      disabled={actionLoading[`p_${member.id}_map:write`]}
+                      onChange={(feature, action, enabled) => handlePatchPerm(member.id, `${feature}:${action}`, enabled)}
+                    />
+                    <PermissionToggle
+                      feature="sync"
+                      action="execute"
+                      enabled={hasPerm(member, 'sync', 'execute')}
+                      disabled={actionLoading[`p_${member.id}_sync:execute`]}
+                      onChange={(feature, action, enabled) => handlePatchPerm(member.id, `${feature}:${action}`, enabled)}
+                    />
+                    <PermissionToggle
+                      feature="locations"
+                      action="write"
+                      enabled={hasPerm(member, 'locations', 'write')}
+                      disabled={actionLoading[`p_${member.id}_locations:write`]}
+                      onChange={(feature, action, enabled) => handlePatchPerm(member.id, `${feature}:${action}`, enabled)}
+                    />
                   </div>
                 </div>
                 {member.status === 'ACTIVE' && (
