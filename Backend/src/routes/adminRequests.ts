@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
@@ -10,7 +11,7 @@ import { adminRequestSchema } from '../lib/validators';
 const router = Router();
 
 // ── POST /api/admin-requests  (public — no auth) ──────────────────────────────
-router.post('/', validate(adminRequestSchema), async (req: Request, res: Response) => {
+router.post('/', validate(adminRequestSchema), asyncHandler(async(req: Request, res: Response) => {
   try {
     const { email, name, description, company } = req.body as {
       email?: string;
@@ -20,10 +21,10 @@ router.post('/', validate(adminRequestSchema), async (req: Request, res: Respons
     };
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'Valid email is required.' });
+      throw new AppError('Valid email is required.', 400);
     }
     if (!description || description.trim().length < 10) {
-      return res.status(400).json({ error: 'Description must be at least 10 characters.' });
+      throw new AppError('Description must be at least 10 characters.', 400);
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -31,12 +32,12 @@ router.post('/', validate(adminRequestSchema), async (req: Request, res: Respons
     const existing = await prisma.adminRequest.findFirst({
       where: { email: normalizedEmail, status: 'PENDING' },
     });
-    if (existing) return res.status(409).json({ error: 'You already have a pending request.' });
+    if (existing) throw new AppError('You already have a pending request.', 409);
 
     const existingAdmin = await prisma.user.findFirst({
       where: { email: normalizedEmail, role: 'ADMIN' },
     });
-    if (existingAdmin) return res.status(409).json({ error: 'An admin with this email already exists.' });
+    if (existingAdmin) throw new AppError('An admin with this email already exists.', 409);
 
     const request = await prisma.adminRequest.create({
       data: {
@@ -56,12 +57,12 @@ router.post('/', validate(adminRequestSchema), async (req: Request, res: Respons
     });
   } catch (err) {
     console.error('[AdminRequests] create error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/admin-requests  (OWNER only) ─────────────────────────────────────
-router.get('/', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+router.get('/', authenticate, requireRole('OWNER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10) || 20));
@@ -85,20 +86,20 @@ router.get('/', authenticate, requireRole('OWNER'), async (req: AuthRequest, res
     return res.json({ requests, total, page, limit });
   } catch (err) {
     console.error('[AdminRequests] list error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── POST /api/admin-requests/:id/approve  (OWNER only) ───────────────────────
-router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const request = await prisma.adminRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found.' });
-    if (request.status !== 'PENDING') return res.status(400).json({ error: 'This request has already been processed.' });
+    if (!request) throw new AppError('Request not found.', 404);
+    if (request.status !== 'PENDING') throw new AppError('This request has already been processed.', 400);
 
     const existingUser = await prisma.user.findUnique({ where: { email: request.email } });
-    if (existingUser) return res.status(409).json({ error: 'A user with this email already exists.' });
+    if (existingUser) throw new AppError('A user with this email already exists.', 409);
 
     const tempPassword = randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
@@ -162,17 +163,17 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: Auth
     });
   } catch (err) {
     console.error('[AdminRequests] approve error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── POST /api/admin-requests/:id/reject  (OWNER only) ────────────────────────
-router.post('/:id/reject', authenticate, requireRole('OWNER'), async (req: AuthRequest, res: Response) => {
+router.post('/:id/reject', authenticate, requireRole('OWNER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const request = await prisma.adminRequest.findUnique({ where: { id } });
-    if (!request) return res.status(404).json({ error: 'Request not found.' });
-    if (request.status !== 'PENDING') return res.status(400).json({ error: 'This request has already been processed.' });
+    if (!request) throw new AppError('Request not found.', 404);
+    if (request.status !== 'PENDING') throw new AppError('This request has already been processed.', 400);
 
     await prisma.adminRequest.update({
       where: { id },
@@ -191,8 +192,8 @@ router.post('/:id/reject', authenticate, requireRole('OWNER'), async (req: AuthR
     return res.json({ message: 'Request rejected.' });
   } catch (err) {
     console.error('[AdminRequests] reject error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 export default router;

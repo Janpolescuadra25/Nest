@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
@@ -9,6 +10,22 @@ import { validate } from '../middleware/validate';
 import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
 import { sendVerificationEmail } from '../lib/email';
 
+function mergeTeamBilling(user: any) {
+  const teamOwner = user.admin ?? {};
+  return {
+    subscriptionSource: user.subscriptionSource ?? teamOwner.subscriptionSource ?? null,
+    stripeCustomerId: user.stripeCustomerId ?? teamOwner.stripeCustomerId ?? null,
+    stripeSubscriptionId: user.stripeSubscriptionId ?? teamOwner.stripeSubscriptionId ?? null,
+    currentPlan: user.currentPlan ?? teamOwner.currentPlan ?? null,
+    planInterval: user.planInterval ?? teamOwner.planInterval ?? null,
+    currentPeriodEnd: user.currentPeriodEnd ?? teamOwner.currentPeriodEnd ?? null,
+    cancelAtPeriodEnd: user.cancelAtPeriodEnd ?? teamOwner.cancelAtPeriodEnd ?? false,
+    paymentIssue: user.paymentIssue ?? teamOwner.paymentIssue ?? false,
+    maxUsers: user.maxUsers ?? teamOwner.maxUsers ?? null,
+    maxLocations: user.maxLocations ?? teamOwner.maxLocations ?? null,
+  };
+}
+
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -16,21 +33,38 @@ if (!JWT_SECRET) {
 }
 
 // POST /api/auth/login
-router.post('/login', authLimiter, validate(loginSchema), async (req: Request, res: Response) => {
+router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      throw new AppError('Email and password are required.', 400);
     }
     const user = await prisma.user.findUnique({
       where: { email: (email as string).toLowerCase() },
+      include: {
+        admin: {
+          select: {
+            subscriptionSource: true,
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            currentPlan: true,
+            planInterval: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+            paymentIssue: true,
+            maxUsers: true,
+            maxLocations: true,
+          },
+        },
+      },
     });
-    if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
-    if (!user.password) return res.status(401).json({ error: 'Account password not set. Please contact your admin.' });
-    if (user.status === 'DISABLED') return res.status(403).json({ error: 'Account is disabled.' });
+    if (!user) throw new AppError('Invalid email or password.', 401);
+    if (!user.password) throw new AppError('Account password not set. Please contact your admin.', 401);
+    if (user.status === 'DISABLED') throw new AppError('Account is disabled.', 403);
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
+    if (!valid) throw new AppError('Invalid email or password.', 401);
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const billing = mergeTeamBilling(user);
     return res.json({
       token,
       user: {
@@ -44,28 +78,29 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
         permissions: user.permissions as Record<string, boolean> | null,
         trialExpiresAt: user.trialExpiresAt,
         customExpiryMessage: user.customExpiryMessage,
+        ...billing,
       },
     });
   } catch (err) {
     console.error('[Auth] Login error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // POST /api/auth/register
 // Creates a new VIEWER account. No admin approval required.
-router.post('/register', authLimiter, validate(registerSchema), async (req: Request, res: Response) => {
+router.post('/register', authLimiter, validate(registerSchema), asyncHandler(async(req: Request, res: Response) => {
   try {
     const { email, password, name } = req.body as { email?: string; password?: string; name?: string };
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      throw new AppError('Email and password are required.', 400);
     }
     if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+      throw new AppError('Password must be at least 8 characters.', 400);
     }
     const normalizedEmail = (email as string).toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) return res.status(409).json({ error: 'An account with this email already exists.' });
+    if (existing) throw new AppError('An account with this email already exists.', 409);
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = await prisma.user.create({
@@ -107,32 +142,44 @@ router.post('/register', authLimiter, validate(registerSchema), async (req: Requ
         emailVerified: user.emailVerified,
         mustChangePassword: user.mustChangePassword,
         permissions: user.permissions as Record<string, boolean> | null,
+        trialExpiresAt: user.trialExpiresAt,
+        customExpiryMessage: user.customExpiryMessage,
+        subscriptionSource: user.subscriptionSource ?? null,
+        stripeCustomerId: user.stripeCustomerId ?? null,
+        stripeSubscriptionId: user.stripeSubscriptionId ?? null,
+        currentPlan: user.currentPlan ?? null,
+        planInterval: user.planInterval ?? null,
+        currentPeriodEnd: user.currentPeriodEnd ?? null,
+        cancelAtPeriodEnd: user.cancelAtPeriodEnd ?? false,
+        paymentIssue: user.paymentIssue ?? false,
+        maxUsers: user.maxUsers ?? null,
+        maxLocations: user.maxLocations ?? null,
       },
     });
   } catch (err) {
     console.error('[Auth] Register error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // POST /api/auth/change-password  (requires authentication)
-router.post('/change-password', authenticate, validate(changePasswordSchema), async (req: AuthRequest, res: Response) => {
+router.post('/change-password', authenticate, validate(changePasswordSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'currentPassword and newPassword are required.' });
+      throw new AppError('currentPassword and newPassword are required.', 400);
     }
     if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+      throw new AppError('New password must be at least 8 characters.', 400);
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
     if (!user || !user.password) {
-      return res.status(400).json({ error: 'Password not set for this account.' });
+      throw new AppError('Password not set for this account.', 400);
     }
 
     const valid = await bcrypt.compare(currentPassword, user.password);
-    if (!valid) return res.status(401).json({ error: 'Current password is incorrect.' });
+    if (!valid) throw new AppError('Current password is incorrect.', 401);
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, mustChangePassword: false } });
@@ -140,12 +187,12 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
     return res.json({ message: 'Password changed successfully.' });
   } catch (err) {
     console.error('[Auth] Change password error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // GET /api/auth/me  (requires authentication)
-router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
@@ -161,38 +208,95 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         mustChangePassword: true,
         trialExpiresAt: true,
         customExpiryMessage: true,
+        subscriptionSource: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        currentPlan: true,
+        planInterval: true,
+        currentPeriodEnd: true,
+        cancelAtPeriodEnd: true,
+        paymentIssue: true,
         maxUsers: true,
+        maxLocations: true,
         createdAt: true,
         _count: { select: { teamMembers: true } },
+        admin: {
+          select: {
+            subscriptionSource: true,
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            currentPlan: true,
+            planInterval: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+            paymentIssue: true,
+            maxUsers: true,
+            maxLocations: true,
+          },
+        },
       },
     });
-    if (!user) return res.status(401).json({ error: 'User not found.' });
-
-    return res.json({ user });
+    if (!user) throw new AppError('User not found.', 401);
+    const billing = mergeTeamBilling(user);
+    return res.json({ user: { ...user, ...billing, admin: undefined } });
   } catch (err) {
     console.error('[Auth] Me error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // GET /api/auth/session  — kept for backward compatibility, delegates to /me logic
-router.get('/session', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true, name: true, status: true, emailVerified: true, mustChangePassword: true, permissions: true, trialExpiresAt: true, customExpiryMessage: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        name: true,
+        status: true,
+        emailVerified: true,
+        mustChangePassword: true,
+        permissions: true,
+        trialExpiresAt: true,
+        customExpiryMessage: true,
+        subscriptionSource: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        currentPlan: true,
+        planInterval: true,
+        currentPeriodEnd: true,
+        cancelAtPeriodEnd: true,
+        paymentIssue: true,
+        maxUsers: true,
+        maxLocations: true,
+        admin: {
+          select: {
+            subscriptionSource: true,
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            currentPlan: true,
+            planInterval: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+            paymentIssue: true,
+            maxUsers: true,
+            maxLocations: true,
+          },
+        },
+      },
     });
-    if (!user) return res.status(401).json({ error: 'User not found.' });
-    return res.json({ user });
+    if (!user) throw new AppError('User not found.', 401);
+    const billing = mergeTeamBilling(user);
+    return res.json({ user: { ...user, ...billing, admin: undefined } });
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ error: 'Session expired' });
+      throw new AppError('Session expired', 401);
     }
-    return res.status(500).json({
-      error: process.env.NODE_ENV === 'production' ? 'Session check failed' : ((err as Error).message || 'Unknown error'),
-    });
+    throw new AppError(process.env.NODE_ENV === 'production' ? 'Session check failed' : ((err as Error).message || 'Unknown error'), 500);
   }
-});
+}))
 
 export default router;
 

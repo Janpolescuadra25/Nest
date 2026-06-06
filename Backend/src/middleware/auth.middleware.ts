@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../lib/errors';
 import jwt from 'jsonwebtoken';
 import { UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
@@ -24,7 +25,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Missing or malformed Authorization header' });
+    return next(new AppError('Missing or malformed Authorization header', 401));
     return;
   }
 
@@ -58,12 +59,12 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     });
 
     if (!user) {
-      res.status(401).json({ error: 'User not found' });
+      return next(new AppError('User not found', 401));
       return;
     }
 
     if (user.status === 'DISABLED') {
-      res.status(403).json({ error: 'Account is disabled' });
+      return next(new AppError('Account is disabled', 403));
       return;
     }
 
@@ -92,10 +93,10 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     next();
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ error: 'Invalid or expired token' });
+      return next(new AppError('Invalid or expired token', 401));
     } else {
       console.error('[Auth] Middleware error:', err);
-      res.status(500).json({ error: 'Authentication service unavailable' });
+      return next(new AppError('Authentication service unavailable', 500));
     }
   }
 }
@@ -110,7 +111,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Not authenticated' });
+      return next(new AppError('Not authenticated', 401));
       return;
     }
 
@@ -126,17 +127,17 @@ export function requireRole(...roles: string[]) {
     const effectiveAccess = getEffectiveAccess(userForAccess);
 
     if (effectiveAccess.isBlocked) {
-      res.status(403).json({ error: 'Account suspended' });
+      return next(new AppError('Account suspended', 403));
       return;
     }
 
     if (effectiveAccess.status === 'PENDING_APPROVAL') {
-      res.status(403).json({ error: 'Account pending approval' });
+      return next(new AppError('Account pending approval', 403));
       return;
     }
 
     if (!roles.includes(effectiveAccess.role)) {
-      res.status(403).json({ error: 'Insufficient permissions' });
+      return next(new AppError('Insufficient permissions', 403));
       return;
     }
 
@@ -164,7 +165,7 @@ export function requireOwnTeam(paramField: string) {
     const targetId = req.params[paramField];
     if (user.role === 'ADMIN' && targetId === user.userId) { next(); return; }
 
-    res.status(403).json({ error: 'Access denied' });
+    return next(new AppError('Access denied', 403));
   };
 }
 
@@ -194,7 +195,7 @@ export function locationFilter(user: AuthPayload): Record<string, unknown> {
 export const requireFeaturePermission = (feature: Feature, action: Action) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Not authenticated' });
+      return next(new AppError('Not authenticated', 401));
       return;
     }
 
@@ -208,7 +209,7 @@ export const requireFeaturePermission = (feature: Feature, action: Action) => {
     };
 
     if (!hasPermission(userForAccess, feature, action)) {
-      res.status(403).json({ error: 'Insufficient permissions' });
+      return next(new AppError('Insufficient permissions', 403));
       return;
     }
 

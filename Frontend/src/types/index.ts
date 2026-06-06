@@ -162,6 +162,13 @@ export interface TeamMember {
   timeBombAt?: string | null;
   gracePeriodHours?: number;
   effectiveAccess?: EffectiveAccess;
+  admin?: {
+    subscriptionSource?: string | null;
+    currentPlan?: string | null;
+    currentPeriodEnd?: string | null;
+    cancelAtPeriodEnd?: boolean;
+    paymentIssue?: boolean;
+  };
 }
 
 export interface AdminRequest {

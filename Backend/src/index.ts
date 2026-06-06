@@ -17,9 +17,12 @@ import ownerRoutes from './routes/owner';
 import inviteRoutes from './routes/invite';
 import passwordResetRoutes from './routes/password-reset';
 import emailVerificationRoutes from './routes/email-verification';
+import checkoutRoutes from './routes/checkout';
+import webhookRoutes from './routes/webhooks';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
+import { createErrorHandler } from './lib/errors';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,6 +57,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -95,6 +99,7 @@ app.use('/api/admin-requests', adminRequestRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
+app.use('/api/checkout', checkoutRoutes);
 
 // ── Web Pages ───────────────────────────────────────────────────────────────
 app.get('/reset-password', (_req, res) => {
@@ -110,13 +115,7 @@ app.use((_req, res) => {
 });
 
 // ── Global Error Handler ────────────────────────────────────────────────────
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('[Express Error]', err.message);
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-  });
-});
+app.use(createErrorHandler());
 
 // ── Start ────────────────────────────────────────────────────────────────────
 startTimeBombCron(prisma);

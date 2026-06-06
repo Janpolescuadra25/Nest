@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import bcrypt from 'bcryptjs';
 import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -16,7 +17,7 @@ const router = Router();
 router.use(authenticate, requireRole('OWNER'));
 
 // ── GET /api/owner/admins ─────────────────────────────────────────────────────
-router.get('/admins', async (req: AuthRequest, res: Response) => {
+router.get('/admins', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = { role: 'ADMIN' as const };
@@ -65,12 +66,12 @@ router.get('/admins', async (req: AuthRequest, res: Response) => {
     return res.json({ admins: result, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAdmins error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/owner/stats ─────────────────────────────────────────────────────
-router.get('/stats', async (req: AuthRequest, res: Response) => {
+router.get('/stats', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const [
       totalPartners,
@@ -106,12 +107,12 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
     });
   } catch (err) {
     console.error('[Owner] stats error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/owner/invites  (OWNER only) ──────────────────────────────────────
-router.get('/invites', async (req: AuthRequest, res: Response) => {
+router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const createdBy = req.query.createdBy as string | undefined;
@@ -151,16 +152,16 @@ router.get('/invites', async (req: AuthRequest, res: Response) => {
     return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] listInviteLinks error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── DELETE /api/owner/invites/:id  (OWNER only) ──────────────────────────────
-router.delete('/invites/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const inviteId = req.params['id'] as string;
     const invite = await prisma.inviteLink.findUnique({ where: { id: inviteId } });
-    if (!invite) return res.status(404).json({ error: 'Invite not found.' });
+    if (!invite) throw new AppError('Invite not found.', 404);
 
     // Hard delete — Owner can revoke anyone's invite, no ownership check
     await prisma.inviteLink.delete({ where: { id: inviteId } });
@@ -174,9 +175,9 @@ router.delete('/invites/:id', async (req: AuthRequest, res: Response) => {
     return res.json({ message: 'Invite revoked' });
   } catch (err) {
     console.error('[Owner] revokeInviteLink error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 // ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────
 const updateAdminSchema = z.object({
@@ -184,14 +185,14 @@ const updateAdminSchema = z.object({
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),
 });
 
-router.patch('/admins/:id', validate(updateAdminSchema), async (req: AuthRequest, res: Response) => {
+router.patch('/admins/:id', validate(updateAdminSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { maxUsers, status } = req.body as { maxUsers?: number; status?: 'ACTIVE' | 'DISABLED' };
 
     const admin = await prisma.user.findUnique({ where: { id } });
-    if (!admin) return res.status(404).json({ error: 'Admin not found.' });
-    if (admin.role === 'OWNER') return res.status(403).json({ error: 'Cannot modify OWNER accounts.' });
+    if (!admin) throw new AppError('Admin not found.', 404);
+    if (admin.role === 'OWNER') throw new AppError('Cannot modify OWNER accounts.', 403);
 
     const updateData: Record<string, unknown> = {};
     if (maxUsers !== undefined) updateData['maxUsers'] = maxUsers;
@@ -231,9 +232,9 @@ router.patch('/admins/:id', validate(updateAdminSchema), async (req: AuthRequest
     return res.json({ admin: updated });
   } catch (err) {
     console.error('[Owner] patchAdmin error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 function buildUserForAccess(user: { role: UserRole; status: UserStatus; blocked: boolean; timeBombAt: Date | string | null; gracePeriodHours: number; permissions: unknown; }): UserForAccess {
   return {
@@ -246,7 +247,7 @@ function buildUserForAccess(user: { role: UserRole; status: UserStatus; blocked:
   };
 }
 
-router.get('/users', async (req: AuthRequest, res: Response) => {
+router.get('/users', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const role = req.query['role'] ? String(req.query['role']) : undefined;
@@ -318,11 +319,11 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
     return res.json({ users: result, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getUsers error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.get('/users/:id', async (req: AuthRequest, res: Response) => {
+router.get('/users/:id', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const user = await prisma.user.findUnique({
@@ -349,7 +350,7 @@ router.get('/users/:id', async (req: AuthRequest, res: Response) => {
       },
     });
 
-    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (!user) throw new AppError('User not found.', 404);
 
     const effectiveAccess = getEffectiveAccess(buildUserForAccess(user));
     const effectivePermissions = ALL_FEATURES.map(feature => ({
@@ -383,25 +384,25 @@ router.get('/users/:id', async (req: AuthRequest, res: Response) => {
     });
   } catch (err) {
     console.error('[Owner] getUser error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/block', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { blocked } = req.body as { blocked: boolean };
 
     if (typeof blocked !== 'boolean') {
-      return res.status(400).json({ error: 'blocked must be a boolean' });
+      throw new AppError('blocked must be a boolean', 400);
     }
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot block an owner' });
+    if (!target) throw new AppError('User not found.', 404);
+    if (target.role === 'OWNER') throw new AppError('Cannot block an owner', 400);
 
     let updateData: Record<string, unknown>;
     const actionDetails: { action: 'USER_BLOCKED' | 'USER_UNBLOCKED'; details: Prisma.InputJsonValue } = blocked
@@ -412,7 +413,7 @@ router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
       updateData = { blocked: true, status: 'BLOCKED', blockedById: req.user!.userId };
     } else {
       if (target.status !== 'BLOCKED') {
-        return res.status(400).json({ error: 'User is not blocked' });
+        throw new AppError('User is not blocked', 400);
       }
       updateData = { blocked: false, status: 'ACTIVE', blockedById: null };
     }
@@ -448,11 +449,11 @@ router.patch('/users/:id/block', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] blockUser error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { timeBombAt, gracePeriodHours, trialExpiresAt, status } = req.body as {
@@ -463,12 +464,15 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     };
 
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
-    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
-    if (target.role === 'OWNER') return res.status(400).json({ error: 'Cannot modify an owner account' });
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true, subscriptionSource: true } });
+    if (!target) throw new AppError('User not found.', 404);
+    if (target.role === 'OWNER') throw new AppError('Cannot modify an owner account', 400);
+    if (target.subscriptionSource === 'stripe') {
+      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
+    }
 
     const updateData: Record<string, unknown> = {};
     let bombDate: Date | undefined;
@@ -477,10 +481,10 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     if (timeBombAt !== undefined) {
       bombDate = new Date(timeBombAt);
       if (isNaN(bombDate.getTime()) || bombDate <= new Date()) {
-        return res.status(400).json({ error: 'timeBombAt must be a future date' });
+        throw new AppError('timeBombAt must be a future date', 400);
       }
       if (gracePeriodHours !== undefined && (typeof gracePeriodHours !== 'number' || gracePeriodHours <= 0)) {
-        return res.status(400).json({ error: 'gracePeriodHours must be a positive number' });
+        throw new AppError('gracePeriodHours must be a positive number', 400);
       }
       updateData.timeBombAt = bombDate;
       if (gracePeriodHours !== undefined) updateData.gracePeriodHours = gracePeriodHours;
@@ -491,7 +495,7 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     if (trialExpiresAt !== undefined) {
       const expiryDate = new Date(trialExpiresAt);
       if (isNaN(expiryDate.getTime())) {
-        return res.status(400).json({ error: 'trialExpiresAt must be a valid ISO date' });
+        throw new AppError('trialExpiresAt must be a valid ISO date', 400);
       }
       updateData.trialExpiresAt = expiryDate;
       isTrial = true;
@@ -500,7 +504,7 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     // ── status = 'ACTIVE' reactivates an EXPIRED user ───────────────────
     if (status === 'ACTIVE') {
       if (target.status !== 'EXPIRED') {
-        return res.status(400).json({ error: 'Can only reactivate EXPIRED users' });
+        throw new AppError('Can only reactivate EXPIRED users', 400);
       }
       updateData.status = 'ACTIVE';
       updateData.permissions = {
@@ -519,7 +523,7 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     }
 
     if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'Provide at least one of: timeBombAt, trialExpiresAt, status' });
+      throw new AppError('Provide at least one of: timeBombAt, trialExpiresAt, status', 400);
     }
 
     const updated = await prisma.user.update({
@@ -571,24 +575,27 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] setTimeBomb error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.patch('/users/:id/timebomb/clear', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, timeBombAt: true, status: true, role: true },
+      select: { id: true, timeBombAt: true, status: true, role: true, subscriptionSource: true },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
+    if (target.subscriptionSource === 'stripe') {
+      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
+    }
     if (!target.timeBombAt) {
-      return res.status(400).json({ error: 'No time bomb set' });
+      throw new AppError('No time bomb set', 400);
     }
 
     const updateData: Record<string, unknown> = { timeBombAt: null };
@@ -627,34 +634,34 @@ router.patch('/users/:id/timebomb/clear', async (req: AuthRequest, res: Response
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] clearTimeBomb error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { role } = req.body as { role?: string };
 
     if (!role || typeof role !== 'string') {
-      return res.status(400).json({ error: 'Role is required' });
+      throw new AppError('Role is required', 400);
     }
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const validRoles = Object.values(UserRole) as string[];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
+      throw new AppError('Invalid role', 400);
     }
     if (role === 'OWNER') {
-      return res.status(400).json({ error: 'Cannot assign OWNER role here' });
+      throw new AppError('Cannot assign OWNER role here', 400);
     }
 
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER') {
-      return res.status(400).json({ error: 'Cannot modify an owner account' });
+      throw new AppError('Cannot modify an owner account', 400);
     }
 
     const updateData: Record<string, unknown> = { role };
@@ -695,12 +702,12 @@ router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] changeUserRole error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 // PATCH /api/owner/users/:id/permissions-reset — reset permissions to role defaults
-router.patch('/users/:id/permissions-reset', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/permissions-reset', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
 
@@ -708,14 +715,14 @@ router.patch('/users/:id/permissions-reset', async (req: AuthRequest, res: Respo
       where: { id },
       select: { id: true, role: true },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER') {
-      return res.status(400).json({ error: 'Cannot modify owner permissions.' });
+      throw new AppError('Cannot modify owner permissions.', 400);
     }
 
     const defaults = permissionDefaultsMap[target.role];
     if (!defaults) {
-      return res.status(400).json({ error: `No permission defaults for role ${target.role}.` });
+      throw new AppError(`No permission defaults for role ${target.role}.`, 400);
     }
 
     const updated = await prisma.user.update({
@@ -736,26 +743,26 @@ router.patch('/users/:id/permissions-reset', async (req: AuthRequest, res: Respo
     return res.json({ user: updated });
   } catch (err) {
     console.error('[Owner] permissions-reset error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.patch('/users/:id/permissions', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/permissions', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const permissions = req.body?.permissions;
 
     if (typeof permissions !== 'object' || permissions === null || Array.isArray(permissions)) {
-      return res.status(400).json({ error: 'permissions must be an object' });
+      throw new AppError('permissions must be an object', 400);
     }
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER') {
-      return res.status(400).json({ error: 'Cannot modify an owner account' });
+      throw new AppError('Cannot modify an owner account', 400);
     }
 
     const validKeys = new Set<string>();
@@ -767,12 +774,12 @@ router.patch('/users/:id/permissions', async (req: AuthRequest, res: Response) =
 
     const invalidKeys = Object.keys(permissions).filter(key => !validKeys.has(key));
     if (invalidKeys.length > 0) {
-      return res.status(400).json({ error: 'Invalid permission keys', invalidKeys });
+      throw new AppError('Invalid permission keys', 400);
     }
 
     for (const [key, value] of Object.entries(permissions)) {
       if (typeof value !== 'boolean') {
-        return res.status(400).json({ error: 'Permission values must be boolean' });
+        throw new AppError('Permission values must be boolean', 400);
       }
     }
 
@@ -807,17 +814,17 @@ router.patch('/users/:id/permissions', async (req: AuthRequest, res: Response) =
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] setPermissionOverrides error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.post('/users/:id/approve', async (req: AuthRequest, res: Response) => {
+router.post('/users/:id/approve', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, status: true, email: true, role: true, blocked: true, timeBombAt: true, gracePeriodHours: true, permissions: true, adminId: true, approvedAt: true, approvedById: true, createdAt: true, updatedAt: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.status !== 'PENDING_APPROVAL') {
-      return res.status(400).json({ error: 'User is not pending approval' });
+      throw new AppError('User is not pending approval', 400);
     }
 
     const updated = await prisma.user.update({
@@ -851,17 +858,17 @@ router.post('/users/:id/approve', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Owner] approveUser error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.post('/users/:id/reject', async (req: AuthRequest, res: Response) => {
+router.post('/users/:id/reject', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, status: true, email: true, role: true } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.status !== 'PENDING_APPROVAL') {
-      return res.status(400).json({ error: 'User is not pending approval' });
+      throw new AppError('User is not pending approval', 400);
     }
 
     const updated = await prisma.user.update({
@@ -895,34 +902,34 @@ router.post('/users/:id/reject', async (req: AuthRequest, res: Response) => {
     return res.json({ user: updated, message: 'User rejected and disabled' });
   } catch (err) {
     console.error('[Owner] rejectUser error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
-router.post('/transfer', async (req: AuthRequest, res: Response) => {
+router.post('/transfer', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { targetUserId, confirmPassword } = req.body as { targetUserId?: string; confirmPassword?: string };
     if (!targetUserId || typeof targetUserId !== 'string' || !confirmPassword || typeof confirmPassword !== 'string') {
-      return res.status(400).json({ error: 'targetUserId and confirmPassword are required' });
+      throw new AppError('targetUserId and confirmPassword are required', 400);
     }
     if (targetUserId === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot transfer ownership to yourself' });
+      throw new AppError('Cannot transfer ownership to yourself', 400);
     }
 
     const targetUser = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, email: true, role: true } });
-    if (!targetUser) return res.status(404).json({ error: 'Target user not found.' });
+    if (!targetUser) throw new AppError('Target user not found.', 404);
     if (targetUser.role !== 'ADMIN') {
-      return res.status(400).json({ error: 'Target user must be an admin' });
+      throw new AppError('Target user must be an admin', 400);
     }
 
     const owner = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { id: true, email: true, password: true } });
     if (!owner || !owner.password) {
-      return res.status(404).json({ error: 'Owner not found' });
+      throw new AppError('Owner not found', 404);
     }
 
     const passwordMatch = await bcrypt.compare(confirmPassword, owner.password);
     if (!passwordMatch) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+      throw new AppError('Current password is incorrect', 401);
     }
 
     const [previousOwner, newOwner] = await prisma.$transaction([
@@ -953,16 +960,16 @@ router.post('/transfer', async (req: AuthRequest, res: Response) => {
     return res.json({ previousOwner, newOwner });
   } catch (err) {
     console.error('[Owner] transferOwnership error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 // ── GET /api/owner/admins/:id/team ────────────────────────────────────────────
-router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
+router.get('/admins/:id/team', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const admin = await prisma.user.findUnique({ where: { id } });
-    if (!admin) return res.status(404).json({ error: 'Admin not found.' });
+    if (!admin) throw new AppError('Admin not found.', 404);
 
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = { adminId: id };
@@ -991,12 +998,12 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
     return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAdminTeam error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 // ── GET /api/owner/audit-log ─────────────────────────────────────────────────
-router.get('/audit-log', async (req: AuthRequest, res: Response) => {
+router.get('/audit-log', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(String(req.query['limit'] ?? '50'), 10) || 50));
@@ -1036,8 +1043,8 @@ router.get('/audit-log', async (req: AuthRequest, res: Response) => {
     return res.json({ logs, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Owner] getAuditLog error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 export default router;

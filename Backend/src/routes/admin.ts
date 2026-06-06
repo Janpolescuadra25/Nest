@@ -1,8 +1,10 @@
 import { Router, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import bcrypt from 'bcryptjs';
 import { UserRole, UserStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
+import { requireCapacity } from '../middleware/capacity';
 import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
 import { validate } from '../middleware/validate';
@@ -40,7 +42,7 @@ router.use(authenticate, requireRole('OWNER', 'ADMIN'));
 router.use(enforceEffectiveRole);  // defense-in-depth: blocks TIME_BOMBED/BLOCKED/PENDING_APPROVAL writes
 
 // ── GET /api/admin/team  (ADMIN only) ─────────────────────────────────────────
-router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.get('/team', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = { adminId: req.user!.userId };
@@ -61,6 +63,15 @@ router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response
           createdAt: true,
           timeBombAt: true,
           gracePeriodHours: true,
+          admin: {
+            select: {
+              subscriptionSource: true,
+              currentPlan: true,
+              currentPeriodEnd: true,
+              cancelAtPeriodEnd: true,
+              paymentIssue: true,
+            },
+          },
         },
         orderBy: { createdAt: 'asc' },
         skip,
@@ -70,12 +81,12 @@ router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response
     return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Admin] getTeam error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/admin/stats  (ADMIN only) ───────────────────────────────────────
-router.get('/stats', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.get('/stats', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const adminId = req.user!.userId;
     const now = new Date();
@@ -116,12 +127,12 @@ router.get('/stats', requireRole('ADMIN'), async (req: AuthRequest, res: Respons
     });
   } catch (err) {
     console.error('[Admin] stats error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/admin/audit-log  (ADMIN only) ───────────────────────────────────
-router.get('/audit-log', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.get('/audit-log', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const adminId = req.user!.userId;
     const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10) || 1);
@@ -149,38 +160,26 @@ router.get('/audit-log', requireRole('ADMIN'), async (req: AuthRequest, res: Res
     return res.json({ logs, total, page, limit });
   } catch (err) {
     console.error('[Admin] audit-log error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
-router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), async (req: AuthRequest, res: Response) => {
+router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), validate(teamInviteSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { email, role, name, trialDays, customExpiryMessage } = req.body as { email?: string; role?: string; name?: string; trialDays?: number; customExpiryMessage?: string };
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'Valid email is required.' });
+      throw new AppError('Valid email is required.', 400);
     }
     const validRoles = ['STAFF', 'ACCOUNTANT', 'VIEWER'];
     if (!role || !validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Role must be one of: STAFF, ACCOUNTANT, VIEWER.' });
+      throw new AppError('Role must be one of: STAFF, ACCOUNTANT, VIEWER.', 400);
     }
 
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) return res.status(409).json({ error: 'A user with this email already exists.' });
-
-    const admin = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      select: { maxUsers: true },
-    });
-
-    if (admin && admin.maxUsers !== null) {
-      const teamSize = await prisma.user.count({ where: { adminId: req.user!.userId } });
-      if (teamSize >= admin.maxUsers) {
-        return res.status(403).json({ error: 'Team is full. Contact Nest support to increase your limit.' });
-      }
-    }
+    if (existing) throw new AppError('A user with this email already exists.', 409);
 
     const perms = permissionDefaultsMap[role] ?? permissionDefaultsMap.VIEWER;
 
@@ -221,12 +220,12 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
     });
   } catch (err) {
     console.error('[Admin] inviteTeamMember error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── POST /api/admin/invite  (OWNER + ADMIN) ──────────────────────────────────
-router.post('/invite', validate(inviteLinkSchema), async (req: AuthRequest, res: Response) => {
+router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { roleHint, expiresInHours, maxUses } = req.body as {
       roleHint?: string;
@@ -240,7 +239,7 @@ router.post('/invite', validate(inviteLinkSchema), async (req: AuthRequest, res:
     const allRoles = Object.values(UserRole) as string[];
 
     if (roleHint && !allRoles.includes(roleHint)) {
-      return res.status(400).json({ error: 'Invalid role hint.' });
+      throw new AppError('Invalid role hint.', 400);
     }
 
     const isOwner = req.user!.role === 'OWNER';
@@ -248,19 +247,19 @@ router.post('/invite', validate(inviteLinkSchema), async (req: AuthRequest, res:
     const resolvedRoleHint = (roleHint && allowedRoles.includes(roleHint) ? roleHint : 'VIEWER') as UserRole;
 
     if (roleHint && !allowedRoles.includes(roleHint)) {
-      return res.status(400).json({ error: 'Cannot invite users with admin role.' });
+      throw new AppError('Cannot invite users with admin role.', 400);
     }
 
     // ExpiresInHours bounds: > 0 and <= 720
     const hours = expiresInHours ?? 72;
     if (hours <= 0 || hours > 720) {
-      return res.status(400).json({ error: 'expiresInHours must be between 1 and 720.' });
+      throw new AppError('expiresInHours must be between 1 and 720.', 400);
     }
 
     // MaxUses bounds: > 0 and <= 100
     const uses = maxUses ?? 1;
     if (uses <= 0 || uses > 100) {
-      return res.status(400).json({ error: 'maxUses must be between 1 and 100.' });
+      throw new AppError('maxUses must be between 1 and 100.', 400);
     }
 
     // User limit check — only enforce if maxUsers is non-null
@@ -269,7 +268,7 @@ router.post('/invite', validate(inviteLinkSchema), async (req: AuthRequest, res:
         where: { adminId: req.user!.userId, status: { not: 'DISABLED' } },
       });
       if (teamSize >= req.user!.maxUsers) {
-        return res.status(403).json({ error: 'User limit reached. Request an increase from the account owner.' });
+        throw new AppError('User limit reached. Request an increase from the account owner.', 403);
       }
     }
 
@@ -299,12 +298,12 @@ router.post('/invite', validate(inviteLinkSchema), async (req: AuthRequest, res:
     });
   } catch (err) {
     console.error('[Admin] createInviteLink error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── GET /api/admin/invites  (OWNER + ADMIN) ──────────────────────────────────
-router.get('/invites', async (req: AuthRequest, res: Response) => {
+router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = { createdBy: req.user!.userId };
@@ -334,20 +333,20 @@ router.get('/invites', async (req: AuthRequest, res: Response) => {
     return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Admin] listInviteLinks error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── DELETE /api/admin/invites/:id  (OWNER + ADMIN) ──────────────────────────
-router.delete('/invites/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const inviteId = req.params['id'] as string;
     const invite = await prisma.inviteLink.findUnique({ where: { id: inviteId } });
     if (!invite) {
-      return res.status(404).json({ error: 'Invite not found.' });
+      throw new AppError('Invite not found.', 404);
     }
     if (invite.createdBy !== req.user!.userId) {
-      return res.status(403).json({ error: "Cannot revoke an invite you didn't create." });
+      throw new AppError("Cannot revoke an invite you didn't create.", 403);
     }
 
     // Hard delete the invite
@@ -362,12 +361,12 @@ router.delete('/invites/:id', async (req: AuthRequest, res: Response) => {
     return res.json({ message: 'Invite revoked' });
   } catch (err) {
     console.error('[Admin] revokeInviteLink error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── PATCH /api/admin/team/:id  (ADMIN only) ───────────────────────────────────
-router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema), async (req: AuthRequest, res: Response) => {
+router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const {
@@ -387,24 +386,28 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
         role: true,
         status: true,
         adminId: true,
+        subscriptionSource: true,
         permissions: true,
         trialExpiresAt: true,
         customExpiryMessage: true,
       },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.adminId !== req.user!.userId) {
-      return res.status(403).json({ error: 'You can only manage your own team members.' });
+      throw new AppError('You can only manage your own team members.', 403);
     }
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
-      return res.status(403).json({ error: 'Cannot modify OWNER or ADMIN accounts.' });
+      throw new AppError('Cannot modify OWNER or ADMIN accounts.', 403);
+    }
+    if (target.subscriptionSource === 'stripe') {
+      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
     }
 
     const permissionPayload = permissions;
 
     if (permissionPayload !== undefined) {
       if (typeof permissionPayload !== 'object' || permissionPayload === null || Array.isArray(permissionPayload)) {
-        return res.status(400).json({ error: 'permissions must be an object' });
+        throw new AppError('permissions must be an object', 400);
       }
 
       const validKeys = new Set<string>();
@@ -416,12 +419,12 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
 
       const invalidKeys = Object.keys(permissionPayload).filter(key => !validKeys.has(key));
       if (invalidKeys.length > 0) {
-        return res.status(400).json({ error: 'Invalid permission keys', invalidKeys });
+        throw new AppError('Invalid permission keys', 400);
       }
 
       for (const [key, value] of Object.entries(permissionPayload)) {
         if (typeof value !== 'boolean') {
-          return res.status(400).json({ error: 'Permission values must be boolean' });
+          throw new AppError('Permission values must be boolean', 400);
         }
       }
     }
@@ -433,10 +436,10 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     if (trialExpiresAt) {
       newExpiryDate = new Date(trialExpiresAt);
       if (isNaN(newExpiryDate.getTime()) || newExpiryDate <= new Date()) {
-        return res.status(400).json({ error: 'trialExpiresAt must be a future date' });
+        throw new AppError('trialExpiresAt must be a future date', 400);
       }
       if (target.status === 'DISABLED') {
-        return res.status(400).json({ error: 'Cannot reset trial for a disabled user' });
+        throw new AppError('Cannot reset trial for a disabled user', 400);
       }
       isTrialReset = true;
     }
@@ -549,21 +552,21 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     return res.json({ user: safeUpdated });
   } catch (err) {
     console.error('[Admin] patchTeamMember error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── POST /api/admin/team/:id/disable  (ADMIN only) ───────────────────────────
-router.post('/team/:id/disable', requireRole('ADMIN'), async (req: AuthRequest, res: Response) => {
+router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const target = await prisma.user.findUnique({ where: { id } });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.adminId !== req.user!.userId) {
-      return res.status(403).json({ error: 'You can only manage your own team members.' });
+      throw new AppError('You can only manage your own team members.', 403);
     }
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
-      return res.status(403).json({ error: 'Cannot disable OWNER or ADMIN accounts.' });
+      throw new AppError('Cannot disable OWNER or ADMIN accounts.', 403);
     }
 
     await prisma.user.update({ where: { id }, data: { status: 'DISABLED' } });
@@ -575,41 +578,44 @@ router.post('/team/:id/disable', requireRole('ADMIN'), async (req: AuthRequest, 
     return res.json({ message: 'User disabled successfully.' });
   } catch (err) {
     console.error('[Admin] disableTeamMember error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── PATCH /api/admin/users/:id/timebomb  (OWNER + ADMIN) ───────────────────
-router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { timeBombAt, gracePeriodHours } = req.body as { timeBombAt?: string; gracePeriodHours?: number };
 
     if (typeof timeBombAt !== 'string') {
-      return res.status(400).json({ error: 'timeBombAt is required' });
+      throw new AppError('timeBombAt is required', 400);
     }
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, role: true, adminId: true },
+      select: { id: true, role: true, adminId: true, subscriptionSource: true },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
-      return res.status(403).json({ error: 'Cannot set a time bomb on this user' });
+      throw new AppError('Cannot set a time bomb on this user', 403);
+    }
+    if (target.subscriptionSource === 'stripe') {
+      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
     }
     if (target.adminId !== req.user!.userId) {
-      return res.status(403).json({ error: 'You can only manage users in your team' });
+      throw new AppError('You can only manage users in your team', 403);
     }
 
     const bombDate = new Date(timeBombAt);
     if (isNaN(bombDate.getTime()) || bombDate <= new Date()) {
-      return res.status(400).json({ error: 'timeBombAt must be a future date' });
+      throw new AppError('timeBombAt must be a future date', 400);
     }
     if (gracePeriodHours !== undefined && (typeof gracePeriodHours !== 'number' || gracePeriodHours <= 0)) {
-      return res.status(400).json({ error: 'gracePeriodHours must be a positive number' });
+      throw new AppError('gracePeriodHours must be a positive number', 400);
     }
 
     const updateData: Record<string, unknown> = { timeBombAt: bombDate };
@@ -636,31 +642,34 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Admin] setTimeBomb error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── PATCH /api/admin/users/:id/timebomb/clear  (OWNER + ADMIN) ────────────────
-router.patch('/users/:id/timebomb/clear', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, timeBombAt: true, status: true, role: true, adminId: true },
+      select: { id: true, timeBombAt: true, status: true, role: true, adminId: true, subscriptionSource: true },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
-      return res.status(403).json({ error: 'Cannot modify this user' });
+      throw new AppError('Cannot modify this user', 403);
+    }
+    if (target.subscriptionSource === 'stripe') {
+      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
     }
     if (target.adminId !== req.user!.userId) {
-      return res.status(403).json({ error: 'You can only manage users in your team' });
+      throw new AppError('You can only manage users in your team', 403);
     }
     if (!target.timeBombAt) {
-      return res.status(400).json({ error: 'No time bomb set' });
+      throw new AppError('No time bomb set', 400);
     }
 
     const updateData: Record<string, unknown> = { timeBombAt: null };
@@ -689,38 +698,38 @@ router.patch('/users/:id/timebomb/clear', async (req: AuthRequest, res: Response
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Admin] clearTimeBomb error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 // ── PATCH /api/admin/users/:id/role  (OWNER + ADMIN) ─────────────────────────
-router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
+router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { role } = req.body as { role?: string };
 
     if (!role || typeof role !== 'string') {
-      return res.status(400).json({ error: 'Role is required' });
+      throw new AppError('Role is required', 400);
     }
     if (id === req.user!.userId) {
-      return res.status(400).json({ error: 'Cannot modify your own account' });
+      throw new AppError('Cannot modify your own account', 400);
     }
 
     const allowedRoles: string[] = ['STAFF', 'ACCOUNTANT', 'VIEWER'];
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ error: 'Allowed roles for admin assignment: STAFF, ACCOUNTANT, VIEWER' });
+      throw new AppError('Allowed roles for admin assignment: STAFF, ACCOUNTANT, VIEWER', 400);
     }
 
     const target = await prisma.user.findUnique({
       where: { id },
       select: { id: true, role: true, status: true, adminId: true },
     });
-    if (!target) return res.status(404).json({ error: 'User not found.' });
+    if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
-      return res.status(403).json({ error: "Cannot change this user's role" });
+      throw new AppError("Cannot change this user's role", 403);
     }
     if (target.adminId !== req.user!.userId) {
-      return res.status(403).json({ error: 'You can only manage users in your team' });
+      throw new AppError('You can only manage users in your team', 403);
     }
 
     // No-op check — still return consistent response shape
@@ -766,8 +775,8 @@ router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     console.error('[Admin] changeUserRole error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}))
 
 export default router;

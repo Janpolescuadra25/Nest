@@ -47,7 +47,7 @@ export async function logAction(params: {
         details: params.details ?? null,
       },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[Audit] Failed to log action:', params.action, err);
     // Audit logging should never block the main operation
   }

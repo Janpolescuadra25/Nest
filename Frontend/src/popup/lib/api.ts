@@ -67,6 +67,17 @@ async function del(path: string, jwt?: string | null): Promise<void> {
   }
 }
 
+export interface Plan {
+  id: string;
+  name: string;
+  pricePhp: number;
+  priceUsd: number;
+  interval: string;
+  users: number;
+  locations: number;
+  features: string[];
+}
+
 export interface UserInfo {
   id: string;
   email: string;
@@ -78,6 +89,16 @@ export interface UserInfo {
   permissions?: Record<string, boolean> | null;
   trialExpiresAt: string | null;
   customExpiryMessage: string | null;
+  subscriptionSource?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  currentPlan?: string | null;
+  planInterval?: string | null;
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  paymentIssue?: boolean;
+  maxUsers?: number | null;
+  maxLocations?: number | null;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -87,6 +108,15 @@ export const api = {
 
   login: (email: string, password: string) =>
     post<{ token: string; user: UserInfo }>('/api/auth/login', { email, password }),
+
+  createCheckoutSession: (jwt: string, plan: string) =>
+    post<{ url: string }>('/api/checkout/create-session', { plan }, jwt),
+
+  createPortalSession: (jwt: string) =>
+    post<{ url: string }>('/api/checkout/create-portal-session', {}, jwt),
+
+  getPlans: (jwt?: string | null) =>
+    get<{ plans: Plan[] }>('/api/checkout/plans', jwt),
 
   changePassword: (jwt: string, currentPassword: string, newPassword: string) =>
     post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, jwt),

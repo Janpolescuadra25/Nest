@@ -19,6 +19,13 @@ interface OwnerUser {
   customExpiryMessage: string | null;
   permissions?: Record<string, boolean> | null;
   createdAt: string;
+  admin?: {
+    subscriptionSource?: string | null;
+    currentPlan?: string | null;
+    currentPeriodEnd?: string | null;
+    cancelAtPeriodEnd?: boolean;
+    paymentIssue?: boolean;
+  };
 }
 
 interface Props {
@@ -84,6 +91,8 @@ export default function UsersTab({ jwt }: Props) {
     if (statusFilter && u.status !== statusFilter) return false;
     return true;
   });
+
+  const teamPlan = users.find((u) => u.admin?.subscriptionSource === 'stripe' && u.admin.currentPlan)?.admin?.currentPlan;
 
   // Group by adminEmail (or "Unassigned")
   const groups: Record<string, { label: string; users: OwnerUser[] }> = {};
@@ -187,6 +196,11 @@ export default function UsersTab({ jwt }: Props) {
 
       {error && (
         <ErrorCard message={error} onDismiss={() => setError('')} />
+      )}
+      {teamPlan === 'solo' && (
+        <div className="rounded-lg border border-yellow-700 bg-yellow-900/20 p-3 text-xs text-yellow-100">
+          Solo plan allows only 1 user. Upgrade to Starter for team features and additional users.
+        </div>
       )}
       {loading ? (
         <DashboardSkeleton type="list" rows={4} />

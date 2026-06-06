@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { api, type UserInfo } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
+import PricingView from './PricingView';
 
 interface Props {
   jwt: string;
@@ -18,6 +19,10 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [showPricing, setShowPricing] = useState(false);
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
 
   const handleAddLocation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +62,34 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       setVerificationMessage(err instanceof Error ? err.message : 'Failed to send verification email.');
     }
   };
+
+  const handleOpenBillingPortal = async () => {
+    setBillingLoading(true);
+    setBillingError(null);
+    setBillingMessage(null);
+    try {
+      const response = await api.createPortalSession(jwt);
+      window.location.href = response.url;
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'Failed to open billing portal.');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const billingStatusText = user.subscriptionSource === 'stripe'
+    ? `Paid plan ${user.currentPlan ?? 'Stripe'}${user.planInterval ? ` (${user.planInterval})` : ''}`
+    : user.subscriptionSource === 'partner'
+      ? 'Partner Plan (Owner-managed)'
+      : 'Free Trial';
+
+  const billingNotes = [] as string[];
+  if (user.subscriptionSource === 'stripe' && user.cancelAtPeriodEnd) {
+    billingNotes.push(`Your subscription ends on ${user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toLocaleDateString() : 'the current period end'}.`);
+  }
+  if (user.subscriptionSource === 'stripe' && user.paymentIssue) {
+    billingNotes.push('Payment failed. Please update your payment method in Stripe to avoid service interruption.');
+  }
 
   return (
     <div className="p-3 space-y-4">
@@ -127,6 +160,78 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Billing section */}
+      <div>
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Billing</div>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+          <div className="text-sm text-white">{billingStatusText}</div>
+          {user.subscriptionSource === 'stripe' && user.currentPeriodEnd ? (
+            <div className="text-gray-400 text-xs">Renewal: {new Date(user.currentPeriodEnd).toLocaleDateString()}</div>
+          ) : null}
+          {billingNotes.length > 0 && (
+            <div className="space-y-1 text-xs">
+              {billingNotes.map((note) => (
+                <div key={note} className={`rounded-lg px-3 py-2 ${user.paymentIssue ? 'bg-red-900 text-red-200' : 'bg-yellow-900 text-yellow-200'}`}>
+                  {note}
+                </div>
+              ))}
+            </div>
+          )}
+          {billingMessage && <div className="text-emerald-300 text-xs">{billingMessage}</div>}
+          {billingError && <div className="text-red-400 text-xs">{billingError}</div>}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {user.subscriptionSource === 'stripe' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleOpenBillingPortal}
+                  disabled={billingLoading}
+                  className="w-full rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white py-2 text-xs font-semibold"
+                >
+                  {billingLoading ? 'Opening portal…' : 'Manage Billing'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPricing(true)}
+                  className="w-full rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-200 py-2 text-xs font-semibold"
+                >
+                  Upgrade Plan
+                </button>
+              </>
+            ) : user.subscriptionSource === 'partner' ? (
+              <button
+                type="button"
+                onClick={() => window.open('https://support.nest.example.com', '_blank')}
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-gray-300 py-2 text-xs font-semibold hover:bg-gray-800"
+              >
+                Contact owner for billing
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPricing(true)}
+                className="w-full rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white py-2 text-xs font-semibold"
+              >
+                Choose a plan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => window.open('https://support.nest.example.com', '_blank')}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 text-gray-300 py-2 text-xs font-semibold hover:bg-gray-800"
+            >
+              Billing help
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showPricing && (
+        <div className="rounded-lg border border-cyan-700 bg-cyan-900/10 p-4">
+          <PricingView jwt={jwt} user={user} onManageBilling={handleOpenBillingPortal} onClose={() => setShowPricing(false)} />
+        </div>
+      )}
 
       {/* Locations section */}
       <div>

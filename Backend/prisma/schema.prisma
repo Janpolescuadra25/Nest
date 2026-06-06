@@ -56,8 +56,17 @@ model User {
   canManageLocs       Boolean     @default(false)
   mustChangePassword  Boolean     @default(false)
   trialExpiresAt      DateTime?
+  subscriptionSource  String?
+  stripeCustomerId    String?     @unique
+  stripeSubscriptionId String?
+  currentPlan         String?
+  planInterval        String?
+  currentPeriodEnd    DateTime?
+  cancelAtPeriodEnd   Boolean     @default(false)
+  paymentIssue        Boolean     @default(false)
   customExpiryMessage String?
   maxUsers            Int?
+  maxLocations        Int?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 

@@ -1,5 +1,7 @@
 import { Router, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
+import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
@@ -10,7 +12,7 @@ const router = Router();
 router.use(authenticate, enforceEffectiveRole);
 
 // ── GET /api/locations ────────────────────────────────────────────────────────
-router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = locationFilter(req.user!);
@@ -26,17 +28,17 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     res.json({ data, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     console.error('[Locations] list error:', err);
-    res.status(500).json({ error: 'Failed to fetch locations' });
+    throw new AppError('Failed to fetch locations', 500);
   }
-});
+}))
 
 // ── POST /api/locations ───────────────────────────────────────────────────────
-router.post('/', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity('location'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, posUrl } = req.body as { name?: string; posUrl?: string };
 
     if (!name || !posUrl) {
-      res.status(400).json({ error: 'name and posUrl are required' });
+      throw new AppError('name and posUrl are required', 400);
       return;
     }
 
@@ -53,12 +55,12 @@ router.post('/', requireFeaturePermission('locations', 'write'), async (req: Aut
     res.status(201).json(location);
   } catch (err) {
     console.error('[Locations] create error:', err);
-    res.status(500).json({ error: 'Failed to create location' });
+    throw new AppError('Failed to create location', 500);
   }
-});
+}))
 
 // ── GET /api/locations/:id ────────────────────────────────────────────────────
-router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -67,19 +69,19 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
     res.json(location);
   } catch (err) {
     console.error('[Locations] get error:', err);
-    res.status(500).json({ error: 'Failed to fetch location' });
+    throw new AppError('Failed to fetch location', 500);
   }
-});
+}))
 
 // ── PUT /api/locations/:id ────────────────────────────────────────────────────
-router.put('/:id', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('locations', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -87,7 +89,7 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), async (req: A
     });
 
     if (!existing) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -110,12 +112,12 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), async (req: A
     res.json(updated);
   } catch (err) {
     console.error('[Locations] update error:', err);
-    res.status(500).json({ error: 'Failed to update location' });
+    throw new AppError('Failed to update location', 500);
   }
-});
+}))
 
 // ── DELETE /api/locations/:id ─────────────────────────────────────────────────
-router.delete('/:id', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requireFeaturePermission('locations', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -123,7 +125,7 @@ router.delete('/:id', requireFeaturePermission('locations', 'write'), async (req
     });
 
     if (!existing) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -131,12 +133,12 @@ router.delete('/:id', requireFeaturePermission('locations', 'write'), async (req
     res.json({ message: 'Location deleted' });
   } catch (err) {
     console.error('[Locations] delete error:', err);
-    res.status(500).json({ error: 'Failed to delete location' });
+    throw new AppError('Failed to delete location', 500);
   }
-});
+}))
 
 // ── POST /api/locations/:id/import-template ──────────────────────────────────
-router.post('/:id/import-template', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/import-template', requireFeaturePermission('map', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params['id'] as string;
     const lf = locationFilter(req.user!);
@@ -145,7 +147,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
       where: { id, ...lf },
     });
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -160,15 +162,15 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
     const mode = body.mode || 'merge';
 
     if (!body.mappings?.length && !body.rules?.length && body.memoTemplate === undefined && body.docNumberTemplate === undefined) {
-      res.status(400).json({ error: 'No template data provided' });
+      throw new AppError('No template data provided', 400);
       return;
     }
     if (body.mappings && !Array.isArray(body.mappings)) {
-      res.status(400).json({ error: 'mappings must be an array' });
+      throw new AppError('mappings must be an array', 400);
       return;
     }
     if (body.rules && !Array.isArray(body.rules)) {
-      res.status(400).json({ error: 'rules must be an array' });
+      throw new AppError('rules must be an array', 400);
       return;
     }
 
@@ -249,16 +251,14 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Import failed';
     console.error('[import-template]', message);
-    res.status(500).json({
-      error: process.env.NODE_ENV !== 'production'
+    throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
-        : 'Template import failed. Please try again.',
-    });
+        : 'Template import failed. Please try again.', 500);
   }
-});
+}))
 
 // ── GET /api/locations/:id/mappings ───────────────────────────────────────────
-router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id/mappings', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -266,7 +266,7 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -278,12 +278,12 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
     res.json(mappings);
   } catch (err) {
     console.error('[Locations] mappings list error:', err);
-    res.status(500).json({ error: 'Failed to fetch mappings' });
+    throw new AppError('Failed to fetch mappings', 500);
   }
-});
+}))
 
 // ── POST /api/locations/:id/mappings ──────────────────────────────────────────
-router.post('/:id/mappings', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -291,7 +291,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), async (re
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -302,7 +302,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), async (re
       };
 
     if (!sourceField || !targetAccount) {
-      res.status(400).json({ error: 'sourceField and targetAccount are required' });
+      throw new AppError('sourceField and targetAccount are required', 400);
       return;
     }
 
@@ -324,12 +324,12 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), async (re
     res.status(201).json(mapping);
   } catch (err) {
     console.error('[Locations] mapping create error:', err);
-    res.status(500).json({ error: 'Failed to create mapping' });
+    throw new AppError('Failed to create mapping', 500);
   }
-});
+}))
 
 // ── GET /api/locations/:id/rules ──────────────────────────────────────────────
-router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -337,7 +337,7 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -349,12 +349,12 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
     res.json(rules);
   } catch (err) {
     console.error('[Locations] rules list error:', err);
-    res.status(500).json({ error: 'Failed to fetch rules' });
+    throw new AppError('Failed to fetch rules', 500);
   }
-});
+}))
 
 // ── POST /api/locations/:id/rules ─────────────────────────────────────────────
-router.post('/:id/rules', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/rules', requireFeaturePermission('rules', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -362,7 +362,7 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), async (req
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -372,12 +372,12 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), async (req
 
     const validTypes = ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'];
     if (!name || !ruleType || !config) {
-      res.status(400).json({ error: 'name, ruleType, and config are required' });
+      throw new AppError('name, ruleType, and config are required', 400);
       return;
     }
 
     if (!validTypes.includes(ruleType)) {
-      res.status(400).json({ error: `ruleType must be one of: ${validTypes.join(', ')}` });
+      throw new AppError(`ruleType must be one of: ${validTypes.join(', ')}`, 400);
       return;
     }
 
@@ -394,12 +394,12 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), async (req
     res.status(201).json(rule);
   } catch (err) {
     console.error('[Locations] rule create error:', err);
-    res.status(500).json({ error: 'Failed to create rule' });
+    throw new AppError('Failed to create rule', 500);
   }
-});
+}))
 
 // ── GET /api/locations/:id/scans ──────────────────────────────────────────────
-router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id/scans', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -407,7 +407,7 @@ router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> 
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
+      throw new AppError('Location not found', 404);
       return;
     }
 
@@ -428,8 +428,8 @@ router.get('/:id/scans', async (req: AuthRequest, res: Response): Promise<void> 
     res.json({ scans, hasMore });
   } catch (err) {
     console.error('[Locations] scans list error:', err);
-    res.status(500).json({ error: 'Failed to fetch scans' });
+    throw new AppError('Failed to fetch scans', 500);
   }
-});
+}))
 
 export default router;
