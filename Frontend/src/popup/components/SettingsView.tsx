@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
-import { api } from '../lib/api';
+import { api, type UserInfo } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 
 interface Props {
   jwt: string;
+  user: UserInfo;
   onLogout: () => void;
 }
 
-export default function SettingsView({ jwt, onLogout }: Props) {
+export default function SettingsView({ jwt, user, onLogout }: Props) {
   const { locations, refetch } = useLocations(jwt);
   const { status, connect } = useQuickBooks(jwt);
   const [showAddLoc, setShowAddLoc] = useState(false);
   const [locForm, setLocForm] = useState({ name: '', posUrl: '' });
   const [locError, setLocError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
 
   const handleAddLocation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +45,52 @@ export default function SettingsView({ jwt, onLogout }: Props) {
     }
   };
 
+  const handleResendVerification = async () => {
+    setVerificationStatus('sending');
+    setVerificationMessage(null);
+    try {
+      const response = await api.resendEmailVerification(jwt);
+      setVerificationStatus('success');
+      setVerificationMessage(response.message || 'Verification email sent.');
+    } catch (err) {
+      setVerificationStatus('error');
+      setVerificationMessage(err instanceof Error ? err.message : 'Failed to send verification email.');
+    }
+  };
+
   return (
     <div className="p-3 space-y-4">
+      {/* Email Verification section */}
+      <div>
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Email Verification</div>
+        <div className={`rounded-lg p-3 ${user.emailVerified ? 'bg-emerald-900/10 border border-emerald-700' : 'bg-yellow-900/10 border border-yellow-700'}`}>
+          {!user.emailVerified ? (
+            <>
+              <div className="text-yellow-200 text-xs font-semibold mb-1">⚠️ Your email is not verified.</div>
+              <div className="text-gray-400 text-xs mb-3">Verify your email to keep your account fully active and receive important notifications.</div>
+              {verificationStatus === 'success' && (
+                <div className="text-emerald-300 text-xs mb-2">{verificationMessage}</div>
+              )}
+              {verificationStatus === 'error' && (
+                <div className="text-red-400 text-xs mb-2">{verificationMessage}</div>
+              )}
+              <button
+                onClick={handleResendVerification}
+                disabled={verificationStatus === 'sending'}
+                className={`w-full py-2 text-xs font-semibold rounded-lg transition-colors ${verificationStatus === 'sending' ? 'bg-yellow-600 text-gray-100' : 'bg-yellow-700 hover:bg-yellow-600 text-white'}`}
+              >
+                {verificationStatus === 'sending' ? 'Sending…' : 'Resend Verification'}
+              </button>
+            </>
+          ) : (
+            <div>
+              <div className="text-emerald-300 text-xs font-semibold mb-1">✅ Email verified</div>
+              <div className="text-gray-400 text-xs">Your email is verified and your account is fully active.</div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* QuickBooks section */}
       <div>
         <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">QuickBooks Online</div>

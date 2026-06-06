@@ -16,6 +16,7 @@ import adminRequestRoutes from './routes/adminRequests';
 import ownerRoutes from './routes/owner';
 import inviteRoutes from './routes/invite';
 import passwordResetRoutes from './routes/password-reset';
+import emailVerificationRoutes from './routes/email-verification';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
@@ -93,10 +94,14 @@ app.use('/api/invite', inviteRoutes);
 app.use('/api/admin-requests', adminRequestRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 
 // ── Web Pages ───────────────────────────────────────────────────────────────
 app.get('/reset-password', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/reset-password/index.html'));
+});
+app.get('/verify-email', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/verify-email/index.html'));
 });
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────

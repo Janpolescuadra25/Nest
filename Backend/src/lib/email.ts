@@ -99,6 +99,52 @@ export async function sendWelcomeEmail({
   }
 }
 
+// ── sendVerificationEmail ───────────────────────────────────────────────────
+
+export async function sendVerificationEmail({
+  to,
+  name,
+  verificationLink,
+}: {
+  to: string;
+  name: string | null | undefined;
+  verificationLink: string;
+}): Promise<void> {
+  if (!process.env.APP_URL) {
+    console.warn('[Email] APP_URL not configured — verification links will be broken');
+  }
+  try {
+    const resend = getResendClient();
+    const displayName = name?.trim() || to;
+
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        Thanks for signing up for Nest. Please verify your email address by clicking the button below.
+      </p>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${verificationLink}"
+           style="display:inline-block;background:#22d3ee;color:#0f172a;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;letter-spacing:0.02em;">
+          Verify Email
+        </a>
+      </div>
+      <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0;">
+        If you did not sign up for Nest, you can safely ignore this email.
+      </p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      to,
+      subject: 'Verify your Nest email',
+      html,
+    });
+    console.log(`[Email] Verification email sent to ${to}`);
+  } catch (err) {
+    console.error('[Email] sendVerificationEmail failed:', err);
+  }
+}
+
 // ── sendTrialWarning ──────────────────────────────────────────────────────────
 
 export async function sendTrialWarning({

@@ -28,6 +28,7 @@ type AuditAction =
   | 'TRIAL_EXPIRY_WARNING'
   | 'OWNER_RESET_TRIAL'
   | 'PASSWORD_RESET'
+  | 'EMAIL_VERIFIED'
   | 'CANX_RESET';
 
 export async function logAction(params: {

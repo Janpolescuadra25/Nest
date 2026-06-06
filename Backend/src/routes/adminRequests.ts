@@ -103,12 +103,13 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: Auth
     const tempPassword = randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
-    const [, newUser] = await prisma.$transaction([
-      prisma.adminRequest.update({
+    const newUser = await prisma.$transaction(async (tx) => {
+      await tx.adminRequest.update({
         where: { id },
         data: { status: 'APPROVED', approvedById: req.user!.userId },
-      }),
-      prisma.user.create({
+      });
+
+      const createdUser = await tx.user.create({
         data: {
           email: request.email,
           name: request.name ?? null,
@@ -121,9 +122,20 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), async (req: Auth
           canSync: true,
           canManageLocs: true,
           mustChangePassword: true,
+          emailVerified: true,
         },
-      }),
-    ]);
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: req.user!.userId,
+          action: 'EMAIL_VERIFIED',
+          targetUserId: createdUser.id,
+        },
+      });
+
+      return createdUser;
+    });
 
     await prisma.auditLog.create({
       data: {

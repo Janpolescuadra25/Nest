@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -6,6 +7,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
+import { sendVerificationEmail } from '../lib/email';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -37,6 +39,7 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
         name: user.name,
         role: user.role,
         status: user.status,
+        emailVerified: user.emailVerified,
         mustChangePassword: user.mustChangePassword,
         canScan: user.canScan,
         canMap: user.canMap,
@@ -79,6 +82,22 @@ router.post('/register', authLimiter, validate(registerSchema), async (req: Requ
       },
     });
 
+    try {
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await prisma.$transaction([
+        prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } }),
+        prisma.emailVerificationToken.create({ data: { userId: user.id, token: verificationToken, expiresAt } }),
+      ]);
+      await sendVerificationEmail({
+        to: user.email,
+        name: user.name,
+        verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
+      });
+    } catch (emailErr) {
+      console.error('[Auth] Verification email failed:', emailErr);
+    }
+
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
     return res.status(201).json({
       token,
@@ -88,6 +107,7 @@ router.post('/register', authLimiter, validate(registerSchema), async (req: Requ
         name: user.name,
         role: user.role,
         status: user.status,
+        emailVerified: user.emailVerified,
         mustChangePassword: user.mustChangePassword,
         canScan: user.canScan,
         canMap: user.canMap,
@@ -141,6 +161,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         name: true,
         role: true,
         status: true,
+        emailVerified: true,
         adminId: true,
         canScan: true,
         canMap: true,
@@ -168,7 +189,7 @@ router.get('/session', authenticate, async (req: AuthRequest, res: Response) => 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true, name: true, status: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true, trialExpiresAt: true, customExpiryMessage: true },
+      select: { id: true, email: true, role: true, name: true, status: true, emailVerified: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true, trialExpiresAt: true, customExpiryMessage: true },
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });

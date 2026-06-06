@@ -73,6 +73,7 @@ export interface UserInfo {
   role: string;
   name: string | null;
   status: string;
+  emailVerified: boolean;
   mustChangePassword: boolean;
   canScan: boolean;
   canMap: boolean;
@@ -92,6 +93,9 @@ export const api = {
 
   changePassword: (jwt: string, currentPassword: string, newPassword: string) =>
     post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, jwt),
+
+  resendEmailVerification: (jwt: string) =>
+    post<{ message: string }>('/api/email-verification/request', {}, jwt),
 
   // ── Admin Requests ─────────────────────────────────────────────────────────
   submitAdminRequest: (email: string, name: string, description: string, company?: string) =>

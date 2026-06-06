@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import bcrypt from 'bcryptjs';
@@ -9,6 +10,7 @@ import { validate } from '../middleware/validate';
 import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { permissionDefaultsMap } from '../lib/permissions';
+import { sendVerificationEmail } from '../lib/email';
 
 const router = Router();
 
@@ -103,6 +105,22 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       return user;
     });
 
+    try {
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await prisma.$transaction([
+        prisma.emailVerificationToken.deleteMany({ where: { userId: result.id } }),
+        prisma.emailVerificationToken.create({ data: { userId: result.id, token: verificationToken, expiresAt } }),
+      ]);
+      await sendVerificationEmail({
+        to: result.email,
+        name: result.name,
+        verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
+      });
+    } catch (emailErr) {
+      console.error('[Invite] Verification email failed:', emailErr);
+    }
+
     // Log audit actions
     await logAction({
       actorId: invite.createdBy,
@@ -129,6 +147,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
         name: result.name,
         role: result.role,
         status: result.status,
+        emailVerified: result.emailVerified,
         mustChangePassword: result.mustChangePassword,
         canScan: result.canScan,
         canMap: result.canMap,

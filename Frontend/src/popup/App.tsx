@@ -40,6 +40,7 @@ export default function App() {
   const [scanRecordId, setScanRecordId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [showHelp, setShowHelp] = useState(false);
+  const [showEmailVerificationBanner, setShowEmailVerificationBanner] = useState(true);
 
   // After password change: refresh auth state by re-fetching session
   const handlePasswordChanged = useCallback(async () => {
@@ -52,6 +53,12 @@ export default function App() {
       setScanRecordId(null);
     }
   }, [scanData]);
+
+  useEffect(() => {
+    if (user?.emailVerified) {
+      setShowEmailVerificationBanner(false);
+    }
+  }, [user?.emailVerified]);
 
   if (loading) {
     return (
@@ -190,6 +197,20 @@ export default function App() {
           </div>
         </div>
 
+        {user && !user.emailVerified && showEmailVerificationBanner && (
+          <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 flex items-center justify-between gap-3">
+            <div>
+              <p className="font-medium">⚠️ Please verify your email. Check your inbox or resend from Settings.</p>
+            </div>
+            <button
+              onClick={() => setShowEmailVerificationBanner(false)}
+              className="text-yellow-200 hover:text-white text-xs"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {/* Tab Nav */}
         <TabNav currentTab={effectiveTab} onTabChange={setCurrentTab} visibleTabs={visibleTabs} />
 
@@ -268,6 +289,7 @@ export default function App() {
           {effectiveTab === 'settings' && (
             <SettingsView
               jwt={jwt!}
+              user={user}
               onLogout={logout}
             />
           )}
