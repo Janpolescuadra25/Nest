@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
+import { ZodError } from 'zod';
 
 export class AppError extends Error {
   public readonly status: number;
@@ -10,6 +11,20 @@ export class AppError extends Error {
     this.status = status;
     this.fields = fields;
     Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(error: ZodError) {
+    const flattened = error.flatten();
+    const fields = Object.fromEntries(
+      Object.entries(flattened.fieldErrors).map(([key, issues]) => [
+        key,
+        Array.isArray(issues) ? issues.filter(Boolean).join(', ') : issues ?? '',
+      ])
+    ) as Record<string, string>;
+    super(error.message || 'Validation failed', 400, fields);
+    this.name = 'ValidationError';
   }
 }
 
