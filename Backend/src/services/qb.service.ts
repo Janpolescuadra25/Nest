@@ -1,5 +1,7 @@
 import { CreateJournalEntryInput, JournalEntryResponse, QBJournalLineItem } from '../types';
 import { QBApiError } from '../lib/qb-errors';
+import { prisma } from '../lib/prisma';
+import { encrypt, decryptSafe } from '../lib/encryption';
 
 const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
 const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
@@ -272,6 +274,99 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   };
 }
 
+async function getValidToken(userId: string): Promise<{ accessToken: string; realmId: string }> {
+  const qbToken = await prisma.qBToken.findUnique({ where: { userId } });
+  if (!qbToken) {
+    throw new QBApiError('QuickBooks not connected. Please complete OAuth first.', 401);
+  }
+
+  if (qbToken.expiresAt < new Date()) {
+    const refreshToken = decryptSafe(qbToken.refreshToken);
+    try {
+      const refreshed = await refreshAccessToken(refreshToken);
+      await prisma.qBToken.update({
+        where: { userId },
+        data: {
+          accessToken: encrypt(refreshed.accessToken),
+          refreshToken: encrypt(refreshed.refreshToken),
+          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+          stale: false,
+        },
+      });
+      return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
+    } catch (refreshError) {
+      await prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
+      throw refreshError;
+    }
+  }
+
+  return { accessToken: decryptSafe(qbToken.accessToken), realmId: qbToken.realmId };
+}
+
+async function forceRefreshToken(userId: string): Promise<string> {
+  const tokenRow = await prisma.qBToken.findUnique({ where: { userId } });
+  if (!tokenRow) {
+    throw new QBApiError('No QB token found', 401);
+  }
+  if (tokenRow.stale) {
+    throw new QBApiError('QB token is stale — reconnect required', 401);
+  }
+
+  const decryptedRefresh = decryptSafe(tokenRow.refreshToken);
+  const result = await refreshAccessToken(decryptedRefresh);
+
+  await prisma.qBToken.update({
+    where: { userId },
+    data: {
+      accessToken: encrypt(result.accessToken),
+      refreshToken: encrypt(result.refreshToken),
+      expiresAt: new Date(Date.now() + result.expiresIn * 1000),
+      stale: false,
+    },
+  });
+
+  return result.accessToken;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function callQB<T>(userId: string, fn: (creds: { accessToken: string; realmId: string }) => Promise<T>): Promise<T> {
+  let { accessToken, realmId } = await getValidToken(userId);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await fn({ accessToken, realmId });
+    } catch (err: unknown) {
+      if (!(err instanceof QBApiError)) throw err;
+      if (err.statusCode === 401 && attempt === 0) {
+        accessToken = await forceRefreshToken(userId);
+        continue;
+      }
+      if (err.statusCode === 429 && attempt < 2) {
+        await sleep(1000 * Math.pow(2, attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new QBApiError('Max QB retry attempts exceeded', 429);
+}
+
+async function revokeAccessToken(accessToken: string): Promise<void> {
+  await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64')}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ token: accessToken }),
+  });
+}
+
 export const qbService = {
   createJournalEntry,
   refreshAccessToken,
@@ -282,4 +377,6 @@ export const qbService = {
   getVendors,
   getCustomers,
   getTaxCodes,
+  callQB,
+  revokeAccessToken,
 };

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
@@ -25,7 +26,7 @@ const QB_TOKEN_URL = process.env.QB_TOKEN_URL ?? 'https://oauth.platform.intuit.
 // ── GET /api/quickbooks/auth-url ──────────────────────────────────────────────
 // Requires JWT — binds the CSRF state to this user and persists it in the DB
 // so the callback works even after server restarts.
-router.get('/auth-url', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/auth-url', authenticate, asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const state = randomBytes(16).toString('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15-min TTL
@@ -49,14 +50,14 @@ router.get('/auth-url', authenticate, async (req: AuthRequest, res: Response): P
     res.json({ authUrl, state });
   } catch (err) {
     console.error('[QB] Failed to generate auth URL:', err);
-    res.status(500).json({ error: 'Failed to generate authorization URL' });
+    throw new AppError('Failed to generate authorization URL', 500);
   }
-});
+}))
 
 // ── GET /api/quickbooks/callback ──────────────────────────────────────────────
 // Browser redirect from Intuit — NO Authorization header.
 // Uses the DB-persisted state to identify the user.
-router.get('/callback', async (req: Request, res: Response): Promise<void> => {
+router.get('/callback', asyncHandler(async(req: Request, res: Response) => {
   const { code, realmId, state, error } = req.query as {
     code?: string; realmId?: string; state?: string; error?: string;
   };
@@ -72,8 +73,7 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   if (!code || !realmId || !state) {
     const missing = [!code && 'code', !realmId && 'realmId', !state && 'state'].filter(Boolean);
     console.error('[QB] Missing OAuth params:', missing.join(', '));
-    res.status(400).send(errorPage(`Missing required parameters: ${missing.join(', ')}`));
-    return;
+    return res.send(errorPage(`Missing required parameters: ${missing.join(', ')}`));
   }
 
   // ── Look up user from persisted state ─────────────────────────────────────
@@ -83,23 +83,20 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
 
     if (!stateRecord) {
       console.error('[QB] State not found in DB — may have been used already or expired. state:', state);
-      res.status(400).send(errorPage('Authorization session not found or already used. Please start the connection flow again from the extension.'));
-      return;
+      return res.send(errorPage('Authorization session not found or already used. Please start the connection flow again from the extension.'));
     }
 
     if (stateRecord.expiresAt < new Date()) {
       console.error('[QB] State expired at', stateRecord.expiresAt);
       await prisma.oAuthState.delete({ where: { state } }).catch(() => {});
-      res.status(400).send(errorPage('Authorization session expired. Please start the connection flow again from the extension.'));
-      return;
+      return res.send(errorPage('Authorization session expired. Please start the connection flow again from the extension.'));
     }
 
     userId = stateRecord.userId;
     await prisma.oAuthState.delete({ where: { state } }); // one-time use
   } catch (err) {
     console.error('[QB] DB error during state lookup:', err);
-    res.status(500).send(errorPage('Internal error verifying authorization state.'));
-    return;
+    return res.send(errorPage('Internal error verifying authorization state.'));
   }
 
   // ── Exchange code for tokens ───────────────────────────────────────────────
@@ -168,7 +165,7 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
   } catch (err) {
     const errMessage = err instanceof Error ? err.message : String(err);
     console.error('[QB] Unexpected error during token exchange / DB write:', err);
-    res.status(500).send(
+    return res.send(
       errorPage(
         process.env.NODE_ENV !== 'production'
           ? errMessage
@@ -176,10 +173,10 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
       )
     );
   }
-});
+}))
 
 // ── GET /api/quickbooks/status ────────────────────────────────────────────────
-router.get('/status', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/status', authenticate, asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const token = await prisma.qBToken.findUnique({ where: { userId: req.user!.userId } });
     if (!token) {
@@ -210,12 +207,12 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
     });
   } catch (err) {
     console.error('[QB] status error:', err);
-    res.status(500).json({ error: 'Failed to check QB status' });
+    throw new AppError('Failed to check QB status', 500);
   }
-});
+}))
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(journalEntrySchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;
@@ -226,7 +223,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
     };
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0) {
-      res.status(400).json({ error: 'txnDate and lines[] are required' });
+      throw new AppError('txnDate and lines[] are required', 400);
       return;
     }
 
@@ -241,7 +238,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
           where: { id: scan.locationId, ...locationFilter(req.user!) },
         });
         if (!loc) {
-          res.status(403).json({ error: "You don't have access to this location" });
+          throw new AppError("You don't have access to this location", 403);
           return;
         }
       }
@@ -261,11 +258,9 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
 
       if (result.status === 'FAILED') {
         console.error('[QB] journal-entry error:', result.errorMessage);
-        res.status(500).json({
-          error: process.env.NODE_ENV !== 'production'
+        throw new AppError(process.env.NODE_ENV !== 'production'
             ? result.errorMessage
-            : 'An unexpected error occurred. Please try again.',
-        });
+            : 'An unexpected error occurred. Please try again.', 500);
         return;
       }
 
@@ -282,7 +277,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
 
     // No scanRecordId — direct sync without dedup or SyncLog
     const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
-    const result = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.createJournalEntry({
         txnDate,
         docNumber: finalDocNumber,
@@ -303,102 +298,12 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] journal-entry error:', message);
-    res.status(500).json({
-      error: process.env.NODE_ENV !== 'production'
+    throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
-        : 'An unexpected error occurred. Please try again.',
-    });
+        : 'An unexpected error occurred. Please try again.', 500);
   }
-});
+}));
 
-// ── Helper: get valid (refreshed) QB token for a user ────────────────────────
-async function getValidToken(userId: string): Promise<{ accessToken: string; realmId: string }> {
-  const qbToken = await prisma.qBToken.findUnique({ where: { userId } });
-  if (!qbToken) throw new Error('QuickBooks not connected. Please complete OAuth first.');
-
-  if (qbToken.expiresAt < new Date()) {
-    const refreshToken = decryptSafe(qbToken.refreshToken);
-    try {
-      const refreshed = await qbService.refreshAccessToken(refreshToken);
-      await prisma.qBToken.update({
-        where: { userId },
-        data: {
-          accessToken: encrypt(refreshed.accessToken),
-          refreshToken: encrypt(refreshed.refreshToken),
-          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
-        },
-      });
-      return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
-    } catch (refreshError) {
-      await prisma.qBToken.update({
-        where: { userId },
-        data: { stale: true },
-      }).catch(() => {});
-      throw refreshError;
-    }
-  }
-
-  return { accessToken: decryptSafe(qbToken.accessToken), realmId: qbToken.realmId };
-}
-
-// ── QB retry wrapper ──────────────────────────────────────────────────────────
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function forceRefreshToken(userId: string): Promise<string> {
-  const tokenRow = await prisma.qBToken.findUnique({ where: { userId } });
-  if (!tokenRow) throw new QBApiError('No QB token found', 401);
-  if (tokenRow.stale) throw new QBApiError('QB token is stale — reconnect required', 401);
-
-  const decryptedRefresh = decryptSafe(tokenRow.refreshToken);
-  try {
-    const result = await qbService.refreshAccessToken(decryptedRefresh);
-    await prisma.qBToken.update({
-      where: { userId },
-      data: {
-        accessToken: encrypt(result.accessToken),
-        refreshToken: encrypt(result.refreshToken),
-        expiresAt: new Date(Date.now() + result.expiresIn * 1000),
-        stale: false,
-      },
-    });
-    return result.accessToken;
-  } catch (err: unknown) {
-    await prisma.qBToken.update({ where: { userId }, data: { stale: true } });
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new QBApiError(`QB token refresh failed: ${msg}`, 401);
-  }
-}
-
-async function callQB<T>(
-  userId: string,
-  fn: (creds: { accessToken: string; realmId: string }) => Promise<T>,
-): Promise<T> {
-  let { accessToken, realmId } = await getValidToken(userId);
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await fn({ accessToken, realmId });
-    } catch (err: unknown) {
-      if (!(err instanceof QBApiError)) throw err;
-
-      if (err.statusCode === 401 && attempt === 0) {
-        accessToken = await forceRefreshToken(userId);
-        continue;
-      }
-
-      if (err.statusCode === 429 && attempt < 2) {
-        await sleep(1000 * Math.pow(2, attempt));
-        continue;
-      }
-
-      throw err;
-    }
-  }
-
-  throw new QBApiError('Max QB retry attempts exceeded', 429);
-}
 
 // ── syncSingleScan helper ─────────────────────────────────────────────────────
 
@@ -438,7 +343,7 @@ async function syncSingleScan(
   const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
 
   try {
-    const result = await callQB(userId, ({ accessToken, realmId }) =>
+    const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
       qbService.createJournalEntry({
         txnDate,
         docNumber: finalDocNumber,
@@ -493,7 +398,7 @@ async function syncSingleScan(
 }
 
 // ── POST /api/quickbooks/sync-batch ──────────────────────────────────────────
-router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { items } = req.body as {
       items?: Array<{
@@ -506,18 +411,18 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
     };
 
     if (!Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ error: 'items must be a non-empty array' });
+      throw new AppError('items must be a non-empty array', 400);
       return;
     }
 
     if (items.length > 100) {
-      res.status(400).json({ error: 'Batch size cannot exceed 100 items' });
+      throw new AppError('Batch size cannot exceed 100 items', 400);
       return;
     }
 
     for (const item of items) {
       if (!item.scanRecordId || !item.txnDate || !Array.isArray(item.lines) || item.lines.length === 0) {
-        res.status(400).json({ error: 'Each item must have scanRecordId, txnDate, and lines[]' });
+        throw new AppError('Each item must have scanRecordId, txnDate, and lines[]', 400);
         return;
       }
     }
@@ -616,12 +521,16 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-batch error:', message);
-    res.status(500).json({ error: 'Batch sync failed' });
+    throw new AppError('Batch sync failed', 500);
   }
-});
+}));
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ── DELETE /api/quickbooks/token ──────────────────────────────────────────────
-router.delete('/token', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/token', authenticate, asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.userId;
     const tokenRow = await prisma.qBToken.findUnique({ where: { userId } });
@@ -630,16 +539,7 @@ router.delete('/token', authenticate, async (req: AuthRequest, res: Response): P
       // Best-effort Intuit revocation — failure does NOT block deletion
       try {
         const decryptedAccess = decryptSafe(tokenRow.accessToken);
-        const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');
-        await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${credentials}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({ token: decryptedAccess }),
-        });
+        await qbService.revokeAccessToken(decryptedAccess);
       } catch {
         console.warn('[QB] Intuit token revocation failed (best-effort, proceeding with local deletion)');
       }
@@ -650,116 +550,98 @@ router.delete('/token', authenticate, async (req: AuthRequest, res: Response): P
     res.json({ success: true });
   } catch (err) {
     console.error('[QB] disconnect error:', err);
-    res.status(500).json({ error: 'Failed to disconnect QuickBooks' });
+    throw new AppError('Failed to disconnect QuickBooks', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/accounts ──────────────────────────────────────────────
-router.get('/accounts', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/accounts', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const accounts = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const accounts = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getAccounts(realmId, accessToken),
     );
     res.json({ accounts });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] accounts error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch accounts',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch accounts', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/classes ───────────────────────────────────────────────
-router.get('/classes', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/classes', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const classes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const classes = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getClasses(realmId, accessToken),
     );
     res.json({ classes });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] classes error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch classes',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch classes', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/employees ─────────────────────────────────────────────
-router.get('/employees', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/employees', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const employees = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const employees = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getEmployees(realmId, accessToken),
     );
     res.json({ employees });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] employees error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch employees',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch employees', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/vendors ───────────────────────────────────────────────
-router.get('/vendors', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/vendors', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const vendors = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const vendors = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getVendors(realmId, accessToken),
     );
     res.json({ vendors });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] vendors error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch vendors',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch vendors', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/customers ─────────────────────────────────────────────
-router.get('/customers', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/customers', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const customers = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const customers = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getCustomers(realmId, accessToken),
     );
     res.json({ customers });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] customers error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch customers',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch customers', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/tax-codes ────────────────────────────────────────────
-router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const taxCodes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
+    const taxCodes = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getTaxCodes(realmId, accessToken),
     );
     res.json({ taxCodes });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] tax-codes error:', message);
-    res.status(500).json({
-      error: 'Failed to fetch tax codes',
-      ...(process.env.NODE_ENV !== 'production' && { detail: message }),
-    });
+    throw new AppError('Failed to fetch tax codes', 500);
   }
-});
+}));
 
 // ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
-router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const entities = await callQB(req.user!.userId, async ({ accessToken, realmId }) => {
+    const entities = await qbService.callQB(req.user!.userId, async ({ accessToken, realmId }) => {
       const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([
         qbService.getAccounts(realmId, accessToken),
         qbService.getClasses(realmId, accessToken),
@@ -774,13 +656,11 @@ router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);
-    res.status(500).json({
-      error: process.env.NODE_ENV !== 'production'
+    throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
-        : 'An unexpected error occurred. Please try again.',
-    });
+        : 'An unexpected error occurred. Please try again.', 500);
   }
-});
+}));
 
 // ── HTML page helpers ─────────────────────────────────────────────────────────
 function successPage(realmId: string): string {

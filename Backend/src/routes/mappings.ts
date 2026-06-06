@@ -1,3 +1,4 @@
+import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
@@ -8,7 +9,7 @@ const router = Router();
 router.use(authenticate, enforceEffectiveRole);
 
 // ── PUT /api/mappings/:id ─────────────────────────────────────────────────────
-router.put('/:id', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const mapping = await prisma.mapping.findFirst({
@@ -17,8 +18,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), async (req: AuthReq
     });
 
     if (!mapping) {
-      res.status(404).json({ error: 'Mapping not found' });
-      return;
+      throw new AppError('Mapping not found', 404);
     }
 
     const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority } =
@@ -45,12 +45,12 @@ router.put('/:id', requireFeaturePermission('map', 'write'), async (req: AuthReq
     res.json(updated);
   } catch (err) {
     console.error('[Mappings] update error:', err);
-    res.status(500).json({ error: 'Failed to update mapping' });
+    throw new AppError('Failed to update mapping', 500);
   }
-});
+}));
 
 // ── DELETE /api/mappings/:id ──────────────────────────────────────────────────
-router.delete('/:id', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const mapping = await prisma.mapping.findFirst({
@@ -59,16 +59,15 @@ router.delete('/:id', requireFeaturePermission('map', 'write'), async (req: Auth
     });
 
     if (!mapping) {
-      res.status(404).json({ error: 'Mapping not found' });
-      return;
+      throw new AppError('Mapping not found', 404);
     }
 
     await prisma.mapping.delete({ where: { id } });
     res.json({ message: 'Mapping deleted' });
   } catch (err) {
     console.error('[Mappings] delete error:', err);
-    res.status(500).json({ error: 'Failed to delete mapping' });
+    throw new AppError('Failed to delete mapping', 500);
   }
-});
+}));
 
 export default router;

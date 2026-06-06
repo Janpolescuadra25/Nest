@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
+import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
 import { sendVerificationEmail } from '../lib/email';
@@ -8,10 +9,10 @@ import { emailVerificationLimiter } from '../middleware/rate-limit';
 const router = Router();
 
 // ── POST /api/email-verification/request ─────────────────────────────────────
-router.post('/request', authenticate, emailVerificationLimiter, async (req: AuthRequest, res: Response) => {
+router.post('/request', authenticate, emailVerificationLimiter, asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) throw new AppError('User not found', 404);
     if (user.emailVerified) return res.json({ message: 'Email already verified' });
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -31,12 +32,12 @@ router.post('/request', authenticate, emailVerificationLimiter, async (req: Auth
     return res.json({ message: 'Verification email sent' });
   } catch (err) {
     console.error('[EmailVerification] request error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    throw new AppError('Internal server error', 500);
   }
-});
+}));
 
 // ── GET /api/email-verification/verify/:token ────────────────────────────────
-router.get('/verify/:token', async (req: Request, res: Response) => {
+router.get('/verify/:token', asyncHandler(async (req: Request, res: Response) => {
   try {
     const tokenParam = String(req.params.token || '').trim();
     if (!tokenParam) {
@@ -70,6 +71,6 @@ router.get('/verify/:token', async (req: Request, res: Response) => {
     console.error('[EmailVerification] verify error:', err);
     return res.redirect(`${process.env.APP_URL}/verify-email?status=invalid`);
   }
-});
+}));
 
 export default router;

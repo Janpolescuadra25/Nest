@@ -1,3 +1,4 @@
+import { AppError, asyncHandler } from '../lib/errors';
 import { Router } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -11,7 +12,7 @@ const router = Router();
 
 // ── POST /api/password-reset/request ─────────────────────────────────────────
 
-router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchema), async (req, res) => {
+router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchema), asyncHandler(async (req, res) => {
   const { email } = req.body as { email?: string };
 
   const GENERIC_RESPONSE = { message: 'If an account exists, a reset link has been sent.' };
@@ -48,21 +49,21 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
     return res.json(GENERIC_RESPONSE);
   } catch (err) {
     console.error('[PasswordReset] request error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    throw new AppError('Internal server error', 500);
   }
-});
+}));
 
 // ── POST /api/password-reset/verify ──────────────────────────────────────────
 
-router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema), async (req, res) => {
+router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema), asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body as { token?: string; newPassword?: string };
 
   if (!token || typeof token !== 'string') {
-    return res.status(400).json({ error: 'Invalid or expired reset link' });
+    throw new AppError('Invalid or expired reset link', 400);
   }
 
   if (!newPassword || typeof newPassword !== 'string') {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    throw new AppError('Password must be at least 8 characters', 400);
   }
 
   try {
@@ -72,19 +73,19 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
     });
 
     if (!resetToken) {
-      return res.status(400).json({ error: 'Invalid or expired reset link' });
+      throw new AppError('Invalid or expired reset link', 400);
     }
 
     if (resetToken.usedAt !== null) {
-      return res.status(400).json({ error: 'This link has already been used' });
+      throw new AppError('This link has already been used', 400);
     }
 
     if (resetToken.expiresAt < new Date()) {
-      return res.status(400).json({ error: 'This link has expired' });
+      throw new AppError('This link has expired', 400);
     }
 
     if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      throw new AppError('Password must be at least 8 characters', 400);
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
@@ -112,8 +113,8 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
     return res.json({ message: 'Password updated successfully. You can now log in.' });
   } catch (err) {
     console.error('[PasswordReset] verify error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    throw new AppError('Internal server error', 500);
   }
-});
+}));
 
 export default router;

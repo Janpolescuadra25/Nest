@@ -4,6 +4,7 @@ import path from 'path';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { AppError, asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
@@ -28,11 +29,11 @@ const signupViaInviteSchema = z.object({
 
 // ── POST /api/invite/signup/:token  (Public — signup via invite) ──────────────
 // MUST be registered BEFORE GET /:token to prevent Express matching "signup" as a token
-router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), async (req: Request, res: Response) => {
+router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyncHandler(async (req: Request, res: Response) => {
   try {
     const tokenParam = String(req.params.token || '').trim();
     if (!tokenParam) {
-      return res.status(400).json({ error: 'Invite token is required.' });
+      throw new AppError('Invite token is required.', 400);
     }
 
     // Validate invite link using shared utility
@@ -47,7 +48,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
           MAX_USES_REACHED: 410,
           ALREADY_USED: 410,
         };
-        return res.status(statusMap[err.code] ?? 400).json({ error: err.message });
+        throw new AppError(err.message, statusMap[err.code] ?? 400);
       }
       throw err;
     }
@@ -58,7 +59,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     // Check email uniqueness
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
+      throw new AppError('An account with this email already exists.', 409);
     }
 
     // Hash password
@@ -151,12 +152,12 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     });
   } catch (err) {
     console.error('[Invite] signupViaInvite error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 // ── GET /api/invite/:token  (Public — view invite details) ───────────────────
-router.get('/:token', async (req: Request, res: Response) => {
+router.get('/:token', asyncHandler(async (req: Request, res: Response) => {
   const wantsHtml = req.headers.accept?.includes('text/html') &&
                     !req.headers.accept?.includes('application/json');
   if (wantsHtml) {
@@ -165,7 +166,7 @@ router.get('/:token', async (req: Request, res: Response) => {
   try {
     const tokenParam = String(req.params.token || '').trim();
     if (!tokenParam) {
-      return res.status(400).json({ error: 'Invite token is required.' });
+      throw new AppError('Invite token is required.', 400);
     }
 
     // Validate invite link using shared utility
@@ -180,7 +181,7 @@ router.get('/:token', async (req: Request, res: Response) => {
           MAX_USES_REACHED: 410,
           ALREADY_USED: 410,
         };
-        return res.status(statusMap[err.code] ?? 400).json({ error: err.message });
+        throw new AppError(err.message, statusMap[err.code] ?? 400);
       }
       throw err;
     }
@@ -207,8 +208,8 @@ router.get('/:token', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('[Invite] getInvite error:', err);
-    return res.status(500).json({ error: 'Internal server error.' });
+    throw new AppError('Internal server error.', 500);
   }
-});
+}));
 
 export default router;

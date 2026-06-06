@@ -1,3 +1,4 @@
+import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
@@ -8,7 +9,7 @@ const router = Router();
 router.use(authenticate, enforceEffectiveRole);
 
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
-router.put('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const rule = await prisma.rule.findFirst({
@@ -17,8 +18,7 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthR
     });
 
     if (!rule) {
-      res.status(404).json({ error: 'Rule not found' });
-      return;
+      throw new AppError('Rule not found', 404);
     }
 
     const { name, ruleType, config, isActive } = req.body as {
@@ -27,8 +27,7 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthR
 
     const validTypes = ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'];
     if (ruleType && !validTypes.includes(ruleType)) {
-      res.status(400).json({ error: `ruleType must be one of: ${validTypes.join(', ')}` });
-      return;
+      throw new AppError(`ruleType must be one of: ${validTypes.join(', ')}`, 400);
     }
 
     const updated = await prisma.rule.update({
@@ -44,12 +43,12 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthR
     res.json(updated);
   } catch (err) {
     console.error('[Rules] update error:', err);
-    res.status(500).json({ error: 'Failed to update rule' });
+    throw new AppError('Failed to update rule', 500);
   }
-});
+}));
 
 // ── DELETE /api/rules/:id ─────────────────────────────────────────────────────
-router.delete('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const rule = await prisma.rule.findFirst({
@@ -58,16 +57,15 @@ router.delete('/:id', requireFeaturePermission('rules', 'write'), async (req: Au
     });
 
     if (!rule) {
-      res.status(404).json({ error: 'Rule not found' });
-      return;
+      throw new AppError('Rule not found', 404);
     }
 
     await prisma.rule.delete({ where: { id } });
     res.json({ message: 'Rule deleted' });
   } catch (err) {
     console.error('[Rules] delete error:', err);
-    res.status(500).json({ error: 'Failed to delete rule' });
+    throw new AppError('Failed to delete rule', 500);
   }
-});
+}));
 
 export default router;

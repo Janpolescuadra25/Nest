@@ -1,3 +1,4 @@
+import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
@@ -11,7 +12,7 @@ router.use(authenticate, enforceEffectiveRole);
 
 // ── POST /api/scans ───────────────────────────────────────────────────────────
 // Save raw Toast POS scan data for a location
-router.post('/', requireFeaturePermission('scan', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { locationId, scanDate, rawData } = req.body as {
       locationId?: string;
@@ -20,8 +21,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), async (req: AuthRequ
     };
 
     if (!locationId || !scanDate || !rawData) {
-      res.status(400).json({ error: 'locationId, scanDate, and rawData are required' });
-      return;
+      throw new AppError('locationId, scanDate, and rawData are required', 400);
     }
 
     // Verify the location is visible to the authenticated user
@@ -30,14 +30,12 @@ router.post('/', requireFeaturePermission('scan', 'write'), async (req: AuthRequ
     });
 
     if (!location) {
-      res.status(404).json({ error: 'Location not found' });
-      return;
+      throw new AppError('Location not found', 404);
     }
 
     const parsedDate = new Date(scanDate);
     if (isNaN(parsedDate.getTime())) {
-      res.status(400).json({ error: 'scanDate must be a valid ISO date string' });
-      return;
+      throw new AppError('scanDate must be a valid ISO date string', 400);
     }
 
     const scan = await prisma.scanRecord.create({
@@ -52,12 +50,12 @@ router.post('/', requireFeaturePermission('scan', 'write'), async (req: AuthRequ
     res.status(201).json(scan);
   } catch (err) {
     console.error('[Scans] create error:', err);
-    res.status(500).json({ error: 'Failed to save scan record' });
+    throw new AppError('Failed to save scan record', 500);
   }
-});
+}));
 
 // ── GET /api/scans/health ─────────────────────────────────────────────────────
-router.get('/health', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/health', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const days = Math.max(0, Math.min(365, Math.round(Number(req.query['days']) || 3)));
     const locationWhere = locationFilter(req.user!);
@@ -103,12 +101,12 @@ router.get('/health', async (req: AuthRequest, res: Response): Promise<void> => 
     });
   } catch (err) {
     console.error('[Scans] health error:', err);
-    res.status(500).json({ error: 'Failed to fetch scan health' });
+    throw new AppError('Failed to fetch scan health', 500);
   }
-});
+}));
 
 // ── GET /api/scans/:id ────────────────────────────────────────────────────────
-router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const scan = await prisma.scanRecord.findUnique({
@@ -117,23 +115,21 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     });
 
     if (!scan) {
-      res.status(404).json({ error: 'Scan record not found' });
-      return;
+      throw new AppError('Scan record not found', 404);
     }
     // Verify location access
     const hasAccess = await prisma.location.count({
       where: { id: scan.location.id, ...locationFilter(req.user!) },
     });
     if (!hasAccess) {
-      res.status(404).json({ error: 'Scan record not found' });
-      return;
+      throw new AppError('Scan record not found', 404);
     }
 
     res.json(scan);
   } catch (err) {
     console.error('[Scans] get error:', err);
-    res.status(500).json({ error: 'Failed to fetch scan record' });
+    throw new AppError('Failed to fetch scan record', 500);
   }
-});
+}));
 
 export default router;
