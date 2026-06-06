@@ -46,9 +46,13 @@ model User {
   role                UserRole    @default(VIEWER)
   status              UserStatus  @default(ACTIVE)
   adminId             String?
+  /// @deprecated Migrated to permissions JSON
   canScan             Boolean     @default(false)
+  /// @deprecated Migrated to permissions JSON
   canMap              Boolean     @default(false)
+  /// @deprecated Migrated to permissions JSON
   canSync             Boolean     @default(false)
+  /// @deprecated Migrated to permissions JSON
   canManageLocs       Boolean     @default(false)
   mustChangePassword  Boolean     @default(false)
   trialExpiresAt      DateTime?

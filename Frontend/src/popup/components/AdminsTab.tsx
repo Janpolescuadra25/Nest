@@ -19,10 +19,7 @@ interface TeamMemberRow {
   name: string | null;
   role: string;
   status: string;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
+  permissions?: Record<string, boolean> | null;
 }
 
 interface Props {

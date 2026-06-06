@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { QBContextProvider } from './contexts/QBContext';
+import { hasPerm } from './lib/permissions';
 import LoginView from './components/LoginView';
 import ChangePasswordView from './components/ChangePasswordView';
 import TabNav from './components/TabNav';
@@ -122,18 +123,18 @@ export default function App() {
     visibleTabs.push('dashboard', 'scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('dashboard', 'my-team');
-    if (user.canScan) visibleTabs.push('scan');
-    if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
-    if (user.canSync) visibleTabs.push('data', 'sync');
-    if (user.canManageLocs) visibleTabs.push('locations');
+    if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
+    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'rules', 'preview');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync');
+    if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   } else {
     // STAFF / ACCOUNTANT / VIEWER
     visibleTabs.push('dashboard');
-    if (user.canScan) visibleTabs.push('scan');
-    if (user.canMap) visibleTabs.push('mappings', 'rules', 'preview');
-    if (user.canSync) visibleTabs.push('data', 'sync');
-    if (user.canManageLocs) visibleTabs.push('locations');
+    if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
+    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'rules', 'preview');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync');
+    if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   }
 

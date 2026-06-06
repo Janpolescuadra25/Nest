@@ -48,10 +48,7 @@ export const inviteLinkSchema = z.object({
 
 export const patchTeamMemberSchema = z.object({
   role: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER']).optional(),
-  canScan: z.boolean().optional(),
-  canMap: z.boolean().optional(),
-  canSync: z.boolean().optional(),
-  canManageLocs: z.boolean().optional(),
+  permissions: z.record(z.string(), z.boolean()).optional(),
   trialExpiresAt: z.string().min(1).optional().nullable(),
   customExpiryMessage: z.string().max(500).optional().nullable(),
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),

@@ -10,10 +10,6 @@ export interface AuthPayload {
   role: string;       // UserRole: OWNER | ADMIN | ACCOUNTANT | STAFF | VIEWER
   status: string;     // UserStatus: ACTIVE | EXPIRED | DISABLED | PENDING_APPROVAL | GRACE_PERIOD | TIME_BOMBED | BLOCKED
   adminId: string | null;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
   mustChangePassword: boolean;
   trialExpiresAt: Date | null;
   maxUsers: number | null;

@@ -41,10 +41,7 @@ router.post('/login', authLimiter, validate(loginSchema), async (req: Request, r
         status: user.status,
         emailVerified: user.emailVerified,
         mustChangePassword: user.mustChangePassword,
-        canScan: user.canScan,
-        canMap: user.canMap,
-        canSync: user.canSync,
-        canManageLocs: user.canManageLocs,
+        permissions: user.permissions as Record<string, boolean> | null,
         trialExpiresAt: user.trialExpiresAt,
         customExpiryMessage: user.customExpiryMessage,
       },
@@ -109,10 +106,7 @@ router.post('/register', authLimiter, validate(registerSchema), async (req: Requ
         status: user.status,
         emailVerified: user.emailVerified,
         mustChangePassword: user.mustChangePassword,
-        canScan: user.canScan,
-        canMap: user.canMap,
-        canSync: user.canSync,
-        canManageLocs: user.canManageLocs,
+        permissions: user.permissions as Record<string, boolean> | null,
       },
     });
   } catch (err) {
@@ -163,10 +157,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         status: true,
         emailVerified: true,
         adminId: true,
-        canScan: true,
-        canMap: true,
-        canSync: true,
-        canManageLocs: true,
+        permissions: true,
         mustChangePassword: true,
         trialExpiresAt: true,
         customExpiryMessage: true,
@@ -189,7 +180,7 @@ router.get('/session', authenticate, async (req: AuthRequest, res: Response) => 
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, email: true, role: true, name: true, status: true, emailVerified: true, mustChangePassword: true, canScan: true, canMap: true, canSync: true, canManageLocs: true, trialExpiresAt: true, customExpiryMessage: true },
+      select: { id: true, email: true, role: true, name: true, status: true, emailVerified: true, mustChangePassword: true, permissions: true, trialExpiresAt: true, customExpiryMessage: true },
     });
     if (!user) return res.status(401).json({ error: 'User not found.' });
     return res.json({ user });

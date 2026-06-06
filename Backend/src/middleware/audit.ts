@@ -29,7 +29,8 @@ type AuditAction =
   | 'OWNER_RESET_TRIAL'
   | 'PASSWORD_RESET'
   | 'EMAIL_VERIFIED'
-  | 'CANX_RESET';
+  | 'CANX_RESET'
+  | 'PERMISSIONS_RESET';
 
 export async function logAction(params: {
   actorId: string;

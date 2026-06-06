@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
 import { trialCountdown } from '../lib/utils';
 import { BACKEND_URL } from '../../lib/config';
@@ -111,17 +112,17 @@ export default function MyTeamTab({ jwt }: Props) {
     }
   };
 
-  const handlePatchPerm = async (id: string, field: string, value: boolean) => {
-    setActionLoading(p => ({ ...p, [`p_${id}_${field}`]: true }));
+  const handlePatchPerm = async (id: string, permissionKey: string, value: boolean) => {
+    setActionLoading(p => ({ ...p, [`p_${id}_${permissionKey}`]: true }));
     try {
-      await api.patchTeamMember(jwt, id, { [field]: value });
+      await api.patchTeamMember(jwt, id, { permissions: { [permissionKey]: value } });
       await fetchTeam();
       showToast('Member updated', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to update permission.');
       showToast('Update failed', 'error');
     } finally {
-      setActionLoading(p => ({ ...p, [`p_${id}_${field}`]: false }));
+      setActionLoading(p => ({ ...p, [`p_${id}_${permissionKey}`]: false }));
     }
   };
 
@@ -261,10 +262,10 @@ export default function MyTeamTab({ jwt }: Props) {
     return null;
   };
 
-  const PermToggle = ({ memberId, field, value, label }: { memberId: string; field: string; value: boolean; label: string }) => (
+  const PermToggle = ({ memberId, permissionKey, value, label }: { memberId: string; permissionKey: string; value: boolean; label: string }) => (
     <button
-      onClick={() => handlePatchPerm(memberId, field, !value)}
-      disabled={actionLoading[`p_${memberId}_${field}`]}
+      onClick={() => handlePatchPerm(memberId, permissionKey, !value)}
+      disabled={actionLoading[`p_${memberId}_${permissionKey}`]}
       className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${value ? 'bg-cyan-800 text-cyan-300' : 'bg-slate-700 text-gray-500'}`}
     >
       {label}
@@ -502,10 +503,10 @@ export default function MyTeamTab({ jwt }: Props) {
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Permissions</p>
                   <div className="flex gap-1 flex-wrap">
-                    <PermToggle memberId={member.id} field="canScan" value={member.canScan} label="Scan" />
-                    <PermToggle memberId={member.id} field="canMap" value={member.canMap} label="Map" />
-                    <PermToggle memberId={member.id} field="canSync" value={member.canSync} label="Sync" />
-                    <PermToggle memberId={member.id} field="canManageLocs" value={member.canManageLocs} label="Locations" />
+                    <PermToggle memberId={member.id} permissionKey="scan:write" value={hasPerm(member, 'scan', 'write')} label="Scan" />
+                    <PermToggle memberId={member.id} permissionKey="map:write" value={hasPerm(member, 'map', 'write')} label="Map" />
+                    <PermToggle memberId={member.id} permissionKey="sync:execute" value={hasPerm(member, 'sync', 'execute')} label="Sync" />
+                    <PermToggle memberId={member.id} permissionKey="locations:write" value={hasPerm(member, 'locations', 'write')} label="Locations" />
                   </div>
                 </div>
                 {member.status === 'ACTIVE' && (

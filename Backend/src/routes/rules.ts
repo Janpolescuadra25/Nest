@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 
@@ -8,7 +8,7 @@ const router = Router();
 router.use(authenticate, enforceEffectiveRole);
 
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
-router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const rule = await prisma.rule.findFirst({
@@ -49,7 +49,7 @@ router.put('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Re
 });
 
 // ── DELETE /api/rules/:id ─────────────────────────────────────────────────────
-router.delete('/:id', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const rule = await prisma.rule.findFirst({

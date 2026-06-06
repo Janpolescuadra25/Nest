@@ -85,10 +85,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
           approvedAt: isOwnerInvite ? new Date() : null,
           approvedById: isOwnerInvite ? invite.createdBy : null,
           mustChangePassword: false,
-          canScan: perms.canScan,
-          canMap: perms.canMap,
-          canSync: perms.canSync,
-          canManageLocs: perms.canManageLocs,
+          permissions: perms,
         },
       });
 
@@ -149,10 +146,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
         status: result.status,
         emailVerified: result.emailVerified,
         mustChangePassword: result.mustChangePassword,
-        canScan: result.canScan,
-        canMap: result.canMap,
-        canSync: result.canSync,
-        canManageLocs: result.canManageLocs,
+        permissions: result.permissions as Record<string, boolean> | null,
       },
     });
   } catch (err) {

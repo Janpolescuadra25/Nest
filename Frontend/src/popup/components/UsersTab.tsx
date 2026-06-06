@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
 import { trialCountdown } from '../lib/utils';
 
@@ -15,10 +16,7 @@ interface OwnerUser {
   blocked: boolean;
   trialExpiresAt: string | null;
   customExpiryMessage: string | null;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
+  permissions?: Record<string, boolean> | null;
   createdAt: string;
 }
 
@@ -130,7 +128,7 @@ export default function UsersTab({ jwt }: Props) {
     }
     setActionLoading(p => ({ ...p, [`reset_${user.id}`]: true }));
     try {
-      await api.ownerResetCanX(jwt, user.id);
+      await api.ownerResetPermissions(jwt, user.id);
       showToast('Permissions reset to role defaults', 'success');
       await fetchUsers();
     } catch (err: any) {
@@ -225,10 +223,10 @@ export default function UsersTab({ jwt }: Props) {
                       {trialBadge(user.trialExpiresAt)}
                     </div>
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      {permPill('Scan', user.canScan)}
-                      {permPill('Map', user.canMap)}
-                      {permPill('Sync', user.canSync)}
-                      {permPill('Locs', user.canManageLocs)}
+                      {permPill('Scan', hasPerm(user, 'scan', 'write'))}
+                      {permPill('Map', hasPerm(user, 'map', 'write'))}
+                      {permPill('Sync', hasPerm(user, 'sync', 'execute'))}
+                      {permPill('Locs', hasPerm(user, 'locations', 'write'))}
                     </div>
                   </div>
                   <button onClick={() => setExpandedId(expandedId === user.id ? null : user.id)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">

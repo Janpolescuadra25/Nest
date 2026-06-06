@@ -42,10 +42,6 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
         role: true,
         status: true,
         adminId: true,
-        canScan: true,
-        canMap: true,
-        canSync: true,
-        canManageLocs: true,
         mustChangePassword: true,
         trialExpiresAt: true,
         maxUsers: true,
@@ -79,10 +75,6 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       role: user.role,
       status: user.status,
       adminId: user.adminId,
-      canScan: user.canScan,
-      canMap: user.canMap,
-      canSync: user.canSync,
-      canManageLocs: user.canManageLocs,
       mustChangePassword: user.mustChangePassword,
       trialExpiresAt: user.trialExpiresAt,
       maxUsers: user.maxUsers,
@@ -192,51 +184,6 @@ export function locationFilter(user: AuthPayload): Record<string, unknown> {
   // Legacy fallback for users who pre-date the hierarchy
   return { userId: user.userId };
 }
-
-/**
- * Middleware factory — requires a specific permission.
- * Supports both the legacy boolean fields (canScan, canMap, canSync, canManageLocs)
- * and the new Feature-based permission model.
- * OWNER always passes.
- * Place after `authenticate`.
- */
-export const requirePermission = (field: 'canScan' | 'canMap' | 'canSync' | 'canManageLocs' | Feature) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({ error: 'Not authenticated' });
-      return;
-    }
-
-    if (req.user.role === 'OWNER') { next(); return; }
-
-    // Legacy boolean permission check
-    if (field === 'canScan' || field === 'canMap' || field === 'canSync' || field === 'canManageLocs') {
-      if (!req.user[field]) {
-        res.status(403).json({ error: 'Permission denied: ' + field });
-        return;
-      }
-      next();
-      return;
-    }
-
-    // Feature-based permission check — defaults to 'read' action
-    const userForAccess: UserForAccess = {
-      role: req.user.role as UserRole,
-      status: req.user.status as UserStatus,
-      blocked: req.user.blocked,
-      timeBombAt: req.user.timeBombAt ?? null,
-      gracePeriodHours: req.user.gracePeriodHours,
-      permissions: req.user.permissions,
-    };
-
-    if (!hasPermission(userForAccess, field as Feature, 'read')) {
-      res.status(403).json({ error: 'Permission denied: ' + field });
-      return;
-    }
-
-    next();
-  };
-};
 
 /**
  * Middleware factory — requires a specific Feature:Action permission.

@@ -75,10 +75,7 @@ export interface UserInfo {
   status: string;
   emailVerified: boolean;
   mustChangePassword: boolean;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
+  permissions?: Record<string, boolean> | null;
   trialExpiresAt: string | null;
   customExpiryMessage: string | null;
 }
@@ -157,7 +154,7 @@ export const api = {
     if (params?.search) sp.set('search', params.search);
     if (params?.page) sp.set('page', String(params.page));
     const qs = sp.toString();
-    return get<{ users: Array<{ id: string; email: string; name: string | null; role: string; status: string; adminId: string | null; adminName: string | null; adminEmail: string | null; blocked: boolean; trialExpiresAt: string | null; customExpiryMessage: string | null; canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean; createdAt: string }> }>(`/api/owner/users${qs ? '?' + qs : ''}`, jwt);
+    return get<{ users: Array<{ id: string; email: string; name: string | null; role: string; status: string; adminId: string | null; adminName: string | null; adminEmail: string | null; blocked: boolean; trialExpiresAt: string | null; customExpiryMessage: string | null; permissions?: Record<string, boolean> | null; createdAt: string }> }>(`/api/owner/users${qs ? '?' + qs : ''}`, jwt);
   },
 
   blockOwnerUser: (jwt: string, id: string, blocked: boolean) =>
@@ -169,8 +166,8 @@ export const api = {
   ownerClearTimebomb: (jwt: string, id: string) =>
     patch<{ user: { id: string; email: string; role: string; status: string } }>(`/api/owner/users/${id}/timebomb/clear`, {}, jwt),
 
-  ownerResetCanX: (jwt: string, userId: string) =>
-    patch<{ user: { id: string; canScan: boolean; canMap: boolean; canSync: boolean; canManageLocs: boolean } }>(`/api/owner/users/${userId}/canx-reset`, {}, jwt),
+  ownerResetPermissions: (jwt: string, userId: string) =>
+    patch<{ user: { id: string } }>(`/api/owner/users/${userId}/permissions-reset`, {}, jwt),
 
   // ── Admin Team ─────────────────────────────────────────────────────────────
   getAdminStats: (jwt: string) =>

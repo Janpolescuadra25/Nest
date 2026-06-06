@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
@@ -11,7 +11,7 @@ router.use(authenticate, enforceEffectiveRole);
 
 // ── POST /api/scans ───────────────────────────────────────────────────────────
 // Save raw Toast POS scan data for a location
-router.post('/', requirePermission('canScan'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('scan', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { locationId, scanDate, rawData } = req.body as {
       locationId?: string;

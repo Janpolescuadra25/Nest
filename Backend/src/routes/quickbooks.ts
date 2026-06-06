@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { randomBytes } from 'crypto';
-import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
@@ -215,7 +215,7 @@ router.get('/status', authenticate, async (req: AuthRequest, res: Response): Pro
 });
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, enforceEffectiveRole, requirePermission('canSync'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(journalEntrySchema), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
       txnDate?: string;
@@ -493,7 +493,7 @@ async function syncSingleScan(
 }
 
 // ── POST /api/quickbooks/sync-batch ──────────────────────────────────────────
-router.post('/sync-batch', authenticate, enforceEffectiveRole, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { items } = req.body as {
       items?: Array<{
@@ -655,7 +655,7 @@ router.delete('/token', authenticate, async (req: AuthRequest, res: Response): P
 });
 
 // ── GET /api/quickbooks/accounts ──────────────────────────────────────────────
-router.get('/accounts', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/accounts', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const accounts = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getAccounts(realmId, accessToken),
@@ -672,7 +672,7 @@ router.get('/accounts', authenticate, requirePermission('canSync'), async (req: 
 });
 
 // ── GET /api/quickbooks/classes ───────────────────────────────────────────────
-router.get('/classes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/classes', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const classes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getClasses(realmId, accessToken),
@@ -689,7 +689,7 @@ router.get('/classes', authenticate, requirePermission('canSync'), async (req: A
 });
 
 // ── GET /api/quickbooks/employees ─────────────────────────────────────────────
-router.get('/employees', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/employees', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const employees = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getEmployees(realmId, accessToken),
@@ -706,7 +706,7 @@ router.get('/employees', authenticate, requirePermission('canSync'), async (req:
 });
 
 // ── GET /api/quickbooks/vendors ───────────────────────────────────────────────
-router.get('/vendors', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/vendors', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const vendors = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getVendors(realmId, accessToken),
@@ -723,7 +723,7 @@ router.get('/vendors', authenticate, requirePermission('canSync'), async (req: A
 });
 
 // ── GET /api/quickbooks/customers ─────────────────────────────────────────────
-router.get('/customers', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/customers', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const customers = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getCustomers(realmId, accessToken),
@@ -740,7 +740,7 @@ router.get('/customers', authenticate, requirePermission('canSync'), async (req:
 });
 
 // ── GET /api/quickbooks/tax-codes ────────────────────────────────────────────
-router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const taxCodes = await callQB(req.user!.userId, ({ accessToken, realmId }) =>
       qbService.getTaxCodes(realmId, accessToken),
@@ -757,7 +757,7 @@ router.get('/tax-codes', authenticate, requirePermission('canSync'), async (req:
 });
 
 // ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
-router.get('/sync-all', authenticate, requirePermission('canSync'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const entities = await callQB(req.user!.userId, async ({ accessToken, realmId }) => {
       const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([

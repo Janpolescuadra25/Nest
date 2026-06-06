@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, AuthRequest, locationFilter, requirePermission } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
@@ -31,7 +31,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── POST /api/locations ───────────────────────────────────────────────────────
-router.post('/', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, posUrl } = req.body as { name?: string; posUrl?: string };
 
@@ -79,7 +79,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 });
 
 // ── PUT /api/locations/:id ────────────────────────────────────────────────────
-router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -115,7 +115,7 @@ router.put('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, 
 });
 
 // ── DELETE /api/locations/:id ─────────────────────────────────────────────────
-router.delete('/:id', requirePermission('canManageLocs'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/:id', requireFeaturePermission('locations', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -136,7 +136,7 @@ router.delete('/:id', requirePermission('canManageLocs'), async (req: AuthReques
 });
 
 // ── POST /api/locations/:id/import-template ──────────────────────────────────
-router.post('/:id/import-template', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/import-template', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params['id'] as string;
     const lf = locationFilter(req.user!);
@@ -283,7 +283,7 @@ router.get('/:id/mappings', async (req: AuthRequest, res: Response): Promise<voi
 });
 
 // ── POST /api/locations/:id/mappings ──────────────────────────────────────────
-router.post('/:id/mappings', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/mappings', requireFeaturePermission('map', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -354,7 +354,7 @@ router.get('/:id/rules', async (req: AuthRequest, res: Response): Promise<void> 
 });
 
 // ── POST /api/locations/:id/rules ─────────────────────────────────────────────
-router.post('/:id/rules', requirePermission('canMap'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/rules', requireFeaturePermission('rules', 'write'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({

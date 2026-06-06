@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { hasPerm } from '../lib/permissions';
 import type { UserInfo } from '../lib/api';
 import type { QBStatus, ScanHealth } from '../../types';
 import { QBConnectionCard } from './QBConnectionCard';
@@ -89,10 +90,10 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
       <div className="bg-gray-800 border border-slate-700 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-cyan-300">My Permissions</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className={user.canScan ? 'text-green-400' : 'text-red-400'}>{user.canScan ? '✅ Scan' : '❌ Scan'}</div>
-          <div className={user.canMap ? 'text-green-400' : 'text-red-400'}>{user.canMap ? '✅ Map & Rules' : '❌ Map & Rules'}</div>
-          <div className={user.canSync ? 'text-green-400' : 'text-red-400'}>{user.canSync ? '✅ Sync Data' : '❌ Sync Data'}</div>
-          <div className={user.canManageLocs ? 'text-green-400' : 'text-red-400'}>{user.canManageLocs ? '✅ Locations' : '❌ Locations'}</div>
+          <div className={hasPerm(user, 'scan', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'scan', 'write') ? '✅ Scan' : '❌ Scan'}</div>
+          <div className={hasPerm(user, 'map', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'map', 'write') ? '✅ Map & Rules' : '❌ Map & Rules'}</div>
+          <div className={hasPerm(user, 'sync', 'execute') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'sync', 'execute') ? '✅ Sync Data' : '❌ Sync Data'}</div>
+          <div className={hasPerm(user, 'locations', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'locations', 'write') ? '✅ Locations' : '❌ Locations'}</div>
         </div>
       </div>
 

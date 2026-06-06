@@ -279,10 +279,6 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
           gracePeriodHours: true,
           trialExpiresAt: true,
           customExpiryMessage: true,
-          canScan: true,
-          canMap: true,
-          canSync: true,
-          canManageLocs: true,
           approvedAt: true,
           approvedById: true,
           createdAt: true,
@@ -311,10 +307,7 @@ router.get('/users', async (req: AuthRequest, res: Response) => {
         gracePeriodHours: user.gracePeriodHours,
         trialExpiresAt: user.trialExpiresAt,
         customExpiryMessage: user.customExpiryMessage,
-        canScan: user.canScan,
-        canMap: user.canMap,
-        canSync: user.canSync,
-        canManageLocs: user.canManageLocs,
+        permissions: user.permissions as Record<string, boolean> | null,
         approvedAt: user.approvedAt,
         approvedById: user.approvedById,
         createdAt: user.createdAt,
@@ -510,10 +503,18 @@ router.patch('/users/:id/timebomb', async (req: AuthRequest, res: Response) => {
         return res.status(400).json({ error: 'Can only reactivate EXPIRED users' });
       }
       updateData.status = 'ACTIVE';
-      updateData.canScan = true;
-      updateData.canMap = true;
-      updateData.canSync = true;
-      updateData.canManageLocs = true;
+      updateData.permissions = {
+        'scan:read': true,
+        'scan:write': true,
+        'scan:execute': true,
+        'map:read': true,
+        'map:write': true,
+        'map:execute': true,
+        'sync:read': true,
+        'sync:execute': true,
+        'locations:read': true,
+        'locations:write': true,
+      };
       isTrial = true;
     }
 
@@ -698,8 +699,8 @@ router.patch('/users/:id/role', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /api/owner/users/:id/canx-reset — reset canX booleans to role defaults
-router.patch('/users/:id/canx-reset', async (req: AuthRequest, res: Response) => {
+// PATCH /api/owner/users/:id/permissions-reset — reset permissions to role defaults
+router.patch('/users/:id/permissions-reset', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
 
@@ -720,24 +721,21 @@ router.patch('/users/:id/canx-reset', async (req: AuthRequest, res: Response) =>
     const updated = await prisma.user.update({
       where: { id },
       data: {
-        canScan: defaults.canScan,
-        canMap: defaults.canMap,
-        canSync: defaults.canSync,
-        canManageLocs: defaults.canManageLocs,
+        permissions: defaults,
       },
-      select: { id: true, email: true, role: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
+      select: { id: true, email: true, role: true, permissions: true },
     });
 
     await logAction({
       actorId: req.user!.userId,
-      action: 'CANX_RESET',
+      action: 'PERMISSIONS_RESET',
       targetUserId: id,
       details: { role: target.role, defaults },
     });
 
     return res.json({ user: updated });
   } catch (err) {
-    console.error('[Owner] canx-reset error:', err);
+    console.error('[Owner] permissions-reset error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 });
@@ -978,10 +976,7 @@ router.get('/admins/:id/team', async (req: AuthRequest, res: Response) => {
           name: true,
           role: true,
           status: true,
-          canScan: true,
-          canMap: true,
-          canSync: true,
-          canManageLocs: true,
+          permissions: true,
           trialExpiresAt: true,
           customExpiryMessage: true,
           mustChangePassword: true,

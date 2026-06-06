@@ -154,10 +154,7 @@ export interface TeamMember {
   name: string | null;
   role: string;
   status: string;
-  canScan: boolean;
-  canMap: boolean;
-  canSync: boolean;
-  canManageLocs: boolean;
+  permissions?: Record<string, boolean> | null;
   mustChangePassword: boolean;
   createdAt?: string;
   trialExpiresAt?: string | null;

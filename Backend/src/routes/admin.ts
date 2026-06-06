@@ -11,6 +11,8 @@ import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { logAction } from '../middleware/audit';
 import { createInviteLink } from '../utils/invite.utils';
 import { enforceEffectiveRole, UserForAccess, EffectiveAccess, getEffectiveAccess } from '../middleware/effective-role';
+import { ALL_FEATURES, ALL_ACTIONS } from '../middleware/permissions';
+import { mergePermissions } from '../lib/permission-utils';
 import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
@@ -52,10 +54,7 @@ router.get('/team', requireRole('ADMIN'), async (req: AuthRequest, res: Response
           name: true,
           role: true,
           status: true,
-          canScan: true,
-          canMap: true,
-          canSync: true,
-          canManageLocs: true,
+          permissions: true,
           trialExpiresAt: true,
           customExpiryMessage: true,
           mustChangePassword: true,
@@ -183,7 +182,7 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
       }
     }
 
-    const perms = permissionDefaultsMap[role] ?? { canScan: false, canMap: false, canSync: false, canManageLocs: false };
+    const perms = permissionDefaultsMap[role] ?? permissionDefaultsMap.VIEWER;
 
     const tempPassword = randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
@@ -201,7 +200,7 @@ router.post('/team/invite', requireRole('ADMIN'), validate(teamInviteSchema), as
         mustChangePassword: true,
         ...(trialExpiresAt !== undefined && { trialExpiresAt }),
         ...(customExpiryMessage ? { customExpiryMessage: customExpiryMessage.trim() } : {}),
-        ...perms,
+        permissions: perms,
       },
     });
 
@@ -372,26 +371,59 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
   try {
     const id = req.params['id'] as string;
     const {
-      role, canScan, canMap, canSync, canManageLocs,
-      trialExpiresAt, customExpiryMessage, status,
+      role, permissions, trialExpiresAt, customExpiryMessage, status,
     } = req.body as {
       role?: string;
-      canScan?: boolean;
-      canMap?: boolean;
-      canSync?: boolean;
-      canManageLocs?: boolean;
+      permissions?: Record<string, boolean>;
       trialExpiresAt?: string | null;
       customExpiryMessage?: string | null;
       status?: string;
     };
 
-    const target = await prisma.user.findUnique({ where: { id } });
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        role: true,
+        status: true,
+        adminId: true,
+        permissions: true,
+        trialExpiresAt: true,
+        customExpiryMessage: true,
+      },
+    });
     if (!target) return res.status(404).json({ error: 'User not found.' });
     if (target.adminId !== req.user!.userId) {
       return res.status(403).json({ error: 'You can only manage your own team members.' });
     }
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
       return res.status(403).json({ error: 'Cannot modify OWNER or ADMIN accounts.' });
+    }
+
+    const permissionPayload = permissions;
+
+    if (permissionPayload !== undefined) {
+      if (typeof permissionPayload !== 'object' || permissionPayload === null || Array.isArray(permissionPayload)) {
+        return res.status(400).json({ error: 'permissions must be an object' });
+      }
+
+      const validKeys = new Set<string>();
+      for (const f of ALL_FEATURES) {
+        for (const a of ALL_ACTIONS) {
+          validKeys.add(`${f}:${a}`);
+        }
+      }
+
+      const invalidKeys = Object.keys(permissionPayload).filter(key => !validKeys.has(key));
+      if (invalidKeys.length > 0) {
+        return res.status(400).json({ error: 'Invalid permission keys', invalidKeys });
+      }
+
+      for (const [key, value] of Object.entries(permissionPayload)) {
+        if (typeof value !== 'boolean') {
+          return res.status(400).json({ error: 'Permission values must be boolean' });
+        }
+      }
     }
 
     // ── Trial-reset branch (only when trialExpiresAt is set to a date) ─────────
@@ -412,18 +444,36 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     const updateData: Record<string, unknown> = {};
     if (role !== undefined) updateData['role'] = role;
 
-    // EXPIRED → ACTIVE: default all permissions to true unless body explicitly sets them
-    if (isTrialReset && target.status === 'EXPIRED') {
+    let finalPermissions = target.permissions as Record<string, boolean> | null;
+    const reactivationDefault = isTrialReset && target.status === 'EXPIRED' && status === 'ACTIVE' && permissionPayload === undefined;
+
+    if (permissionPayload !== undefined) {
+      finalPermissions = mergePermissions(finalPermissions, permissionPayload);
+    } else if (reactivationDefault) {
+      finalPermissions = mergePermissions(
+        finalPermissions,
+        {
+          'scan:read': true,
+          'scan:write': true,
+          'scan:execute': true,
+          'map:read': true,
+          'map:write': true,
+          'map:execute': true,
+          'sync:read': true,
+          'sync:execute': true,
+          'locations:read': true,
+          'locations:write': true,
+        },
+      );
+    }
+
+    if (isTrialReset && target.status === 'EXPIRED' && status === 'ACTIVE') {
       updateData['status'] = 'ACTIVE';
-      updateData['canScan'] = canScan !== undefined ? canScan : true;
-      updateData['canMap'] = canMap !== undefined ? canMap : true;
-      updateData['canSync'] = canSync !== undefined ? canSync : true;
-      updateData['canManageLocs'] = canManageLocs !== undefined ? canManageLocs : true;
+      updateData['permissions'] = finalPermissions;
     } else {
-      if (canScan !== undefined) updateData['canScan'] = canScan;
-      if (canMap !== undefined) updateData['canMap'] = canMap;
-      if (canSync !== undefined) updateData['canSync'] = canSync;
-      if (canManageLocs !== undefined) updateData['canManageLocs'] = canManageLocs;
+      if (permissionPayload !== undefined) {
+        updateData['permissions'] = finalPermissions;
+      }
       if (status !== undefined) updateData['status'] = status;
     }
 
@@ -435,10 +485,12 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
       data: updateData,
       select: {
         id: true, email: true, name: true, role: true, status: true,
-        canScan: true, canMap: true, canSync: true, canManageLocs: true,
+        permissions: true,
         trialExpiresAt: true, customExpiryMessage: true, mustChangePassword: true,
       },
     });
+
+    const safeUpdated = updated;
 
     // ── Standard audit entries ────────────────────────────────────────────────
     const auditEntries: Array<{ actorId: string; action: string; targetUserId: string; details?: object }> = [];
@@ -446,11 +498,13 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
       auditEntries.push({ actorId: req.user!.userId, action: 'ROLE_CHANGED', targetUserId: id, details: { newRole: role } });
     }
     if (!isTrialReset) {
-      const permKeys = (['canScan', 'canMap', 'canSync', 'canManageLocs'] as const).filter(k => req.body[k] !== undefined);
-      if (permKeys.length > 0) {
-        const changes: Record<string, unknown> = {};
-        permKeys.forEach(k => { changes[k] = req.body[k]; });
-        auditEntries.push({ actorId: req.user!.userId, action: 'PERMISSION_UPDATED', targetUserId: id, details: { changes } });
+      if (permissionPayload !== undefined) {
+        auditEntries.push({
+          actorId: req.user!.userId,
+          action: 'PERMISSION_UPDATED',
+          targetUserId: id,
+          details: { permissions: permissionPayload },
+        });
       }
       if (trialExpiresAt !== undefined || customExpiryMessage !== undefined) {
         auditEntries.push({ actorId: req.user!.userId, action: 'TIMEBOMB_SET', targetUserId: id, details: { trialExpiresAt, customExpiryMessage } });
@@ -479,12 +533,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
             previousStatus: target.status,
             previousTrialExpiresAt: target.trialExpiresAt,
             newTrialExpiresAt: newExpiryDate,
-            permissionsSet: {
-              canScan: updated.canScan,
-              canMap: updated.canMap,
-              canSync: updated.canSync,
-              canManageLocs: updated.canManageLocs,
-            },
+            permissionsSet: updated.permissions,
           },
         },
       });
@@ -497,7 +546,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
       }).catch(() => {});
     }
 
-    return res.json({ user: updated });
+    return res.json({ user: safeUpdated });
   } catch (err) {
     console.error('[Admin] patchTeamMember error:', err);
     return res.status(500).json({ error: 'Internal server error.' });
