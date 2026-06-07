@@ -1,7 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { useQuickBooks } from './hooks/useQuickBooks';
+import { useLocations } from './hooks/useLocations';
 import { QBContextProvider } from './contexts/QBContext';
 import { hasPerm } from './lib/permissions';
+import { api } from './lib/api';
+import { getOnboardingState, type OnboardingState } from './lib/onboarding';
+import { OnboardingBanner } from './components/OnboardingBanner';
 import LoginView from './components/LoginView';
 import ChangePasswordView from './components/ChangePasswordView';
 import TabNav from './components/TabNav';
@@ -42,6 +47,12 @@ export default function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [showHelp, setShowHelp] = useState(false);
   const [showEmailVerificationBanner, setShowEmailVerificationBanner] = useState(true);
+  const [deferredMappings, setDeferredMappings] = useState(false);
+  const [deferredSynced, setDeferredSynced] = useState(false);
+  const [hasSavedMappings, setHasSavedMappings] = useState(false);
+  const [hasSyncedBefore, setHasSyncedBefore] = useState(false);
+  const { status: qbStatus } = useQuickBooks(jwt);
+  const { locations } = useLocations(jwt);
 
   // After password change: refresh auth state by re-fetching session
   const handlePasswordChanged = useCallback(async () => {
@@ -60,6 +71,65 @@ export default function App() {
       setShowEmailVerificationBanner(false);
     }
   }, [user?.emailVerified]);
+
+  useEffect(() => {
+    if (!jwt || !user || user.role !== 'OWNER' || locations.length === 0) return;
+    let active = true;
+
+    const loadMappings = async () => {
+      try {
+        const results = await Promise.allSettled(
+          locations.map((location) => api.getMappings(jwt, location.id).then((mappings) => mappings.length)),
+        );
+        if (!active) return;
+
+        const hasMappings = results.some(
+          (result) => result.status === 'fulfilled' && result.value > 0,
+        );
+
+        if (hasMappings) {
+          setHasSavedMappings(true);
+        }
+      } catch {
+        // ignore mapping load failures; onboarding can still update later
+      }
+    };
+
+    void loadMappings();
+    return () => {
+      active = false;
+    };
+  }, [jwt, user, locations]);
+
+  useEffect(() => {
+    if (!jwt || !user || user.role !== 'OWNER') return;
+    let active = true;
+
+    const loadOwnerStats = async () => {
+      try {
+        const stats = await api.getOwnerStats(jwt);
+        if (!active) return;
+
+        if (stats.totalSynced > 0) {
+          setHasSyncedBefore(true);
+        }
+      } catch {
+        // ignore stats load failures; onboarding can still update later
+      }
+    };
+
+    void loadOwnerStats();
+    return () => {
+      active = false;
+    };
+  }, [jwt, user]);
+
+  const onboardingState = getOnboardingState({
+    qbStatus: qbStatus || null,
+    hasLocations: locations.length > 0,
+    hasMappings: deferredMappings || hasSavedMappings,
+    hasSynced: deferredSynced || hasSyncedBefore,
+  });
 
   if (loading) {
     return (
@@ -215,6 +285,11 @@ export default function App() {
         {/* Tab Nav */}
         <TabNav currentTab={effectiveTab} onTabChange={setCurrentTab} visibleTabs={visibleTabs} />
 
+        {/* Onboarding banner for owner users */}
+        {role === 'OWNER' && onboardingState.step > 0 && (
+          <OnboardingBanner state={onboardingState} onNavigate={setCurrentTab} />
+        )}
+
         {/* Pipeline progress indicator — shown when scan data is loaded */}
         {scanData !== null && (() => {
           const steps: { id: string; label: string }[] = [
@@ -256,6 +331,7 @@ export default function App() {
               onClearScanData={() => setScanData(null)}
               onScanRecordId={setScanRecordId}
               locationId={selectedLocationId || null}
+              onboardingStep={onboardingState.step}
             />
           )}
           {effectiveTab === 'mappings' && (
@@ -265,6 +341,8 @@ export default function App() {
               onLocationChange={setSelectedLocationId}
               scanData={scanData}
               onTabChange={setCurrentTab}
+              onboardingStep={onboardingState.step}
+              onHasMappings={() => setDeferredMappings(true)}
             />
           )}
           {effectiveTab === 'preview' && (
@@ -285,6 +363,8 @@ export default function App() {
               onLocationChange={setSelectedLocationId}
               onTabChange={(tab) => setCurrentTab(tab as TabId)}
               onScanRecordId={setScanRecordId}
+              onboardingStep={onboardingState.step}
+              onHasSynced={() => setDeferredSynced(true)}
             />
           )}
           {effectiveTab === 'settings' && (
@@ -296,13 +376,25 @@ export default function App() {
           )}
           {effectiveTab === 'partners' && <PartnersTab jwt={jwt!} />}
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
-          {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} />}
+          {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} subscriptionSource={user.subscriptionSource} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
           {effectiveTab === 'admins' && <AdminsTab jwt={jwt!} />}
           {effectiveTab === 'users' && <UsersTab jwt={jwt!} />}
-          {effectiveTab === 'locations' && <LocationsTab jwt={jwt!} />}
+          {effectiveTab === 'locations' && (
+            <LocationsTab
+              jwt={jwt!}
+              onboardingStep={onboardingState.step}
+            />
+          )}
           {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} scanData={scanData} />}
-          {effectiveTab === 'dashboard' && role === 'OWNER' && <DashboardView jwt={jwt!} />}
+          {effectiveTab === 'dashboard' && role === 'OWNER' && (
+            <DashboardView
+              jwt={jwt!}
+              onboardingState={onboardingState}
+              onNavigate={setCurrentTab}
+              onHasSynced={() => setDeferredSynced(true)}
+            />
+          )}
           {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}
           {effectiveTab === 'dashboard' && role !== 'OWNER' && role !== 'ADMIN' && <UserDashboard jwt={jwt!} user={user} />}
         </div>

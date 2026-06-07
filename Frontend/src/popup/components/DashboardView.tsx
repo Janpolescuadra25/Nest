@@ -1,14 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useToast } from './Toast';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
 import { ErrorCard, DashboardSkeleton } from './shared';
 import { formatAction, relativeTime } from '../lib/utils';
-import type { QBStatus, ScanHealth, AdminRequest, OwnerAuditLogEntry } from '../../types';
+import type { QBStatus, ScanHealth, AdminRequest, OwnerAuditLogEntry, TabId } from '../../types';
+import type { OnboardingState } from '../lib/onboarding';
 
 interface Props {
   jwt: string;
+  onboardingState?: OnboardingState;
+  onNavigate?: (tab: TabId) => void;
+  onHasSynced?: () => void;
 }
 
 interface OwnerStats {
@@ -46,7 +50,7 @@ const EMPTY_STATS: OwnerStats = {
 };
 
 
-export default function DashboardView({ jwt }: Props) {
+export default function DashboardView({ jwt, onboardingState, onNavigate, onHasSynced }: Props) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,6 +64,8 @@ export default function DashboardView({ jwt }: Props) {
   const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
   const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
   const [healthDays, setHealthDays] = useState(3);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const prevStepRef = useRef<number>(0);
 
   const fetchPendingRequests = useCallback(async () => {
     const data = await api.getAdminRequests(jwt, 1, 'PENDING');
@@ -123,6 +129,23 @@ export default function DashboardView({ jwt }: Props) {
     void fetchDashboard();
     void fetchScanHealth();
   }, [fetchDashboard, fetchScanHealth]);
+
+  useEffect(() => {
+    if (stats.totalSynced > 0) {
+      onHasSynced?.();
+    }
+  }, [stats.totalSynced, onHasSynced]);
+
+  useEffect(() => {
+    const prevStep = prevStepRef.current;
+    const currentStep = onboardingState?.step ?? 0;
+    if (prevStep > 0 && currentStep === 0) {
+      setShowCelebration(true);
+      const timer = window.setTimeout(() => setShowCelebration(false), 5000);
+      return () => window.clearTimeout(timer);
+    }
+    prevStepRef.current = currentStep;
+  }, [onboardingState?.step]);
 
   const handleApprove = async (id: string) => {
     setActionLoading(prev => ({ ...prev, [`approve_${id}`]: true }));
@@ -206,8 +229,56 @@ export default function DashboardView({ jwt }: Props) {
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
           <div className="text-xs text-gray-400">❌ Failed</div>
           <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
+          {stats.totalFailed > 0 && (
+            <p className="text-[10px] text-slate-500 mt-1">
+              Check SyncView for retry details
+            </p>
+          )}
         </div>
       </div>
+
+      {onboardingState?.step === 1 ? (
+        <div className="bg-indigo-700/20 border border-indigo-600 rounded-lg p-3 text-sm text-white">
+          <div className="font-semibold">Connect QuickBooks to get started.</div>
+          <div className="mt-1 text-xs text-indigo-100">QuickBooks connection is required before you can sync your first report.</div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('settings')}
+              className="mt-3 rounded bg-white px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-gray-100"
+            >
+              Connect QuickBooks
+            </button>
+          )}
+        </div>
+      ) : onboardingState?.step && onboardingState.step > 1 ? (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-gray-200">
+          <div className="font-semibold">You're on step {onboardingState.step}: {onboardingState.step === 2 ? 'Add Your First Location' : onboardingState.step === 3 ? 'Create a Mapping' : 'Begin Your First Sync'}</div>
+          <div className="mt-1 text-xs text-gray-400">Continue setup to complete your onboarding flow.</div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate(onboardingState.step === 2 ? 'locations' : onboardingState.step === 3 ? 'mappings' : 'scan')}
+              className="mt-3 rounded bg-cyan-700 px-3 py-1 text-xs font-medium text-white hover:bg-cyan-600"
+            >
+              Continue setup
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {showCelebration && (
+        <div
+          className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-center cursor-pointer"
+          onClick={() => setShowCelebration(false)}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="text-2xl mb-1">🎉</div>
+          <p className="text-green-300 text-sm font-medium">You're all set!</p>
+          <p className="text-green-400 text-xs mt-1">Nest is now syncing your data automatically.</p>
+        </div>
+      )}
 
       <QBConnectionCard qbStatus={qbStatus} onReconnect={() => void handleReconnect()} onDisconnect={() => void handleDisconnect()} />
       {scanHealthLoaded ? (

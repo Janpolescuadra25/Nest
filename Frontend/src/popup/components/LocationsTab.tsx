@@ -5,11 +5,12 @@ import type { Location } from '../../types';
 
 interface Props {
   jwt: string;
+  onboardingStep?: number;
 }
 
 const EMPTY_FORM = { name: '', posUrl: '' };
 
-export default function LocationsTab({ jwt }: Props) {
+export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
   const { showToast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,7 +182,15 @@ export default function LocationsTab({ jwt }: Props) {
       {loading ? (
         <p className="text-gray-500 text-sm">Loading…</p>
       ) : locations.length === 0 ? (
-        <p className="text-gray-500 text-sm">No locations yet. Add one above.</p>
+        <div className="text-center py-8">
+          <div className="text-3xl mb-2">📍</div>
+          <p className="text-gray-400 text-sm mb-1">
+            {onboardingStep === 2 ? 'Add your first location to start syncing' : 'No locations yet'}
+          </p>
+          <p className="text-gray-600 text-xs">
+            {onboardingStep === 2 ? 'Locations connect your POS data to QuickBooks' : 'Add one above'}
+          </p>
+        </div>
       ) : (
         locations.map(loc => {
           const form = editForms[loc.id] ?? {};
