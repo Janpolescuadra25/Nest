@@ -190,6 +190,68 @@ export async function sendTrialWarning({
   }
 }
 
+export async function sendSyncFailureAlert({
+  to,
+  name,
+  staleCount,
+  maxRetriedCount,
+  oldFailureCount,
+  dashboardLink,
+}: {
+  to: string;
+  name: string | null | undefined;
+  staleCount: number;
+  maxRetriedCount: number;
+  oldFailureCount: number;
+  dashboardLink: string;
+}): Promise<void> {
+  try {
+    const resend = getResendClient();
+    const displayName = name?.trim() || to;
+    const total = staleCount + maxRetriedCount + oldFailureCount;
+
+    if (!process.env.APP_URL) {
+      console.warn('[email] APP_URL not set, using fallback dashboard link');
+    }
+
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        There are <strong style="color:#0f172a;">${total}</strong> scan${total !== 1 ? 's' : ''} that need attention in Nest.
+        This includes data that is stale or sync failures requiring a manual review.
+      </p>
+      <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;">
+        <p style="color:#0f172a;font-size:14px;font-weight:700;margin:0 0 12px;">Attention summary</p>
+        <ul style="color:#475569;font-size:14px;line-height:1.8;margin:0;padding-left:18px;">
+          ${staleCount > 0 ? `<li>⏰ ${staleCount} stale scan${staleCount !== 1 ? 's' : ''}</li>` : ''}
+          ${maxRetriedCount > 0 ? `<li>⛔ ${maxRetriedCount} max-retried scan${maxRetriedCount !== 1 ? 's' : ''}</li>` : ''}
+          ${oldFailureCount > 0 ? `<li>⚠️ ${oldFailureCount} old failed scan${oldFailureCount !== 1 ? 's' : ''}</li>` : ''}
+        </ul>
+      </div>
+      ${maxRetriedCount > 0 ? `<div style="border-left:4px solid #22d3ee;background:#f0fdff;border-radius:0 8px 8px 0;padding:12px 16px;margin:0 0 16px;"><p style="color:#0f172a;font-size:14px;line-height:1.6;margin:0;"><strong>Action required:</strong> Scans with maximum retry attempts require a manual re-sync from the Preview tab.</p></div>` : ''}
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${escapeHtml(dashboardLink)}"
+           style="display:inline-block;background:#22d3ee;color:#0f172a;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;letter-spacing:0.02em;">
+          View dashboard
+        </a>
+      </div>
+      <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0;">
+        These alerts are sent once every 24 hours for your team. If new attention items appear after that window, a new alert will be sent.
+      </p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      to,
+      subject: `Action needed: ${total} scan${total !== 1 ? 's' : ''} need${total === 1 ? 's' : ''} attention`,
+      html,
+    });
+    console.log(`[Email] Sync failure alert sent to ${to}`);
+  } catch (err) {
+    console.error('[Email] sendSyncFailureAlert failed:', err);
+  }
+}
+
 // ── sendTrialExpired ──────────────────────────────────────────────────────────
 
 export async function sendTrialExpired({

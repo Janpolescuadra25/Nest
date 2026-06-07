@@ -263,6 +263,8 @@ model SyncLog {
   status           SyncStatus
   errorMessage     String?
   errorType        String?    // 'TRANSIENT' | 'AUTH' | 'VALIDATION' | 'FATAL'
+  attemptCount     Int        @default(1)
+  requestPayload   Json?
   syncedAt         DateTime   @default(now())
   scanRecord       ScanRecord @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
 
