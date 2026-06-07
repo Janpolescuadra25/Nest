@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import type { ScanData } from '../../types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
 import { ErrorCard, EmptyState } from './shared';
 
@@ -12,11 +12,19 @@ const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
 async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; posName: string } | null> {
   const allTabs = await chrome.tabs.query({});
   for (const [posType, { pattern, name }] of Object.entries(POS_URLS)) {
-    const tab = allTabs.find(t => t.url && pattern.test(t.url));
+    const tab = allTabs.find((t) => t.url && pattern.test(t.url));
     if (tab) return { tab, posType, posName: name };
   }
   return null;
 }
+
+const generateId = () => Math.random().toString(36).substring(2, 11);
+
+const parseNumericValue = (value: string): number => {
+  const cleaned = String(value).replace(/[^0-9.-]/g, '').trim();
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 interface Props {
   jwt: string;
@@ -25,12 +33,50 @@ interface Props {
   onClearScanData: () => void;
   onScanRecordId?: (id: string) => void;
   locationId: string | null;
+  onboardingStep?: number;
+  selectedTemplate?: Template | null;
+  onOpenExcelImportModal?: () => void;
+  onTabChange: (tab: TabId) => void;
+  scanEntries: ScanEntry[];
+  setScanEntries: React.Dispatch<React.SetStateAction<ScanEntry[]>>;
+  activeScanEntryId: string | null;
+  setActiveScanEntryId: React.Dispatch<React.SetStateAction<string | null>>;
+  activeScanEntry: ScanEntry | null;
 }
 
-export default function ScanView({ jwt, scanData, onScanData, onClearScanData, onScanRecordId, locationId }: Props) {
+export default function ScanView({
+  jwt,
+  scanData,
+  onScanData,
+  onClearScanData,
+  onScanRecordId,
+  locationId,
+  onboardingStep = 0,
+  selectedTemplate,
+  onOpenExcelImportModal,
+  onTabChange,
+  scanEntries,
+  setScanEntries,
+  activeScanEntryId,
+  setActiveScanEntryId,
+  activeScanEntry,
+}: Props) {
+  // MIGRATION PLAN: preserve the current POS scan contract while moving toward ScanEntry-driven ingestion.
+  // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
+  // - New ScanEntry records are stored locally in ScanView for both POS and Excel scan modes.
+  // - activeScanEntry.lineItems[0] is converted into numeric `scanData` for legacy mapping bindings.
+  const [scanMode, setScanMode] = useState<ScanMode>('pos');
+  const [uploadedExcelFile, setUploadedExcelFile] = useState<File | null>(null);
+  const [excelPreviewSheets, setExcelPreviewSheets] = useState<ExcelParseResult['sheets']>([]);
+  const [excelPreviewSheetName, setExcelPreviewSheetName] = useState<string>('');
+  const [excelParseError, setExcelParseError] = useState<string | null>(null);
+  const [excelPreviewLoading, setExcelPreviewLoading] = useState(false);
+  const [excelParseLoading, setExcelParseLoading] = useState(false);
+  const [excelDataResult, setExcelDataResult] = useState<ExcelDataParseResult | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
+  const excelInputRef = useRef<HTMLInputElement>(null);
 
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {
@@ -45,10 +91,37 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
         if (!scanData) onScanData(cached);
       }
     });
-    findPOSTab().then(result => {
+    findPOSTab().then((result) => {
       if (result) setDetectedPOS({ type: result.posType, name: result.posName });
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!scanData || scanMode !== 'pos' || scanEntries.length > 0) return;
+    const entry: ScanEntry = {
+      id: generateId(),
+      source: 'pos',
+      header: {},
+      lineItems: [Object.fromEntries(Object.entries(scanData).map(([key, value]) => [key, String(value)]))],
+    };
+    setScanEntries([entry]);
+    setActiveScanEntryId(entry.id);
+  }, [scanData, scanMode, scanEntries.length]);
+
+  const activeScanData = useMemo(() => {
+    if (!activeScanEntry?.lineItems?.[0]) return null;
+    return Object.fromEntries(
+      Object.entries(activeScanEntry.lineItems[0]).map(([key, rawValue]) => [key, parseNumericValue(rawValue)]),
+    ) as ScanData;
+  }, [activeScanEntry]);
+
+  useEffect(() => {
+    if (activeScanData) {
+      onScanData(activeScanData);
+    } else {
+      onClearScanData();
+    }
+  }, [activeScanData, onScanData, onClearScanData]);
 
   /** Send REQUEST_SCAN to a tab and return the response (or null on failure). */
   const sendScanMessage = (tabId: number): Promise<{ data?: ScanData } | null> => {
@@ -73,6 +146,13 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
   const handleClear = () => {
     onClearScanData();
     chrome.storage.local.remove(['lastScanData']);
+    setScanEntries([]);
+    setActiveScanEntryId(null);
+    setUploadedExcelFile(null);
+    setExcelPreviewSheets([]);
+    setExcelPreviewSheetName('');
+    setExcelDataResult(null);
+    setExcelParseError(null);
   };
 
   const handleRescan = async () => {
@@ -103,7 +183,7 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
             target: { tabId: tab.id },
             files: [scriptFile],
           });
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise((r) => setTimeout(r, 1500));
           console.log('[Nest Popup] Scanner injected — retrying scan...');
           response = await sendScanMessage(tab.id);
         } catch (injectErr) {
@@ -115,6 +195,14 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
       console.log('[Nest Popup] Response from content script:', response,
         response?.data ? `| keys: ${Object.keys(response.data).length}` : '| no data');
       if (response?.data) {
+        const entry: ScanEntry = {
+          id: generateId(),
+          source: 'pos',
+          header: {},
+          lineItems: [Object.fromEntries(Object.entries(response.data).map(([key, value]) => [key, String(value)]))],
+        };
+        setScanEntries([entry]);
+        setActiveScanEntryId(entry.id);
         onScanData(response.data);
         chrome.storage.local.set({ lastScanData: response.data });
         if (locationId) {
@@ -123,7 +211,7 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
               jwt,
               locationId,
               new Date().toISOString().split('T')[0],
-              response.data
+              response.data,
             );
             console.log('[Nest] Scan data saved to backend');
             if (scanRecord?.id && onScanRecordId) {
@@ -145,80 +233,325 @@ export default function ScanView({ jwt, scanData, onScanData, onClearScanData, o
     }
   };
 
+  const handleExcelFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !jwt) return;
+    e.target.value = '';
+    setUploadedExcelFile(file);
+    setExcelParseError(null);
+    setExcelPreviewSheets([]);
+    setExcelPreviewSheetName('');
+    setExcelDataResult(null);
+    setExcelPreviewLoading(true);
+
+    try {
+      const result = await api.parseExcel(jwt, file);
+      setExcelPreviewSheetName(result.selectedSheetName || result.sheets?.[0]?.name || '');
+      setExcelPreviewSheets(result.sheets || []);
+    } catch (err) {
+      setExcelParseError(err instanceof Error ? err.message : 'Failed to parse Excel preview');
+    } finally {
+      setExcelPreviewLoading(false);
+    }
+  };
+
+  const handleParseExcelData = async () => {
+    if (!uploadedExcelFile || !jwt || !selectedTemplate) return;
+    setExcelParseLoading(true);
+    setExcelParseError(null);
+
+    try {
+      const result = await api.parseExcelData(jwt, selectedTemplate.id, uploadedExcelFile);
+      setExcelDataResult(result);
+      const parsedEntries: ScanEntry[] = result.transactions.flatMap((transaction) => {
+        const txnType = selectedTemplate?.transactionType ?? 'JOURNAL_ENTRY';
+
+        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT') {
+          return [{
+            id: generateId(),
+            source: 'excel',
+            fileName: uploadedExcelFile.name,
+            rowNumber: 1,
+            header: transaction.header,
+            lineItems: transaction.lineItems,
+          }];
+        }
+
+        return transaction.lineItems.map((lineItem, rowIndex) => ({
+          id: generateId(),
+          source: 'excel',
+          fileName: uploadedExcelFile.name,
+          rowNumber: rowIndex + 1,
+          header: transaction.header,
+          lineItems: [lineItem],
+        }));
+      });
+      setScanEntries(parsedEntries);
+      setActiveScanEntryId(parsedEntries[0]?.id ?? null);
+    } catch (err) {
+      setExcelParseError(err instanceof Error ? err.message : 'Failed to parse Excel data');
+    } finally {
+      setExcelParseLoading(false);
+    }
+  };
+
+  const handleOpenExcelModal = () => {
+    onOpenExcelImportModal?.();
+    onTabChange('mappings');
+  };
+
+  const activeScanEntryLabel = activeScanEntry?.fileName
+    ? `${activeScanEntry.fileName} (row ${activeScanEntry.rowNumber ?? 1})`
+    : 'Active scan entry';
+
   return (
-    <div className="p-3">
-      {/* Status bar */}
-      <div className="flex items-center justify-between mb-3">
-        <div className={`text-xs px-2 py-1 rounded-full ${
-          detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
-        }`}>
-          {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
-        </div>
+    <div className="p-3 space-y-4">
+      <div className="flex flex-wrap gap-2 mb-3">
         <button
-          onClick={handleRescan}
-          disabled={scanning}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
+          type="button"
+          onClick={() => setScanMode('pos')}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
-          {scanning ? 'Scanning…' : '↻ Re-scan Page'}
+          POS Scan
+        </button>
+        <button
+          type="button"
+          onClick={() => setScanMode('excel')}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+        >
+          Excel Scan
         </button>
       </div>
 
-      {error && (
-        <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
-      )}
+      {scanMode === 'excel' ? (
+        <div className="space-y-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Excel Scan</div>
+                <div className="text-xs text-gray-400">Upload an Excel file and parse it into the scan pipeline.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => excelInputRef.current?.click()}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+              >
+                Choose file
+              </button>
+            </div>
+            <input
+              ref={excelInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              aria-label="Upload Excel file"
+              className="hidden"
+              onChange={handleExcelFileSelect}
+            />
+            {uploadedExcelFile ? (
+              <div className="text-xs text-gray-300">Selected file: {uploadedExcelFile.name}</div>
+            ) : (
+              <div className="text-xs text-gray-500">No Excel file selected yet.</div>
+            )}
+            {excelParseError && (
+              <div className="text-xs text-red-400">{excelParseError}</div>
+            )}
+            {!selectedTemplate ? (
+              <div className="rounded-lg border border-orange-700 bg-orange-950/20 p-3 text-xs text-orange-200">
+                Select a template in the Mappings tab before parsing Excel data.
+              </div>
+            ) : !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 ? (
+              <div className="rounded-lg border border-orange-700 bg-orange-950/20 p-3 text-xs text-orange-200 space-y-2">
+                <div>⚠️ This template has no column mapping configured. Configure it first.</div>
+                <button
+                  type="button"
+                  onClick={handleOpenExcelModal}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 rounded px-3 py-1.5"
+                >
+                  Open Excel import modal
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200">
+                ✅ Column mapping is configured for {selectedTemplate.name}.
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!uploadedExcelFile || !selectedTemplate || !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 || excelParseLoading}
+                onClick={handleParseExcelData}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+              >
+                {excelParseLoading ? 'Parsing…' : 'Parse Excel Data'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5"
+              >
+                Clear scan
+              </button>
+            </div>
+          </div>
 
-      {scanData ? (
+          {excelPreviewSheets.length > 0 && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-gray-400">Preview from {excelPreviewSheetName || 'sheet'}</div>
+                {excelPreviewSheets.length > 1 && (
+                  <select
+                    value={excelPreviewSheetName}
+                    onChange={(e) => setExcelPreviewSheetName(e.target.value)}
+                    title="Choose worksheet"
+                    className="text-xs bg-gray-900 border border-gray-700 text-white rounded px-2 py-1"
+                  >
+                    {excelPreviewSheets.map((sheet) => (
+                      <option key={sheet.name} value={sheet.name}>{sheet.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="text-xs text-gray-400">
+                {excelPreviewLoading ? 'Loading preview…' : 'This preview shows the first parsed transaction row from Excel.'}
+              </div>
+              {(() => {
+                const previewSheet = excelPreviewSheets.find((sheet) => sheet.name === excelPreviewSheetName) ?? excelPreviewSheets[0];
+                if (!previewSheet) return null;
+                return (
+                  <div className="overflow-x-auto border border-gray-700 rounded-lg bg-gray-950">
+                    <table className="min-w-full text-left text-xs text-gray-200">
+                      <thead>
+                        <tr className="border-b border-gray-700 bg-gray-900 text-gray-300">
+                          {previewSheet.headers.map((header) => (
+                            <th key={header} className="px-2 py-2">{header}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewSheet.rows.map((row, rowIndex) => (
+                          <tr key={rowIndex} className="odd:bg-gray-950 even:bg-gray-900">
+                            {previewSheet.headers.map((header) => (
+                              <td key={header} className="px-2 py-2 text-gray-300 truncate max-w-[10rem]">{row[header]}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {excelDataResult && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-xs text-gray-200 space-y-2">
+              <div>Parsed {excelDataResult.totalRows} row(s), skipped {excelDataResult.skippedRows} empty row(s).</div>
+              <div>{excelDataResult.transactions.length} transaction(s) loaded into the scan pipeline.</div>
+              <div>Active scan entry: {activeScanEntryLabel}</div>
+            </div>
+          )}
+          {scanEntries.length > 1 && scanMode === 'excel' && (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+              <div className="text-sm font-semibold text-white">Excel entries</div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {scanEntries.map((entry, index) => {
+                  const label = entry.fileName
+                    ? `${entry.fileName} (row ${entry.rowNumber ?? index + 1})`
+                    : `Entry ${index + 1}`;
+                  const selected = entry.id === activeScanEntryId;
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => setActiveScanEntryId(entry.id)}
+                      className={`text-left text-xs rounded-lg px-3 py-2 transition ${selected ? 'bg-cyan-700 text-white' : 'bg-gray-900 text-gray-300 hover:bg-gray-800'}`}
+                    >
+                      <div className="font-medium">{label}</div>
+                      <div className="text-gray-400">{selected ? 'Active' : 'Select this entry'}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
         <>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-500">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className={`text-xs px-2 py-1 rounded-full ${
+              detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
+            }`}>
+              {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
+            </div>
             <button
-              onClick={handleClear}
-              className="text-xs text-gray-400 hover:text-red-400 border border-gray-600 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
+              onClick={handleRescan}
+              disabled={scanning}
+              className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
             >
-              ✕ Clear
+              {scanning ? 'Scanning…' : '↻ Re-scan Page'}
             </button>
           </div>
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left text-xs text-gray-500 px-3 py-2">Field</th>
-                  <th className="text-right text-xs text-gray-500 px-3 py-2">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(scanData).map(([field, value]) => (
-                  <tr key={field} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                    <td className="px-3 py-2 text-gray-300 text-xs">{field}</td>
-                    <td className="px-3 py-2 text-white text-xs text-right font-mono">
-                      {field.includes('Count')
-                        ? String(value)
-                        : `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-700/40">
-                  <td className="px-3 py-2 text-xs text-gray-400 font-medium">Total</td>
-                  <td className="px-3 py-2 text-xs text-cyan-400 text-right font-mono font-bold">
-                    ${Object.entries(scanData)
-                      .filter(([key]) => !key.includes('Count'))
-                      .reduce((sum, [, v]) => sum + v, 0)
-                      .toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
+          {error && (
+            <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
+          )}
+
+          {scanData ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</span>
+                <button
+                  onClick={handleClear}
+                  className="text-xs text-gray-400 hover:text-red-400 border border-gray-600 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
+                >
+                  ✕ Clear
+                </button>
+              </div>
+              <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left text-xs text-gray-500 px-3 py-2">Field</th>
+                      <th className="text-right text-xs text-gray-500 px-3 py-2">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(scanData).map(([field, value]) => (
+                      <tr key={field} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                        <td className="px-3 py-2 text-gray-300 text-xs">{field}</td>
+                        <td className="px-3 py-2 text-white text-xs text-right font-mono">
+                          {field.includes('Count')
+                            ? String(value)
+                            : `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-700/40">
+                      <td className="px-3 py-2 text-xs text-gray-400 font-medium">Total</td>
+                      <td className="px-3 py-2 text-xs text-cyan-400 text-right font-mono font-bold">
+                        ${Object.entries(scanData)
+                          .filter(([key]) => !key.includes('Count'))
+                          .reduce((sum, [, v]) => sum + v, 0)
+                          .toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              icon="🍽️"
+              title="No scan data yet"
+              description={onboardingStep === 4
+                ? 'Navigate to a POS report page, then click Re-scan Page to start your first sync pipeline'
+                : 'Navigate to a POS report page, then click Re-scan Page.'}
+              action={{ label: 'Re-scan Page', onClick: handleRescan }}
+            />
+          )}
         </>
-      ) : (
-        <EmptyState
-          icon="🍽️"
-          title="No scan data yet"
-          description="Navigate to a POS report page, then click Re-scan Page."
-          action={{ label: 'Re-scan Page', onClick: handleRescan }}
-        />
       )}
     </div>
   );

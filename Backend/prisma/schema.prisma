@@ -183,15 +183,39 @@ model Location {
   mappings    Mapping[]
   rules       Rule[]
   scanRecords ScanRecord[]
+  templates   Template[]
 
   @@index([userId])
   @@index([adminId])
   @@map("locations")
 }
 
+model Template {
+  id                String          @id @default(cuid())
+  locationId        String
+  name              String
+  transactionType   String          @default("JOURNAL_ENTRY")
+  lineType          String          @default("journal_entry")
+  version           Int             @default(1)
+  defaults          Json?
+  columnMappings    Json?
+  memoTemplate      String?
+  docNumberTemplate String?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  location          Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  mappings          Mapping[]
+
+  @@index([locationId])
+  @@map("templates")
+}
+
 model Mapping {
   id                String   @id @default(cuid())
   locationId        String
+  templateId        String?
   sourceField       String   // e.g. "Food Sales", "Credit Card Tips"
   targetAccount     String   // QB Account name or ID
   postingType       String   @default("Credit")
@@ -204,8 +228,10 @@ model Mapping {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   location          Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  template          Template? @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([locationId])
+  @@index([templateId])
   @@map("mappings")
 }
 

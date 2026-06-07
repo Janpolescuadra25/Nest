@@ -12,12 +12,14 @@ interface Props {
   onLocationChange: (id: string) => void;
   onExport: () => void;
   onImport: () => void;
-  onAddMapping: () => void;
   onAutoDetect: () => void;
   onApplyTemplate: (template: string) => void;
   onSyncLists: () => void;
   listsLoading: boolean;
   accountsLoaded: boolean;
+  showImportButton?: boolean;
+  disableAutoDetect?: boolean;
+  disablePresets?: boolean;
 }
 
 const TEMPLATE_NAMES = ['Standard Daily', 'Full Service', 'Quick Service'] as const;
@@ -28,12 +30,14 @@ export default function MappingFilters({
   onLocationChange,
   onExport,
   onImport,
-  onAddMapping,
   onAutoDetect,
   onApplyTemplate,
   onSyncLists,
   listsLoading,
   accountsLoaded,
+  showImportButton,
+  disableAutoDetect,
+  disablePresets,
 }: Props) {
   return (
     <>
@@ -55,33 +59,31 @@ export default function MappingFilters({
         >
           📤 Export
         </button>
-        <button
-          type="button"
-          onClick={onImport}
-          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
-        >
-          📥 Import
-        </button>
-        <button
-          onClick={onAddMapping}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1.5 rounded whitespace-nowrap transition-colors"
-        >
-          + Add
-        </button>
+        {showImportButton !== false && (
+          <button
+            type="button"
+            onClick={onImport}
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
+          >
+            📥 Import
+          </button>
+        )}
       </div>
 
       <div className="flex gap-1.5 flex-wrap">
         <button
-          onClick={onAutoDetect}
-          className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+          onClick={disableAutoDetect ? undefined : onAutoDetect}
+          title={disableAutoDetect ? 'Auto-Detect is designed for POS scans' : undefined}
+          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
         >
           🔍 Auto-Detect
         </button>
         {TEMPLATE_NAMES.map((template) => (
           <button
             key={template}
-            onClick={() => onApplyTemplate(template)}
-            className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+            onClick={disablePresets ? undefined : () => onApplyTemplate(template)}
+            title={disablePresets ? 'Presets are designed for POS scans' : undefined}
+            className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disablePresets ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
           >
             📋 {template}
           </button>

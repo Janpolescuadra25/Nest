@@ -34,7 +34,7 @@ export async function processTrialExpiry(prisma: PrismaClient): Promise<number> 
     where: {
       trialExpiresAt: { not: null, lt: now },
       status: 'ACTIVE',
-      subscriptionSource: { not: 'stripe' },
+      subscriptionSource: { notIn: ['stripe', 'owner'] },
     },
     select: {
       id: true,
@@ -98,7 +98,7 @@ export async function processTrialWarnings(prisma: PrismaClient): Promise<number
     where: {
       trialExpiresAt: { not: null },
       status: 'ACTIVE',
-      subscriptionSource: { not: 'stripe' },
+      subscriptionSource: { notIn: ['stripe', 'owner'] },
     },
     select: {
       id: true,
@@ -161,7 +161,7 @@ export async function processTimeBombTransitions(prisma: PrismaClient): Promise<
       timeBombAt: { not: null, lte: now },
       status: 'ACTIVE',
       blocked: false,
-      subscriptionSource: { not: 'stripe' },
+      subscriptionSource: { notIn: ['stripe', 'owner'] },
     },
     select: {
       id: true,
@@ -204,7 +204,7 @@ export async function processTimeBombTransitions(prisma: PrismaClient): Promise<
       status: 'GRACE_PERIOD',
       timeBombAt: { not: null },
       blocked: false,
-      subscriptionSource: { not: 'stripe' },
+      subscriptionSource: { notIn: ['stripe', 'owner'] },
     },
     select: {
       id: true,

@@ -28,7 +28,7 @@ import { UserDashboard } from './components/UserDashboard';
 import AdminsTab from './components/AdminsTab';
 import UsersTab from './components/UsersTab';
 import LocationsTab from './components/LocationsTab';
-import type { TabId, ScanData } from '../types';
+import type { TabId, ScanData, ScanEntry, Template } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
 const ROLE_META: Record<string, { icon: string; color: string }> = {
@@ -44,7 +44,11 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<TabId>('dashboard');
   const [scanData, setScanData] = useState<ScanData | null>(null);
   const [scanRecordId, setScanRecordId] = useState<string | null>(null);
+  const [scanEntries, setScanEntries] = useState<ScanEntry[]>([]);
+  const [activeScanEntryId, setActiveScanEntryId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
+  const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showEmailVerificationBanner, setShowEmailVerificationBanner] = useState(true);
   const [deferredMappings, setDeferredMappings] = useState(false);
@@ -65,6 +69,8 @@ export default function App() {
       setScanRecordId(null);
     }
   }, [scanData]);
+
+  const activeScanEntry = scanEntries.find((entry) => entry.id === activeScanEntryId) ?? null;
 
   useEffect(() => {
     if (user?.emailVerified) {
@@ -332,6 +338,14 @@ export default function App() {
               onScanRecordId={setScanRecordId}
               locationId={selectedLocationId || null}
               onboardingStep={onboardingState.step}
+              selectedTemplate={selectedTemplateForScan}
+              onOpenExcelImportModal={() => setShowExcelImportModal(true)}
+              onTabChange={setCurrentTab}
+              scanEntries={scanEntries}
+              setScanEntries={setScanEntries}
+              activeScanEntryId={activeScanEntryId}
+              setActiveScanEntryId={setActiveScanEntryId}
+              activeScanEntry={activeScanEntry}
             />
           )}
           {effectiveTab === 'mappings' && (
@@ -340,15 +354,22 @@ export default function App() {
               selectedLocationId={selectedLocationId}
               onLocationChange={setSelectedLocationId}
               scanData={scanData}
+              scanEntries={scanEntries}
+              activeScanEntry={activeScanEntry}
+              onActiveScanEntryIdChange={setActiveScanEntryId}
               onTabChange={setCurrentTab}
               onboardingStep={onboardingState.step}
               onHasMappings={() => setDeferredMappings(true)}
+              onSelectedTemplateChange={setSelectedTemplateForScan}
+              showExcelImportModal={showExcelImportModal}
+              setShowExcelImportModal={setShowExcelImportModal}
             />
           )}
           {effectiveTab === 'preview' && (
             <JournalEntryPreview
               jwt={jwt!}
               scanData={scanData}
+              activeScanEntry={activeScanEntry}
               selectedLocationId={selectedLocationId}
               scanRecordId={scanRecordId}
             />

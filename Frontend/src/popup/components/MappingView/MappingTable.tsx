@@ -17,6 +17,9 @@ interface Props {
   onSave: (mapping: LocalMapping, index: number) => void;
   onDelete: (mapping: LocalMapping) => void;
   onToggleExpand: (localId: string) => void;
+  onAddMapping?: () => void;
+  isBill?: boolean;
+  isVendorCredit?: boolean;
 }
 
 export default function MappingTable({
@@ -32,6 +35,9 @@ export default function MappingTable({
   onSave,
   onDelete,
   onToggleExpand,
+  onAddMapping,
+  isBill = false,
+  isVendorCredit = false,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -51,8 +57,19 @@ export default function MappingTable({
           onSave={() => onSave(mapping, index)}
           onDelete={() => onDelete(mapping)}
           onToggleExpand={() => onToggleExpand(mapping.localId)}
+          isBill={isBill}
+          isVendorCredit={isVendorCredit}
         />
       ))}
+      {localMappings.length > 0 && onAddMapping && (
+        <button
+          type="button"
+          onClick={onAddMapping}
+          className="w-full py-2 text-sm text-teal-400 hover:text-teal-300 border border-dashed border-gray-600 rounded-md hover:border-teal-400 transition-colors"
+        >
+          + Add mapping
+        </button>
+      )}
     </div>
   );
 }
@@ -71,6 +88,8 @@ interface MappingCardProps {
   onSave: () => void;
   onDelete: () => void;
   onToggleExpand: () => void;
+  isBill: boolean;
+  isVendorCredit: boolean;
 }
 
 function MappingCard({
@@ -86,8 +105,13 @@ function MappingCard({
   onSave,
   onDelete,
   onToggleExpand,
+  isBill,
+  isVendorCredit,
 }: MappingCardProps) {
   const selectedAccount = accountOptions.find((option) => option.value === mapping.accountId);
+
+  const amountLabel = scanFieldOptions.find((option) => option.value === mapping.sourceField)?.subtitle ?? '$0.00';
+  const hidePostingType = isBill || isVendorCredit;
 
   return (
     <div className={`bg-gray-800 border rounded-lg overflow-hidden transition-all ${
@@ -118,30 +142,37 @@ function MappingCard({
             />
           )}
         </div>
-        <div className="flex rounded overflow-hidden border border-gray-600 shrink-0">
-          <button
-            type="button"
-            onClick={() => onUpdate({ postingType: 'Debit' })}
-            className={`text-xs px-2 py-0.5 transition-colors ${
-              mapping.postingType === 'Debit'
-                ? 'bg-blue-700 text-blue-100'
-                : 'bg-gray-900 text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            Dr
-          </button>
-          <button
-            type="button"
-            onClick={() => onUpdate({ postingType: 'Credit' })}
-            className={`text-xs px-2 py-0.5 transition-colors ${
-              mapping.postingType === 'Credit'
-                ? 'bg-emerald-700 text-emerald-100'
-                : 'bg-gray-900 text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            Cr
-          </button>
-        </div>
+        {hidePostingType ? (
+          <div className="flex flex-col items-end text-right text-xs text-gray-400 shrink-0">
+            <span>Amount</span>
+            <span className="text-white">{amountLabel}</span>
+          </div>
+        ) : (
+          <div className="flex rounded overflow-hidden border border-gray-600 shrink-0">
+            <button
+              type="button"
+              onClick={() => onUpdate({ postingType: 'Debit' })}
+              className={`text-xs px-2 py-0.5 transition-colors ${
+                mapping.postingType === 'Debit'
+                  ? 'bg-blue-700 text-blue-100'
+                  : 'bg-gray-900 text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Dr
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate({ postingType: 'Credit' })}
+              className={`text-xs px-2 py-0.5 transition-colors ${
+                mapping.postingType === 'Credit'
+                  ? 'bg-emerald-700 text-emerald-100'
+                  : 'bg-gray-900 text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              Cr
+            </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={onDelete}

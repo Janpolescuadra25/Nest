@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import locationRoutes from './routes/locations';
 import mappingRoutes from './routes/mappings';
+import templateRoutes from './routes/templates';
 import ruleRoutes from './routes/rules';
 import scanRoutes from './routes/scans';
 import quickbooksRoutes from './routes/quickbooks';
@@ -89,6 +90,7 @@ app.use((req: express.Request, _res: express.Response, next: express.NextFunctio
 // ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/templates', templateRoutes);
 app.use('/api/mappings', mappingRoutes);
 app.use('/api/rules', ruleRoutes);
 app.use('/api/scans', scanRoutes);

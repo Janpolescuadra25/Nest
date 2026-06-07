@@ -5,6 +5,7 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { journalEntrySchema } from '../lib/validators';
@@ -326,6 +327,12 @@ async function syncSingleScan(
   privateNote?: string,
   docNumber?: string,
 ): Promise<SyncSingleResult> {
+  const existingLogs = await prisma.syncLog.findMany({
+    where: { scanRecordId },
+    select: { id: true },
+  });
+  const attemptCount = existingLogs.length + 1;
+
   // Dedup check
   const existingSync = await prisma.syncLog.findFirst({
     where: { scanRecordId, status: 'SUCCESS' },
@@ -360,6 +367,8 @@ async function syncSingleScan(
         qbJournalEntryId: result.id,
         docNumber: finalDocNumber,
         status: 'SUCCESS',
+        attemptCount,
+        requestPayload: null,
       },
     });
 
@@ -385,6 +394,8 @@ async function syncSingleScan(
         status: 'FAILED',
         errorMessage: message,
         errorType,
+        attemptCount,
+        requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
       },
     }).catch(console.error);
 
@@ -452,7 +463,6 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
     };
 
     const results: BatchResult[] = [];
-    let authAborted = false;
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i]!;
@@ -468,28 +478,6 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
         continue;
       }
 
-      if (authAborted) {
-        results.push({
-          scanRecordId: item.scanRecordId,
-          status: 'FAILED',
-          errorType: 'AUTH',
-          errorMessage: 'QB connection expired — batch aborted',
-        });
-        await prisma.syncLog.create({
-          data: {
-            scanRecordId: item.scanRecordId,
-            status: 'FAILED',
-            errorType: 'AUTH',
-            errorMessage: 'QB connection expired — batch aborted',
-          },
-        }).catch(console.error);
-        await prisma.scanRecord.update({
-          where: { id: item.scanRecordId },
-          data: { status: 'FAILED' },
-        }).catch(console.error);
-        continue;
-      }
-
       const result = await syncSingleScan(
         req.user!.userId,
         item.scanRecordId,
@@ -501,11 +489,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
 
       results.push({ scanRecordId: item.scanRecordId, ...result });
 
-      if (result.status === 'FAILED' && result.errorType === 'AUTH') {
-        authAborted = true;
-      }
-
-      if (i < items.length - 1 && !authAborted) {
+      if (i < items.length - 1) {
         await sleep(200);
       }
     }
@@ -522,6 +506,331 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-batch error:', message);
     throw new AppError('Batch sync failed', 500);
+  }
+}));
+
+// ── POST /api/quickbooks/retry/:scanRecordId ─────────────────────────────
+router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const scanRecordId = String(req.params.scanRecordId);
+
+    const scan = await prisma.scanRecord.findUnique({
+      where: { id: scanRecordId },
+      select: { id: true, status: true, locationId: true },
+    });
+
+    if (!scan) {
+      throw new AppError('Scan not found', 404);
+    }
+
+    if (scan.status !== 'FAILED') {
+      throw new AppError('Only failed scans can be retried', 409);
+    }
+
+    const location = await prisma.location.findFirst({
+      where: { id: scan.locationId, ...locationFilter(req.user!) },
+    });
+
+    if (!location) {
+      throw new AppError("You don't have access to this location", 403);
+    }
+
+    const latestLog = await prisma.syncLog.findFirst({
+      where: { scanRecordId },
+      orderBy: { syncedAt: 'desc' },
+    });
+
+    if (!latestLog) {
+      throw new AppError('No sync log found. Please re-sync from the Preview tab.', 409);
+    }
+
+    if (!latestLog.requestPayload) {
+      throw new AppError('No sync payload available. Please re-sync from the Preview tab.', 409);
+    }
+
+    const existingCount = await prisma.syncLog.count({ where: { scanRecordId } });
+    const attemptCount = existingCount + 1;
+
+    if (attemptCount > 3) {
+      throw new AppError('Maximum retry attempts (3) reached. Please re-sync from the Preview tab.', 409);
+    }
+
+    const { txnDate, lines, privateNote, docNumber } = latestLog.requestPayload as unknown as {
+      txnDate: string;
+      lines: QBJournalLineItem[];
+      privateNote?: string;
+      docNumber?: string;
+    };
+
+    const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+    try {
+      const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+        qbService.createJournalEntry({
+          txnDate,
+          lines,
+          privateNote,
+          docNumber: finalDocNumber,
+          realmId,
+          accessToken,
+        }),
+      );
+
+      await prisma.syncLog.create({
+        data: {
+          scanRecordId,
+          status: 'SUCCESS',
+          qbJournalEntryId: result.id,
+          docNumber: finalDocNumber,
+          attemptCount,
+          requestPayload: null,
+        },
+      });
+
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+
+      res.json({ success: true, qbJournalEntryId: result.id, docNumber: finalDocNumber, attemptCount });
+      return;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+      await prisma.syncLog.create({
+        data: {
+          scanRecordId,
+          status: 'FAILED',
+          errorMessage: message,
+          errorType,
+          attemptCount,
+          requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
+        },
+      }).catch(console.error);
+
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+
+      res.json({ success: false, errorMessage: message, errorType, attemptCount });
+      return;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] retry error:', message);
+    throw err instanceof AppError ? err : new AppError(message, 500);
+  }
+}));
+
+// ── POST /api/quickbooks/retry-batch ─────────────────────────────────────
+router.post('/retry-batch', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { locationId, scanRecordIds } = req.body as { locationId?: string; scanRecordIds?: string[] };
+
+    if (!locationId && (!Array.isArray(scanRecordIds) || scanRecordIds.length === 0)) {
+      throw new AppError('locationId or scanRecordIds is required', 400);
+    }
+
+    if (scanRecordIds && scanRecordIds.length > 100) {
+      throw new AppError('Maximum 100 scans per batch retry', 400);
+    }
+
+    const accessibleLocations = await prisma.location.findMany({
+      where: locationFilter(req.user!),
+      select: { id: true },
+    });
+    const accessibleLocationIds = new Set(accessibleLocations.map((l) => l.id));
+
+    let scansToRetry: Array<{ id: string; locationId: string; status: string }> = [];
+    if (scanRecordIds) {
+      scansToRetry = await prisma.scanRecord.findMany({
+        where: { id: { in: scanRecordIds } },
+        select: { id: true, locationId: true, status: true },
+      });
+    } else {
+      if (!accessibleLocationIds.has(locationId!)) {
+        throw new AppError("You don't have access to this location", 403);
+      }
+
+      const totalFailed = await prisma.scanRecord.count({
+        where: { locationId: locationId!, status: 'FAILED' },
+      });
+
+      if (totalFailed > 100) {
+        throw new AppError('Maximum 100 scans per batch retry', 400);
+      }
+
+      scansToRetry = await prisma.scanRecord.findMany({
+        where: { locationId: locationId!, status: 'FAILED' },
+        select: { id: true, locationId: true, status: true },
+      });
+    }
+
+    const scanMap = new Map(scansToRetry.map((scan) => [scan.id, scan]));
+    const candidateIds = scanRecordIds ?? scansToRetry.map((scan) => scan.id);
+
+    type RetryBatchResult = {
+      scanRecordId: string;
+      status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+      qbJournalEntryId?: string;
+      docNumber?: string;
+      errorMessage?: string;
+      errorType?: string;
+      skipReason?: 'max_retries' | 'no_payload';
+      attemptCount: number;
+    };
+
+    const results: RetryBatchResult[] = [];
+
+    for (let i = 0; i < candidateIds.length; i++) {
+      const scanRecordId = candidateIds[i]!;
+      const scan = scanMap.get(scanRecordId);
+
+      if (!scan || !accessibleLocationIds.has(scan.locationId)) {
+        results.push({
+          scanRecordId,
+          status: 'FAILED',
+          errorType: 'VALIDATION',
+          errorMessage: 'Scan not found or access denied',
+          attemptCount: 0,
+        });
+        continue;
+      }
+
+      if (scan.status !== 'FAILED') {
+        results.push({
+          scanRecordId,
+          status: 'SKIPPED',
+          skipReason: 'no_payload',
+          attemptCount: 0,
+        });
+        continue;
+      }
+
+      const existingCount = await prisma.syncLog.count({ where: { scanRecordId } });
+      if (existingCount >= 3) {
+        results.push({
+          scanRecordId,
+          status: 'SKIPPED',
+          skipReason: 'max_retries',
+          attemptCount: existingCount,
+        });
+        continue;
+      }
+
+      const latestLog = await prisma.syncLog.findFirst({
+        where: { scanRecordId },
+        orderBy: { syncedAt: 'desc' },
+      });
+
+      if (!latestLog || !latestLog.requestPayload) {
+        results.push({
+          scanRecordId,
+          status: 'SKIPPED',
+          skipReason: 'no_payload',
+          attemptCount: existingCount,
+        });
+        continue;
+      }
+
+      const payload = latestLog.requestPayload as unknown as {
+        txnDate: string;
+        lines: QBJournalLineItem[];
+        privateNote?: string;
+        docNumber?: string;
+      };
+      const attemptCount = existingCount + 1;
+      const finalDocNumber = payload.docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+      try {
+        const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+          qbService.createJournalEntry({
+            txnDate: payload.txnDate,
+            lines: payload.lines,
+            privateNote: payload.privateNote,
+            docNumber: finalDocNumber,
+            realmId,
+            accessToken,
+          }),
+        );
+
+        await prisma.syncLog.create({
+          data: {
+            scanRecordId,
+            status: 'SUCCESS',
+            qbJournalEntryId: result.id,
+            docNumber: finalDocNumber,
+            attemptCount,
+            requestPayload: null,
+          },
+        });
+
+        await prisma.scanRecord.update({
+          where: { id: scanRecordId },
+          data: { status: 'SYNCED' },
+        }).catch(console.error);
+
+        results.push({
+          scanRecordId,
+          status: 'SUCCESS',
+          qbJournalEntryId: result.id,
+          docNumber: finalDocNumber,
+          attemptCount,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+        await prisma.syncLog.create({
+          data: {
+            scanRecordId,
+            status: 'FAILED',
+            errorMessage: message,
+            errorType,
+            attemptCount,
+            requestPayload: {
+              txnDate: payload.txnDate,
+              lines: payload.lines,
+              privateNote: payload.privateNote,
+              docNumber: payload.docNumber,
+            } as unknown as Prisma.JsonObject,
+          },
+        }).catch(console.error);
+
+        await prisma.scanRecord.update({
+          where: { id: scanRecordId },
+          data: { status: 'FAILED' },
+        }).catch(console.error);
+
+        results.push({
+          scanRecordId,
+          status: 'FAILED',
+          errorMessage: message,
+          errorType,
+          attemptCount,
+        });
+      }
+
+      if (i < candidateIds.length - 1) {
+        await sleep(200);
+      }
+    }
+
+    const summary = {
+      total: results.length,
+      retried: results.filter((r) => r.status === 'SUCCESS' || r.status === 'FAILED').length,
+      succeeded: results.filter((r) => r.status === 'SUCCESS').length,
+      skipped: results.filter((r) => r.status === 'SKIPPED').length,
+      failed: results.filter((r) => r.status === 'FAILED').length,
+    };
+
+    res.json({ results, summary });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] retry-batch error:', message);
+    throw new AppError('Batch retry failed', 500);
   }
 }));
 

@@ -4,6 +4,7 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
+import { createLocationTemplateRouter } from './templates';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 
 const router = Router();
@@ -157,9 +158,18 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
       memoTemplate?: string;
       docNumberTemplate?: string;
       mode?: 'replace' | 'merge';
+      templateId?: string;
     };
 
     const mode = body.mode || 'merge';
+    if (body.templateId) {
+      const template = await prisma.template.findFirst({
+        where: { id: body.templateId, locationId: id },
+      });
+      if (!template) {
+        throw new AppError('Template not found', 404);
+      }
+    }
 
     if (!body.mappings?.length && !body.rules?.length && body.memoTemplate === undefined && body.docNumberTemplate === undefined) {
       throw new AppError('No template data provided', 400);
@@ -189,6 +199,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
           await tx.mapping.create({
             data: {
               locationId: id,
+              templateId: body.templateId || null,
               sourceField: sf,
               targetAccount: ta,
               postingType: m['postingType'] === 'Debit' ? 'Debit' : 'Credit',
@@ -295,10 +306,10 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
       return;
     }
 
-    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, templateId } =
       req.body as {
         sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean;
-        targetClass?: string; targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number;
+        targetClass?: string; targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; templateId?: string;
       };
 
     if (!sourceField || !targetAccount) {
@@ -306,9 +317,20 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
       return;
     }
 
+    if (templateId) {
+      const template = await prisma.template.findFirst({
+        where: { id: templateId, locationId: id },
+      });
+      if (!template) {
+        throw new AppError('Template not found', 404);
+        return;
+      }
+    }
+
     const mapping = await prisma.mapping.create({
       data: {
         locationId: id,
+        templateId: templateId || null,
         sourceField,
         targetAccount,
         postingType: postingType ?? 'Credit',
@@ -431,5 +453,7 @@ router.get('/:id/scans', asyncHandler(async(req: AuthRequest, res: Response): Pr
     throw new AppError('Failed to fetch scans', 500);
   }
 }))
+
+router.use('/:id/templates', createLocationTemplateRouter());
 
 export default router;

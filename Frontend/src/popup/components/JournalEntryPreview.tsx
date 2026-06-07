@@ -5,7 +5,7 @@ import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
-import type { ScanData, Mapping } from '../../types';
+import type { ScanData, ScanEntry, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { guessPostingType, decodeMapping } from '../lib/je-builder';
@@ -88,11 +88,12 @@ function resolveMemoTemplate(template: string, data: ScanData | null): string {
 interface Props {
   jwt: string;
   scanData: ScanData | null;
+  activeScanEntry?: ScanEntry | null;
   selectedLocationId: string;
   scanRecordId?: string | null;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, selectedLocationId, scanRecordId }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, selectedLocationId, scanRecordId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -155,8 +156,41 @@ export default function JournalEntryPreview({ jwt, scanData, selectedLocationId,
     if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
   }, [scanData, locId, locations]);
 
+  // Build lines from the current active scan entry when available
+  useEffect(() => {
+    if (!activeScanEntry || !mappingsLoaded) return;
+    const decoded = savedMappings.map(decodeMapping);
+    const currentLineItem = activeScanEntry.lineItems?.[0] ?? {};
+    const scanLines: LineItem[] = Object.entries(currentLineItem)
+      .map(([field, rawValue]) => ({ field, amount: Number(rawValue) }))
+      .filter((entry) => !Number.isNaN(entry.amount) && entry.amount !== 0)
+      .map(({ field, amount }) => {
+        const mapping = decoded.find((m) => m.sourceField === field);
+        const rawSide = mapping
+          ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
+          : guessPostingType(field);
+        const side = amount < 0
+          ? (rawSide === 'debit' ? 'credit' : 'debit')
+          : rawSide;
+        const accountName = mapping
+          ? (accountsRef.current.find((a) => a.Id === mapping.accountId)?.FullyQualifiedName ?? '')
+          : '';
+        return newLine({
+          description: mapping?.description ?? field,
+          accountId: mapping?.accountId ?? '',
+          accountName,
+          classId: mapping?.classId ?? '',
+          keepSeparate: mapping?.keepSeparate ?? false,
+          debit: side === 'debit' ? Math.abs(amount).toFixed(2) : '',
+          credit: side === 'credit' ? Math.abs(amount).toFixed(2) : '',
+        });
+      });
+    if (scanLines.length > 0) setLines(scanLines);
+  }, [activeScanEntry, savedMappings, mappingsLoaded]);
+
   // Build lines from scan data, applying saved mappings
   useEffect(() => {
+    if (activeScanEntry) return;
     if (!scanData || !mappingsLoaded) return;
     const decoded = savedMappings.map(decodeMapping);
     const scanLines: LineItem[] = Object.entries(scanData)

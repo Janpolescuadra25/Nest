@@ -7,12 +7,14 @@ import { useToast } from '../Toast';
 import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
-import type { Mapping, ScanData, TabId, ExportTemplate } from '../../types';
+import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
+import type { ExcelParseResult, Mapping, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { SelectOption } from '../SearchableSelect';
 
 export interface LocalMapping {
   localId: string;
   remoteId?: string;
+  templateId?: string | null;
   sourceField: string;
   accountId: string;
   postingType: 'Debit' | 'Credit';
@@ -64,7 +66,16 @@ interface Props {
   selectedLocationId: string;
   onLocationChange: (id: string) => void;
   scanData: ScanData | null;
+  scanEntries?: ScanEntry[];
+  activeScanEntry?: ScanEntry | null;
+  activeScanEntryId?: string | null;
+  onActiveScanEntryIdChange?: (id: string) => void;
   onTabChange: (tab: TabId) => void;
+  onboardingStep?: number;
+  onHasMappings?: () => void;
+  onSelectedTemplateChange?: (template: Template | null) => void;
+  showExcelImportModal?: boolean;
+  setShowExcelImportModal?: (open: boolean) => void;
 }
 
 function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'locationId' | 'createdAt'> {
@@ -81,6 +92,7 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
       entityType: m.entityType || undefined,
       entityId: m.entityId || undefined,
     }),
+    templateId: m.templateId || undefined,
     priority,
   };
 }
@@ -114,6 +126,7 @@ function decodeFromApi(m: Mapping): LocalMapping {
   return {
     localId: m.id,
     remoteId: m.id,
+    templateId: m.templateId ?? undefined,
     sourceField: m.sourceField,
     accountId: m.targetAccount,
     postingType,
@@ -161,7 +174,16 @@ export default function MappingView({
   selectedLocationId,
   onLocationChange,
   scanData,
+  scanEntries,
+  activeScanEntry,
+  activeScanEntryId,
+  onActiveScanEntryIdChange,
   onTabChange,
+  onboardingStep = 0,
+  onHasMappings,
+  onSelectedTemplateChange,
+  showExcelImportModal: showExcelImportModalProp,
+  setShowExcelImportModal: setShowExcelImportModalProp,
 }: Props) {
   const { locations } = useLocations(jwt);
   const {
@@ -187,6 +209,19 @@ export default function MappingView({
   const [docNumberTemplate, setDocNumberTemplate] = useState('');
   const [memoOpen, setMemoOpen] = useState(true);
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [billDefaults, setBillDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
+  const [billDefaultsDirty, setBillDefaultsDirty] = useState(false);
+  const [vendorCreditDefaults, setVendorCreditDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
+  const [vendorCreditDefaultsDirty, setVendorCreditDefaultsDirty] = useState(false);
+  const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateType, setNewTemplateType] = useState<keyof typeof TRANSACTION_TYPE_LABELS>('JOURNAL_ENTRY');
+  const [editingType, setEditingType] = useState(false);
+  const [editingTypeValue, setEditingTypeValue] = useState<keyof typeof TRANSACTION_TYPE_LABELS>('JOURNAL_ENTRY');
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -196,8 +231,15 @@ export default function MappingView({
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [pendingImport, setPendingImport] = useState<ExportTemplate | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [excelSheets, setExcelSheets] = useState<ExcelParseResult['sheets']>([]);
+  const [selectedExcelSheetName, setSelectedExcelSheetName] = useState<string>('');
+  const [excelColumnMappings, setExcelColumnMappings] = useState<Record<string, string>>({});
+  const [localExcelImportModalOpen, setLocalExcelImportModalOpen] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
 
   const locId = selectedLocationId || locations[0]?.id || '';
+  const showExcelImportModal = showExcelImportModalProp ?? localExcelImportModalOpen;
+  const setShowExcelImportModal = setShowExcelImportModalProp ?? setLocalExcelImportModalOpen;
 
   const accountOptions = useMemo((): SelectOption[] =>
     accounts
@@ -230,13 +272,38 @@ export default function MappingView({
   );
 
   const scanFieldOptions = useMemo((): SelectOption[] => {
+    if (activeScanEntry) {
+      const fieldMap = new Map<string, string>();
+
+      Object.entries(activeScanEntry.header).forEach(([key, value]) => {
+        if (!fieldMap.has(key)) {
+          fieldMap.set(key, value);
+        }
+      });
+
+      if (activeScanEntry.lineItems.length > 0) {
+        Object.entries(activeScanEntry.lineItems[0]).forEach(([key, value]) => {
+          fieldMap.set(key, value);
+        });
+      }
+
+      return Array.from(fieldMap.entries()).map(([key, value]) => ({
+        value: key,
+        label: key,
+        subtitle: isNaN(Number(value)) || value.trim() === ''
+          ? value
+          : `$${Number(value).toFixed(2)}`,
+      }));
+    }
+
     if (!scanData) return [];
+
     return Object.entries(scanData).map(([field, amount]) => ({
       value: field,
       label: field,
       subtitle: `$${Number(amount).toFixed(2)}`,
     }));
-  }, [scanData]);
+  }, [activeScanEntry, scanData]);
 
   const scanFieldChips = useMemo(() => {
     if (!scanData) return [];
@@ -248,69 +315,400 @@ export default function MappingView({
 
   const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
+  const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
+  const isBill = selectedTemplate?.transactionType === 'BILL';
+  const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
+  const isComingSoonType = selectedTemplate?.transactionType === 'BILL_PAYMENT';
+  const hidePostingType = isBill || isVendorCredit;
+  const showMappingControls = !isComingSoonType;
+  const isExcelMode = activeScanEntry?.source === 'excel';
+  const activeEntryIndex = scanEntries?.findIndex((entry) => entry.id === activeScanEntryId) ?? -1;
+  const totalEntries = scanEntries?.length ?? 0;
+  const showEntryNav = totalEntries > 1 && activeScanEntry?.source === 'excel';
+
+  const columnMappingFields = useMemo(() => {
+    if (selectedTemplate?.transactionType === 'BILL') {
+      return ['vendorRef', 'apAccountRef', 'termsRef', 'dueDate', 'memo', 'docNumber'];
+    }
+    if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
+      return ['vendorRef', 'apAccountRef', 'memo', 'docNumber'];
+    }
+    return ['memo', 'docNumber'];
+  }, [selectedTemplate?.transactionType]);
+
+  const getColumnFieldLabel = (field: string) => {
+    return BILL_FIELD_LABELS[field] ?? VENDOR_CREDIT_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
+  };
+
+  useEffect(() => {
+    if (selectedTemplate?.transactionType === 'BILL') {
+      setBillDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
+      setBillDefaultsDirty(false);
+      setVendorCreditDefaults({});
+      setVendorCreditDefaultsDirty(false);
+    } else if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
+      setVendorCreditDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
+      setVendorCreditDefaultsDirty(false);
+      setBillDefaults({});
+      setBillDefaultsDirty(false);
+    } else {
+      setBillDefaults({});
+      setBillDefaultsDirty(false);
+      setVendorCreditDefaults({});
+      setVendorCreditDefaultsDirty(false);
+    }
+  }, [selectedTemplate]);
+
+  const updateBillDefault = (key: string, value: string) => {
+    setBillDefaults((prev) => ({
+      ...prev,
+      [key]: { value, name: value },
+    }));
+    setBillDefaultsDirty(true);
+  };
+
+  const saveBillDefaults = async () => {
+    if (!selectedTemplateId || !jwt) return;
+    setTemplatesLoading(true);
+    try {
+      await api.updateTemplate(jwt, selectedTemplateId, { defaults: billDefaults });
+      await loadTemplates();
+      setBillDefaultsDirty(false);
+      showToast('Bill defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save bill defaults', 'error');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const updateVendorCreditDefault = (key: string, value: string) => {
+    setVendorCreditDefaults((prev) => ({
+      ...prev,
+      [key]: { value, name: value },
+    }));
+    setVendorCreditDefaultsDirty(true);
+  };
+
+  const saveVendorCreditDefaults = async () => {
+    if (!selectedTemplateId || !jwt) return;
+    setTemplatesLoading(true);
+    try {
+      await api.updateTemplate(jwt, selectedTemplateId, { defaults: vendorCreditDefaults });
+      await loadTemplates();
+      setVendorCreditDefaultsDirty(false);
+      showToast('Vendor Credit defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save vendor credit defaults', 'error');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const renderBillHeader = () => (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+      <div className="text-xs font-semibold text-white">Bill Defaults</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.vendorRef}</div>
+          <input
+            type="text"
+            value={billDefaults.vendorRef?.value ?? ''}
+            onChange={(e) => updateBillDefault('vendorRef', e.target.value)}
+            placeholder="e.g. ABC Vendor"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.apAccountRef}</div>
+          <input
+            type="text"
+            value={billDefaults.apAccountRef?.value ?? ''}
+            onChange={(e) => updateBillDefault('apAccountRef', e.target.value)}
+            placeholder="e.g. 33"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.termsRef}</div>
+          <input
+            type="text"
+            value={billDefaults.termsRef?.value ?? ''}
+            onChange={(e) => updateBillDefault('termsRef', e.target.value)}
+            placeholder="e.g. Net 30"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.dueDate}</div>
+          <input
+            type="text"
+            value={billDefaults.dueDate?.value ?? ''}
+            onChange={(e) => updateBillDefault('dueDate', e.target.value)}
+            placeholder="e.g. 30"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          disabled={!billDefaultsDirty || templatesLoading}
+          onClick={saveBillDefaults}
+          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+        >
+          Save Defaults
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderVendorCreditHeader = () => (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+      <div className="text-xs font-semibold text-white">Vendor Credit Defaults</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.vendorRef}</div>
+          <input
+            type="text"
+            value={vendorCreditDefaults.vendorRef?.value ?? ''}
+            onChange={(e) => updateVendorCreditDefault('vendorRef', e.target.value)}
+            placeholder="e.g. ABC Vendor"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.apAccountRef}</div>
+          <input
+            type="text"
+            value={vendorCreditDefaults.apAccountRef?.value ?? ''}
+            onChange={(e) => updateVendorCreditDefault('apAccountRef', e.target.value)}
+            placeholder="e.g. 33"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.docNumber}</div>
+          <input
+            type="text"
+            value={vendorCreditDefaults.docNumber?.value ?? ''}
+            onChange={(e) => updateVendorCreditDefault('docNumber', e.target.value)}
+            placeholder="e.g. VC-001"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          disabled={!vendorCreditDefaultsDirty || templatesLoading}
+          onClick={saveVendorCreditDefaults}
+          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+        >
+          Save Defaults
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderComingSoon = (type: string) => (
+    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 text-center">
+      <p className="text-sm text-gray-300">{TRANSACTION_TYPE_LABELS[type] ?? type} form layout is coming soon.</p>
+    </div>
+  );
+
+  const selectedTemplateHasMappings = useMemo(
+    () => selectedTemplateId !== '' && localMappings.some((mapping) => mapping.templateId === selectedTemplateId),
+    [localMappings, selectedTemplateId],
+  );
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      setEditingType(false);
+    }
+    onSelectedTemplateChange?.(selectedTemplate);
+  }, [selectedTemplate, onSelectedTemplateChange]);
+
+  const loadTemplates = useCallback(async () => {
+    if (!locId || !jwt) return;
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    try {
+      const data = await api.getTemplates(jwt, locId);
+      setTemplates(data);
+      setSelectedTemplateId((current) => {
+        if (current && data.some((t) => t.id === current)) return current;
+        return data[0]?.id ?? '';
+      });
+    } catch (err) {
+      setTemplatesError(err instanceof Error ? err.message : 'Failed to load templates');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, [jwt, locId]);
+
+  useEffect(() => { void loadTemplates(); }, [loadTemplates]);
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      setMemoTemplate('');
+      setDocNumberTemplate('');
+      return;
+    }
+    setMemoTemplate(selectedTemplate.memoTemplate ?? '');
+    setDocNumberTemplate(selectedTemplate.docNumberTemplate ?? '');
+  }, [selectedTemplate]);
 
   const debouncedSaveTemplates = useCallback((memo: string, doc: string) => {
-    if (!locId || !jwt) return;
+    if (!selectedTemplateId || !jwt) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      api.updateLocation(jwt, locId, { memoTemplate: memo || undefined, docNumberTemplate: doc || undefined })
+      api.updateTemplate(jwt, selectedTemplateId, { memoTemplate: memo || undefined, docNumberTemplate: doc || undefined })
         .catch(() => { /* silent — will retry on next change */ });
     }, 1500);
-  }, [locId, jwt]);
+  }, [selectedTemplateId, jwt]);
 
   useEffect(() => {
     if (!listsLoaded && !listsLoading && !listsError) void syncAllLists();
   }, [listsLoaded, listsLoading, listsError, syncAllLists]);
 
   const loadMappings = useCallback(async () => {
-    if (!locId) return;
+    if (!locId || !selectedTemplateId) {
+      setLocalMappings([]);
+      return;
+    }
     setLoading(true);
     try {
       const data = await api.getMappings(jwt, locId);
-      setLocalMappings(data.map(decodeFromApi));
+      const filtered = data.filter((mapping) => mapping.templateId === selectedTemplateId);
+      setLocalMappings(filtered.map(decodeFromApi));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load mappings');
     } finally {
       setLoading(false);
     }
-  }, [jwt, locId]);
-
-  useEffect(() => { void loadMappings(); }, [loadMappings]);
+  }, [jwt, locId, selectedTemplateId]);
 
   useEffect(() => {
-    if (!locId) return;
-    const loc = locations.find((l) => l.id === locId);
-    if (loc) {
-      setMemoTemplate(loc.memoTemplate ?? '');
-      setDocNumberTemplate(loc.docNumberTemplate ?? '');
-    } else {
-      setMemoTemplate('');
-      setDocNumberTemplate('');
+    if (!locId || !selectedTemplateId) {
+      setLocalMappings([]);
+      return;
     }
-  }, [locId, locations]);
+    void loadMappings();
+  }, [loadMappings, locId, selectedTemplateId]);
 
-  useEffect(() => {
-    if (!locId || !jwt) return;
-    const lsKey = `nest_templates_${locId}`;
-    const raw = localStorage.getItem(lsKey);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { memoTemplate?: string; docNumberTemplate?: string };
-      const loc = locations.find((l) => l.id === locId);
-      if (loc && !loc.memoTemplate && !loc.docNumberTemplate && (parsed.memoTemplate || parsed.docNumberTemplate)) {
-        api.updateLocation(jwt, locId, {
-          memoTemplate: parsed.memoTemplate || undefined,
-          docNumberTemplate: parsed.docNumberTemplate || undefined,
-        }).then(() => {
-          localStorage.removeItem(lsKey);
-        }).catch(() => { /* silent fail — data is safe in localStorage, will retry next load */ });
-      } else {
-        localStorage.removeItem(lsKey);
+  const handleTemplateChange = (templateId: string) => {
+    if (localMappings.some((mapping) => mapping.isDirty)) {
+      if (!window.confirm('You have unsaved mapping changes. Switch templates anyway?')) {
+        return;
       }
-    } catch {
-      localStorage.removeItem(lsKey);
     }
-  }, [locId, jwt, locations]);
+    setSelectedTemplateId(templateId);
+  };
+
+  const resetNewTemplateForm = () => {
+    setShowNewTemplateForm(false);
+    setNewTemplateName('');
+    setNewTemplateType('JOURNAL_ENTRY');
+  };
+
+  const openNewTemplateForm = () => {
+    setEditingType(false);
+    setNewTemplateName('');
+    setNewTemplateType('JOURNAL_ENTRY');
+    setShowNewTemplateForm(true);
+  };
+
+  const handleSubmitNewTemplate = async () => {
+    if (!locId || !jwt || !newTemplateName.trim()) return;
+    setTemplatesLoading(true);
+    try {
+      const created = await api.createTemplate(jwt, locId, {
+        name: newTemplateName.trim(),
+        transactionType: newTemplateType,
+      });
+      setTemplates((prev) => [...prev, created]);
+      setSelectedTemplateId(created.id);
+      await loadTemplates();
+      showToast('Template created', 'success');
+      resetNewTemplateForm();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to create template', 'error');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const handleNewTemplateKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (newTemplateName.trim()) {
+        await handleSubmitNewTemplate();
+      }
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      resetNewTemplateForm();
+    }
+  };
+
+  const handleToggleEditingType = () => {
+    if (!selectedTemplate) return;
+    setEditingType((current) => {
+      const next = !current;
+      if (!current) {
+        setEditingTypeValue(selectedTemplate.transactionType as keyof typeof TRANSACTION_TYPE_LABELS);
+      }
+      return next;
+    });
+  };
+
+  const handleEditTemplateTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!jwt || !selectedTemplateId) return;
+    const newType = event.target.value as keyof typeof TRANSACTION_TYPE_LABELS;
+    const oldType = editingTypeValue;
+    setEditingTypeValue(newType);
+
+    try {
+      await api.updateTemplate(jwt, selectedTemplateId, { transactionType: newType });
+      await loadTemplates();
+      setEditingType(false);
+    } catch (err) {
+      setEditingTypeValue(oldType);
+      showToast(err instanceof Error ? err.message : 'Failed to update template type', 'error');
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!selectedTemplateId || templates.length <= 1) return;
+    if (!window.confirm('Delete this template and ALL its mappings? This cannot be undone.')) return;
+
+    setTemplatesLoading(true);
+    try {
+      await api.deleteTemplate(jwt, selectedTemplateId);
+      const remaining = templates.filter((t) => t.id !== selectedTemplateId);
+      setTemplates(remaining);
+      setSelectedTemplateId(remaining[0]?.id ?? '');
+      showToast('Template deleted', 'success');
+      if (remaining[0]?.id) {
+        void loadMappings();
+      } else {
+        setLocalMappings([]);
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete template', 'error');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const hasReportedMappings = useRef(false);
+  useEffect(() => {
+    if (localMappings.length > 0 && !hasReportedMappings.current) {
+      hasReportedMappings.current = true;
+      onHasMappings?.();
+    }
+  }, [localMappings.length, onHasMappings]);
 
   useEffect(() => {
     debouncedSaveTemplates(memoTemplate, docNumberTemplate);
@@ -336,12 +734,14 @@ export default function MappingView({
   };
 
   const addMapping = () => {
+    if (!selectedTemplateId) return;
     const newMapping: LocalMapping = {
       localId: `new-${Date.now()}`,
       remoteId: undefined,
+      templateId: selectedTemplateId || undefined,
       sourceField: '',
       accountId: '',
-      postingType: 'Credit',
+      postingType: selectedTemplate?.transactionType === 'VENDOR_CREDIT' ? 'Debit' : 'Credit',
       description: '',
       classId: '',
       taxCodeId: '',
@@ -403,6 +803,10 @@ export default function MappingView({
   };
 
   const autoDetect = () => {
+    if (!selectedTemplateId) {
+      setAutoMsg('Select a template first before using Auto-Detect.');
+      return;
+    }
     if (!scanData || accounts.length === 0) {
       setAutoMsg('No scan data or QB accounts loaded');
       return;
@@ -429,7 +833,7 @@ export default function MappingView({
         description: field,
         classId: '',
         taxCodeId: '',
-        entityType: '',
+        entityType: '' as LocalMapping['entityType'],
         entityId: '',
         amountRule: 'Direct Amount',
         keepSeparate: false,
@@ -449,7 +853,11 @@ export default function MappingView({
   };
 
   const applyTemplate = (templateName: string) => {
-    const templates: Record<string, { field: string; postingType: 'Debit' | 'Credit'; accountHint: string }[]> = {
+    if (!selectedTemplateId) {
+      setAutoMsg('Select a template first before applying a preset.');
+      return;
+    }
+    const matchingTemplates: Record<string, { field: string; postingType: 'Debit' | 'Credit'; accountHint: string }[]> = {
       'Standard Daily': [
         { field: 'Revenue.Net sales', postingType: 'Credit', accountHint: 'Sales of Product' },
         { field: 'Revenue.Tax amount', postingType: 'Credit', accountHint: 'Sales Tax' },
@@ -476,10 +884,10 @@ export default function MappingView({
       ],
     };
 
-    const tpl = templates[templateName];
+    const tpl = matchingTemplates[templateName];
     if (!tpl || accounts.length === 0) return;
 
-    const newMappings = tpl
+    const newMappings: LocalMapping[] = tpl
       .filter((item) => !localMappings.some((mapping) => mapping.sourceField === item.field))
       .map((item) => {
         const matchedAccount = accounts.find(
@@ -488,13 +896,14 @@ export default function MappingView({
         return {
           localId: `tpl-${Date.now()}-${item.field}`,
           remoteId: undefined,
+          templateId: selectedTemplateId || undefined,
           sourceField: item.field,
           accountId: matchedAccount?.Id ?? '',
           postingType: item.postingType,
           description: item.field,
           classId: '',
           taxCodeId: '',
-          entityType: '',
+          entityType: '' as LocalMapping['entityType'],
           entityId: '',
           amountRule: 'Direct Amount',
           keepSeparate: false,
@@ -612,12 +1021,44 @@ export default function MappingView({
     }
   }, [pendingImport, locId, jwt, importMode, showToast, loadMappings, locations]);
 
+  const saveExcelColumnMappings = useCallback(async () => {
+    if (!selectedTemplateId || !jwt) return;
+    try {
+      await api.updateTemplate(jwt, selectedTemplateId, {
+        columnMappings: excelColumnMappings,
+      });
+      await loadTemplates();
+      showToast('Excel column mappings saved', 'success');
+      setShowExcelImportModal(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save Excel mappings', 'error');
+    }
+  }, [excelColumnMappings, jwt, selectedTemplateId, loadTemplates, showToast]);
+
+  const getAmountForField = (field: string): number => {
+    if (activeScanEntry?.lineItems?.[0]) {
+      const raw = activeScanEntry.lineItems[0][field];
+      if (raw !== undefined && raw !== '') {
+        const parsed = Number(raw);
+        if (!Number.isNaN(parsed)) return Math.abs(parsed);
+      }
+    }
+    if (activeScanEntry?.header) {
+      const raw = activeScanEntry.header[field];
+      if (raw !== undefined && raw !== '') {
+        const parsed = Number(raw);
+        if (!Number.isNaN(parsed)) return Math.abs(parsed);
+      }
+    }
+    return Math.abs(scanData?.[field] ?? 0);
+  };
+
   const totalDebits = localMappings
     .filter((mapping) => mapping.postingType === 'Debit')
-    .reduce((sum, mapping) => sum + Math.abs(scanData?.[mapping.sourceField] ?? 0), 0);
+    .reduce((sum, mapping) => sum + getAmountForField(mapping.sourceField), 0);
   const totalCredits = localMappings
     .filter((mapping) => mapping.postingType === 'Credit')
-    .reduce((sum, mapping) => sum + Math.abs(scanData?.[mapping.sourceField] ?? 0), 0);
+    .reduce((sum, mapping) => sum + getAmountForField(mapping.sourceField), 0);
   const diff = totalCredits - totalDebits;
   const isBalanced = Math.abs(diff) < 0.01;
 
@@ -631,27 +1072,289 @@ export default function MappingView({
 
   return (
     <div className="p-3 space-y-3">
+      {showEntryNav && (
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg mb-3">
+          <button
+            type="button"
+            onClick={() => {
+              const prev = activeEntryIndex - 1;
+              if (prev >= 0 && scanEntries) onActiveScanEntryIdChange?.(scanEntries[prev].id);
+            }}
+            disabled={activeEntryIndex <= 0}
+            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Prev
+          </button>
+          <span className="text-xs text-gray-300 font-medium">
+            Entry {activeEntryIndex + 1} of {totalEntries}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const next = activeEntryIndex + 1;
+              if (next < totalEntries && scanEntries) onActiveScanEntryIdChange?.(scanEntries[next].id);
+            }}
+            disabled={activeEntryIndex >= totalEntries - 1}
+            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Next →
+          </button>
+        </div>
+      )}
       <MappingFilters
         locId={locId}
         locations={locations}
         onLocationChange={onLocationChange}
         onExport={handleExport}
         onImport={() => fileInputRef.current?.click()}
-        onAddMapping={addMapping}
         onAutoDetect={autoDetect}
         onApplyTemplate={applyTemplate}
         onSyncLists={() => void syncAllLists()}
         listsLoading={listsLoading}
         accountsLoaded={accounts.length > 0}
+        showImportButton={showMappingControls}
+        disableAutoDetect={isExcelMode}
+        disablePresets={isExcelMode}
       />
+
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <label className="block text-xs text-gray-400 mb-1">Template</label>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+              disabled={templatesLoading}
+              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            >
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} ({TRANSACTION_TYPE_LABELS[template.transactionType] ?? template.transactionType})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!showNewTemplateForm && (
+              <button
+                type="button"
+                onClick={openNewTemplateForm}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+              >
+                + New
+              </button>
+            )}
+            {selectedTemplate && !showNewTemplateForm && (
+              <button
+                type="button"
+                onClick={handleToggleEditingType}
+                className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
+              >
+                {editingType ? 'Cancel' : 'Edit Type'}
+              </button>
+            )}
+            {editingType && selectedTemplate && (
+              <select
+                value={editingTypeValue}
+                onChange={handleEditTemplateTypeChange}
+                className="bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5"
+              >
+                {TRANSACTION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {TRANSACTION_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            )}
+            {templates.length > 1 && (
+              <button
+                type="button"
+                onClick={handleDeleteTemplate}
+                disabled={templatesLoading}
+                className="text-xs bg-red-800 hover:bg-red-700 text-white rounded px-3 py-1.5"
+              >
+                ✕ Delete
+              </button>
+            )}
+          </div>
+        </div>
+        {selectedTemplateHasMappings && (
+          <div className="text-xs text-orange-300">Changing type may affect existing mappings.</div>
+        )}
+        {showNewTemplateForm && (
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-[1.6fr_1fr]">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Template name"
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+                onKeyDown={handleNewTemplateKeyDown}
+                className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+              />
+              <select
+                value={newTemplateType}
+                onChange={(e) => setNewTemplateType(e.target.value as keyof typeof TRANSACTION_TYPE_LABELS)}
+                className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+              >
+                {TRANSACTION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {TRANSACTION_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!newTemplateName.trim() || templatesLoading}
+                onClick={handleSubmitNewTemplate}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={resetNewTemplateForm}
+                className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {templatesError ? (
+          <div className="text-xs text-red-400">{templatesError}</div>
+        ) : null}
+        {templatesLoading ? (
+          <div className="text-xs text-gray-400">Loading templates…</div>
+        ) : null}
+      </div>
+
+      {!templatesLoading && templates.length === 0 && (
+        <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 text-center">
+          <p className="text-sm text-gray-300 mb-3">No templates yet. Create your first template to start mapping.</p>
+          <button
+            type="button"
+            onClick={openNewTemplateForm}
+            className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+          >
+            Create Default Template
+          </button>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
         type="file"
         accept=".json"
+        aria-label="Import template JSON file"
         className="hidden"
         onChange={handleFileSelect}
       />
+
+      {showExcelImportModal && excelSheets.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 w-full max-w-3xl space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Excel Column Mappings</h3>
+                <p className="text-xs text-gray-400 max-w-2xl">
+                  Map the imported spreadsheet columns to fields used by the selected template.
+                </p>
+                {selectedTemplate?.columnMappings && Object.keys(selectedTemplate.columnMappings).length > 0 && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    This template has an existing column mapping. Upload a new file to reconfigure it.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExcelImportModal(false)}
+                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded px-3 py-1.5"
+              >
+                Close
+              </button>
+            </div>
+
+            {excelSheets.length > 1 && (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-400">Worksheet</div>
+                <select
+                  value={selectedExcelSheetName}
+                  onChange={(e) => setSelectedExcelSheetName(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                >
+                  {excelSheets.map((sheet) => (
+                    <option key={sheet.name} value={sheet.name}>{sheet.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {columnMappingFields.map((field) => (
+                <div key={field}>
+                  <div className="text-xs text-gray-400 mb-1">{getColumnFieldLabel(field)}</div>
+                  <select
+                    value={excelColumnMappings[field] ?? ''}
+                    onChange={(e) => setExcelColumnMappings((prev) => ({ ...prev, [field]: e.target.value }))}
+                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="">Select column</option>
+                    {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers ?? []).map((header) => (
+                      <option key={header} value={header}>{header}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-400 mb-2">Preview</div>
+              <div className="overflow-x-auto border border-gray-700 rounded-lg bg-gray-950">
+                <table className="min-w-full text-left text-xs text-gray-200">
+                  <thead>
+                    <tr className="border-b border-gray-700 bg-gray-900 text-gray-300">
+                      {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers ?? []).map((header) => (
+                        <th key={header} className="px-2 py-2">{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.rows ?? []).map((row, rowIndex) => (
+                      <tr key={rowIndex} className="odd:bg-gray-950 even:bg-gray-900">
+                        {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers ?? []).map((header) => (
+                          <td key={header} className="px-2 py-2 text-gray-300 truncate max-w-[10rem]">{row[header]}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowExcelImportModal(false)}
+                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded px-3 py-1.5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveExcelColumnMappings()}
+                disabled={excelLoading}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+              >
+                {excelLoading ? 'Saving…' : 'Save Mappings'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showImportConfirm && pendingImport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -820,33 +1523,42 @@ export default function MappingView({
         )}
       </div>
 
-      {loading ? (
-        <DashboardSkeleton type="list" rows={3} />
-      ) : localMappings.length === 0 ? (
-        <EmptyState
-          icon="🗂️"
-          title="No mappings yet"
-          description="Add a mapping or use Auto-Detect to get started."
-          action={{ label: 'Add mapping', onClick: addMapping }}
-        />
-      ) : (
-        <MappingTable
-          localMappings={localMappings}
-          accountOptions={accountOptions}
-          classOptions={classOptions}
-          taxCodeOptions={taxCodeOptions}
-          scanFieldOptions={scanFieldOptions}
-          entityOptions={buildEntityOptions('')}
-          saving={saving}
-          deleting={deleting}
-          onUpdate={updateMapping}
-          onSave={saveMapping}
-          onDelete={deleteMapping}
-          onToggleExpand={toggleExpand}
-        />
+      {isBill && renderBillHeader()}
+      {isVendorCredit && renderVendorCreditHeader()}
+      {isComingSoonType ? renderComingSoon(selectedTemplate.transactionType) : (
+        loading ? (
+          <DashboardSkeleton type="list" rows={3} />
+        ) : localMappings.length === 0 ? (
+          <EmptyState
+            icon="🗂️"
+            title="No mappings yet"
+            description={onboardingStep === 3
+              ? 'Create a mapping template to translate your POS data into QuickBooks journal entries'
+              : 'Add a mapping or use Auto-Detect to get started.'}
+            action={{ label: 'Add mapping', onClick: addMapping }}
+          />
+        ) : (
+          <MappingTable
+            localMappings={localMappings}
+            accountOptions={accountOptions}
+            classOptions={classOptions}
+            taxCodeOptions={taxCodeOptions}
+            scanFieldOptions={scanFieldOptions}
+            entityOptions={buildEntityOptions('')}
+            saving={saving}
+            deleting={deleting}
+            onUpdate={updateMapping}
+            onSave={saveMapping}
+            onDelete={deleteMapping}
+            onToggleExpand={toggleExpand}
+            onAddMapping={addMapping}
+            isBill={isBill}
+            isVendorCredit={isVendorCredit}
+          />
+        )
       )}
 
-      {localMappings.length > 0 && (
+      {!isComingSoonType && selectedTemplate?.transactionType !== 'BILL' && selectedTemplate?.transactionType !== 'VENDOR_CREDIT' && localMappings.length > 0 && (
         <div className="border-t border-gray-700 pt-3 space-y-2">
           <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
             isBalanced ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'

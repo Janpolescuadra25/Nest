@@ -24,6 +24,7 @@ async function main(): Promise<void> {
       canMap: true,
       canSync: true,
       canManageLocs: true,
+      subscriptionSource: 'owner',
     },
     create: {
       email: ownerEmail,
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
       canMap: true,
       canSync: true,
       canManageLocs: true,
+      subscriptionSource: 'owner',
     },
   });
   console.log(`[Seed] Owner: ${ownerUser.email} / password: ${ownerPassword}`);

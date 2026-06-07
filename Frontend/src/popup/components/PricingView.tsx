@@ -9,6 +9,14 @@ interface Props {
 }
 
 export default function PricingView({ jwt, user, onManageBilling, onClose }: Props) {
+  if (user.subscriptionSource === 'owner') {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-400 text-sm">You have unlimited platform access.</p>
+      </div>
+    );
+  }
+
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

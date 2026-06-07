@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { api, type UserInfo } from '../lib/api';
-import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import PricingView from './PricingView';
 
@@ -11,44 +10,13 @@ interface Props {
 }
 
 export default function SettingsView({ jwt, user, onLogout }: Props) {
-  const { locations, refetch } = useLocations(jwt);
   const { status, connect } = useQuickBooks(jwt);
-  const [showAddLoc, setShowAddLoc] = useState(false);
-  const [locForm, setLocForm] = useState({ name: '', posUrl: '' });
-  const [locError, setLocError] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [showPricing, setShowPricing] = useState(false);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
-
-  const handleAddLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!locForm.name) return;
-    try {
-      await api.createLocation(jwt, locForm.name, locForm.posUrl);
-      setLocForm({ name: '', posUrl: '' });
-      setShowAddLoc(false);
-      await refetch();
-    } catch (err) {
-      setLocError(err instanceof Error ? err.message : 'Failed to create location');
-    }
-  };
-
-  const handleDeleteLoc = async (id: string) => {
-    if (!confirm('Delete this location and all its data?')) return;
-    setDeleting(id);
-    try {
-      await api.deleteLocation(jwt, id);
-      await refetch();
-    } catch (err) {
-      setLocError(err instanceof Error ? err.message : 'Failed to delete');
-    } finally {
-      setDeleting(null);
-    }
-  };
 
   const handleResendVerification = async () => {
     setVerificationStatus('sending');
@@ -77,11 +45,13 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
     }
   };
 
-  const billingStatusText = user.subscriptionSource === 'stripe'
-    ? `Paid plan ${user.currentPlan ?? 'Stripe'}${user.planInterval ? ` (${user.planInterval})` : ''}`
-    : user.subscriptionSource === 'partner'
-      ? 'Partner Plan (Owner-managed)'
-      : 'Free Trial';
+  const billingStatusText = user.subscriptionSource === 'owner'
+    ? '👑 Platform Owner — Unlimited Access'
+    : user.subscriptionSource === 'stripe'
+      ? `Paid plan ${user.currentPlan ?? 'Stripe'}${user.planInterval ? ` (${user.planInterval})` : ''}`
+      : user.subscriptionSource === 'partner'
+        ? 'Partner Plan (Owner-managed)'
+        : 'Free Trial';
 
   const billingNotes = [] as string[];
   if (user.subscriptionSource === 'stripe' && user.cancelAtPeriodEnd) {
@@ -181,7 +151,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           {billingMessage && <div className="text-emerald-300 text-xs">{billingMessage}</div>}
           {billingError && <div className="text-red-400 text-xs">{billingError}</div>}
           <div className="grid gap-2 sm:grid-cols-2">
-            {user.subscriptionSource === 'stripe' ? (
+            {user.subscriptionSource === 'owner' ? null : user.subscriptionSource === 'stripe' ? (
               <>
                 <button
                   type="button"
@@ -232,65 +202,6 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <PricingView jwt={jwt} user={user} onManageBilling={handleOpenBillingPortal} onClose={() => setShowPricing(false)} />
         </div>
       )}
-
-      {/* Locations section */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Locations</div>
-          <button
-            onClick={() => setShowAddLoc(!showAddLoc)}
-            className="text-xs text-cyan-400 hover:text-cyan-300"
-          >
-            + Add
-          </button>
-        </div>
-
-        {locError && <p className="text-red-400 text-xs mb-2">{locError}</p>}
-
-        {showAddLoc && (
-          <form onSubmit={handleAddLocation} className="bg-gray-800 border border-gray-600 rounded-lg p-3 mb-2 space-y-2">
-            <input
-              value={locForm.name}
-              onChange={(e) => setLocForm({ ...locForm, name: e.target.value })}
-              placeholder="Location name"
-              className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
-              required
-            />
-            <input
-              value={locForm.posUrl}
-              onChange={(e) => setLocForm({ ...locForm, posUrl: e.target.value })}
-              placeholder="POS URL (optional)"
-              className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
-            />
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setShowAddLoc(false)} className="text-xs text-gray-500 px-2 py-1">Cancel</button>
-              <button type="submit" className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-3 py-1 rounded">Save</button>
-            </div>
-          </form>
-        )}
-
-        <div className="space-y-1">
-          {locations.length === 0 ? (
-            <p className="text-gray-600 text-xs">No locations. Add one above.</p>
-          ) : (
-            locations.map((l) => (
-              <div key={l.id} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
-                <div>
-                  <div className="text-white text-xs">{l.name}</div>
-                  {l.posUrl && <div className="text-gray-500 text-xs truncate max-w-48">{l.posUrl}</div>}
-                </div>
-                <button
-                  onClick={() => void handleDeleteLoc(l.id)}
-                  disabled={deleting === l.id}
-                  className="text-gray-600 hover:text-red-400 text-xs ml-2"
-                >
-                  {deleting === l.id ? '…' : '✕'}
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
 
       {/* Account section */}
       <div>

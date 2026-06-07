@@ -1,4 +1,4 @@
-import type { Location, Mapping, Rule, ScanData, ScanRecord, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary } from '../../types';
+import type { Location, Mapping, Template, Rule, ScanData, ScanRecord, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -22,6 +22,19 @@ async function post<T>(path: string, body: unknown, jwt?: string | null): Promis
     method: 'POST',
     headers: await headers(jwt),
     body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+    throw new Error(err.error ?? `API ${path} failed`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function postForm<T>(path: string, form: FormData, jwt?: string | null): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: jwt ? { Authorization: `Bearer ${jwt}` } : undefined,
+    body: form,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
@@ -276,6 +289,33 @@ export const api = {
 
   deleteMapping: (jwt: string, id: string) => del(`/api/mappings/${id}`, jwt),
 
+  // ── Templates ──────────────────────────────────────────────────────────────
+  getTemplates: (jwt: string, locationId: string) =>
+    get<Template[]>(`/api/locations/${locationId}/templates`, jwt),
+
+  getTemplate: (jwt: string, id: string) =>
+    get<Template>(`/api/templates/${id}`, jwt),
+
+  createTemplate: (jwt: string, locationId: string, data: { name: string; transactionType?: string; memoTemplate?: string; docNumberTemplate?: string }) =>
+    post<Template>(`/api/locations/${locationId}/templates`, data, jwt),
+
+  updateTemplate: (jwt: string, id: string, data: Partial<Template>) =>
+    put<Template>(`/api/templates/${id}`, data, jwt),
+
+  deleteTemplate: (jwt: string, id: string) => del(`/api/templates/${id}`, jwt),
+
+  parseExcel: (jwt: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<ExcelParseResult>('/api/templates/parse-excel', form, jwt);
+  },
+
+  parseExcelData: (jwt: string, templateId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<ExcelDataParseResult>(`/api/templates/parse-excel-data?templateId=${encodeURIComponent(templateId)}`, form, jwt);
+  },
+
   // ── Rules ──────────────────────────────────────────────────────────────────
   getRules: (jwt: string, locationId: string) =>
     get<Rule[]>(`/api/locations/${locationId}/rules`, jwt),
@@ -329,6 +369,20 @@ export const api = {
     post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(
       '/api/quickbooks/sync-batch',
       { items },
+      jwt,
+    ),
+
+  retryScan: (jwt: string, scanRecordId: string) =>
+    post<{ success: boolean; qbJournalEntryId?: string; docNumber?: string; errorMessage?: string; errorType?: string; attemptCount: number }>(
+      `/api/quickbooks/retry/${scanRecordId}`,
+      {},
+      jwt,
+    ),
+
+  retryBatch: (jwt: string, body: { locationId?: string; scanRecordIds?: string[] }) =>
+    post<{ results: RetryBatchResult[]; summary: RetryBatchSummary }>(
+      '/api/quickbooks/retry-batch',
+      body,
       jwt,
     ),
 

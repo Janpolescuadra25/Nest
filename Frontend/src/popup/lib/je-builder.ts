@@ -1,4 +1,4 @@
-import type { Mapping, ScanData, QBJournalLineItem } from '../../types';
+import type { Mapping, ScanData, ScanEntry, QBJournalLineItem } from '../../types';
 import type { QBAccount } from '../types/qb';
 
 // ── Decoded mapping ───────────────────────────────────────────────────────────
@@ -57,8 +57,8 @@ export function guessPostingType(field: string): 'debit' | 'credit' {
   if (/^(unpaid orders)$/.test(section)) return 'debit';
 
   // Fallback: keyword matching on the full field name
-  if (/cash|credit card|debit card|gift card|discount|comp\b|net sales|total/.test(lower)) return 'debit';
-  if (/sales|revenue|tax|tip|gratuity|fee|charge/.test(lower)) return 'credit';
+  if (/cash|credit card|debit card|gift card|discount|refund|void|comp\b|net sales|total/.test(lower)) return 'debit';
+  if (/sales|revenue|income|tax|tip|gratuity|fee|charge/.test(lower)) return 'credit';
 
   return 'debit';
 }
@@ -106,11 +106,20 @@ export function buildJEPayload(params: {
   txnDate: string;
   privateNote?: string;
   docNumber?: string;
+  scanEntry?: ScanEntry;
 }): JEPayload {
-  const { scanRecordId, scanData, mappings, accounts, txnDate, privateNote, docNumber } = params;
+  const { scanRecordId, scanData, mappings, accounts, txnDate, privateNote, docNumber, scanEntry } = params;
   const decoded = mappings.map(decodeMapping);
 
-  const jeLines: QBJournalLineItem[] = Object.entries(scanData)
+  const scanFields: ScanData = scanEntry
+    ? Object.fromEntries(
+        Object.entries(scanEntry.lineItems?.[0] ?? {})
+          .map(([key, value]) => [key, Number(value)])
+          .filter(([, value]) => !Number.isNaN(value)),
+      ) as ScanData
+    : scanData;
+
+  const jeLines: QBJournalLineItem[] = Object.entries(scanFields)
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
       const mapping = decoded.find((m) => m.sourceField === field);

@@ -21,11 +21,22 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
       throw new AppError('Mapping not found', 404);
     }
 
-    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, templateId } =
       req.body as {
         sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean; targetClass?: string;
-        targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number;
+        targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; templateId?: string | null;
       };
+
+    if (templateId !== undefined) {
+      if (templateId !== null && templateId !== '') {
+        const template = await prisma.template.findFirst({
+          where: { id: templateId, locationId: mapping.locationId },
+        });
+        if (!template) {
+          throw new AppError('Template not found', 404);
+        }
+      }
+    }
 
     const updated = await prisma.mapping.update({
       where: { id },
@@ -39,6 +50,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
         ...(targetDescription !== undefined && { targetDescription }),
         ...(targetMemo !== undefined && { targetMemo }),
         ...(priority !== undefined && { priority }),
+        ...(templateId !== undefined && { templateId: templateId || null }),
       },
     });
 

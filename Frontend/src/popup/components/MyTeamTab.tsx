@@ -14,11 +14,12 @@ interface InviteResult {
 
 interface Props {
   jwt: string;
+  subscriptionSource?: string | null;
 }
 
 const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT'];
 
-export default function MyTeamTab({ jwt }: Props) {
+export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
   const { showToast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,29 +335,35 @@ export default function MyTeamTab({ jwt }: Props) {
           >
             {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <div>
-            <label className="block text-xs text-gray-500 mb-0.5">Trial period (days)</label>
-            <input
-              type="number"
-              min={1}
-              max={365}
-              placeholder="e.g. 30"
-              value={inviteTrialDays}
-              onChange={e => setInviteTrialDays(e.target.value)}
-              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-0.5">Expiry message (shown to user when trial ends)</label>
-            <textarea
-              placeholder="e.g. Contact me to renew your access"
-              value={inviteExpiryMsg}
-              onChange={e => setInviteExpiryMsg(e.target.value)}
-              maxLength={200}
-              rows={2}
-              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
-            />
-          </div>
+          {subscriptionSource !== 'stripe' ? (
+            <>
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Trial period (days)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  placeholder="e.g. 30"
+                  value={inviteTrialDays}
+                  onChange={e => setInviteTrialDays(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Expiry message (shown to user when trial ends)</label>
+                <textarea
+                  placeholder="e.g. Contact me to renew your access"
+                  value={inviteExpiryMsg}
+                  onChange={e => setInviteExpiryMsg(e.target.value)}
+                  maxLength={200}
+                  rows={2}
+                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-gray-400">Team access is managed through your Stripe subscription.</div>
+          )}
           <div className="flex gap-2">
             <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50">
               {actionLoading['invite'] ? 'Inviting...' : 'Send Invite'}
@@ -533,125 +540,131 @@ export default function MyTeamTab({ jwt }: Props) {
                   </button>
                 )}
 
-                {/* Time Bomb */}
-                <div className="pt-2 border-t border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 font-medium">Time Bomb</p>
-                    {member.timeBombAt && (
-                      <span className="text-xs text-yellow-400">💣 {new Date(member.timeBombAt).toLocaleDateString()}</span>
-                    )}
-                  </div>
-                  {member.status === 'GRACE_PERIOD' && (
-                    <div className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-800 rounded px-2 py-1">
-                      ⏳ Grace period — access restricted soon
-                    </div>
-                  )}
-                  {member.status === 'TIME_BOMBED' && (
-                    <div className="text-xs text-red-300 bg-red-900/30 border border-red-800 rounded px-2 py-1">
-                      🚫 Access restricted (downgraded to VIEWER)
-                    </div>
-                  )}
-                  {member.timeBombAt ? (
-                    <button
-                      onClick={() => handleClearTimeBomb(member.id)}
-                      disabled={actionLoading[`bomb_${member.id}`]}
-                      className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
-                    >
-                      {actionLoading[`bomb_${member.id}`] ? 'Clearing...' : 'Clear Time Bomb'}
-                    </button>
-                  ) : (
-                    <>
-                      {!showBombForm[member.id] ? (
+                {subscriptionSource !== 'stripe' ? (
+                  <>
+                    {/* Time Bomb */}
+                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-400 font-medium">Time Bomb</p>
+                        {member.timeBombAt && (
+                          <span className="text-xs text-yellow-400">💣 {new Date(member.timeBombAt).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                      {member.status === 'GRACE_PERIOD' && (
+                        <div className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-800 rounded px-2 py-1">
+                          ⏳ Grace period — access restricted soon
+                        </div>
+                      )}
+                      {member.status === 'TIME_BOMBED' && (
+                        <div className="text-xs text-red-300 bg-red-900/30 border border-red-800 rounded px-2 py-1">
+                          🚫 Access restricted (downgraded to VIEWER)
+                        </div>
+                      )}
+                      {member.timeBombAt ? (
                         <button
-                          onClick={() => setShowBombForm(p => ({ ...p, [member.id]: true }))}
-                          className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600"
+                          onClick={() => handleClearTimeBomb(member.id)}
+                          disabled={actionLoading[`bomb_${member.id}`]}
+                          className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
                         >
-                          Set Time Bomb
+                          {actionLoading[`bomb_${member.id}`] ? 'Clearing...' : 'Clear Time Bomb'}
                         </button>
                       ) : (
+                        <>
+                          {!showBombForm[member.id] ? (
+                            <button
+                              onClick={() => setShowBombForm(p => ({ ...p, [member.id]: true }))}
+                              className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600"
+                            >
+                              Set Time Bomb
+                            </button>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-0.5">Bomb date</label>
+                                <input
+                                  type="datetime-local"
+                                  value={bombDate[member.id] ?? ''}
+                                  onChange={e => setBombDate(p => ({ ...p, [member.id]: e.target.value }))}
+                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-0.5">Grace period (hours)</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={bombGrace[member.id] ?? '24'}
+                                  onChange={e => setBombGrace(p => ({ ...p, [member.id]: e.target.value }))}
+                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleSetTimeBomb(member.id)}
+                                  disabled={actionLoading[`bomb_${member.id}`]}
+                                  className="flex-1 py-1.5 bg-yellow-800 text-yellow-200 rounded text-xs font-medium hover:bg-yellow-700 disabled:opacity-50"
+                                >
+                                  {actionLoading[`bomb_${member.id}`] ? 'Setting...' : 'Set Bomb'}
+                                </button>
+                                <button
+                                  onClick={() => setShowBombForm(p => ({ ...p, [member.id]: false }))}
+                                  className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Trial Period */}
+                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-400 font-medium">Trial Period</p>
+                        <button
+                          onClick={() => setTrialEnabled(p => ({ ...p, [member.id]: !p[member.id] }))}
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[member.id] ? 'bg-yellow-800 text-yellow-300' : 'bg-slate-700 text-gray-500'}`}
+                        >
+                          {trialEnabled[member.id] ? 'Enabled' : 'Disabled'}
+                        </button>
+                      </div>
+                      {trialEnabled[member.id] && (
                         <div className="space-y-1.5">
                           <div>
-                            <label className="block text-xs text-gray-500 mb-0.5">Bomb date</label>
+                            <label className="block text-xs text-gray-500 mb-0.5">Expiry date</label>
                             <input
-                              type="datetime-local"
-                              value={bombDate[member.id] ?? ''}
-                              onChange={e => setBombDate(p => ({ ...p, [member.id]: e.target.value }))}
+                              type="date"
+                              value={trialDate[member.id] ?? ''}
+                              onChange={e => setTrialDate(p => ({ ...p, [member.id]: e.target.value }))}
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-0.5">Grace period (hours)</label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={bombGrace[member.id] ?? '24'}
-                              onChange={e => setBombGrace(p => ({ ...p, [member.id]: e.target.value }))}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                            <label className="block text-xs text-gray-500 mb-0.5">Custom message</label>
+                            <textarea
+                              value={trialMsg[member.id] ?? ''}
+                              onChange={e => setTrialMsg(p => ({ ...p, [member.id]: e.target.value }))}
+                              placeholder="Your trial has expired. Contact your admin to extend access."
+                              rows={2}
+                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
                             />
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleSetTimeBomb(member.id)}
-                              disabled={actionLoading[`bomb_${member.id}`]}
-                              className="flex-1 py-1.5 bg-yellow-800 text-yellow-200 rounded text-xs font-medium hover:bg-yellow-700 disabled:opacity-50"
-                            >
-                              {actionLoading[`bomb_${member.id}`] ? 'Setting...' : 'Set Bomb'}
-                            </button>
-                            <button
-                              onClick={() => setShowBombForm(p => ({ ...p, [member.id]: false }))}
-                              className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600"
-                            >
-                              Cancel
-                            </button>
                           </div>
                         </div>
                       )}
-                    </>
-                  )}
-                </div>
-
-                {/* Trial Period */}
-                <div className="pt-2 border-t border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400 font-medium">Trial Period</p>
-                    <button
-                      onClick={() => setTrialEnabled(p => ({ ...p, [member.id]: !p[member.id] }))}
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[member.id] ? 'bg-yellow-800 text-yellow-300' : 'bg-slate-700 text-gray-500'}`}
-                    >
-                      {trialEnabled[member.id] ? 'Enabled' : 'Disabled'}
-                    </button>
-                  </div>
-                  {trialEnabled[member.id] && (
-                    <div className="space-y-1.5">
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-0.5">Expiry date</label>
-                        <input
-                          type="date"
-                          value={trialDate[member.id] ?? ''}
-                          onChange={e => setTrialDate(p => ({ ...p, [member.id]: e.target.value }))}
-                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-0.5">Custom message</label>
-                        <textarea
-                          value={trialMsg[member.id] ?? ''}
-                          onChange={e => setTrialMsg(p => ({ ...p, [member.id]: e.target.value }))}
-                          placeholder="Your trial has expired. Contact your admin to extend access."
-                          rows={2}
-                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
-                        />
-                      </div>
+                      <button
+                        onClick={() => handleTrialSave(member.id)}
+                        disabled={trialLoading[member.id]}
+                        className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                      >
+                        {trialLoading[member.id] ? 'Saving...' : 'Save Trial Settings'}
+                      </button>
                     </div>
-                  )}
-                  <button
-                    onClick={() => handleTrialSave(member.id)}
-                    disabled={trialLoading[member.id]}
-                    className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
-                  >
-                    {trialLoading[member.id] ? 'Saving...' : 'Save Trial Settings'}
-                  </button>
-                </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-gray-400 pt-2 border-t border-slate-700">Team access is managed through your Stripe subscription.</div>
+                )}
               </div>
             )}
           </div>

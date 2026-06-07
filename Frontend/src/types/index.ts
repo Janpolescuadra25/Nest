@@ -15,6 +15,7 @@ export interface Location {
 export interface Mapping {
   id: string;
   locationId: string;
+  templateId?: string | null;
   sourceField: string;
   targetAccount: string;
   postingType?: string;
@@ -26,6 +27,81 @@ export interface Mapping {
   priority: number;
   createdAt: string;
 }
+
+export interface Template {
+  id: string;
+  locationId: string;
+  name: string;
+  transactionType: string;
+  lineType: string;
+  version: number;
+  defaults: Record<string, unknown> | null;
+  columnMappings: Record<string, unknown> | null;
+  memoTemplate?: string;
+  docNumberTemplate?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExcelSheetPreview {
+  name: string;
+  headers: string[];
+  rows: Record<string, string>[];
+}
+
+export interface ExcelParseResult {
+  sheetNames: string[];
+  sheets: ExcelSheetPreview[];
+  selectedSheetName: string;
+}
+
+export interface ScanEntry {
+  id: string;
+  source: 'pos' | 'excel' | 'image' | 'pdf';
+  fileName?: string;
+  rowNumber?: number;
+  thumbnail?: string;
+  header: Record<string, string>;
+  lineItems: Record<string, string>[];
+}
+
+export type ScanMode = 'pos' | 'excel';
+
+export interface ExcelDataParseResult {
+  transactions: {
+    type: string;
+    header: Record<string, string>;
+    lineItems: Record<string, string>[];
+  }[];
+  totalRows: number;
+  skippedRows: number;
+}
+
+export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
+  JOURNAL_ENTRY: 'Journal Entry',
+  BILL: 'Bill',
+  VENDOR_CREDIT: 'Vendor Credit',
+  BILL_PAYMENT: 'Bill Payment',
+};
+
+export const TRANSACTION_TYPES = Object.keys(TRANSACTION_TYPE_LABELS) as (keyof typeof TRANSACTION_TYPE_LABELS)[];
+
+export const BILL_FIELD_LABELS: Record<string, string> = {
+  vendorRef: 'Vendor',
+  dueDate: 'Due Date',
+  termsRef: 'Terms',
+  apAccountRef: 'AP Account',
+  memo: 'Memo',
+  docNumber: 'Bill No.',
+};
+
+export const VENDOR_CREDIT_FIELD_LABELS: Record<string, string> = {
+  vendorRef: 'Vendor',
+  apAccountRef: 'AP Account',
+  memo: 'Memo',
+  docNumber: 'Credit No.',
+};
 
 export interface Rule {
   id: string;
@@ -55,6 +131,7 @@ export interface SyncLog {
   status: 'SUCCESS' | 'FAILED';
   errorMessage?: string;
   errorType?: string;
+  attemptCount: number;
   syncedAt: string;
 }
 
@@ -109,7 +186,24 @@ export interface BatchSyncSummary {
   skipped: number;
   failed: number;
 }
+export interface RetryBatchResult {
+  scanRecordId: string;
+  status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  qbJournalEntryId?: string;
+  docNumber?: string;
+  errorMessage?: string;
+  errorType?: string;
+  skipReason?: 'max_retries' | 'no_payload';
+  attemptCount: number;
+}
 
+export interface RetryBatchSummary {
+  total: number;
+  retried: number;
+  succeeded: number;
+  skipped: number;
+  failed: number;
+}
 export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'data' | 'sync' | 'settings' | 'partners' | 'requests' | 'my-team' | 'activity' | 'admins' | 'users' | 'locations';
 
 export type ScanData = Record<string, number>;
@@ -156,6 +250,7 @@ export interface TeamMember {
   status: string;
   permissions?: Record<string, boolean> | null;
   mustChangePassword: boolean;
+  blocked?: boolean;
   createdAt?: string;
   trialExpiresAt?: string | null;
   customExpiryMessage?: string | null;

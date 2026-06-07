@@ -23,6 +23,9 @@ router.post(
     const teamId = req.user!.adminId ?? req.user!.userId;
     const team = await prisma.user.findUnique({ where: { id: teamId } });
     if (!team) throw new AppError('Team not found', 404);
+    if (team.subscriptionSource === 'owner') {
+      throw new AppError('Platform owner does not use Stripe billing', 400);
+    }
 
     if (team.subscriptionSource === 'stripe' && team.stripeSubscriptionId) {
       throw new AppError('Team already has an active subscription. Use the billing portal to manage or change plans.', 400);
@@ -69,6 +72,9 @@ router.post(
     const teamId = req.user!.adminId ?? req.user!.userId;
     const team = await prisma.user.findUnique({ where: { id: teamId } });
     if (!team) throw new AppError('Team not found', 404);
+    if (team.subscriptionSource === 'owner') {
+      throw new AppError('Platform owner does not use Stripe billing', 400);
+    }
     if (!team.stripeCustomerId) {
       throw new AppError('No Stripe customer found for this team', 400);
     }

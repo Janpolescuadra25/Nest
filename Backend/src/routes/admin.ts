@@ -169,6 +169,11 @@ router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), valid
   try {
     const { email, role, name, trialDays, customExpiryMessage } = req.body as { email?: string; role?: string; name?: string; trialDays?: number; customExpiryMessage?: string };
 
+    const adminUser = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { subscriptionSource: true } });
+    if (adminUser?.subscriptionSource === 'stripe' && (trialDays || customExpiryMessage)) {
+      throw new AppError('Stripe subscribers cannot set trial expiry on invites. Manage your subscription through Stripe billing.', 403);
+    }
+
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new AppError('Valid email is required.', 400);
     }
@@ -399,8 +404,13 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
       throw new AppError('Cannot modify OWNER or ADMIN accounts.', 403);
     }
-    if (target.subscriptionSource === 'stripe') {
-      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
+
+    const adminUser = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { subscriptionSource: true } });
+    if (adminUser?.subscriptionSource === 'stripe' && (trialExpiresAt !== undefined || customExpiryMessage !== undefined)) {
+      throw new AppError(
+        'Stripe subscribers cannot set manual expiry dates. Manage your subscription through Stripe billing.',
+        403
+      );
     }
 
     const permissionPayload = permissions;
@@ -595,16 +605,18 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
       throw new AppError('Cannot modify your own account', 400);
     }
 
+    const adminUser = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { subscriptionSource: true } });
+    if (adminUser?.subscriptionSource === 'stripe') {
+      throw new AppError('Stripe subscribers cannot set manual expiry dates. Manage your subscription through Stripe billing.', 403);
+    }
+
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, role: true, adminId: true, subscriptionSource: true },
+      select: { id: true, role: true, adminId: true },
     });
     if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
       throw new AppError('Cannot set a time bomb on this user', 403);
-    }
-    if (target.subscriptionSource === 'stripe') {
-      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
     }
     if (target.adminId !== req.user!.userId) {
       throw new AppError('You can only manage users in your team', 403);
@@ -654,16 +666,24 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
       throw new AppError('Cannot modify your own account', 400);
     }
 
+    const adminUser = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { subscriptionSource: true },
+    });
+    if (adminUser?.subscriptionSource === 'stripe') {
+      throw new AppError(
+        'Stripe subscribers cannot clear manual expiry dates. Manage your subscription through Stripe billing.',
+        403
+      );
+    }
+
     const target = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, timeBombAt: true, status: true, role: true, adminId: true, subscriptionSource: true },
+      select: { id: true, timeBombAt: true, status: true, role: true, adminId: true },
     });
     if (!target) throw new AppError('User not found.', 404);
     if (target.role === 'OWNER' || target.role === 'ADMIN') {
       throw new AppError('Cannot modify this user', 403);
-    }
-    if (target.subscriptionSource === 'stripe') {
-      throw new AppError('Cannot modify subscription for Stripe-managed teams', 403);
     }
     if (target.adminId !== req.user!.userId) {
       throw new AppError('You can only manage users in your team', 403);

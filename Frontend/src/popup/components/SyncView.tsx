@@ -13,6 +13,8 @@ interface Props {
   onLocationChange: (id: string) => void;
   onTabChange?: (tab: string) => void;
   onScanRecordId?: (id: string) => void;
+  onboardingStep?: number;
+  onHasSynced?: () => void;
 }
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -22,7 +24,7 @@ const STATUS_CLASSES: Record<string, string> = {
   MAPPED: 'text-blue-400 bg-blue-900/30 border-blue-800',
 };
 
-export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId }: Props) {
+export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced }: Props) {
   const { locations } = useLocations(jwt);
   const { status } = useQuickBooks(jwt);
   const { accounts } = useQBContext();
@@ -35,6 +37,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [hasMore, setHasMore] = useState(false);
   const [batchSyncing, setBatchSyncing] = useState(false);
   const [batchProgress, setBatchProgress] = useState('');
+  const [isRetryingId, setIsRetryingId] = useState<string | null>(null);
+  const [isRetryingAll, setIsRetryingAll] = useState(false);
 
   useEffect(() => {
     if (!locationId) return;
@@ -57,6 +61,68 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       .then((data) => { setScans(prev => [...prev, ...(data.scans ?? [])]); setHasMore(data.hasMore ?? false); setPage(nextPage); })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load more'))
       .finally(() => setLoading(false));
+  };
+
+  const refreshScans = async () => {
+    const { scans: freshScans, hasMore: freshMore } = await api.getScans(jwt, locationId, 1);
+    setScans(freshScans ?? []);
+    setHasMore(freshMore ?? false);
+    setPage(1);
+  };
+
+  const handleRetryScan = async (scanId: string) => {
+    setIsRetryingId(scanId);
+    try {
+      const result = await api.retryScan(jwt, scanId);
+      if (result.success) {
+        showToast(
+          `Retry succeeded — JE ${result.docNumber ?? result.qbJournalEntryId ?? 'created'} (attempt ${result.attemptCount})`,
+          'success',
+        );
+      } else {
+        showToast(
+          `Retry failed: ${result.errorMessage ?? 'Unknown error'} (attempt ${result.attemptCount}/3)`,
+          'error',
+        );
+      }
+      await refreshScans();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Retry error', 'error');
+    } finally {
+      setIsRetryingId(null);
+    }
+  };
+
+  const handleRetryAllFailed = async () => {
+    setIsRetryingAll(true);
+    try {
+      const { summary } = await api.retryBatch(jwt, { locationId });
+      showToast(
+        `Retry complete — ${summary.succeeded} succeeded, ${summary.failed} failed, ${summary.skipped} skipped`,
+        summary.failed > 0 ? 'error' : 'success',
+      );
+      await refreshScans();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Batch retry failed', 'error');
+    } finally {
+      setIsRetryingAll(false);
+    }
+  };
+
+  const getScanAttention = (scan: ScanRecord): 'stale' | 'max-retried' | 'old-failure' | null => {
+    if (scan.status === 'PENDING' || scan.status === 'MAPPED') {
+      const scanAge = Date.now() - new Date(scan.scanDate).getTime();
+      if (scanAge > 24 * 60 * 60 * 1000) return 'stale';
+    }
+    if (scan.status === 'FAILED') {
+      const latestLog = scan.syncLogs?.slice().sort((a, b) => new Date(b.syncedAt).getTime() - new Date(a.syncedAt).getTime())[0];
+      if (latestLog?.attemptCount && latestLog.attemptCount >= 3) return 'max-retried';
+      if (latestLog) {
+        const failureAge = Date.now() - new Date(latestLog.syncedAt).getTime();
+        if (failureAge > 24 * 60 * 60 * 1000) return 'old-failure';
+      }
+    }
+    return null;
   };
 
   const handleSyncAll = async () => {
@@ -104,11 +170,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         showToast('QuickBooks connection expired. Please reconnect.', 'error');
       }
 
-      // Refresh scan list
-      const { scans: freshScans, hasMore: freshMore } = await api.getScans(jwt, locationId, 1);
-      setScans(freshScans ?? []);
-      setHasMore(freshMore ?? false);
-      setPage(1);
+      await refreshScans();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Batch sync failed', 'error');
     } finally {
@@ -121,6 +183,16 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const totalSynced = safeScans.filter((s) => s.status === 'SYNCED').length;
   const totalFailed = safeScans.filter((s) => s.status === 'FAILED').length;
   const totalPending = safeScans.filter((s) => s.status === 'PENDING' || s.status === 'MAPPED').length;
+  const staleCount = safeScans.filter((s) => getScanAttention(s) === 'stale').length;
+  const maxRetriedCount = safeScans.filter((s) => getScanAttention(s) === 'max-retried').length;
+  const oldFailureCount = safeScans.filter((s) => getScanAttention(s) === 'old-failure').length;
+  const totalAttention = staleCount + maxRetriedCount + oldFailureCount;
+
+  useEffect(() => {
+    if (totalSynced > 0) {
+      onHasSynced?.();
+    }
+  }, [totalSynced, onHasSynced]);
 
   return (
     <div className="p-3 space-y-3">
@@ -163,15 +235,42 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             {status.connected && (totalPending > 0 || batchSyncing) && (
               <button
                 onClick={() => void handleSyncAll()}
-                disabled={batchSyncing}
+                disabled={batchSyncing || isRetryingAll}
                 className="text-xs bg-amber-700 hover:bg-amber-600 disabled:bg-amber-900 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
               >
                 {batchSyncing ? '⏳ Syncing...' : '⚡ Sync All Pending'}
               </button>
             )}
+            {status.connected && totalFailed > 0 && (
+              <button
+                onClick={() => void handleRetryAllFailed()}
+                disabled={batchSyncing || isRetryingAll}
+                className="text-xs bg-amber-600 hover:bg-amber-700 disabled:bg-amber-900 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
+              >
+                {isRetryingAll ? '⏳ Retrying...' : `↻ Retry ${totalFailed} Failed`}
+              </button>
+            )}
           </div>
           {batchSyncing && batchProgress && (
             <p className="text-xs text-amber-400 text-center animate-pulse">{batchProgress}</p>
+          )}
+        </div>
+      )}
+
+      {totalAttention > 0 && (
+        <div className="mb-3 px-3 py-2 rounded bg-amber-900/20 border border-amber-800/50 text-xs">
+          <span className="text-amber-300 font-medium">
+            ⚠ {totalAttention} scan{totalAttention > 1 ? 's' : ''} need{totalAttention === 1 ? 's' : ''} attention
+          </span>
+          <span className="text-slate-400 ml-2">
+            {staleCount > 0 && `${staleCount} stale`}
+            {staleCount > 0 && maxRetriedCount > 0 && ' · '}
+            {maxRetriedCount > 0 && `${maxRetriedCount} max-retried`}
+            {maxRetriedCount > 0 && oldFailureCount > 0 && ' · '}
+            {oldFailureCount > 0 && `${oldFailureCount} old failure${oldFailureCount > 1 ? 's' : ''}`}
+          </span>
+          {maxRetriedCount > 0 && (
+            <span className="text-slate-500 ml-2">— Re-sync max-retried scans from Preview tab</span>
           )}
         </div>
       )}
@@ -196,7 +295,11 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           <div className="py-8 text-center">
             <div className="text-2xl mb-2">📭</div>
             <p className="text-gray-500 text-sm">No scans yet</p>
-            <p className="text-gray-600 text-xs mt-1">Go to Scan tab and scan a Toast report to get started</p>
+            <p className="text-gray-600 text-xs mt-1">
+              {onboardingStep === 4
+                ? 'Begin your first sync — scan a POS report, map it, and push to QuickBooks'
+                : 'Go to Scan tab and scan a Toast report to get started'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -212,18 +315,31 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
               </thead>
               <tbody>
                 {safeScans.map((scan) => {
-                  const syncLog = scan.syncLogs?.[0];
-                  const jeId = syncLog?.qbJournalEntryId;
+                  const latestLog = scan.syncLogs?.slice().sort((a, b) => new Date(b.syncedAt).getTime() - new Date(a.syncedAt).getTime())[0];
+                  const attempts = latestLog?.attemptCount ?? 1;
+                  const jeId = latestLog?.qbJournalEntryId;
                   const qbBaseUrl = status.environment === 'sandbox'
                     ? 'https://app.sandbox.qbo.intuit.com'
                     : 'https://app.qbo.intuit.com';
+                  const retryDisabled = scan.syncLogs?.some((l) => l.attemptCount >= 3) ?? false;
+                  const attention = getScanAttention(scan);
                   return (
                     <React.Fragment key={scan.id}>
-                      <tr className="border-t border-gray-700/50 hover:bg-gray-700/20">
+                      <tr className={`border-t border-gray-700/50 hover:bg-gray-700/20 ${attention === 'max-retried' ? 'bg-red-900/20' : attention === 'stale' || attention === 'old-failure' ? 'bg-amber-900/10' : ''}`}>
                         <td className="px-3 py-2 text-gray-200 font-mono">{scan.scanDate}</td>
                         <td className="px-3 py-2">
                           <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-400'}`}>
                             {scan.status}
+                            {scan.status === 'FAILED' ? ` (${attempts}/3)` : ''}
+                            {attention === 'stale' && (
+                              <span className="ml-1 text-amber-400" title="Scan data is over 24h old and hasn't been synced">⏰</span>
+                            )}
+                            {attention === 'max-retried' && (
+                              <span className="ml-1 text-red-500" title="Maximum retries reached (3/3). Re-sync from Preview tab.">⛔</span>
+                            )}
+                            {attention === 'old-failure' && (
+                              <span className="ml-1 text-amber-400" title="Failed over 24h ago. Retries available — use Retry button.">⚠️</span>
+                            )}
                           </span>
                         </td>
                         <td className="px-3 py-2 font-mono text-gray-400">
@@ -236,21 +352,22 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                           {new Date(scan.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2">
-                          {scan.status === 'FAILED' && onTabChange && onScanRecordId && (
+                          {scan.status === 'FAILED' && (
                             <button
-                              onClick={() => { onScanRecordId(scan.id); onTabChange('preview'); }}
-                              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
-                              title="Go to Preview tab to retry sync"
+                              onClick={() => void handleRetryScan(scan.id)}
+                              disabled={isRetryingId === scan.id || retryDisabled}
+                              title={retryDisabled ? 'Maximum retries reached (3 attempts)' : 'Retry sync'}
+                              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
                             >
-                              ↻ Retry
+                              {isRetryingId === scan.id ? '⏳ Retrying...' : '↻ Retry'}
                             </button>
                           )}
                         </td>
                       </tr>
-                      {scan.status === 'FAILED' && syncLog && (syncLog.errorMessage || syncLog.errorType) && (
+                      {scan.status === 'FAILED' && latestLog && (latestLog.errorMessage || latestLog.errorType) && (
                         <tr>
                           <td colSpan={5} className="px-3 pb-2 pt-0">
-                            {syncLog.errorType === 'AUTH' ? (
+                            {latestLog.errorType === 'AUTH' ? (
                               <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1.5 space-y-1">
                                 <div>QuickBooks connection expired. Please reconnect.</div>
                                 <button
@@ -264,21 +381,21 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                   ↻ Reconnect QuickBooks
                                 </button>
                               </div>
-                            ) : syncLog.errorType === 'TRANSIENT' ? (
+                            ) : latestLog.errorType === 'TRANSIENT' ? (
                               <div className="text-xs text-amber-400 bg-amber-900/20 border border-amber-800 rounded px-2 py-1">
                                 ⚠ Sync failed due to a temporary issue. Please try again.
                               </div>
-                            ) : syncLog.errorType === 'VALIDATION' ? (
+                            ) : latestLog.errorType === 'VALIDATION' ? (
                               <div className="text-xs text-gray-300 bg-slate-900 border border-slate-700 rounded px-2 py-1">
-                                Sync failed: {syncLog.errorMessage}
+                                Sync failed: {latestLog.errorMessage}
                               </div>
-                            ) : syncLog.errorType === 'FATAL' ? (
+                            ) : latestLog.errorType === 'FATAL' ? (
                               <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1">
                                 Sync failed. Please try again or contact support.
                               </div>
                             ) : (
                               <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1">
-                                {syncLog.errorMessage}
+                                {latestLog.errorMessage}
                               </div>
                             )}
                           </td>
