@@ -22,6 +22,7 @@ import webhookRoutes from './routes/webhooks';
 import { prisma } from './lib/prisma';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
+import { startSyncFailureAlertCron } from './cron/sync-failure-alerts';
 import { createErrorHandler } from './lib/errors';
 
 const app = express();
@@ -86,6 +87,35 @@ app.use((req: express.Request, _res: express.Response, next: express.NextFunctio
 });
 
 
+// ── TEMPORARY Admin Fix Endpoint ───────────────────────────────────────────
+app.get('/api/admin/fix-owner-subscription', async (_req, res) => {
+  try {
+    const before = await prisma.user.findMany({
+      where: { role: 'OWNER' },
+      select: { email: true, role: true, subscriptionSource: true },
+    });
+
+    const result = await prisma.user.updateMany({
+      where: { role: 'OWNER', email: 'paulescuadra25@gmail.com' },
+      data: { subscriptionSource: 'owner' },
+    });
+
+    const after = await prisma.user.findMany({
+      where: { role: 'OWNER' },
+      select: { email: true, role: true, subscriptionSource: true },
+    });
+
+    res.json({
+      matched: result.count,
+      before,
+      after,
+      status: 'done — remove this endpoint now',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/locations', locationRoutes);
@@ -120,6 +150,7 @@ app.use(createErrorHandler());
 // ── Start ────────────────────────────────────────────────────────────────────
 startTimeBombCron(prisma);
 startTrialWarningCron(prisma);
+startSyncFailureAlertCron(prisma);
 app.listen(PORT, () => {
   console.log(`[Nest] Server running on http://localhost:${PORT}`);
   console.log(`[Nest] Environment: ${process.env.NODE_ENV ?? 'development'}`);
