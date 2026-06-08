@@ -44,6 +44,35 @@ export interface Template {
   updatedAt: string;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ProductFormData {
+  name: string;
+}
+
+export interface ProductMapping {
+  id: string;
+  templateId: string;
+  productId: string;
+  productName: string;
+  accountId: string;
+  postingType: 'Credit' | 'Debit';
+  classId: string | null;
+  createdAt: string;
+}
+
+export interface ProductMappingFormData {
+  templateId: string;
+  productId: string;
+  accountId: string;
+  postingType: 'Credit' | 'Debit';
+  classId?: string;
+}
+
 export interface ExcelSheetPreview {
   name: string;
   headers: string[];
@@ -106,6 +135,8 @@ export const VENDOR_CREDIT_FIELD_LABELS: Record<string, string> = {
 export interface Rule {
   id: string;
   locationId: string;
+  templateId?: string | null;
+  template?: { id: string; name: string; transactionType: string } | null;
   name: string;
   ruleType: 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA';
   config: Record<string, unknown>;
@@ -113,11 +144,21 @@ export interface Rule {
   createdAt: string;
 }
 
+export interface RuleFormData {
+  name: string;
+  ruleType: 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA';
+  config: Record<string, unknown>;
+  isActive?: boolean;
+  templateId?: string | null;
+}
+
 export interface ScanRecord {
   id: string;
   locationId: string;
   scanDate: string;
   rawData: Record<string, number>;
+  rawScanEntry?: ScanEntry | null;
+  source?: string;
   status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED';
   createdAt: string;
   syncLogs?: SyncLog[];
@@ -162,6 +203,52 @@ export interface QBJournalLineItem {
   memo?: string;
 }
 
+export interface QBBillLineItem {
+  amount: number;
+  accountRef: { value: string; name?: string };
+  classRef?: { value: string; name?: string };
+  taxCodeRef?: { value: string; name?: string };
+  description?: string;
+}
+
+export interface QBTerm {
+  Id: string;
+  Name: string;
+  Type?: 'Standard' | 'DateDriven';
+  DueDays?: number;
+  DayOfMonth?: number;
+  Month?: number;
+  DueNextMonthDays?: number;
+  Active?: boolean;
+}
+
+export interface OutstandingBill {
+  id: string;
+  txnDate: string;
+  dueDate?: string;
+  totalAmt: number;
+  balance: number;
+  vendorRef: { value: string; name?: string };
+  docNumber?: string;
+}
+
+export interface VendorCreditItem {
+  id: string;
+  txnDate: string;
+  totalAmt: number;
+  balance: number;
+  vendorRef: { value: string; name?: string };
+  docNumber?: string;
+}
+
+export interface BillPaymentLineItem {
+  amount: number;
+  linkedTxn: {
+    txnId: string;
+    txnType: 'Bill' | 'VendorCredit';
+  };
+}
+
 export interface BatchSyncItem {
   scanRecordId: string;
   txnDate: string;
@@ -204,7 +291,7 @@ export interface RetryBatchSummary {
   skipped: number;
   failed: number;
 }
-export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'data' | 'sync' | 'settings' | 'partners' | 'requests' | 'my-team' | 'activity' | 'admins' | 'users' | 'locations';
+export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'payments' | 'data' | 'sync' | 'settings' | 'products' | 'partners' | 'requests' | 'my-team' | 'activity' | 'admins' | 'users' | 'locations';
 
 export type ScanData = Record<string, number>;
 

@@ -86,6 +86,7 @@ model User {
   managedLocations    Location[]     @relation("AdminLocations")
   qbTokens            QBToken[]
   oauthStates         OAuthState[]
+  products            Product[]
   approvedRequests     AdminRequest[]       @relation("ApprovedAdminRequests")
   auditLogs            AuditLog[]           @relation("AuditActor")
   auditTargets         AuditLog[]           @relation("AuditTarget")
@@ -207,6 +208,8 @@ model Template {
 
   location          Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
   mappings          Mapping[]
+  rules             Rule[]
+  productMappings   ProductMapping[]
 
   @@index([locationId])
   @@map("templates")
@@ -235,9 +238,29 @@ model Mapping {
   @@map("mappings")
 }
 
+model ProductMapping {
+  id          String   @id @default(cuid())
+  templateId  String
+  productId   String
+  accountId   String
+  postingType String   @default("Credit")
+  classId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, productId])
+  @@index([templateId])
+  @@index([productId])
+  @@map("product_mappings")
+}
+
 model Rule {
   id         String   @id @default(cuid())
   locationId String
+  templateId String?
   name       String
   ruleType   RuleType
   config     Json     // stores source fields, operator, target, etc.
@@ -245,8 +268,10 @@ model Rule {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([locationId])
+  @@index([templateId])
   @@map("rules")
 }
 
@@ -258,19 +283,22 @@ enum RuleType {
 }
 
 model ScanRecord {
-  id         String       @id @default(cuid())
-  locationId String
-  scanDate   DateTime
-  rawData    Json         // all extracted Toast fields
-  status     ScanStatus   @default(PENDING)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  location   Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  syncLogs   SyncLog[]
+  id            String       @id @default(cuid())
+  locationId    String
+  scanDate      DateTime
+  rawData       Json         // all extracted Toast fields
+  rawScanEntry  Json?        // full ScanEntry for Excel/image/pdf sources
+  source        String       @default("pos")   // pos | excel | image | pdf
+  status        ScanStatus   @default(PENDING)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  location      Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  syncLogs      SyncLog[]
 
   @@index([locationId])
   @@index([status])
   @@index([createdAt])
+  @@index([source])
   @@map("scan_records")
 }
 
@@ -359,4 +387,19 @@ model EmailVerificationToken {
   @@index([token])
   @@index([userId])
   @@map("email_verification_tokens")
+}
+
+model Product {
+  id              String           @id @default(cuid())
+  name            String
+  userId          String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productMappings ProductMapping[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("products")
 }

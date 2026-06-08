@@ -288,6 +288,32 @@ export default function ScanView({
       });
       setScanEntries(parsedEntries);
       setActiveScanEntryId(parsedEntries[0]?.id ?? null);
+
+      // Sequential batch save — one at a time, track partial failures
+      if (locationId) {
+        let savedCount = 0;
+        let failCount = 0;
+        for (const entry of parsedEntries) {
+          try {
+            await api.saveScanEntry(
+              jwt,
+              locationId,
+              new Date().toISOString().split('T')[0],
+              entry,
+              'excel',
+            );
+            savedCount++;
+          } catch (saveErr) {
+            console.error(`[Nest] Failed to save Excel entry ${entry.id} (row ${entry.rowNumber ?? '?'}) :`, saveErr);
+            failCount++;
+          }
+        }
+        if (failCount > 0) {
+          setExcelParseError(`Saved ${savedCount}/${parsedEntries.length} entries. ${failCount} failed to save to backend.`);
+        } else {
+          console.log(`[Nest] Excel batch save complete: ${savedCount}/${parsedEntries.length} saved.`);
+        }
+      }
     } catch (err) {
       setExcelParseError(err instanceof Error ? err.message : 'Failed to parse Excel data');
     } finally {

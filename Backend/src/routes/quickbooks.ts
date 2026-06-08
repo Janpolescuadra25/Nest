@@ -4,11 +4,11 @@ import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
-import { CreateJournalEntryInput, QBJournalLineItem } from '../types';
+import { CreateBillInput, CreateBillPaymentInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem } from '../types';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
-import { journalEntrySchema } from '../lib/validators';
+import { billSchema, vendorCreditSchema, billPaymentSchema, journalEntrySchema } from '../lib/validators';
 import { encrypt, decryptSafe } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
 
@@ -305,6 +305,236 @@ const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId 
   }
 }));
 
+// ── POST /api/quickbooks/bill ───────────────────────────────────────────────
+router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(billSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      txnDate,
+      vendorRef,
+      apAccountRef,
+      termsRef,
+      dueDate,
+      memo,
+      docNumber,
+      lines,
+      scanRecordId,
+    } = req.body as {
+      txnDate?: string;
+      vendorRef?: { value: string; name?: string };
+      apAccountRef?: { value: string; name?: string };
+      termsRef?: { value: string; name?: string };
+      dueDate?: string;
+      memo?: string;
+      docNumber?: string;
+      lines?: QBBillLineItem[];
+      scanRecordId?: string;
+    };
+
+    if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0 || !vendorRef?.value || !apAccountRef?.value) {
+      throw new AppError('txnDate, vendorRef, apAccountRef and lines[] are required', 400);
+      return;
+    }
+
+    if (scanRecordId) {
+      const scan = await prisma.scanRecord.findUnique({
+        where: { id: scanRecordId },
+        select: { locationId: true },
+      });
+      if (scan) {
+        const loc = await prisma.location.findFirst({
+          where: { id: scan.locationId, ...locationFilter(req.user!) },
+        });
+        if (!loc) {
+          throw new AppError("You don't have access to this location", 403);
+          return;
+        }
+      }
+
+      const result = await syncSingleBill(
+        req.user!.userId,
+        scanRecordId,
+        txnDate,
+        vendorRef,
+        apAccountRef,
+        termsRef,
+        dueDate,
+        memo,
+        lines,
+        docNumber,
+      );
+
+      if (result.status === 'SKIPPED') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
+      if (result.status === 'FAILED') {
+        console.error('[QB] bill error:', result.errorMessage);
+        throw new AppError(process.env.NODE_ENV !== 'production'
+            ? result.errorMessage
+            : 'An unexpected error occurred. Please try again.', 500);
+        return;
+      }
+
+      res.json({
+        message: 'Bill created successfully',
+        billId: result.qbJournalEntryId,
+        txnDate: result.txnDate,
+        totalAmount: result.totalAmount,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
+    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.createBill({
+        txnDate,
+        docNumber: finalDocNumber,
+        vendorRef,
+        apAccountRef,
+        termsRef,
+        dueDate,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    res.json({
+      message: 'Bill created successfully',
+      billId: result.id,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmount,
+      docNumber: finalDocNumber,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] bill error:', message);
+    throw new AppError(process.env.NODE_ENV !== 'production'
+        ? message
+        : 'An unexpected error occurred. Please try again.', 500);
+  }
+}));
+
+// ── POST /api/quickbooks/vendorcredit ───────────────────────────────────────
+router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(vendorCreditSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      vendorRef,
+      txnDate,
+      apAccountRef,
+      lines,
+      scanRecordId,
+      memo,
+      docNumber,
+    } = req.body as {
+      vendorRef?: { value: string; name?: string };
+      txnDate?: string;
+      apAccountRef?: { value: string; name?: string };
+      lines?: QBBillLineItem[];
+      scanRecordId?: string;
+      memo?: string;
+      docNumber?: string;
+    };
+
+    if (!vendorRef?.value || !txnDate || !apAccountRef?.value || !lines || !Array.isArray(lines) || lines.length === 0) {
+      throw new AppError('vendorRef, txnDate, apAccountRef and lines[] are required', 400);
+      return;
+    }
+
+    if (scanRecordId) {
+      const scan = await prisma.scanRecord.findUnique({
+        where: { id: scanRecordId },
+        select: { locationId: true },
+      });
+      if (scan) {
+        const loc = await prisma.location.findFirst({
+          where: { id: scan.locationId, ...locationFilter(req.user!) },
+        });
+        if (!loc) {
+          throw new AppError("You don't have access to this location", 403);
+          return;
+        }
+      }
+
+      const result = await syncSingleVendorCredit(
+        req.user!.userId,
+        scanRecordId,
+        txnDate,
+        vendorRef,
+        apAccountRef,
+        memo,
+        lines,
+        docNumber,
+      );
+
+      if (result.status === 'SKIPPED') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
+      if (result.status === 'FAILED') {
+        console.error('[QB] vendorcredit error:', result.errorMessage);
+        throw new AppError(process.env.NODE_ENV !== 'production'
+            ? result.errorMessage
+            : 'An unexpected error occurred. Please try again.', 500);
+        return;
+      }
+
+      res.json({
+        message: 'Vendor Credit created successfully',
+        vendorCreditId: result.qbJournalEntryId,
+        txnDate: result.txnDate,
+        totalAmount: result.totalAmount,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
+    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.createVendorCredit({
+        txnDate,
+        docNumber: finalDocNumber,
+        vendorRef,
+        apAccountRef,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    res.json({
+      message: 'Vendor Credit created successfully',
+      vendorCreditId: result.id,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmount,
+      docNumber: finalDocNumber,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] vendorcredit error:', message);
+    throw new AppError(process.env.NODE_ENV !== 'production'
+        ? message
+        : 'An unexpected error occurred. Please try again.', 500);
+  }
+}));
+
 
 // ── syncSingleScan helper ─────────────────────────────────────────────────────
 
@@ -396,6 +626,192 @@ async function syncSingleScan(
         errorType,
         attemptCount,
         requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
+      },
+    }).catch(console.error);
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'FAILED' },
+    }).catch(console.error);
+
+    return { status: 'FAILED', errorType, errorMessage: message };
+  }
+}
+
+async function syncSingleVendorCredit(
+  userId: string,
+  scanRecordId: string,
+  txnDate: string,
+  vendorRef: { value: string; name?: string },
+  apAccountRef: { value: string; name?: string },
+  memo: string | undefined,
+  lines: QBBillLineItem[],
+  docNumber?: string,
+): Promise<SyncSingleResult> {
+  const existingLogs = await prisma.syncLog.findMany({
+    where: { scanRecordId },
+    select: { id: true },
+  });
+  const attemptCount = existingLogs.length + 1;
+
+  const existingSync = await prisma.syncLog.findFirst({
+    where: { scanRecordId, status: 'SUCCESS' },
+  });
+  if (existingSync) {
+    return {
+      status: 'SKIPPED',
+      reason: 'already_synced',
+      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
+      docNumber: existingSync.docNumber ?? undefined,
+    };
+  }
+
+  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+  try {
+    const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
+      qbService.createVendorCredit({
+        txnDate,
+        docNumber: finalDocNumber,
+        vendorRef,
+        apAccountRef,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        qbJournalEntryId: result.id,
+        docNumber: finalDocNumber,
+        status: 'SUCCESS',
+        attemptCount,
+        requestPayload: null,
+      },
+    });
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'SYNCED' },
+    });
+
+    return {
+      status: 'SYNCED',
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmount,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        status: 'FAILED',
+        errorMessage: message,
+        errorType,
+        attemptCount,
+        requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      },
+    }).catch(console.error);
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'FAILED' },
+    }).catch(console.error);
+
+    return { status: 'FAILED', errorType, errorMessage: message };
+  }
+}
+
+async function syncSingleBill(
+  userId: string,
+  scanRecordId: string,
+  txnDate: string,
+  vendorRef: { value: string; name?: string },
+  apAccountRef: { value: string; name?: string },
+  termsRef: { value: string; name?: string } | undefined,
+  dueDate: string | undefined,
+  memo: string | undefined,
+  lines: QBBillLineItem[],
+  docNumber?: string,
+): Promise<SyncSingleResult> {
+  const existingLogs = await prisma.syncLog.findMany({
+    where: { scanRecordId },
+    select: { id: true },
+  });
+  const attemptCount = existingLogs.length + 1;
+
+  const existingSync = await prisma.syncLog.findFirst({
+    where: { scanRecordId, status: 'SUCCESS' },
+  });
+  if (existingSync) {
+    return {
+      status: 'SKIPPED',
+      reason: 'already_synced',
+      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
+      docNumber: existingSync.docNumber ?? undefined,
+    };
+  }
+
+  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+  try {
+    const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
+      qbService.createBill({
+        txnDate,
+        docNumber: finalDocNumber,
+        vendorRef,
+        apAccountRef,
+        termsRef,
+        dueDate,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        qbJournalEntryId: result.id,
+        docNumber: finalDocNumber,
+        status: 'SUCCESS',
+        attemptCount,
+        requestPayload: null,
+      },
+    });
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'SYNCED' },
+    });
+
+    return {
+      status: 'SYNCED',
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmount,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        status: 'FAILED',
+        errorMessage: message,
+        errorType,
+        attemptCount,
+        requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
       },
     }).catch(console.error);
 
@@ -947,19 +1363,75 @@ router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute
   }
 }));
 
+// ── GET /api/quickbooks/bills ───────────────────────────────────────────────
+router.get('/bills', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const vendorId = req.query.vendorId as string | undefined;
+    const bills = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getOutstandingBills(realmId, accessToken),
+    );
+
+    const filteredBills = vendorId ? bills.filter((bill) => bill.vendorRef.value === vendorId) : bills;
+    res.json({ bills: filteredBills });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] bills error:', message);
+    throw new AppError('Failed to fetch bills', 500);
+  }
+}));
+
+// ── GET /api/quickbooks/vendor-credits ─────────────────────────────────────────
+router.get('/vendor-credits', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const vendorId = req.query.vendorId as string | undefined;
+    const vendorCredits = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.getVendorCredits(realmId, accessToken),
+    );
+
+    const filteredCredits = vendorId ? vendorCredits.filter((credit) => credit.vendorRef.value === vendorId) : vendorCredits;
+    res.json({ vendorCredits: filteredCredits });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] vendor credits error:', message);
+    throw new AppError('Failed to fetch vendor credits', 500);
+  }
+}));
+
+// ── POST /api/quickbooks/bill-payment ────────────────────────────────────────
+router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(billPaymentSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const body = req.body as CreateBillPaymentInput;
+    const billPayment = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.createBillPayment({ ...body, realmId, accessToken }),
+    );
+
+    res.json({
+      message: 'Bill Payment created successfully',
+      billPaymentId: billPayment.id,
+      txnDate: billPayment.txnDate,
+      totalAmount: billPayment.totalAmt,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] bill payment error:', message);
+    throw new AppError('Failed to create bill payment', 500);
+  }
+}));
+
 // ── GET /api/quickbooks/sync-all ──────────────────────────────────────────────
 router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const entities = await qbService.callQB(req.user!.userId, async ({ accessToken, realmId }) => {
-      const [accounts, classes, employees, vendors, customers, taxCodes] = await Promise.all([
+      const [accounts, classes, employees, vendors, customers, taxCodes, terms] = await Promise.all([
         qbService.getAccounts(realmId, accessToken),
         qbService.getClasses(realmId, accessToken),
         qbService.getEmployees(realmId, accessToken),
         qbService.getVendors(realmId, accessToken),
         qbService.getCustomers(realmId, accessToken),
         qbService.getTaxCodes(realmId, accessToken),
+        qbService.getTerms(realmId, accessToken),
       ]);
-      return { accounts, classes, employees, vendors, customers, taxCodes };
+      return { accounts, classes, employees, vendors, customers, taxCodes, terms };
     });
     res.json(entities);
   } catch (err) {

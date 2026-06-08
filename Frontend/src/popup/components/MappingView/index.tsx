@@ -7,6 +7,7 @@ import { useToast } from '../Toast';
 import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
+import ProductMappingSection from './ProductMappingSection';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
 import type { ExcelParseResult, Mapping, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { SelectOption } from '../SearchableSelect';
@@ -1522,6 +1523,10 @@ export default function MappingView({
           </div>
         )}
       </div>
+
+      {selectedTemplateId && (
+        <ProductMappingSection jwt={jwt} templateId={selectedTemplateId} />
+      )}
 
       {isBill && renderBillHeader()}
       {isVendorCredit && renderVendorCreditHeader()}

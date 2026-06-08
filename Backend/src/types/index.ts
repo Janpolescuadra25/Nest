@@ -43,6 +43,14 @@ export interface QBJournalLineItem {
   memo?: string;
 }
 
+export interface QBBillLineItem {
+  amount: number;
+  accountRef: { value: string; name?: string };
+  classRef?: { value: string; name?: string };
+  taxCodeRef?: { value: string; name?: string };
+  description?: string;
+}
+
 export interface CreateJournalEntryInput {
   txnDate: string;             // YYYY-MM-DD
   docNumber?: string;
@@ -50,6 +58,76 @@ export interface CreateJournalEntryInput {
   lines: QBJournalLineItem[];
   realmId: string;
   accessToken: string;
+}
+
+export interface CreateBillInput {
+  txnDate: string;             // YYYY-MM-DD
+  docNumber?: string;
+  vendorRef: { value: string; name?: string };
+  apAccountRef: { value: string; name?: string };
+  termsRef?: { value: string; name?: string };
+  dueDate?: string;
+  memo?: string;
+  lines: QBBillLineItem[];
+  realmId: string;
+  accessToken: string;
+}
+
+export interface CreateVendorCreditInput {
+  txnDate: string;             // YYYY-MM-DD
+  docNumber?: string;
+  vendorRef: { value: string; name?: string };
+  apAccountRef: { value: string; name?: string };
+  memo?: string;
+  lines: QBBillLineItem[];
+  realmId: string;
+  accessToken: string;
+}
+
+export interface OutstandingBill {
+  id: string;
+  txnDate: string;
+  dueDate?: string;
+  totalAmt: number;
+  balance: number;
+  vendorRef: { value: string; name?: string };
+  docNumber?: string;
+}
+
+export interface VendorCreditItem {
+  id: string;
+  txnDate: string;
+  totalAmt: number;
+  balance: number;
+  vendorRef: { value: string; name?: string };
+  docNumber?: string;
+}
+
+export interface BillPaymentLine {
+  amount: number;
+  linkedTxn: {
+    txnId: string;
+    txnType: 'Bill' | 'VendorCredit';
+  };
+}
+
+export interface CreateBillPaymentInput {
+  vendorRef: { value: string; name?: string };
+  payType: 'Cash' | 'Check' | 'CreditCard' | 'Other';
+  bankAccountRef?: { value: string; name?: string };
+  checkNum?: string;
+  txnDate: string;
+  totalAmt: number;
+  lines: BillPaymentLine[];
+  realmId: string;
+  accessToken: string;
+}
+
+export interface BillPaymentResponse {
+  id: string;
+  txnDate: string;
+  totalAmt: number;
+  syncToken: string;
 }
 
 export interface JournalEntryResponse {

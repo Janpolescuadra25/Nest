@@ -54,6 +54,103 @@ export const patchTeamMemberSchema = z.object({
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),
 });
 
+export const billSchema = z.object({
+  txnDate: z.string().min(1, 'Transaction date is required'),
+  vendorRef: z.object({
+    value: z.string().min(1, 'Vendor is required'),
+    name: z.string().optional(),
+  }),
+  apAccountRef: z.object({
+    value: z.string().min(1, 'AP account is required'),
+    name: z.string().optional(),
+  }),
+  termsRef: z.object({
+    value: z.string().min(1, 'Terms reference is required'),
+    name: z.string().optional(),
+  }).optional(),
+  dueDate: z.string().optional(),
+  memo: z.string().optional(),
+  docNumber: z.string().optional(),
+  lines: z.array(z.object({
+    amount: z.number().positive('Amount must be positive'),
+    accountRef: z.object({
+      value: z.string().min(1, 'Account value is required'),
+      name: z.string().optional(),
+    }),
+    description: z.string().optional(),
+    classRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+    taxCodeRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+  })).min(1, 'At least one line item is required'),
+  scanRecordId: z.string().optional(),
+});
+
+export const vendorCreditSchema = z.object({
+  txnDate: z.string().min(1, 'Credit date is required'),
+  vendorRef: z.object({
+    value: z.string().min(1, 'Vendor is required'),
+    name: z.string().optional(),
+  }),
+  apAccountRef: z.object({
+    value: z.string().min(1, 'AP account is required'),
+    name: z.string().optional(),
+  }),
+  memo: z.string().optional(),
+  docNumber: z.string().optional(),
+  lines: z.array(z.object({
+    amount: z.number().positive('Amount must be positive'),
+    accountRef: z.object({
+      value: z.string().min(1, 'Account value is required'),
+      name: z.string().optional(),
+    }),
+    description: z.string().optional(),
+    classRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+    taxCodeRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+  })).min(1, 'At least one line item is required'),
+  scanRecordId: z.string().optional(),
+});
+
+export const billPaymentSchema = z.object({
+  vendorRef: z.object({
+    value: z.string().min(1, 'Vendor is required'),
+    name: z.string().optional(),
+  }),
+  payType: z.enum(['Cash', 'Check', 'CreditCard', 'Other']),
+  bankAccountRef: z.object({
+    value: z.string().optional(),
+    name: z.string().optional(),
+  }).optional(),
+  checkNum: z.string().optional(),
+  txnDate: z.string().min(1, 'Transaction date is required'),
+  totalAmt: z.number().positive('Total amount must be positive'),
+  lines: z.array(z.object({
+    amount: z.number(),
+    linkedTxn: z.object({
+      txnId: z.string().min(1),
+      txnType: z.enum(['Bill', 'VendorCredit']),
+    }),
+  })).min(1, 'At least one linked transaction is required'),
+}).superRefine((data, ctx) => {
+  if ((data.payType === 'Check' || data.payType === 'CreditCard') && !data.bankAccountRef?.value) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Bank account is required for ${data.payType} payments`,
+      path: ['bankAccountRef'],
+    });
+  }
+});
+
 export const journalEntrySchema = z.object({
   txnDate: z.string().min(1, 'Transaction date is required'),
   lines: z.array(z.object({

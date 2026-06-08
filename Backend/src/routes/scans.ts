@@ -14,14 +14,22 @@ router.use(authenticate, enforceEffectiveRole);
 // Save raw Toast POS scan data for a location
 router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { locationId, scanDate, rawData } = req.body as {
+    const { locationId, scanDate, rawData, rawScanEntry, source } = req.body as {
       locationId?: string;
       scanDate?: string;
       rawData?: ScanRawData;
+      rawScanEntry?: unknown;
+      source?: string;
     };
 
-    if (!locationId || !scanDate || !rawData) {
-      throw new AppError('locationId, scanDate, and rawData are required', 400);
+    if (!locationId || !scanDate) {
+      throw new AppError('locationId and scanDate are required', 400);
+    }
+    if (!rawData && (!source || source === 'pos')) {
+      throw new AppError('rawData is required for POS scans', 400);
+    }
+    if (source && source !== 'pos' && !rawScanEntry) {
+      throw new AppError('rawScanEntry is required for non-POS scans', 400);
     }
 
     // Verify the location is visible to the authenticated user
@@ -42,7 +50,9 @@ router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (
       data: {
         locationId,
         scanDate: parsedDate,
-        rawData: rawData as unknown as Prisma.InputJsonValue,
+        rawData: (rawData ?? {}) as unknown as Prisma.InputJsonValue,
+        rawScanEntry: rawScanEntry ? rawScanEntry as unknown as Prisma.InputJsonValue : null,
+        source: source || 'pos',
         status: 'PENDING',
       },
     });

@@ -1,4 +1,4 @@
-import type { Location, Mapping, Template, Rule, ScanData, ScanRecord, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult } from '../../types';
+import type { Location, Mapping, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -317,13 +317,13 @@ export const api = {
   },
 
   // ── Rules ──────────────────────────────────────────────────────────────────
-  getRules: (jwt: string, locationId: string) =>
-    get<Rule[]>(`/api/locations/${locationId}/rules`, jwt),
+  getRules: (jwt: string, locationId: string, templateId?: string | null) =>
+    get<Rule[]>(`/api/locations/${locationId}/rules${templateId ? `?templateId=${encodeURIComponent(templateId)}` : ''}`, jwt),
 
-  createRule: (jwt: string, locationId: string, data: Omit<Rule, 'id' | 'locationId' | 'createdAt'>) =>
+  createRule: (jwt: string, locationId: string, data: RuleFormData) =>
     post<Rule>(`/api/locations/${locationId}/rules`, data, jwt),
 
-  updateRule: (jwt: string, id: string, data: Partial<Rule>) =>
+  updateRule: (jwt: string, id: string, data: Partial<RuleFormData>) =>
     put<Rule>(`/api/rules/${id}`, data, jwt),
 
   deleteRule: (jwt: string, id: string) => del(`/api/rules/${id}`, jwt),
@@ -335,6 +335,35 @@ export const api = {
   // ── Scans ──────────────────────────────────────────────────────────────────
   saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData) =>
     post<{ id: string }>('/api/scans', { locationId, scanDate, rawData }, jwt),
+
+  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source }, jwt),
+
+  // ── Products ─────────────────────────────────────────────────────────────────
+  getProducts: (jwt: string) =>
+    get<Product[]>('/api/products', jwt),
+
+  createProduct: (jwt: string, data: ProductFormData) =>
+    post<Product>('/api/products', data, jwt),
+
+  updateProduct: (jwt: string, id: string, data: ProductFormData) =>
+    put<Product>(`/api/products/${id}`, data, jwt),
+
+  deleteProduct: (jwt: string, id: string) =>
+    del(`/api/products/${id}`, jwt),
+
+  // ── Product Mappings ─────────────────────────────────────────────────────
+  getProductMappings: (jwt: string, templateId: string) =>
+    get<ProductMapping[]>(`/api/product-mappings/${templateId}`, jwt),
+
+  createProductMapping: (jwt: string, data: ProductMappingFormData) =>
+    post<ProductMapping>('/api/product-mappings', data, jwt),
+
+  updateProductMapping: (jwt: string, id: string, data: Partial<ProductMappingFormData>) =>
+    put<ProductMapping>(`/api/product-mappings/${id}`, data, jwt),
+
+  deleteProductMapping: (jwt: string, id: string) =>
+    del(`/api/product-mappings/${id}`, jwt),
 
   getScans: (jwt: string, locationId: string, page?: number, limit?: number) => {
     const sp = new URLSearchParams();
@@ -365,6 +394,32 @@ export const api = {
   ) =>
     post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote, docNumber }, jwt),
 
+  createBill: (
+    jwt: string,
+    txnDate: string,
+    vendorRef: { value: string; name?: string },
+    apAccountRef: { value: string; name?: string },
+    termsRef: { value: string; name?: string } | undefined,
+    dueDate: string | undefined,
+    memo: string | undefined,
+    docNumber: string | undefined,
+    lines: unknown[],
+    scanRecordId?: string,
+  ) =>
+    post('/api/quickbooks/bill', { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines, scanRecordId }, jwt),
+
+  createVendorCredit: (
+    jwt: string,
+    vendorRef: { value: string; name?: string },
+    txnDate: string,
+    apAccountRef: { value: string; name?: string },
+    lines: unknown[],
+    scanRecordId?: string,
+    memo?: string,
+    docNumber?: string,
+  ) =>
+    post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, docNumber }, jwt),
+
   syncBatch: (jwt: string, items: BatchSyncItem[]) =>
     post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(
       '/api/quickbooks/sync-batch',
@@ -387,6 +442,25 @@ export const api = {
     ),
 
   getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
+  getOutstandingBills: (jwt: string, vendorId?: string) =>
+    get<{ bills: OutstandingBill[] }>(`/api/quickbooks/bills${vendorId ? `?vendorId=${vendorId}` : ''}`, jwt),
+  getVendorCredits: (jwt: string, vendorId?: string) =>
+    get<{ vendorCredits: VendorCreditItem[] }>(`/api/quickbooks/vendor-credits${vendorId ? `?vendorId=${vendorId}` : ''}`, jwt),
+  createBillPayment: (
+    jwt: string,
+    vendorRef: { value: string; name?: string },
+    payType: 'Cash' | 'Check' | 'CreditCard' | 'Other',
+    txnDate: string,
+    totalAmt: number,
+    lines: BillPaymentLineItem[],
+    bankAccountRef?: { value: string; name?: string },
+    checkNum?: string,
+  ) =>
+    post<{ message: string; billPaymentId: string; txnDate: string; totalAmount: number }>(
+      '/api/quickbooks/bill-payment',
+      { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum },
+      jwt,
+    ),
   getQBClasses: (jwt: string) => get<{ classes: QBClass[] }>('/api/quickbooks/classes', jwt),
   getQBEmployees: (jwt: string) => get<{ employees: QBEmployee[] }>('/api/quickbooks/employees', jwt),
   getQBVendors: (jwt: string) => get<{ vendors: QBVendor[] }>('/api/quickbooks/vendors', jwt),
@@ -399,6 +473,7 @@ export const api = {
     vendors: QBVendor[];
     customers: QBCustomer[];
     taxCodes: QBTaxCode[];
+    terms: QBTerm[];
   }>('/api/quickbooks/sync-all', jwt),
 
   // ── Admin ──────────────────────────────────────────────────────────────────

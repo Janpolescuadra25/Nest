@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { api } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import SearchableSelect, { type SelectOption } from './SearchableSelect';
-import type { Rule } from '../../types';
+import { TRANSACTION_TYPE_LABELS } from '../../types';
+import type { Rule, RuleFormData, Template } from '../../types';
 
 interface RulesViewProps {
   jwt: string;
@@ -125,6 +126,8 @@ function ToggleSwitch({ value, onChange }: { value: boolean; onChange: () => voi
 export default function RulesView({ jwt, selectedLocationId, onLocationChange, scanData }: RulesViewProps) {
   const { locations } = useLocations(jwt);
   const [rules, setRules] = useState<Rule[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,6 +139,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   // Form fields
   const [formName, setFormName] = useState('');
   const [formRuleType, setFormRuleType] = useState<Rule['ruleType']>('COMBINE');
+  const [formTemplateId, setFormTemplateId] = useState<string>('');
   const [sourceFields, setSourceFields] = useState<string[]>(['', '']);
   const [thresholdSource, setThresholdSource] = useState('');
   const [thresholdValue, setThresholdValue] = useState<number>(0);
@@ -147,6 +151,20 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const formulaInputRef = useRef<HTMLInputElement>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
+
+  useEffect(() => {
+    if (!locId) return;
+    setSelectedTemplateId('');
+    const loadTemplates = async () => {
+      try {
+        const data = await api.getTemplates(jwt, locId);
+        setTemplates(data);
+      } catch (err) {
+        console.error('[RulesView] failed to load templates', err);
+      }
+    };
+    void loadTemplates();
+  }, [jwt, locId]);
 
   // ------------------------------------------------------------------
   // Available fields
@@ -173,14 +191,14 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getRules(jwt, locId);
+      const data = await api.getRules(jwt, locId, selectedTemplateId || undefined);
       setRules(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load rules');
     } finally {
       setLoading(false);
     }
-  }, [jwt, locId]);
+  }, [jwt, locId, selectedTemplateId]);
 
   useEffect(() => { void loadRules(); }, [loadRules]);
 
@@ -194,6 +212,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const resetForm = () => {
     setFormName('');
     setFormRuleType('COMBINE');
+    setFormTemplateId('');
     setSourceFields(['', '']);
     setThresholdSource('');
     setThresholdValue(0);
@@ -224,6 +243,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const openEditForm = (r: Rule) => {
     setFormName(r.name);
     setFormRuleType(r.ruleType);
+    setFormTemplateId(r.templateId ?? '');
     setTargetField((cfg(r.config, 'targetField') ?? '') as string);
     setValidationErrors({});
 
@@ -331,10 +351,17 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
     }
 
     try {
+      const payload: RuleFormData = {
+        name: formName,
+        ruleType: formRuleType,
+        config,
+        templateId: formTemplateId || null,
+      };
+
       if (editingRule) {
-        await api.updateRule(jwt, editingRule.id, { name: formName, ruleType: formRuleType, config });
+        await api.updateRule(jwt, editingRule.id, payload);
       } else {
-        await api.createRule(jwt, locId, { name: formName, ruleType: formRuleType, config, isActive: true });
+        await api.createRule(jwt, locId, { ...payload, isActive: true });
       }
       resetForm();
       await loadRules();
@@ -519,7 +546,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   return (
     <div className="p-3">
       {/* Location selector + New Rule button */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center">
         <select
           value={locId}
           onChange={(e) => onLocationChange(e.target.value)}
@@ -535,6 +562,19 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
         >
           + New Rule
         </button>
+      </div>
+      <div className="flex items-center gap-2 mb-3">
+        <label className="text-xs text-gray-400">Template</label>
+        <select
+          value={selectedTemplateId}
+          onChange={(e) => setSelectedTemplateId(e.target.value)}
+          className="flex-1 bg-gray-800 border border-gray-600 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none"
+        >
+          <option value="">All Rules</option>
+          {templates.map((template) => (
+            <option key={template.id} value={template.id}>{template.name}</option>
+          ))}
+        </select>
       </div>
 
       {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
@@ -573,6 +613,19 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 ))}
               </select>
               <p className="text-gray-500 text-xs mt-0.5">{RULE_DESCRIPTIONS[formRuleType]}</p>
+            </div>
+            <div className={fieldGroupClass}>
+              <label className={labelClass}>Template</label>
+              <select
+                value={formTemplateId}
+                onChange={(e) => setFormTemplateId(e.target.value)}
+                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
+              >
+                <option value="">None (Location-scoped)</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>{template.name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Type-specific fields */}
@@ -629,7 +682,12 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                   {r.ruleType}
                 </span>
                 <span className="flex-1 text-white text-xs font-semibold truncate">{r.name}</span>
-                <ToggleSwitch value={r.isActive} onChange={() => void handleToggle(r)} />
+              {r.template && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-200">
+                  {TRANSACTION_TYPE_LABELS[r.template.transactionType] ?? r.template.transactionType}
+                </span>
+              )}
+              <ToggleSwitch value={r.isActive} onChange={() => void handleToggle(r)} />
                 <button
                   type="button"
                   onClick={() => openEditForm(r)}

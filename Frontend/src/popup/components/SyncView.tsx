@@ -5,7 +5,7 @@ import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import { useToast } from './Toast';
 import { buildJEPayload } from '../lib/je-builder';
-import type { ScanRecord } from '../../types';
+import type { ScanRecord, ScanEntry } from '../../types';
 
 interface Props {
   jwt: string;
@@ -39,6 +39,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [batchProgress, setBatchProgress] = useState('');
   const [isRetryingId, setIsRetryingId] = useState<string | null>(null);
   const [isRetryingAll, setIsRetryingAll] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!locationId) return;
@@ -47,6 +49,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     setScans([]);
     setPage(1);
     setHasMore(false);
+    setSourceFilter('all');
+    setExpandedScanId(null);
     api.getScans(jwt, locationId, 1)
       .then((data) => { setScans(data.scans ?? []); setHasMore(data.hasMore ?? false); })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load sync history'))
@@ -149,6 +153,9 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           mappings,
           accounts,
           txnDate: scan.scanDate.slice(0, 10),
+          scanEntry: scan.source && scan.source !== 'pos' && scan.rawScanEntry
+            ? scan.rawScanEntry as ScanEntry
+            : undefined,
         }))
         .filter((item) => item.lines.length > 0);
 
@@ -180,6 +187,9 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   };
 
   const safeScans = scans ?? [];
+  const filteredScans = sourceFilter === 'all'
+    ? safeScans
+    : safeScans.filter((s) => (s.source ?? 'pos').toLowerCase() === sourceFilter);
   const totalSynced = safeScans.filter((s) => s.status === 'SYNCED').length;
   const totalFailed = safeScans.filter((s) => s.status === 'FAILED').length;
   const totalPending = safeScans.filter((s) => s.status === 'PENDING' || s.status === 'MAPPED').length;
@@ -280,6 +290,25 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         <div className="px-3 py-2 border-b border-gray-700">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sync History</span>
         </div>
+        <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2">
+          <span className="text-xs text-gray-500 flex-shrink-0">Filter:</span>
+          <select
+            className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+          >
+            <option value="all">All Sources</option>
+            <option value="pos">POS Only</option>
+            <option value="excel">Excel Only</option>
+            <option value="image">Image Only</option>
+            <option value="pdf">PDF Only</option>
+          </select>
+          {sourceFilter !== 'all' && (
+            <span className="text-xs text-gray-500">
+              {filteredScans.length} of {safeScans.length} scans
+            </span>
+          )}
+        </div>
 
         {loading ? (
           <div className="py-8 text-center text-gray-500 text-sm">Loading…</div>
@@ -290,6 +319,12 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <div className="text-2xl mb-2">📍</div>
             <p className="text-gray-500 text-sm">No location selected</p>
             <p className="text-gray-600 text-xs mt-1">Add a location in Settings first</p>
+          </div>
+        ) : filteredScans.length === 0 && safeScans.length > 0 ? (
+          <div className="py-8 text-center">
+            <div className="text-2xl mb-2">🔍</div>
+            <p className="text-gray-500 text-sm">No scans match the selected filter</p>
+            <p className="text-gray-600 text-xs mt-1">Try changing the source filter above</p>
           </div>
         ) : safeScans.length === 0 ? (
           <div className="py-8 text-center">
@@ -310,11 +345,12 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Status</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">QB Journal Entry ID</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Created</th>
+                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Source</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {safeScans.map((scan) => {
+                {filteredScans.map((scan) => {
                   const latestLog = scan.syncLogs?.slice().sort((a, b) => new Date(b.syncedAt).getTime() - new Date(a.syncedAt).getTime())[0];
                   const attempts = latestLog?.attemptCount ?? 1;
                   const jeId = latestLog?.qbJournalEntryId;
@@ -323,6 +359,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                     : 'https://app.qbo.intuit.com';
                   const retryDisabled = scan.syncLogs?.some((l) => l.attemptCount >= 3) ?? false;
                   const attention = getScanAttention(scan);
+                  const scanSource = (scan.source ?? 'pos').toLowerCase();
                   return (
                     <React.Fragment key={scan.id}>
                       <tr className={`border-t border-gray-700/50 hover:bg-gray-700/20 ${attention === 'max-retried' ? 'bg-red-900/20' : attention === 'stale' || attention === 'old-failure' ? 'bg-amber-900/10' : ''}`}>
@@ -352,6 +389,49 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                           {new Date(scan.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2">
+                          {scanSource === 'excel' ? (
+                            <span
+                              className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400 cursor-pointer hover:bg-emerald-900/50"
+                              title="Excel import — click to inspect"
+                              onClick={() => {
+                                if (scan.rawScanEntry) {
+                                  setExpandedScanId(expandedScanId === scan.id ? null : scan.id);
+                                }
+                              }}
+                            >
+                              Excel{expandedScanId === scan.id ? ' ▾' : ' ▸'}
+                            </span>
+                          ) : scanSource === 'image' ? (
+                            <span
+                              className="px-2 py-0.5 rounded border text-xs bg-purple-900/30 border-purple-800 text-purple-400 cursor-pointer hover:bg-purple-900/50"
+                              title="Image scan — click to inspect"
+                              onClick={() => {
+                                if (scan.rawScanEntry) {
+                                  setExpandedScanId(expandedScanId === scan.id ? null : scan.id);
+                                }
+                              }}
+                            >
+                              Image{expandedScanId === scan.id ? ' ▾' : ' ▸'}
+                            </span>
+                          ) : scanSource === 'pdf' ? (
+                            <span
+                              className="px-2 py-0.5 rounded border text-xs bg-orange-900/30 border-orange-800 text-orange-400 cursor-pointer hover:bg-orange-900/50"
+                              title="PDF scan — click to inspect"
+                              onClick={() => {
+                                if (scan.rawScanEntry) {
+                                  setExpandedScanId(expandedScanId === scan.id ? null : scan.id);
+                                }
+                              }}
+                            >
+                              PDF{expandedScanId === scan.id ? ' ▾' : ' ▸'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded border text-xs bg-cyan-900/30 border-cyan-800 text-cyan-400" title="POS scan">
+                              POS
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
                           {scan.status === 'FAILED' && (
                             <button
                               onClick={() => void handleRetryScan(scan.id)}
@@ -364,9 +444,56 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                           )}
                         </td>
                       </tr>
+                      {expandedScanId === scan.id && scan.rawScanEntry && (
+                        <tr className="border-t border-gray-700/30 bg-gray-900/50">
+                          <td colSpan={6} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
+                            {(() => {
+                              const entry = scan.rawScanEntry as ScanEntry;
+                              const header = entry.header ?? {};
+                              const headerKeys = Object.keys(header);
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                                    {entry.fileName && (
+                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                        📄 {entry.fileName}
+                                      </span>
+                                    )}
+                                    {entry.rowNumber != null && (
+                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                        Row {entry.rowNumber}
+                                      </span>
+                                    )}
+                                    {entry.source && (
+                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                        Source: {entry.source}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {headerKeys.length > 0 && (
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      {headerKeys.map((key) => (
+                                        <div key={key} className="text-xs">
+                                          <span className="text-gray-500">{key}:</span>{' '}
+                                          <span className="text-gray-300">{header[key]}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {entry.lineItems && entry.lineItems.length > 0 && (
+                                    <div className="mt-1 text-xs text-gray-500">
+                                      {entry.lineItems.length} line item{entry.lineItems.length !== 1 ? 's' : ''}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                      )}
                       {scan.status === 'FAILED' && latestLog && (latestLog.errorMessage || latestLog.errorType) && (
                         <tr>
-                          <td colSpan={5} className="px-3 pb-2 pt-0">
+                          <td colSpan={6} className="px-3 pb-2 pt-0">
                             {latestLog.errorType === 'AUTH' ? (
                               <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1.5 space-y-1">
                                 <div>QuickBooks connection expired. Please reconnect.</div>

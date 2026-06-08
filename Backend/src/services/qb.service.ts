@@ -1,4 +1,4 @@
-import { CreateJournalEntryInput, JournalEntryResponse, QBJournalLineItem } from '../types';
+import { CreateBillInput, CreateBillPaymentInput, CreateJournalEntryInput, CreateVendorCreditInput, JournalEntryResponse, OutstandingBill, VendorCreditItem, BillPaymentResponse, QBJournalLineItem, QBBillLineItem } from '../types';
 import { QBApiError } from '../lib/qb-errors';
 import { prisma } from '../lib/prisma';
 import { encrypt, decryptSafe } from '../lib/encryption';
@@ -115,12 +115,136 @@ async function getCustomers(realmId: string, accessToken: string): Promise<QBCus
   return data.QueryResponse.Customer ?? [];
 }
 
+interface QBTerm {
+  Id: string;
+  Name: string;
+  Type?: 'Standard' | 'DateDriven';
+  DueDays?: number;
+  DayOfMonth?: number;
+  Month?: number;
+  DueNextMonthDays?: number;
+  Active?: boolean;
+}
+
 async function getTaxCodes(realmId: string, accessToken: string): Promise<QBTaxCode[]> {
   const data = await qbQuery<{ QueryResponse: { TaxCode?: QBTaxCode[] } }>(
     realmId, accessToken,
     'SELECT * FROM TaxCode MAXRESULTS 1000',
   );
   return data.QueryResponse.TaxCode ?? [];
+}
+
+async function getTerms(realmId: string, accessToken: string): Promise<QBTerm[]> {
+  const data = await qbQuery<{ QueryResponse: { Term?: QBTerm[] } }>(
+    realmId, accessToken,
+    'SELECT * FROM Term WHERE Active = true ORDER BY Name ASC MAXRESULTS 1000',
+  );
+  return data.QueryResponse.Term ?? [];
+}
+
+async function getOutstandingBills(realmId: string, accessToken: string): Promise<OutstandingBill[]> {
+  const query = "SELECT Id, TxnDate, DueDate, TotalAmt, Balance, VendorRef, DocNumber FROM Bill WHERE Balance > 0 ORDERBY TxnDate ASC MAXRESULTS 1000";
+  const result = await qbQuery<{ Bill: Record<string, unknown>[] | Record<string, unknown> }>(realmId, accessToken, query);
+  const raw = Array.isArray(result.Bill) ? result.Bill : result.Bill ? [result.Bill] : [];
+  return raw.map((b) => ({
+    id: b.Id as string,
+    txnDate: b.TxnDate as string,
+    dueDate: b.DueDate as string | undefined,
+    totalAmt: b.TotalAmt as number,
+    balance: b.Balance as number,
+    vendorRef: b.VendorRef as { value: string; name?: string },
+    docNumber: b.DocNumber as string | undefined,
+  }));
+}
+
+async function getVendorCredits(realmId: string, accessToken: string): Promise<VendorCreditItem[]> {
+  const query = "SELECT Id, TxnDate, TotalAmt, Balance, VendorRef, DocNumber FROM VendorCredit WHERE Balance > 0 ORDERBY TxnDate ASC MAXRESULTS 1000";
+  const result = await qbQuery<{ VendorCredit: Record<string, unknown>[] | Record<string, unknown> }>(realmId, accessToken, query);
+  const raw = Array.isArray(result.VendorCredit) ? result.VendorCredit : result.VendorCredit ? [result.VendorCredit] : [];
+  return raw.map((vc) => ({
+    id: vc.Id as string,
+    txnDate: vc.TxnDate as string,
+    totalAmt: vc.TotalAmt as number,
+    balance: vc.Balance as number,
+    vendorRef: vc.VendorRef as { value: string; name?: string },
+    docNumber: vc.DocNumber as string | undefined,
+  }));
+}
+
+function buildBillPaymentPayload(input: CreateBillPaymentInput): object {
+  const { vendorRef, payType, bankAccountRef, checkNum, txnDate, totalAmt, lines } = input;
+
+  const payload: Record<string, unknown> = {
+    VendorRef: vendorRef,
+    TxnDate: txnDate,
+    TotalAmt: totalAmt,
+    Line: lines.map((line) => ({
+      Amount: line.amount,
+      LinkedTxn: {
+        TxnId: line.linkedTxn.txnId,
+        TxnType: line.linkedTxn.txnType,
+      },
+    })),
+  };
+
+  if (payType === 'Check') {
+    payload.PayType = 'Check';
+    const checkPayment: Record<string, unknown> = {};
+    if (bankAccountRef) checkPayment.BankAccountRef = bankAccountRef;
+    if (checkNum) checkPayment.CheckNum = checkNum;
+    payload.CheckPayment = checkPayment;
+  } else if (payType === 'Cash') {
+    payload.PayType = 'Cash';
+  } else if (payType === 'CreditCard') {
+    payload.PayType = 'CreditCard';
+    const ccPayment: Record<string, unknown> = {};
+    if (bankAccountRef) ccPayment.CCCardAccountRef = bankAccountRef;
+    payload.CreditCardPayment = ccPayment;
+  } else {
+    payload.PayType = 'Other';
+  }
+
+  return payload;
+}
+
+async function createBillPayment(input: CreateBillPaymentInput): Promise<BillPaymentResponse> {
+  const { realmId, accessToken } = input;
+  const payload = buildBillPaymentPayload(input);
+  const url = `${QB_API_BASE_URL}/${realmId}/billpayment?minorversion=65`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] POST ${url}`);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseBody = await response.json() as Record<string, unknown>;
+
+  if (!response.ok) {
+    const fault = responseBody.Fault as Record<string, unknown> | undefined;
+    const faultErrors = fault?.Error as Array<Record<string, unknown>> | undefined;
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    const errMsg = faultErrors?.[0]?.Message as string | undefined ?? JSON.stringify(fault ?? responseBody);
+    const errCode = faultErrors?.[0]?.code as string | undefined;
+    throw new QBApiError(`QB bill payment failed (${response.status}): ${errMsg}`, response.status, errCode, intuitTid);
+  }
+
+  const billPayment = responseBody.BillPayment as Record<string, unknown>;
+
+  return {
+    id: billPayment.Id as string,
+    txnDate: billPayment.TxnDate as string,
+    totalAmt: billPayment.TotalAmt as number,
+    syncToken: billPayment.SyncToken as string,
+  };
 }
 
 /**
@@ -226,6 +350,168 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
     txnDate: je.TxnDate as string,
     totalAmount: je.TotalAmt as number,
     syncToken: je.SyncToken as string,
+  };
+}
+
+function buildBillPayload(input: CreateBillInput): object {
+  const { txnDate, docNumber, vendorRef, apAccountRef, termsRef, dueDate, memo, lines } = input;
+
+  const qbLines = lines.map((line: QBBillLineItem) => {
+    const lineDetail: Record<string, unknown> = {
+      AccountRef: line.accountRef,
+    };
+
+    if (line.classRef) lineDetail.ClassRef = line.classRef;
+    if (line.taxCodeRef) lineDetail.TaxCodeRef = line.taxCodeRef;
+
+    const qbLine: Record<string, unknown> = {
+      Amount: line.amount,
+      DetailType: 'AccountBasedExpenseLineDetail',
+      AccountBasedExpenseLineDetail: lineDetail,
+    };
+
+    if (line.description) qbLine.Description = line.description;
+
+    return qbLine;
+  });
+
+  const payload: Record<string, unknown> = {
+    TxnDate: txnDate,
+    VendorRef: vendorRef,
+    APAccountRef: apAccountRef,
+    Line: qbLines,
+  };
+
+  if (docNumber) payload.DocNumber = docNumber;
+  if (termsRef) payload.TermsRef = termsRef;
+  if (dueDate) payload.DueDate = dueDate;
+  if (memo) payload.PrivateNote = memo;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[QB Service] Bill payload:');
+    console.log(JSON.stringify(payload, null, 2));
+  }
+
+  return payload;
+}
+
+async function createBill(input: CreateBillInput): Promise<JournalEntryResponse> {
+  const { realmId, accessToken } = input;
+  const payload = buildBillPayload(input);
+  const url = `${QB_API_BASE_URL}/${realmId}/bill?minorversion=65`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] POST ${url}`);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseBody = await response.json() as Record<string, unknown>;
+
+  if (!response.ok) {
+    const fault = responseBody.Fault as Record<string, unknown> | undefined;
+    const faultErrors = fault?.Error as Array<Record<string, unknown>> | undefined;
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    const errMsg = faultErrors?.[0]?.Message as string | undefined ?? JSON.stringify(fault ?? responseBody);
+    const errCode = faultErrors?.[0]?.code as string | undefined;
+    throw new QBApiError(`QB bill failed (${response.status}): ${errMsg}`, response.status, errCode, intuitTid);
+  }
+
+  const bill = responseBody.Bill as Record<string, unknown>;
+
+  return {
+    id: bill.Id as string,
+    txnDate: bill.TxnDate as string,
+    totalAmount: bill.TotalAmt as number,
+    syncToken: bill.SyncToken as string,
+  };
+}
+
+function buildVendorCreditPayload(input: CreateVendorCreditInput): object {
+  const { txnDate, docNumber, vendorRef, apAccountRef, memo, lines } = input;
+
+  const qbLines = lines.map((line: QBBillLineItem) => {
+    const lineDetail: Record<string, unknown> = {
+      AccountRef: line.accountRef,
+    };
+
+    if (line.classRef) lineDetail.ClassRef = line.classRef;
+    if (line.taxCodeRef) lineDetail.TaxCodeRef = line.taxCodeRef;
+
+    const qbLine: Record<string, unknown> = {
+      Amount: line.amount,
+      DetailType: 'AccountBasedExpenseLineDetail',
+      AccountBasedExpenseLineDetail: lineDetail,
+    };
+
+    if (line.description) qbLine.Description = line.description;
+
+    return qbLine;
+  });
+
+  const payload: Record<string, unknown> = {
+    TxnDate: txnDate,
+    VendorRef: vendorRef,
+    APAccountRef: apAccountRef,
+    Line: qbLines,
+  };
+
+  if (docNumber) payload.DocNumber = docNumber;
+  if (memo) payload.PrivateNote = memo;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[QB Service] Vendor Credit payload:');
+    console.log(JSON.stringify(payload, null, 2));
+  }
+
+  return payload;
+}
+
+async function createVendorCredit(input: CreateVendorCreditInput): Promise<JournalEntryResponse> {
+  const { realmId, accessToken } = input;
+  const payload = buildVendorCreditPayload(input);
+  const url = `${QB_API_BASE_URL}/${realmId}/vendorcredit?minorversion=65`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] POST ${url}`);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseBody = await response.json() as Record<string, unknown>;
+
+  if (!response.ok) {
+    const fault = responseBody.Fault as Record<string, unknown> | undefined;
+    const faultErrors = fault?.Error as Array<Record<string, unknown>> | undefined;
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    const errMsg = faultErrors?.[0]?.Message as string | undefined ?? JSON.stringify(fault ?? responseBody);
+    const errCode = faultErrors?.[0]?.code as string | undefined;
+    throw new QBApiError(`QB vendor credit failed (${response.status}): ${errMsg}`, response.status, errCode, intuitTid);
+  }
+
+  const vendorCredit = responseBody.VendorCredit as Record<string, unknown>;
+
+  return {
+    id: vendorCredit.Id as string,
+    txnDate: vendorCredit.TxnDate as string,
+    totalAmount: vendorCredit.TotalAmt as number,
+    syncToken: vendorCredit.SyncToken as string,
   };
 }
 
@@ -369,14 +655,23 @@ async function revokeAccessToken(accessToken: string): Promise<void> {
 
 export const qbService = {
   createJournalEntry,
+  createBill,
+  createVendorCredit,
+  createBillPayment,
   refreshAccessToken,
   buildJournalEntryPayload,
+  buildBillPayload,
+  buildVendorCreditPayload,
+  buildBillPaymentPayload,
+  getOutstandingBills,
+  getVendorCredits,
   getAccounts,
   getClasses,
   getEmployees,
   getVendors,
   getCustomers,
   getTaxCodes,
+  getTerms,
   callQB,
   revokeAccessToken,
 };

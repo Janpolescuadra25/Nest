@@ -13,6 +13,8 @@ import TabNav from './components/TabNav';
 import ScanView from './components/ScanView';
 import MappingView from './components/MappingView';
 import JournalEntryPreview from './components/JournalEntryPreview';
+import BillPreviewForm from './components/BillPreviewForm';
+import VendorCreditPreviewForm from './components/VendorCreditPreviewForm';
 import QBDataView from './components/QBDataView';
 import SyncView from './components/SyncView';
 import SettingsView from './components/SettingsView';
@@ -25,9 +27,11 @@ import RulesView from './components/RulesView';
 import DashboardView from './components/DashboardView';
 import AdminDashboard from './components/AdminDashboard';
 import { UserDashboard } from './components/UserDashboard';
+import BillPaymentView from './components/BillPaymentView';
 import AdminsTab from './components/AdminsTab';
 import UsersTab from './components/UsersTab';
 import LocationsTab from './components/LocationsTab';
+import ProductCatalogView from './components/ProductCatalogView';
 import type { TabId, ScanData, ScanEntry, Template } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
@@ -196,20 +200,19 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('dashboard', 'scan', 'mappings', 'rules', 'preview', 'data', 'sync', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
+    visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'sync', 'payments', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
   } else if (role === 'ADMIN') {
     visibleTabs.push('dashboard', 'my-team');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
-    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'rules', 'preview');
-    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync');
+    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'products', 'rules', 'preview');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync', 'payments');
     if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   } else {
-    // STAFF / ACCOUNTANT / VIEWER
     visibleTabs.push('dashboard');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
-    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'rules', 'preview');
-    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync');
+    if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'products', 'rules', 'preview');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync', 'payments');
     if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   }
@@ -365,13 +368,42 @@ export default function App() {
               setShowExcelImportModal={setShowExcelImportModal}
             />
           )}
+          {effectiveTab === 'products' && (
+            <ProductCatalogView jwt={jwt!} />
+          )}
           {effectiveTab === 'preview' && (
-            <JournalEntryPreview
+            selectedTemplateForScan?.transactionType === 'BILL' ? (
+              <BillPreviewForm
+                jwt={jwt!}
+                scanData={scanData}
+                activeScanEntry={activeScanEntry}
+                selectedLocationId={selectedLocationId}
+                scanRecordId={scanRecordId}
+                selectedTemplate={selectedTemplateForScan}
+              />
+            ) : selectedTemplateForScan?.transactionType === 'VENDOR_CREDIT' ? (
+              <VendorCreditPreviewForm
+                jwt={jwt!}
+                scanData={scanData}
+                activeScanEntry={activeScanEntry}
+                selectedLocationId={selectedLocationId}
+                scanRecordId={scanRecordId}
+                selectedTemplate={selectedTemplateForScan}
+              />
+            ) : (
+              <JournalEntryPreview
+                jwt={jwt!}
+                scanData={scanData}
+                activeScanEntry={activeScanEntry}
+                selectedLocationId={selectedLocationId}
+                scanRecordId={scanRecordId}
+              />
+            )
+          )}
+          {effectiveTab === 'payments' && (
+            <BillPaymentView
               jwt={jwt!}
-              scanData={scanData}
-              activeScanEntry={activeScanEntry}
               selectedLocationId={selectedLocationId}
-              scanRecordId={scanRecordId}
             />
           )}
           {effectiveTab === 'data' && (

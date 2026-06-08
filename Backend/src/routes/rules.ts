@@ -8,6 +8,16 @@ const router = Router();
 
 router.use(authenticate, enforceEffectiveRole);
 
+async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) {
+  const template = await prisma.template.findFirst({
+    where: { id: templateId, location: { ...locationFilter(user!) } },
+  });
+  if (!template) {
+    throw new AppError('Template not found', 404);
+  }
+  return template;
+}
+
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
 router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -21,13 +31,21 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(asyn
       throw new AppError('Rule not found', 404);
     }
 
-    const { name, ruleType, config, isActive } = req.body as {
-      name?: string; ruleType?: string; config?: object; isActive?: boolean;
+    const { name, ruleType, config, isActive, templateId } = req.body as {
+      name?: string; ruleType?: string; config?: object; isActive?: boolean; templateId?: string | null;
     };
 
     const validTypes = ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'];
     if (ruleType && !validTypes.includes(ruleType)) {
       throw new AppError(`ruleType must be one of: ${validTypes.join(', ')}`, 400);
+    }
+
+    let template;
+    if (templateId !== undefined && templateId) {
+      template = await getTemplateOrFail(templateId, req.user);
+      if (template.locationId !== rule.locationId) {
+        throw new AppError('Template not found', 404);
+      }
     }
 
     const updated = await prisma.rule.update({
@@ -37,6 +55,7 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(asyn
         ...(ruleType !== undefined && { ruleType: ruleType as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA' }),
         ...(config !== undefined && { config }),
         ...(isActive !== undefined && { isActive }),
+        ...(templateId !== undefined && { templateId: templateId || null }),
       },
     });
 

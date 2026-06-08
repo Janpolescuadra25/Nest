@@ -120,6 +120,9 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
   const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
 
+  // Track which ScanEntry has been auto-populated (prevent overwrite on re-render)
+  const autoPopulatedForRef = useRef<string | null>(null);
+
   // Persist column visibility
   useEffect(() => {
     localStorage.setItem(LS_COL_KEY, JSON.stringify(colVis));
@@ -155,6 +158,55 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
     if (loc.memoTemplate) setPrivateNote(resolveMemoTemplate(loc.memoTemplate, scanData));
     if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
   }, [scanData, locId, locations]);
+
+  // Auto-populate header fields from non-POS ScanEntry using mapping-based detection
+  useEffect(() => {
+    if (!activeScanEntry || activeScanEntry.source === 'pos' || !mappingsLoaded) return;
+    if (autoPopulatedForRef.current === activeScanEntry.id) return;
+
+    const header = activeScanEntry.header;
+    if (!header || Object.keys(header).length === 0) return;
+
+    const shouldPopulateTxnDate = txnDate === today;
+    const shouldPopulatePrivateNote = privateNote.trim() === '';
+    const shouldPopulateDocNumber = docNumber.trim() === '';
+
+    // Detect date field via mapping sourceField matching date pattern
+    const dateMapping = savedMappings.find(m =>
+      /date|txn/i.test(m.sourceField) && Object.prototype.hasOwnProperty.call(header, m.sourceField)
+    );
+    if (dateMapping && header[dateMapping.sourceField] && shouldPopulateTxnDate) {
+      const parsed = new Date(header[dateMapping.sourceField]);
+      if (!isNaN(parsed.getTime())) {
+        setTxnDate(parsed.toISOString().split('T')[0]);
+      }
+    }
+
+    // Detect memo/description field
+    const memoMapping = savedMappings.find(m =>
+      /memo|description|note/i.test(m.sourceField) && Object.prototype.hasOwnProperty.call(header, m.sourceField)
+    );
+    if (memoMapping && header[memoMapping.sourceField] && shouldPopulatePrivateNote) {
+      setPrivateNote(header[memoMapping.sourceField]);
+    } else if (shouldPopulatePrivateNote) {
+      const vendorMapping = savedMappings.find(m =>
+        /vendor|name|payee/i.test(m.sourceField) && Object.prototype.hasOwnProperty.call(header, m.sourceField)
+      );
+      if (vendorMapping && header[vendorMapping.sourceField]) {
+        setPrivateNote(header[vendorMapping.sourceField]);
+      }
+    }
+
+    // Detect doc/reference field
+    const docMapping = savedMappings.find(m =>
+      /doc|number|reference|invoice\s*no/i.test(m.sourceField) && Object.prototype.hasOwnProperty.call(header, m.sourceField)
+    );
+    if (docMapping && header[docMapping.sourceField] && shouldPopulateDocNumber) {
+      setDocNumber(header[docMapping.sourceField]);
+    }
+
+    autoPopulatedForRef.current = activeScanEntry.id;
+  }, [activeScanEntry, savedMappings, mappingsLoaded, txnDate, privateNote, docNumber, today]);
 
   // Build lines from the current active scan entry when available
   useEffect(() => {

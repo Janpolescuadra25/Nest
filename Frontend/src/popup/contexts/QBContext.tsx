@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { api } from '../lib/api';
+import type { QBTerm } from '../../types';
 import type {
   QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode, QBEntity,
 } from '../types/qb';
@@ -11,6 +12,7 @@ interface QBContextType {
   vendors: QBVendor[];
   customers: QBCustomer[];
   taxCodes: QBTaxCode[];
+  terms: QBTerm[];
   listsLoaded: boolean;
   listsLoading: boolean;
   listsError: string | null;
@@ -36,6 +38,7 @@ export function QBContextProvider({
   const [vendors, setVendors] = useState<QBVendor[]>([]);
   const [customers, setCustomers] = useState<QBCustomer[]>([]);
   const [taxCodes, setTaxCodes] = useState<QBTaxCode[]>([]);
+  const [terms, setTerms] = useState<QBTerm[]>([]);
   const [listsLoaded, setListsLoaded] = useState(false);
   const [listsLoading, setListsLoading] = useState(false);
   const [listsError, setListsError] = useState<string | null>(null);
@@ -63,6 +66,7 @@ export function QBContextProvider({
       setVendors(data.vendors ?? []);
       setCustomers(data.customers ?? []);
       setTaxCodes(data.taxCodes ?? []);
+      setTerms(data.terms ?? []);
       setListsLoaded(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh QuickBooks lists';
@@ -126,6 +130,7 @@ export function QBContextProvider({
         vendors,
         customers,
         taxCodes,
+        terms,
         listsLoaded,
         listsLoading,
         listsError,

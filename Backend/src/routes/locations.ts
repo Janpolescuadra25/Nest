@@ -12,6 +12,23 @@ const router = Router();
 // All location routes require authentication + effective role enforcement
 router.use(authenticate, enforceEffectiveRole);
 
+async function getTemplateOrFail(templateId: string, user: AuthRequest['user'], locationId?: string) {
+  const where: Record<string, unknown> = {
+    id: templateId,
+    location: { ...locationFilter(user!) },
+  };
+  if (locationId) {
+    where.locationId = locationId;
+  }
+  const template = await prisma.template.findFirst({
+    where,
+  });
+  if (!template) {
+    throw new AppError('Template not found', 404);
+  }
+  return template;
+}
+
 // ── GET /api/locations ────────────────────────────────────────────────────────
 router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -354,6 +371,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
 router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
+    const templateId = String(req.query.templateId || '');
     const location = await prisma.location.findFirst({
       where: { id, ...locationFilter(req.user!) },
     });
@@ -363,9 +381,14 @@ router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Pr
       return;
     }
 
+    if (templateId) {
+      await getTemplateOrFail(templateId, req.user, id);
+    }
+
     const rules = await prisma.rule.findMany({
-      where: { locationId: id },
+      where: templateId ? { locationId: id, templateId } : { locationId: id },
       orderBy: { createdAt: 'asc' },
+      include: { template: { select: { id: true, name: true, transactionType: true } } },
     });
 
     res.json(rules);
@@ -388,14 +411,18 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), asyncHandl
       return;
     }
 
-    const { name, ruleType, config, isActive } = req.body as {
-      name?: string; ruleType?: string; config?: object; isActive?: boolean;
+    const { name, ruleType, config, isActive, templateId } = req.body as {
+      name?: string; ruleType?: string; config?: object; isActive?: boolean; templateId?: string | null;
     };
 
     const validTypes = ['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'];
     if (!name || !ruleType || !config) {
       throw new AppError('name, ruleType, and config are required', 400);
       return;
+    }
+
+    if (templateId) {
+      await getTemplateOrFail(templateId, req.user, id);
     }
 
     if (!validTypes.includes(ruleType)) {
@@ -406,6 +433,7 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), asyncHandl
     const rule = await prisma.rule.create({
       data: {
         locationId: id,
+        templateId: templateId || null,
         name,
         ruleType: ruleType as 'COMBINE' | 'DEDUCT' | 'THRESHOLD' | 'FORMULA',
         config,
