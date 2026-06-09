@@ -114,6 +114,9 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
   const [error, setError] = useState<string | null>(null);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
+  const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
+  const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
+  const rulesAppliedRef = useRef(false);
   const [consolidate, setConsolidate] = useState(false);
 
   // Keep a stable ref to accounts to avoid re-render loops in the scan effect
@@ -158,6 +161,51 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
     if (loc.memoTemplate) setPrivateNote(resolveMemoTemplate(loc.memoTemplate, scanData));
     if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
   }, [scanData, locId, locations]);
+
+  useEffect(() => {
+    rulesAppliedRef.current = false;
+    setRuleTransformedData(null);
+    setRuleTransformedLineItems(null);
+  }, [activeScanEntryId, scanData]);
+
+  // Fetch and apply active rules to current scan data or line item rows
+  useEffect(() => {
+    if (rulesAppliedRef.current || !jwt || !locId) return;
+    rulesAppliedRef.current = true;
+
+    const applyRulesToScan = async () => {
+      try {
+        const rules = await api.getRules(jwt, locId);
+        const activeRules = rules.filter((r) => r.isActive);
+        if (activeRules.length === 0) return;
+
+        if (activeScanEntry?.lineItems?.length) {
+          const result = await api.applyRules(jwt, {
+            lineItems: activeScanEntry.lineItems,
+            rules: activeRules,
+          });
+          if (result.type === 'lineItems') {
+            setRuleTransformedLineItems(result.data);
+          }
+          return;
+        }
+
+        if (scanData) {
+          const result = await api.applyRules(jwt, {
+            scanData,
+            rules: activeRules,
+          });
+          if (result.type === 'flat') {
+            setRuleTransformedData(result.data);
+          }
+        }
+      } catch (err) {
+        console.error('[JE Preview] Failed to apply rules:', err);
+      }
+    };
+
+    void applyRulesToScan();
+  }, [jwt, locId, activeScanEntry, scanData]);
 
   // Auto-populate header fields from non-POS ScanEntry using mapping-based detection
   useEffect(() => {
@@ -212,7 +260,7 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
   useEffect(() => {
     if (!activeScanEntry || !mappingsLoaded) return;
     const decoded = savedMappings.map(decodeMapping);
-    const currentLineItem = activeScanEntry.lineItems?.[0] ?? {};
+    const currentLineItem = (ruleTransformedLineItems?.[0] ?? activeScanEntry.lineItems?.[0]) ?? {};
     const scanLines: LineItem[] = Object.entries(currentLineItem)
       .map(([field, rawValue]) => ({ field, amount: Number(rawValue) }))
       .filter((entry) => !Number.isNaN(entry.amount) && entry.amount !== 0)
@@ -243,9 +291,10 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
   // Build lines from scan data, applying saved mappings
   useEffect(() => {
     if (activeScanEntry) return;
-    if (!scanData || !mappingsLoaded) return;
+    const data = ruleTransformedData ?? scanData;
+    if (!data || !mappingsLoaded) return;
     const decoded = savedMappings.map(decodeMapping);
-    const scanLines: LineItem[] = Object.entries(scanData)
+    const scanLines: LineItem[] = Object.entries(data)
       .filter(([, v]) => v !== 0)
       .map(([field, amount]) => {
         const mapping = decoded.find((m) => m.sourceField === field);

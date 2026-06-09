@@ -80,6 +80,8 @@ export default function VendorCreditPreviewForm({
   const [lines, setLines] = useState<CreditLine[]>([newLine(), newLine()]);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
+  const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
+  const [autoFillSummary, setAutoFillSummary] = useState<{ total: number; mapped: number; unmapped: number } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +110,34 @@ export default function VendorCreditPreviewForm({
         setMappingsLoaded(true);
       });
   }, [jwt, locId]);
+
+  useEffect(() => {
+    if (!jwt || !locId || !activeScanEntry?.lineItems?.length) return;
+    if (!selectedTemplate?.id) return;
+
+    const apply = async () => {
+      try {
+        const rules = await api.getRules(jwt, locId, selectedTemplate?.id);
+        const activeRules = rules.filter((r) => r.isActive);
+        if (activeRules.length === 0) {
+          setRuleTransformedLineItems(null);
+          return;
+        }
+
+        const result = await api.applyRules(jwt, {
+          lineItems: activeScanEntry.lineItems,
+          rules: activeRules,
+        });
+        if (result.type === 'lineItems') {
+          setRuleTransformedLineItems(result.data);
+        }
+      } catch (err) {
+        console.error('[Vendor Credit Preview] Failed to apply rules:', err);
+      }
+    };
+
+    void apply();
+  }, [jwt, locId, activeScanEntry, selectedTemplate?.id]);
 
   useEffect(() => {
     if (!scanData || !locId) return;
@@ -228,7 +258,48 @@ export default function VendorCreditPreviewForm({
     setLines([newLine(), newLine()]);
     setError(null);
     setSyncResult(null);
+    setAutoFillSummary(null);
+    setRuleTransformedLineItems(null);
   };
+
+  const handleAutoFill = useCallback(async () => {
+    if (!activeScanEntry?.lineItems?.length) {
+      setError('No scan line items available to auto-fill');
+      return;
+    }
+    if (!selectedTemplate?.columnMappings) {
+      setError('Template column mappings are required for auto-fill');
+      return;
+    }
+    if (!selectedTemplate?.id) return;
+
+    setError(null);
+
+    try {
+      const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
+      const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
+      const extracted = extractLineItems({
+        lineItems: itemsToExtract,
+        columnMappings: selectedTemplate.columnMappings,
+        productMappings,
+        defaultPostingType: 'Debit',
+      });
+
+      const creditLines = extracted.map((item) => newLine({
+        accountId: item.accountId,
+        accountName: item.accountName || accounts.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
+        description: item.description,
+        classId: item.classId ?? '',
+        taxCodeId: item.taxCodeId ?? '',
+        amount: item.amount.toFixed(2),
+      }));
+
+      setLines(creditLines);
+      setAutoFillSummary(getAutoFillSummary(extracted));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Auto-fill failed');
+    }
+  }, [activeScanEntry, accounts, jwt, selectedTemplate]);
 
   const handleSync = useCallback(async () => {
     if (!hasHeader || !allMapped || !hasAmount) return;
