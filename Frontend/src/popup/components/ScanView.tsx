@@ -78,7 +78,6 @@ export default function ScanView({
   const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
   const [invoiceScanComplete, setInvoiceScanComplete] = useState(false);
-  const [invoiceTextLength, setInvoiceTextLength] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
@@ -129,7 +128,6 @@ export default function ScanView({
     setInvoicePreviewUrl(null);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
-    setInvoiceTextLength(null);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -185,7 +183,6 @@ export default function ScanView({
     setInvoiceUploading(false);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
-    setInvoiceTextLength(null);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -301,7 +298,6 @@ export default function ScanView({
     setInvoiceFile(file);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
-    setInvoiceTextLength(null);
 
     if (file && scanMode === 'image') {
       setInvoicePreviewUrl(URL.createObjectURL(file));
@@ -313,7 +309,6 @@ export default function ScanView({
     setInvoiceUploading(true);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
-    setInvoiceTextLength(null);
 
     try {
       const scanDate = new Date().toISOString().split('T')[0];
@@ -323,7 +318,6 @@ export default function ScanView({
       setScanEntries([scanEntry]);
       setActiveScanEntryId(scanEntry.id);
       setInvoiceScanComplete(true);
-      setInvoiceTextLength(0);
 
       if (locationId) {
         try {
@@ -670,11 +664,26 @@ export default function ScanView({
                 Clear scan
               </button>
             </div>
-            {invoiceScanComplete && (
-              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200">
-                {scanMode === 'pdf'
-                  ? `Invoice parsed — ${invoiceTextLength ?? 0} character${(invoiceTextLength === 1 ? '' : 's')} extracted`
-                  : 'Image uploaded — text extraction coming soon'}
+            {invoiceScanComplete && scanEntries[0] && (
+              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200 space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-green-400">✓</span>
+                  <span className="font-medium text-green-100">Invoice parsed successfully</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-green-300/80">
+                  {scanEntries[0].header?.vendor && (
+                    <div>Vendor: <span className="text-green-100">{scanEntries[0].header.vendor}</span></div>
+                  )}
+                  {scanEntries[0].header?.invoiceNumber && (
+                    <div>Invoice #: <span className="text-green-100">{scanEntries[0].header.invoiceNumber}</span></div>
+                  )}
+                  {scanEntries[0].header?.total && (
+                    <div>Total: <span className="text-green-100">${scanEntries[0].header.total}</span></div>
+                  )}
+                  {scanEntries[0].lineItems && (
+                    <div>Line items: <span className="text-green-100">{scanEntries[0].lineItems.length}</span></div>
+                  )}
+                </div>
               </div>
             )}
           </div>
