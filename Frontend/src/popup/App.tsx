@@ -75,6 +75,11 @@ export default function App() {
   }, [scanData]);
 
   const activeScanEntry = scanEntries.find((entry) => entry.id === activeScanEntryId) ?? null;
+  const currentScanSource = activeScanEntry?.source;
+  const noScanData = !scanData && !activeScanEntry;
+  const isIncompatibleTemplate = selectedTemplateForScan &&
+    (selectedTemplateForScan.transactionType === 'BILL' || selectedTemplateForScan.transactionType === 'VENDOR_CREDIT') &&
+    currentScanSource === 'pos';
 
   useEffect(() => {
     if (user?.emailVerified) {
@@ -372,7 +377,18 @@ export default function App() {
             <ProductCatalogView jwt={jwt!} />
           )}
           {effectiveTab === 'preview' && (
-            selectedTemplateForScan?.transactionType === 'BILL' ? (
+            noScanData || !selectedTemplateForScan ? (
+              <div className="p-6 rounded-lg border border-orange-500 bg-orange-950/50 text-orange-200 text-sm">
+                Select a template and scan data to preview the transaction.
+              </div>
+            ) : isIncompatibleTemplate ? (
+              <div className="p-6 rounded-lg border border-yellow-500 bg-yellow-950/50 text-yellow-200 text-sm">
+                <div className="font-semibold text-white">Template Not Compatible</div>
+                <p className="mt-2">
+                  Bill and Vendor Credit templates are designed for invoice scans (image/PDF). Your current scan is from POS data. Please use a Journal Entry template for POS scans, or scan an invoice to use this template.
+                </p>
+              </div>
+            ) : selectedTemplateForScan.transactionType === 'BILL' ? (
               <BillPreviewForm
                 jwt={jwt!}
                 scanData={scanData}
@@ -380,8 +396,9 @@ export default function App() {
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
+                onNavigateToPayments={() => setCurrentTab('payments')}
               />
-            ) : selectedTemplateForScan?.transactionType === 'VENDOR_CREDIT' ? (
+            ) : selectedTemplateForScan.transactionType === 'VENDOR_CREDIT' ? (
               <VendorCreditPreviewForm
                 jwt={jwt!}
                 scanData={scanData}

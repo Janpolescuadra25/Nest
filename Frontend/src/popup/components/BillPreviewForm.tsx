@@ -48,6 +48,7 @@ interface Props {
   selectedLocationId: string;
   scanRecordId?: string | null;
   selectedTemplate?: Template | null;
+  onNavigateToPayments?: () => void;
 }
 
 export default function BillPreviewForm({
@@ -57,6 +58,7 @@ export default function BillPreviewForm({
   selectedLocationId,
   scanRecordId,
   selectedTemplate,
+  onNavigateToPayments,
 }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
@@ -486,7 +488,7 @@ export default function BillPreviewForm({
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
           <div>✅ Bill created — <span className="font-mono">{syncResult.id}</span></div>
           {syncResult.docNumber && <div>Bill # {syncResult.docNumber}</div>}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
               className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
@@ -501,6 +503,15 @@ export default function BillPreviewForm({
             >
               View in QuickBooks ↗
             </a>
+            {onNavigateToPayments && (
+              <button
+                type="button"
+                onClick={onNavigateToPayments}
+                className="text-xs text-white bg-cyan-700 hover:bg-cyan-600 px-2 py-0.5 rounded transition-colors"
+              >
+                Pay this bill → Payments
+              </button>
+            )}
           </div>
         </div>
       )}

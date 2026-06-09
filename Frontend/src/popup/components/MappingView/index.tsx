@@ -221,8 +221,6 @@ export default function MappingView({
   const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateType, setNewTemplateType] = useState<keyof typeof TRANSACTION_TYPE_LABELS>('JOURNAL_ENTRY');
-  const [editingType, setEditingType] = useState(false);
-  const [editingTypeValue, setEditingTypeValue] = useState<keyof typeof TRANSACTION_TYPE_LABELS>('JOURNAL_ENTRY');
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -524,9 +522,6 @@ export default function MappingView({
   );
 
   useEffect(() => {
-    if (!selectedTemplate) {
-      setEditingType(false);
-    }
     onSelectedTemplateChange?.(selectedTemplate);
   }, [selectedTemplate, onSelectedTemplateChange]);
 
@@ -614,7 +609,6 @@ export default function MappingView({
   };
 
   const openNewTemplateForm = () => {
-    setEditingType(false);
     setNewTemplateName('');
     setNewTemplateType('JOURNAL_ENTRY');
     setShowNewTemplateForm(true);
@@ -653,32 +647,6 @@ export default function MappingView({
     }
   };
 
-  const handleToggleEditingType = () => {
-    if (!selectedTemplate) return;
-    setEditingType((current) => {
-      const next = !current;
-      if (!current) {
-        setEditingTypeValue(selectedTemplate.transactionType as keyof typeof TRANSACTION_TYPE_LABELS);
-      }
-      return next;
-    });
-  };
-
-  const handleEditTemplateTypeChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!jwt || !selectedTemplateId) return;
-    const newType = event.target.value as keyof typeof TRANSACTION_TYPE_LABELS;
-    const oldType = editingTypeValue;
-    setEditingTypeValue(newType);
-
-    try {
-      await api.updateTemplate(jwt, selectedTemplateId, { transactionType: newType });
-      await loadTemplates();
-      setEditingType(false);
-    } catch (err) {
-      setEditingTypeValue(oldType);
-      showToast(err instanceof Error ? err.message : 'Failed to update template type', 'error');
-    }
-  };
 
   const handleDeleteTemplate = async () => {
     if (!selectedTemplateId || templates.length <= 1) return;
@@ -1146,26 +1114,9 @@ export default function MappingView({
               </button>
             )}
             {selectedTemplate && !showNewTemplateForm && (
-              <button
-                type="button"
-                onClick={handleToggleEditingType}
-                className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
-              >
-                {editingType ? 'Cancel' : 'Edit Type'}
-              </button>
-            )}
-            {editingType && selectedTemplate && (
-              <select
-                value={editingTypeValue}
-                onChange={handleEditTemplateTypeChange}
-                className="bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5"
-              >
-                {TRANSACTION_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {TRANSACTION_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
+              <div className="text-xs text-gray-400 px-3 py-1.5 rounded border border-gray-700">
+                {TRANSACTION_TYPE_LABELS[selectedTemplate.transactionType] ?? selectedTemplate.transactionType}
+              </div>
             )}
             {templates.length > 1 && (
               <button

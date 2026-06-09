@@ -238,7 +238,7 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), asyncHandler(
     where: { id: template.id },
     data: {
       ...(body.name !== undefined && { name: body.name.trim() }),
-      ...(body.transactionType && { transactionType: body.transactionType as string }),
+      // transactionType is intentionally NOT updatable — locked at creation
       ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
       ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
