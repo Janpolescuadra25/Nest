@@ -9,7 +9,7 @@ import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
-import type { ExcelParseResult, Mapping, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
+import type { ColumnMapping, ExcelParseResult, Mapping, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { SelectOption } from '../SearchableSelect';
 
 export interface LocalMapping {
@@ -61,6 +61,14 @@ const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountH
   { patterns: /Service Mode\./i, postingType: 'Credit', accountHint: 'Sales of Product' },
   { patterns: /Deferred\./i, postingType: 'Credit', accountHint: 'Deferred Revenue' },
 ];
+
+const LINE_ITEM_COLUMN_ROLES = [
+  { key: 'productColumn', label: 'Product / Item Name', required: true },
+  { key: 'amountColumn', label: 'Amount', required: true },
+  { key: 'descriptionColumn', label: 'Description', required: false },
+  { key: 'classColumn', label: 'Class', required: false },
+  { key: 'taxCodeColumn', label: 'Tax Code', required: false },
+] as const;
 
 interface Props {
   jwt: string;
@@ -233,6 +241,8 @@ export default function MappingView({
   const [excelSheets, setExcelSheets] = useState<ExcelParseResult['sheets']>([]);
   const [selectedExcelSheetName, setSelectedExcelSheetName] = useState<string>('');
   const [excelColumnMappings, setExcelColumnMappings] = useState<Record<string, string>>({});
+  const [localColMap, setLocalColMap] = useState<Record<string, string>>({});
+  const [lineItemMappingOpen, setLineItemMappingOpen] = useState(true);
   const [localExcelImportModalOpen, setLocalExcelImportModalOpen] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
 
@@ -334,6 +344,31 @@ export default function MappingView({
     }
     return ['memo', 'docNumber'];
   }, [selectedTemplate?.transactionType]);
+
+  const lineItemHeaders = useMemo(() => {
+    const headers = excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers;
+    if (headers && headers.length > 0) {
+      return headers;
+    }
+    if (activeScanEntry?.lineItems?.[0]) {
+      return Object.keys(activeScanEntry.lineItems[0]);
+    }
+    return [] as string[];
+  }, [activeScanEntry, excelSheets, selectedExcelSheetName]);
+
+  useEffect(() => {
+    if (!selectedTemplate?.columnMappings) {
+      setLocalColMap({});
+      return;
+    }
+    const cm = selectedTemplate.columnMappings as Record<string, unknown>;
+    const lineItemKeys = Object.keys(cm).filter((key) => !key.startsWith('_header_'));
+    const parsed: Record<string, string> = {};
+    for (const key of lineItemKeys) {
+      parsed[key] = String(cm[key] ?? '');
+    }
+    setLocalColMap(parsed);
+  }, [selectedTemplate]);
 
   const getColumnFieldLabel = (field: string) => {
     return BILL_FIELD_LABELS[field] ?? VENDOR_CREDIT_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
@@ -1004,6 +1039,23 @@ export default function MappingView({
     }
   }, [excelColumnMappings, jwt, selectedTemplateId, loadTemplates, showToast]);
 
+  const saveLineItemColumnMappings = useCallback(async () => {
+    if (!selectedTemplateId || !jwt || !selectedTemplate) return;
+    try {
+      const merged = {
+        ...(selectedTemplate.columnMappings ?? {}),
+        ...localColMap,
+      };
+      await api.updateTemplate(jwt, selectedTemplateId, {
+        columnMappings: merged,
+      });
+      await loadTemplates();
+      showToast('Line item column roles saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save line item mappings', 'error');
+    }
+  }, [jwt, selectedTemplateId, selectedTemplate, localColMap, loadTemplates, showToast]);
+
   const getAmountForField = (field: string): number => {
     if (activeScanEntry?.lineItems?.[0]) {
       const raw = activeScanEntry.lineItems[0][field];
@@ -1475,8 +1527,65 @@ export default function MappingView({
         )}
       </div>
 
-      {selectedTemplateId && (
+      {(isBill || isVendorCredit) && selectedTemplateId && (
         <ProductMappingSection jwt={jwt} templateId={selectedTemplateId} />
+      )}
+
+      {(isBill || isVendorCredit) && selectedTemplateId && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setLineItemMappingOpen((current) => !current)}
+            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="text-xs font-semibold text-gray-300">Column Roles — Line Items</span>
+            <span className="text-gray-500 text-xs">{lineItemMappingOpen ? '▲' : '▼'}</span>
+          </button>
+          {lineItemMappingOpen ? (
+            <div className="px-3 pb-3 space-y-3 border-t border-gray-700/60 pt-3">
+              <p className="text-xs text-gray-400">Tell Nest which spreadsheet columns hold product names, amounts, etc.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {LINE_ITEM_COLUMN_ROLES.map((role) => (
+                  <div key={role.key}>
+                    <div className="text-xs text-gray-400 mb-1">
+                      {role.label}{role.required ? ' *' : ''}
+                    </div>
+                    <select
+                      value={localColMap[role.key] ?? ''}
+                      onChange={(e) => setLocalColMap((prev) => ({ ...prev, [role.key]: e.target.value }))}
+                      className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                    >
+                      <option value="">Select column</option>
+                      {lineItemHeaders.map((header) => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  onClick={() => void saveLineItemColumnMappings()}
+                  className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+                >
+                  Save Column Roles
+                </button>
+                <div className="text-xs text-gray-400">
+                  Current: {Object.entries(localColMap).filter(([, value]) => value).length} selected
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="px-3 pb-3 pt-3 border-t border-gray-700/60 flex flex-wrap gap-2">
+              {Object.entries(localColMap).filter(([, value]) => value).map(([key, value]) => (
+                <span key={key} className="rounded-full bg-gray-900 border border-gray-700 text-gray-300 text-[11px] px-2 py-1">
+                  {LINE_ITEM_COLUMN_ROLES.find((role) => role.key === key)?.label ?? key}: {value}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {isBill && renderBillHeader()}

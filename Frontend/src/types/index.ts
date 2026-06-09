@@ -44,6 +44,26 @@ export interface Template {
   updatedAt: string;
 }
 
+export interface ColumnMapping {
+  productColumn: string;
+  amountColumn: string;
+  descriptionColumn?: string;
+  classColumn?: string;
+  taxCodeColumn?: string;
+}
+
+export interface ExtractedLineItem {
+  productName: string;
+  amount: number;
+  description: string;
+  classId: string | null;
+  taxCodeId: string | null;
+  accountId: string;
+  accountName: string;
+  postingType: 'Credit' | 'Debit';
+  matched: boolean;
+}
+
 export interface Product {
   id: string;
   name: string;

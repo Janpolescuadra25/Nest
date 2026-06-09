@@ -88,12 +88,15 @@ function resolveMemoTemplate(template: string, data: ScanData | null): string {
 interface Props {
   jwt: string;
   scanData: ScanData | null;
+  scanEntries: ScanEntry[];
   activeScanEntry?: ScanEntry | null;
+  activeScanEntryId: string | null;
+  onActiveScanEntryIdChange: (id: string) => void;
   selectedLocationId: string;
   scanRecordId?: string | null;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, selectedLocationId, scanRecordId }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -511,6 +514,37 @@ export default function JournalEntryPreview({ jwt, scanData, activeScanEntry, se
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+
+      {scanEntries.length > 1 && activeScanEntry && (
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <button
+            type="button"
+            onClick={() => {
+              const idx = scanEntries.findIndex((e) => e.id === activeScanEntryId);
+              if (idx > 0) onActiveScanEntryIdChange(scanEntries[idx - 1].id);
+            }}
+            disabled={scanEntries.findIndex((e) => e.id === activeScanEntryId) <= 0}
+            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← Prev Row
+          </button>
+          <span className="text-xs text-gray-300 font-medium">
+            Row {activeScanEntry.rowNumber ?? '?'} of {scanEntries.length}
+            {activeScanEntry.fileName && ` · ${activeScanEntry.fileName}`}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const idx = scanEntries.findIndex((e) => e.id === activeScanEntryId);
+              if (idx < scanEntries.length - 1) onActiveScanEntryIdChange(scanEntries[idx + 1].id);
+            }}
+            disabled={scanEntries.findIndex((e) => e.id === activeScanEntryId) >= scanEntries.length - 1}
+            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            Next Row →
+          </button>
+        </div>
+      )}
 
       {/* Header fields */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-3">

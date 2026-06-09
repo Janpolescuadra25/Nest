@@ -411,7 +411,10 @@ export default function App() {
               <JournalEntryPreview
                 jwt={jwt!}
                 scanData={scanData}
+                scanEntries={scanEntries}
                 activeScanEntry={activeScanEntry}
+                activeScanEntryId={activeScanEntryId}
+                onActiveScanEntryIdChange={setActiveScanEntryId}
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
               />
