@@ -1,5 +1,8 @@
 import { AppError, asyncHandler } from '../lib/errors';
-import { Router, Response } from 'express';
+import { Router, Response, Request, NextFunction } from 'express';
+import multer from 'multer';
+import crypto from 'node:crypto';
+import pdfParse from 'pdf-parse';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import type { Prisma } from '@prisma/client';
@@ -8,7 +11,83 @@ import { prisma } from '../lib/prisma';
 
 const router = Router();
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb: any) => {
+    const allowedExts = ['.pdf', '.png', '.jpg', '.jpeg'];
+    const extension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+    if (!allowedExts.includes(extension)) {
+      return cb(new Error('Only PDF and image files are supported'), false);
+    }
+    cb(null, true);
+  },
+});
+
+function getSourceFromFilename(fileName: string): 'pdf' | 'image' {
+  return fileName.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image';
+}
+
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  const pdfParseFn = pdfParse as unknown as (data: Buffer) => Promise<{ text?: string }>;
+  const data = await pdfParseFn(buffer);
+  return (typeof data.text === 'string' ? data.text.trim() : '') || '';
+}
+
 router.use(authenticate, enforceEffectiveRole);
+
+router.post('/upload', requireFeaturePermission('scan', 'write'), (req: Request, res: Response, next: NextFunction) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return next(new AppError('File size must be 10MB or less', 400));
+      }
+      return next(new AppError(err.message || 'File upload failed', 400));
+    }
+    next();
+  });
+}, asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    const { locationId, scanDate } = req.body as { locationId?: string; scanDate?: string };
+
+    if (!file) {
+      throw new AppError('File is required', 400);
+    }
+    if (!locationId || !scanDate) {
+      throw new AppError('locationId and scanDate are required', 400);
+    }
+
+    const location = await prisma.location.findFirst({
+      where: { id: locationId, ...locationFilter(req.user!) },
+    });
+    if (!location) {
+      throw new AppError('Location not found', 404);
+    }
+
+    const parsedDate = new Date(scanDate);
+    if (isNaN(parsedDate.getTime())) {
+      throw new AppError('scanDate must be a valid ISO date string', 400);
+    }
+
+    const source = getSourceFromFilename(file.originalname);
+    const rawText = source === 'pdf' ? await extractTextFromPDF(file.buffer) : '';
+
+    const scanEntry = {
+      id: crypto.randomUUID(),
+      source,
+      fileName: file.originalname,
+      header: {} as Record<string, string>,
+      lineItems: [] as Record<string, string>[],
+      rawText,
+    };
+
+    res.status(200).json(scanEntry);
+  } catch (err) {
+    console.error('[Scans] upload error:', err);
+    throw new AppError('Failed to parse uploaded file', 500);
+  }
+}));
 
 // ── POST /api/scans ───────────────────────────────────────────────────────────
 // Save raw Toast POS scan data for a location
