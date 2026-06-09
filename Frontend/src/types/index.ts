@@ -115,7 +115,7 @@ export interface ScanEntry {
   lineItems: Record<string, string>[];
 }
 
-export type ScanMode = 'pos' | 'excel';
+export type ScanMode = 'pos' | 'excel' | 'image' | 'pdf';
 
 export interface ExcelDataParseResult {
   transactions: {
