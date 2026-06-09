@@ -327,9 +327,8 @@ export default function MappingView({
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
-  const isComingSoonType = selectedTemplate?.transactionType === 'BILL_PAYMENT';
   const hidePostingType = isBill || isVendorCredit;
-  const showMappingControls = !isComingSoonType;
+  const showMappingControls = true;
   const isExcelMode = activeScanEntry?.source === 'excel';
   const activeEntryIndex = scanEntries?.findIndex((entry) => entry.id === activeScanEntryId) ?? -1;
   const totalEntries = scanEntries?.length ?? 0;
@@ -542,12 +541,6 @@ export default function MappingView({
           Save Defaults
         </button>
       </div>
-    </div>
-  );
-
-  const renderComingSoon = (type: string) => (
-    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 text-center">
-      <p className="text-sm text-gray-300">{TRANSACTION_TYPE_LABELS[type] ?? type} form layout is coming soon.</p>
     </div>
   );
 
@@ -1590,7 +1583,7 @@ export default function MappingView({
 
       {isBill && renderBillHeader()}
       {isVendorCredit && renderVendorCreditHeader()}
-      {isComingSoonType ? renderComingSoon(selectedTemplate.transactionType) : (
+      {(
         loading ? (
           <DashboardSkeleton type="list" rows={3} />
         ) : localMappings.length === 0 ? (
@@ -1623,7 +1616,7 @@ export default function MappingView({
         )
       )}
 
-      {!isComingSoonType && selectedTemplate?.transactionType !== 'BILL' && selectedTemplate?.transactionType !== 'VENDOR_CREDIT' && localMappings.length > 0 && (
+      {selectedTemplate?.transactionType !== 'BILL' && selectedTemplate?.transactionType !== 'VENDOR_CREDIT' && localMappings.length > 0 && (
         <div className="border-t border-gray-700 pt-3 space-y-2">
           <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
             isBalanced ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'
