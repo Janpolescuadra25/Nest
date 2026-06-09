@@ -73,10 +73,17 @@ export default function ScanView({
   const [excelPreviewLoading, setExcelPreviewLoading] = useState(false);
   const [excelParseLoading, setExcelParseLoading] = useState(false);
   const [excelDataResult, setExcelDataResult] = useState<ExcelDataParseResult | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+  const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
+  const [invoiceScanComplete, setInvoiceScanComplete] = useState(false);
+  const [invoiceTextLength, setInvoiceTextLength] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
+  const invoiceFileInputRef = useRef<HTMLInputElement>(null);
 
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {
@@ -107,6 +114,26 @@ export default function ScanView({
     setScanEntries([entry]);
     setActiveScanEntryId(entry.id);
   }, [scanData, scanMode, scanEntries.length]);
+
+  useEffect(() => {
+    if (invoicePreviewUrl) {
+      return () => {
+        URL.revokeObjectURL(invoicePreviewUrl);
+      };
+    }
+    return undefined;
+  }, [invoicePreviewUrl]);
+
+  useEffect(() => {
+    setInvoiceFile(null);
+    setInvoicePreviewUrl(null);
+    setInvoiceUploadError(null);
+    setInvoiceScanComplete(false);
+    setInvoiceTextLength(null);
+    if (invoiceFileInputRef.current) {
+      invoiceFileInputRef.current.value = '';
+    }
+  }, [scanMode]);
 
   const activeScanData = useMemo(() => {
     if (!activeScanEntry?.lineItems?.[0]) return null;
@@ -153,6 +180,15 @@ export default function ScanView({
     setExcelPreviewSheetName('');
     setExcelDataResult(null);
     setExcelParseError(null);
+    setInvoiceFile(null);
+    setInvoicePreviewUrl(null);
+    setInvoiceUploading(false);
+    setInvoiceUploadError(null);
+    setInvoiceScanComplete(false);
+    setInvoiceTextLength(null);
+    if (invoiceFileInputRef.current) {
+      invoiceFileInputRef.current.value = '';
+    }
   };
 
   const handleRescan = async () => {
@@ -255,6 +291,55 @@ export default function ScanView({
     }
   };
 
+  const handleInvoiceFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = '';
+    if (invoicePreviewUrl) {
+      URL.revokeObjectURL(invoicePreviewUrl);
+      setInvoicePreviewUrl(null);
+    }
+    setInvoiceFile(file);
+    setInvoiceUploadError(null);
+    setInvoiceScanComplete(false);
+    setInvoiceTextLength(null);
+
+    if (file && scanMode === 'image') {
+      setInvoicePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleParseInvoice = async () => {
+    if (!invoiceFile || !jwt || !locationId) return;
+    setInvoiceUploading(true);
+    setInvoiceUploadError(null);
+    setInvoiceScanComplete(false);
+    setInvoiceTextLength(null);
+
+    try {
+      const scanDate = new Date().toISOString().split('T')[0];
+      const result = await api.uploadScanFile(jwt, locationId, scanDate, invoiceFile);
+      const scanEntry: ScanEntry = result;
+
+      setScanEntries([scanEntry]);
+      setActiveScanEntryId(scanEntry.id);
+      setInvoiceScanComplete(true);
+      setInvoiceTextLength(result.rawText?.length ?? 0);
+
+      if (locationId) {
+        try {
+          await api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source);
+        } catch (saveErr) {
+          console.error('[Nest] Failed to save invoice scan to backend:', saveErr);
+          setInvoiceUploadError('Invoice parsed but failed to save to backend');
+        }
+      }
+    } catch (err) {
+      setInvoiceUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setInvoiceUploading(false);
+    }
+  };
+
   const handleParseExcelData = async () => {
     if (!uploadedExcelFile || !jwt || !selectedTemplate) return;
     setExcelParseLoading(true);
@@ -346,6 +431,20 @@ export default function ScanView({
           className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           Excel Scan
+        </button>
+        <button
+          type="button"
+          onClick={() => setScanMode('image')}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+        >
+          📷 Image
+        </button>
+        <button
+          type="button"
+          onClick={() => setScanMode('pdf')}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pdf' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+        >
+          📄 PDF
         </button>
       </div>
 
@@ -500,6 +599,85 @@ export default function ScanView({
               </div>
             </div>
           )}
+        </div>
+      ) : scanMode === 'image' || scanMode === 'pdf' ? (
+        <div className="space-y-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">
+                  {scanMode === 'pdf' ? 'PDF Invoice Scan' : 'Image Invoice Scan'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Upload a {scanMode === 'pdf' ? 'PDF invoice' : 'receipt image'} to continue.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => invoiceFileInputRef.current?.click()}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+              >
+                Choose file
+              </button>
+            </div>
+            <input
+              ref={invoiceFileInputRef}
+              type="file"
+              accept={scanMode === 'pdf' ? '.pdf' : 'image/*'}
+              className="hidden"
+              onChange={handleInvoiceFileSelect}
+            />
+            {invoiceFile ? (
+              <div className="space-y-2 text-xs text-gray-300">
+                <div>Selected: {invoiceFile.name}</div>
+                {scanMode === 'image' && invoicePreviewUrl && (
+                  <img
+                    src={invoicePreviewUrl}
+                    alt="Selected invoice preview"
+                    className="max-h-32 rounded border border-gray-700 object-contain"
+                  />
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">No file selected yet.</div>
+            )}
+            {invoiceUploadError && (
+              <div className="rounded-md border border-red-700 bg-red-950/20 px-3 py-2 text-xs text-red-300 flex items-center justify-between gap-3">
+                <span>{invoiceUploadError}</span>
+                <button
+                  type="button"
+                  onClick={() => setInvoiceUploadError(null)}
+                  className="text-xs text-red-200 hover:text-red-100"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!invoiceFile || invoiceUploading}
+                onClick={handleParseInvoice}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+              >
+                {invoiceUploading ? 'Uploading…' : 'Parse Invoice'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5"
+              >
+                Clear scan
+              </button>
+            </div>
+            {invoiceScanComplete && (
+              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200">
+                {scanMode === 'pdf'
+                  ? `Invoice parsed — ${invoiceTextLength ?? 0} character${(invoiceTextLength === 1 ? '' : 's')} extracted`
+                  : 'Image uploaded — text extraction coming soon'}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <>
