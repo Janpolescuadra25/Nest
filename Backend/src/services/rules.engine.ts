@@ -85,3 +85,25 @@ export function applyRules(
 
   return result;
 }
+
+export function applyRulesToLineItems(
+  lineItems: Record<string, string>[],
+  rules: RuleDefinition[]
+): Record<string, string>[] {
+  return lineItems.map((row) => {
+    const numericRow: Record<string, number> = {};
+    for (const [key, value] of Object.entries(row)) {
+      const cleaned = String(value).replace(/[^0-9.\-]/g, '');
+      const num = parseFloat(cleaned);
+      if (!Number.isNaN(num)) {
+        numericRow[key] = num;
+      }
+    }
+    const transformed = applyRules(numericRow, rules);
+    const resultRow: Record<string, string> = { ...row };
+    for (const [key, value] of Object.entries(transformed)) {
+      resultRow[key] = String(value);
+    }
+    return resultRow;
+  });
+}

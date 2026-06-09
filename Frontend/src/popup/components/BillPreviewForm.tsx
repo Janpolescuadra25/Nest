@@ -86,6 +86,7 @@ export default function BillPreviewForm({
   const [lines, setLines] = useState<BillLine[]>([newLine(), newLine()]);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
+  const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
   const [autoFillSummary, setAutoFillSummary] = useState<{ total: number; mapped: number; unmapped: number } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
@@ -115,6 +116,34 @@ export default function BillPreviewForm({
         setMappingsLoaded(true);
       });
   }, [jwt, locId]);
+
+  useEffect(() => {
+    if (!jwt || !locId || !activeScanEntry?.lineItems?.length) return;
+    if (!selectedTemplate?.id) return;
+
+    const apply = async () => {
+      try {
+        const rules = await api.getRules(jwt, locId, selectedTemplate?.id);
+        const activeRules = rules.filter((r) => r.isActive);
+        if (activeRules.length === 0) {
+          setRuleTransformedLineItems(null);
+          return;
+        }
+
+        const result = await api.applyRules(jwt, {
+          lineItems: activeScanEntry.lineItems,
+          rules: activeRules,
+        });
+        if (result.type === 'lineItems') {
+          setRuleTransformedLineItems(result.data);
+        }
+      } catch (err) {
+        console.error('[Bill Preview] Failed to apply rules:', err);
+      }
+    };
+
+    void apply();
+  }, [jwt, locId, activeScanEntry, selectedTemplate?.id]);
 
   useEffect(() => {
     if (!scanData || !locId) return;
@@ -240,6 +269,7 @@ export default function BillPreviewForm({
     setError(null);
     setSyncResult(null);
     setAutoFillSummary(null);
+    setRuleTransformedLineItems(null);
   };
 
   const handleAutoFill = useCallback(async () => {
@@ -257,8 +287,9 @@ export default function BillPreviewForm({
 
     try {
       const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
+      const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
       const extracted = extractLineItems({
-        lineItems: activeScanEntry.lineItems,
+        lineItems: itemsToExtract,
         columnMappings: selectedTemplate.columnMappings,
         productMappings,
         defaultPostingType: 'Credit',

@@ -320,6 +320,12 @@ export const api = {
   getRules: (jwt: string, locationId: string, templateId?: string | null) =>
     get<Rule[]>(`/api/locations/${locationId}/rules${templateId ? `?templateId=${encodeURIComponent(templateId)}` : ''}`, jwt),
 
+  applyRules: (jwt: string, params: {
+    scanData?: Record<string, number>;
+    lineItems?: Record<string, string>[];
+    rules: Array<{ id: string; name: string; ruleType: string; config: Record<string, unknown>; isActive: boolean }>;
+  }) => post<{ type: 'flat'; data: Record<string, number> } | { type: 'lineItems'; data: Record<string, string>[] }>('/api/rules/apply', params, jwt),
+
   createRule: (jwt: string, locationId: string, data: RuleFormData) =>
     post<Rule>(`/api/locations/${locationId}/rules`, data, jwt),
 
