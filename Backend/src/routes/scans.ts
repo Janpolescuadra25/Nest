@@ -80,7 +80,8 @@ router.post('/upload', requireFeaturePermission('scan', 'write'), (req: Request,
     res.status(200).json(scanEntry);
   } catch (err) {
     console.error('[Scans] upload error:', err);
-    throw new AppError('Failed to parse uploaded file', 500);
+    const message = err instanceof Error ? err.message : 'Failed to parse uploaded file';
+    throw new AppError(message, 500);
   }
 }));
 

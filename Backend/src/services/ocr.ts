@@ -1,8 +1,13 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import pdfParse from 'pdf-parse';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+const model = genAI.getGenerativeModel({
+  model: 'gemini-1.5-flash',
+  generationConfig: {
+    responseMimeType: 'application/json',
+    temperature: 0,
+  },
 });
 
 const EXTRACTION_PROMPT = `You are an invoice data extraction assistant for a restaurant accounting system. Extract structured data from the provided invoice.
@@ -40,7 +45,7 @@ export interface ExtractedInvoice {
   lineItems: Record<string, string>[];
 }
 
-function getMediaType(filename: string): string {
+function getMimeType(filename: string): string {
   const ext = filename.toLowerCase().split('.').pop();
   switch (ext) {
     case 'png':
@@ -56,34 +61,37 @@ function getMediaType(filename: string): string {
   }
 }
 
+function validateExtractedInvoice(parsed: ExtractedInvoice): ExtractedInvoice {
+  const hasData = Object.values(parsed.header).some((value) => value?.trim().length > 0) || (parsed.lineItems?.length ?? 0) > 0;
+  if (!hasData) {
+    throw new Error('Could not extract data from image — image may be too blurry or not an invoice');
+  }
+  return parsed;
+}
+
 export async function extractFromImage(buffer: Buffer, filename: string): Promise<ExtractedInvoice> {
   const base64 = buffer.toString('base64');
-  const mediaType = getMediaType(filename);
+  const mimeType = getMimeType(filename);
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: EXTRACTION_PROMPT },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: 'Extract the invoice data from this image.' },
-          {
-            type: 'image_url',
-            image_url: { url: `data:${mediaType};base64,${base64}` },
-          },
-        ],
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType,
+        data: base64,
       },
-    ],
-    response_format: { type: 'json_object' },
-    max_tokens: 4000,
-    temperature: 0,
-  });
+    },
+    {
+      text: 'Extract the invoice data from this image. Return a JSON object with header and lineItems.',
+    },
+  ]);
 
-  const content = response.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No response from OpenAI');
+  const text = result.response.text();
+  if (!text || text.trim().length === 0) {
+    throw new Error('Could not extract data from image — image may be too blurry or empty');
+  }
 
-  return JSON.parse(content) as ExtractedInvoice;
+  const parsed = JSON.parse(text) as ExtractedInvoice;
+  return validateExtractedInvoice(parsed);
 }
 
 export async function extractFromPDF(buffer: Buffer): Promise<ExtractedInvoice> {
@@ -95,22 +103,14 @@ export async function extractFromPDF(buffer: Buffer): Promise<ExtractedInvoice> 
     throw new Error('Could not extract meaningful text from PDF');
   }
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: EXTRACTION_PROMPT },
-      {
-        role: 'user',
-        content: `Extract the invoice data from this text:\n\n${text}`,
-      },
-    ],
-    response_format: { type: 'json_object' },
-    max_tokens: 4000,
-    temperature: 0,
-  });
+  const result = await model.generateContent(
+    `Extract the invoice data from this text. Return a JSON object with header and lineItems.\n\n${text}`
+  );
 
-  const content = response.choices?.[0]?.message?.content;
-  if (!content) throw new Error('No response from OpenAI');
+  const responseText = result.response.text();
+  if (!responseText || responseText.trim().length === 0) {
+    throw new Error('Could not parse invoice data from extracted PDF text');
+  }
 
-  return JSON.parse(content) as ExtractedInvoice;
+  return JSON.parse(responseText) as ExtractedInvoice;
 }
