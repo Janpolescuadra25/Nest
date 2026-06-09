@@ -323,7 +323,7 @@ export default function ScanView({
       setScanEntries([scanEntry]);
       setActiveScanEntryId(scanEntry.id);
       setInvoiceScanComplete(true);
-      setInvoiceTextLength(result.rawText?.length ?? 0);
+      setInvoiceTextLength(0);
 
       if (locationId) {
         try {
