@@ -318,7 +318,9 @@ export default function ScanView({
         ? await extractTextFromPDF(invoiceFile)
         : await extractTextFromImage(invoiceFile);
 
+      console.log('[OCR] Raw text (first 500 chars):', rawText.substring(0, 500));
       const parsed = parseInvoiceText(rawText);
+      console.log('[OCR] Parsed result:', JSON.stringify(parsed, null, 2));
 
       const scanEntry: ScanEntry = {
         id: crypto.randomUUID(),
