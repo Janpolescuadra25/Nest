@@ -350,7 +350,7 @@ export const api = {
     form.append('locationId', locationId);
     form.append('scanDate', scanDate);
     form.append('file', file);
-    return postForm<ScanEntry & { rawText: string }>('/api/scans/upload', form, jwt);
+    return postForm<ScanEntry>('/api/scans/upload', form, jwt);
   },
 
   // ── Products ─────────────────────────────────────────────────────────────────
