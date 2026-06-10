@@ -1,64 +1,72 @@
 import Tesseract from 'tesseract.js';
 
-export async function extractTextFromImage(file: File): Promise<string> {
-  const result = await Tesseract.recognize(file, 'eng', {
-    logger: () => {},
-  });
+const TESSERACT_DIR = chrome.runtime.getURL('tesseract');
 
-  if (!result.data || !result.data.text || result.data.text.trim().length === 0) {
-    throw new Error('No text could be extracted from the image. The image may be too blurry or unreadable.');
+let worker: Tesseract.Worker | null = null;
+
+async function getWorker(): Promise<Tesseract.Worker> {
+  if (!worker) {
+    worker = await Tesseract.createWorker('eng', Tesseract.OEM.LSTM_ONLY, {
+      workerBlobURL: false,
+      workerPath: `${TESSERACT_DIR}/worker.min.js`,
+      corePath: `${TESSERACT_DIR}`,
+      langPath: `${TESSERACT_DIR}/lang`,
+      gzip: true,
+      logger: () => {},
+    });
   }
+  return worker;
+}
 
-  return result.data.text;
+export async function extractTextFromImage(file: File): Promise<string> {
+  const w = await getWorker();
+  const result = await w.recognize(file);
+  const text = result.data.text.trim();
+  if (!text) throw new Error('No text could be extracted from the image.');
+  return text;
 }
 
 export async function extractTextFromPDF(file: File): Promise<string> {
   try {
-    const result = await Tesseract.recognize(file, 'eng', {
-      logger: () => {},
-    });
-
-    if (result.data && result.data.text && result.data.text.trim().length > 0) {
-      return result.data.text;
-    }
+    const w = await getWorker();
+    const result = await w.recognize(file);
+    const text = result.data.text.trim();
+    if (text) return text;
   } catch {
     // Fall through to pdfjs-dist approach
   }
 
   try {
     const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdf.worker.min.mjs', import.meta.url).toString();
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
     let fullText = '';
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale: 2.0 });
-
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-
       const ctx = canvas.getContext('2d')!;
       await page.render({ canvas, viewport }).promise;
-
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((b) => resolve(b!), 'image/png');
-      });
-
-      const pageImage = new File([blob], `page-${i}.png`, { type: 'image/png' });
-      const pageText = await extractTextFromImage(pageImage);
-      fullText += pageText + '\n';
+      const result = await getWorker().then((w) => w.recognize(canvas));
+      fullText += result.data.text + '\n';
     }
 
-    if (fullText.trim().length === 0) {
-      throw new Error('No text could be extracted from the PDF. The PDF may be image-based or unreadable.');
-    }
-
-    return fullText;
+    const trimmed = fullText.trim();
+    if (!trimmed) throw new Error('No text could be extracted from the PDF.');
+    return trimmed;
   } catch (err) {
     throw new Error('Failed to process PDF. Please try uploading an image instead.');
+  }
+}
+
+export function terminateWorker(): void {
+  if (worker) {
+    worker.terminate();
+    worker = null;
   }
 }
