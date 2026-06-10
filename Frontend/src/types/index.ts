@@ -115,6 +115,11 @@ export interface ScanEntry {
   lineItems: Record<string, string>[];
 }
 
+export interface ExtractedInvoice {
+  header: Record<string, string>;
+  lineItems: Record<string, string>[];
+}
+
 export type ScanMode = 'pos' | 'excel' | 'image' | 'pdf';
 
 export interface ExcelDataParseResult {

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
+import { extractTextFromImage, extractTextFromPDF } from '../lib/tesseract';
+import { parseInvoiceText } from '../lib/invoice-parser';
 import { ErrorCard, EmptyState } from './shared';
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
@@ -311,24 +313,29 @@ export default function ScanView({
     setInvoiceScanComplete(false);
 
     try {
-      const scanDate = new Date().toISOString().split('T')[0];
-      const result = await api.uploadScanFile(jwt, locationId, scanDate, invoiceFile);
-      const scanEntry: ScanEntry = result;
+      const source = invoiceFile.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image';
+      const rawText = source === 'pdf'
+        ? await extractTextFromPDF(invoiceFile)
+        : await extractTextFromImage(invoiceFile);
+
+      const parsed = parseInvoiceText(rawText);
+
+      const scanEntry: ScanEntry = {
+        id: crypto.randomUUID(),
+        source: source as ScanMode,
+        fileName: invoiceFile.name,
+        header: parsed.header,
+        lineItems: parsed.lineItems,
+      };
 
       setScanEntries([scanEntry]);
       setActiveScanEntryId(scanEntry.id);
       setInvoiceScanComplete(true);
 
-      if (locationId) {
-        try {
-          await api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source);
-        } catch (saveErr) {
-          console.error('[Nest] Failed to save invoice scan to backend:', saveErr);
-          setInvoiceUploadError('Invoice parsed but failed to save to backend');
-        }
-      }
+      const scanDate = new Date().toISOString().split('T')[0];
+      await api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source);
     } catch (err) {
-      setInvoiceUploadError(err instanceof Error ? err.message : 'Upload failed');
+      setInvoiceUploadError(err instanceof Error ? err.message : 'OCR failed. Please try again or upload a clearer image.');
     } finally {
       setInvoiceUploading(false);
     }
