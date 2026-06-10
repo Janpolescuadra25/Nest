@@ -345,14 +345,6 @@ export const api = {
   saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string) =>
     post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source }, jwt),
 
-  uploadScanFile: (jwt: string, locationId: string, scanDate: string, file: File) => {
-    const form = new FormData();
-    form.append('locationId', locationId);
-    form.append('scanDate', scanDate);
-    form.append('file', file);
-    return postForm<ScanEntry>('/api/scans/upload', form, jwt);
-  },
-
   // ── Products ─────────────────────────────────────────────────────────────────
   getProducts: (jwt: string) =>
     get<Product[]>('/api/products', jwt),
