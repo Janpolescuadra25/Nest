@@ -1,16 +1,43 @@
 import type { ExtractedInvoice } from '../../types';
 
+export function cleanOcrText(rawText: string): string {
+  let text = rawText.replace(/\r\n?/g, '\n');
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  const lines = text.split('\n').map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    const nonSpaceChars = trimmed.replace(/\s/g, '');
+    const invalidCount = Array.from(nonSpaceChars).reduce((count, char) => {
+      if (/[A-Za-z0-9\.,\-:;\/\$£€₹@%+()#&']/.test(char)) return count;
+      return count + 1;
+    }, 0);
+    if (nonSpaceChars.length > 0 && invalidCount / nonSpaceChars.length > 0.7) {
+      return '';
+    }
+
+    let cleaned = trimmed.replace(/(\d)O(?=\d)/g, '$10');
+    cleaned = cleaned.replace(/^O(?=\d)/gm, '0');
+    cleaned = cleaned.replace(/(\d)O$/gm, '$10');
+    cleaned = cleaned.replace(/ {2,}/g, ' ');
+    return cleaned.trim();
+  }).filter((line) => line.length > 0);
+
+  return lines.join('\n');
+}
+
 export function parseInvoiceText(rawText: string): ExtractedInvoice {
-  const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const cleanedText = cleanOcrText(rawText);
+  const lines = cleanedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
   const header: Record<string, string> = {};
   const lineItems: Record<string, string>[] = [];
 
   header.vendor = extractVendorName(lines);
-  header.invoiceNumber = extractInvoiceNumber(rawText);
-  header.invoiceDate = extractDate(rawText, ['invoice date', 'date', 'inv date']);
-  header.dueDate = extractDate(rawText, ['due date', 'due', 'payment due']);
-  header.total = extractTotal(lines, rawText);
+  header.invoiceNumber = extractInvoiceNumber(cleanedText);
+  header.invoiceDate = extractDate(cleanedText, ['invoice date', 'date', 'inv date']);
+  header.dueDate = extractDate(cleanedText, ['due date', 'due', 'payment due']);
+  header.total = extractTotal(lines, cleanedText);
 
   const extractedItems = extractLineItems(lines);
   lineItems.push(...extractedItems);

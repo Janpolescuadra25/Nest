@@ -314,13 +314,11 @@ export default function ScanView({
 
     try {
       const source = invoiceFile.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image';
-      const rawText = source === 'pdf'
+      const { text: rawText, confidence } = source === 'pdf'
         ? await extractTextFromPDF(invoiceFile)
         : await extractTextFromImage(invoiceFile);
-
-      console.log('[OCR] Raw text (first 500 chars):', rawText.substring(0, 500));
       const parsed = parseInvoiceText(rawText);
-      console.log('[OCR] Parsed result:', JSON.stringify(parsed, null, 2));
+      parsed.header.ocrConfidence = String(confidence);
 
       const scanEntry: ScanEntry = {
         id: crypto.randomUUID(),
