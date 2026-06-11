@@ -131,14 +131,14 @@ function MappingCard({
               options={scanFieldOptions}
               value={mapping.sourceField}
               onChange={(value) => onUpdate({ sourceField: value, description: value || mapping.description })}
-              placeholder="Toast field…"
+              placeholder="Source field…"
             />
           ) : (
             <input
               className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
               value={mapping.sourceField}
               onChange={(e) => onUpdate({ sourceField: e.target.value })}
-              placeholder="Toast field name…"
+              placeholder="Source field name…"
             />
           )}
         </div>
