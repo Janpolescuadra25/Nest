@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
-import { extractTextFromImage, extractTextFromPDF } from '../lib/tesseract';
+import { extractTextFromImage, extractTextFromPDF, detectBlur } from '../lib/tesseract';
 import { parseInvoiceText } from '../lib/invoice-parser';
+import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
 import { ErrorCard, EmptyState } from './shared';
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
@@ -80,6 +81,11 @@ export default function ScanView({
   const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
   const [invoiceScanComplete, setInvoiceScanComplete] = useState(false);
+  const [blurWarning, setBlurWarning] = useState(false);
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
+  const [showInvoiceReview, setShowInvoiceReview] = useState(false);
+  const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
+  const [parsedInvoiceLineItems, setParsedInvoiceLineItems] = useState<Record<string, string>[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
@@ -130,6 +136,11 @@ export default function ScanView({
     setInvoicePreviewUrl(null);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
+    setBlurWarning(false);
+    setOcrConfidence(null);
+    setShowInvoiceReview(false);
+    setParsedInvoiceHeader({});
+    setParsedInvoiceLineItems([]);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -185,6 +196,11 @@ export default function ScanView({
     setInvoiceUploading(false);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
+    setBlurWarning(false);
+    setOcrConfidence(null);
+    setShowInvoiceReview(false);
+    setParsedInvoiceHeader({});
+    setParsedInvoiceLineItems([]);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -300,6 +316,11 @@ export default function ScanView({
     setInvoiceFile(file);
     setInvoiceUploadError(null);
     setInvoiceScanComplete(false);
+    setBlurWarning(false);
+    setOcrConfidence(null);
+    setShowInvoiceReview(false);
+    setParsedInvoiceHeader({});
+    setParsedInvoiceLineItems([]);
 
     if (file && scanMode === 'image') {
       setInvoicePreviewUrl(URL.createObjectURL(file));
@@ -313,32 +334,62 @@ export default function ScanView({
     setInvoiceScanComplete(false);
 
     try {
+      if (scanMode === 'image' && invoiceFile) {
+        const blobUrl = URL.createObjectURL(invoiceFile);
+        try {
+          const blurResult = await detectBlur(blobUrl);
+          setBlurWarning(blurResult.isBlurry);
+        } finally {
+          URL.revokeObjectURL(blobUrl);
+        }
+      }
+
       const source = invoiceFile.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image';
       const { text: rawText, confidence } = source === 'pdf'
         ? await extractTextFromPDF(invoiceFile)
         : await extractTextFromImage(invoiceFile);
+      setOcrConfidence(confidence);
       const parsed = parseInvoiceText(rawText);
-      parsed.header.ocrConfidence = String(confidence);
 
-      const scanEntry: ScanEntry = {
-        id: crypto.randomUUID(),
-        source: source as ScanMode,
-        fileName: invoiceFile.name,
-        header: parsed.header,
-        lineItems: parsed.lineItems,
-      };
-
-      setScanEntries([scanEntry]);
-      setActiveScanEntryId(scanEntry.id);
-      setInvoiceScanComplete(true);
-
-      const scanDate = new Date().toISOString().split('T')[0];
-      await api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source);
+      setParsedInvoiceHeader(parsed.header);
+      setParsedInvoiceLineItems(parsed.lineItems);
+      setShowInvoiceReview(true);
     } catch (err) {
       setInvoiceUploadError(err instanceof Error ? err.message : 'OCR failed. Please try again or upload a clearer image.');
     } finally {
       setInvoiceUploading(false);
     }
+  };
+
+  const handleInvoiceReviewConfirm = (editedHeader: Record<string, string>, editedLineItems: Record<string, string>[]) => {
+    const scanEntry: ScanEntry = {
+      id: generateId(),
+      source: scanMode as 'image' | 'pdf',
+      fileName: invoiceFile?.name,
+      header: {
+        ...editedHeader,
+        ...(ocrConfidence !== null ? { ocrConfidence: String(ocrConfidence) } : {}),
+      },
+      lineItems: editedLineItems,
+    };
+
+    const scanDate = new Date().toISOString().split('T')[0];
+    if (locationId) {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source).catch(() => {});
+    }
+
+    setScanEntries([scanEntry]);
+    setActiveScanEntryId(scanEntry.id);
+    setShowInvoiceReview(false);
+  };
+
+  const handleInvoiceRetry = () => {
+    setShowInvoiceReview(false);
+    setParsedInvoiceHeader({});
+    setParsedInvoiceLineItems([]);
+    setBlurWarning(false);
+    setOcrConfidence(null);
+    invoiceFileInputRef.current?.click();
   };
 
   const handleParseExcelData = async () => {
@@ -671,27 +722,32 @@ export default function ScanView({
                 Clear scan
               </button>
             </div>
-            {invoiceScanComplete && scanEntries[0] && (
-              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200 space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-green-400">✓</span>
-                  <span className="font-medium text-green-100">Invoice parsed successfully</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-green-300/80">
-                  {scanEntries[0].header?.vendor && (
-                    <div>Vendor: <span className="text-green-100">{scanEntries[0].header.vendor}</span></div>
-                  )}
-                  {scanEntries[0].header?.invoiceNumber && (
-                    <div>Invoice #: <span className="text-green-100">{scanEntries[0].header.invoiceNumber}</span></div>
-                  )}
-                  {scanEntries[0].header?.total && (
-                    <div>Total: <span className="text-green-100">${scanEntries[0].header.total}</span></div>
-                  )}
-                  {scanEntries[0].lineItems && (
-                    <div>Line items: <span className="text-green-100">{scanEntries[0].lineItems.length}</span></div>
-                  )}
-                </div>
+            {(blurWarning || ocrConfidence !== null) && (
+              <div className="space-y-2">
+                {blurWarning && (
+                  <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-3">
+                    <p className="text-yellow-800 text-sm">
+                      ⚠ This image appears blurry. For better results, try retaking the photo with better focus and lighting.
+                    </p>
+                  </div>
+                )}
+                {ocrConfidence !== null && (
+                  <div className={`text-xs mb-2 ${ocrConfidence < 50 ? 'text-red-600' : ocrConfidence < 75 ? 'text-yellow-600' : 'text-green-600'}`}>
+                    OCR Confidence: {Math.round(ocrConfidence)}%
+                    {ocrConfidence < 50 && ' — Results may be inaccurate. Please review carefully.'}
+                  </div>
+                )}
               </div>
+            )}
+            {showInvoiceReview && (
+              <InvoiceReviewPanel
+                header={parsedInvoiceHeader}
+                lineItems={parsedInvoiceLineItems}
+                confidence={ocrConfidence}
+                onConfirm={handleInvoiceReviewConfirm}
+                onRetry={handleInvoiceRetry}
+                onClear={handleClear}
+              />
             )}
           </div>
         </div>
