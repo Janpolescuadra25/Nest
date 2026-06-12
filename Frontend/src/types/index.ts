@@ -120,7 +120,7 @@ export interface ExtractedInvoice {
   lineItems: Record<string, string>[];
 }
 
-export type ScanMode = 'pos' | 'excel' | 'image' | 'pdf';
+export type ScanMode = 'pos' | 'excel' | 'image';
 
 export interface ExcelDataParseResult {
   transactions: {
