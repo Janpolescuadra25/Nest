@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
-import { extractTextFromImage, extractTextFromPDF, detectBlur } from '../lib/tesseract';
-import { parseInvoiceText } from '../lib/invoice-parser';
+import { detectBlur } from '../lib/blur-detect';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
 import { ErrorCard, EmptyState } from './shared';
 
@@ -367,16 +366,9 @@ export default function ScanView({
 
     const file = files[0];
 
-    if (scanMode === 'pdf') {
-      if (!file.name.toLowerCase().endsWith('.pdf')) {
-        setInvoiceUploadError('Please drop a PDF file.');
-        return;
-      }
-    } else {
-      if (!file.type.startsWith('image/')) {
-        setInvoiceUploadError('Please drop an image file (JPG, PNG, etc.).');
-        return;
-      }
+    if (!file.type.startsWith('image/')) {
+      setInvoiceUploadError('Please drop an image file (JPG, PNG, etc.).');
+      return;
     }
 
     if (invoicePreviewUrl) {
@@ -400,30 +392,24 @@ export default function ScanView({
     if (!invoiceFile || !jwt || !locationId) return;
     setInvoiceUploading(true);
     setInvoiceUploadError(null);
-
     try {
+      // Blur detection (image mode only)
       if (scanMode === 'image' && invoiceFile) {
         const blobUrl = URL.createObjectURL(invoiceFile);
         try {
           const blurResult = await detectBlur(blobUrl);
           setBlurWarning(blurResult.isBlurry);
-        } finally {
-          URL.revokeObjectURL(blobUrl);
-        }
+        } finally { URL.revokeObjectURL(blobUrl); }
       }
 
-      const source = invoiceFile.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image';
-      const { text: rawText, confidence } = source === 'pdf'
-        ? await extractTextFromPDF(invoiceFile)
-        : await extractTextFromImage(invoiceFile);
-      setOcrConfidence(confidence);
-      const parsed = parseInvoiceText(rawText);
-
+      // AI invoice parsing via backend Gemini endpoint
+      const parsed = await api.parseInvoiceAI(jwt, invoiceFile);
+      setOcrConfidence(null);
       setParsedInvoiceHeader(parsed.header);
       setParsedInvoiceLineItems(parsed.lineItems);
       setShowInvoiceReview(true);
     } catch (err) {
-      setInvoiceUploadError(err instanceof Error ? err.message : 'OCR failed. Please try again or upload a clearer image.');
+      setInvoiceUploadError(err instanceof Error ? err.message : 'AI parsing failed. Please try again or upload a clearer image.');
     } finally {
       setInvoiceUploading(false);
     }
@@ -432,7 +418,7 @@ export default function ScanView({
   const handleInvoiceReviewConfirm = (editedHeader: Record<string, string>, editedLineItems: Record<string, string>[]) => {
     const scanEntry: ScanEntry = {
       id: generateId(),
-      source: scanMode as 'image' | 'pdf',
+      source: 'image' as const,
       fileName: invoiceFile?.name,
       header: {
         ...editedHeader,
@@ -563,13 +549,6 @@ export default function ScanView({
           className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           📷 Image
-        </button>
-        <button
-          type="button"
-          onClick={() => setScanMode('pdf')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pdf' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
-        >
-          📄 PDF
         </button>
       </div>
 
@@ -725,7 +704,7 @@ export default function ScanView({
             </div>
           )}
         </div>
-      ) : scanMode === 'image' || scanMode === 'pdf' ? (
+      ) : scanMode === 'image' ? (
         <div className="space-y-4">
           <div
             className={`bg-gray-800 border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-cyan-400 bg-cyan-950/50' : 'border-gray-700'}`}
@@ -737,10 +716,10 @@ export default function ScanView({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-white">
-                  {scanMode === 'pdf' ? 'PDF Invoice Scan' : 'Image Invoice Scan'}
+                  Image Invoice Scan
                 </div>
                 <div className="text-xs text-gray-400">
-                  Upload a {scanMode === 'pdf' ? 'PDF invoice' : 'receipt image'} to continue.
+                  Upload a receipt image to continue.
                 </div>
               </div>
               <button
@@ -754,7 +733,7 @@ export default function ScanView({
             <input
               ref={invoiceFileInputRef}
               type="file"
-              accept={scanMode === 'pdf' ? '.pdf' : 'image/*'}
+              accept="image/*"
               className="hidden"
               onChange={handleInvoiceFileSelect}
             />
@@ -780,7 +759,7 @@ export default function ScanView({
                   }`}>
                     <div className="text-2xl mb-1">📄</div>
                     <div className="text-xs">
-                      {isDragOver ? 'Drop your file here' : `Drag & drop a ${scanMode === 'pdf' ? 'PDF' : 'receipt image'} here`}
+                      {isDragOver ? 'Drop your file here' : 'Drag & drop a receipt image here'}
                     </div>
                     <div className="text-[10px] text-gray-600 mt-1">or use the Choose file button above</div>
                   </div>

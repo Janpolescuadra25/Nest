@@ -345,6 +345,16 @@ export const api = {
   saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string) =>
     post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source }, jwt),
 
+  parseInvoiceAI: async (jwt: string, file: File): Promise<{ header: Record<string, string>; lineItems: Record<string, string>[] }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<{ success: boolean; data: { header: Record<string, string>; lineItems: Record<string, string>[] } }>(
+      '/api/scans/parse-invoice',
+      form,
+      jwt
+    ).then(res => res.data);
+  },
+
   // ── Products ─────────────────────────────────────────────────────────────────
   getProducts: (jwt: string) =>
     get<Product[]>('/api/products', jwt),
