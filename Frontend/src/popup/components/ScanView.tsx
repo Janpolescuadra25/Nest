@@ -854,7 +854,7 @@ export default function ScanView({
           {scanData ? (
             <>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">Extracted {detectedPOS?.name ?? 'POS'} fields ({Object.keys(scanData).length})</span>
+                <span className="text-xs text-gray-500">{activeScanEntry?.source === 'pos' ? `Extracted ${detectedPOS?.name ?? 'POS'} fields` : 'Extracted invoice data'} ({Object.keys(scanData).length})</span>
                 <button
                   onClick={handleClear}
                   className="text-xs text-gray-400 hover:text-red-400 border border-gray-600 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
