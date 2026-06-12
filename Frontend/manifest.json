@@ -40,17 +40,12 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src http://localhost:3000 https://*.onrender.com https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 https://*.onrender.com https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
   },
   "web_accessible_resources": [
     {
       "resources": [
-        "public/icons/*.png",
-        "tesseract/worker.min.js",
-        "tesseract/tesseract-core-*.wasm.js",
-        "tesseract/tesseract-core-*.wasm",
-        "tesseract/lang/eng.traineddata.gz",
-        "pdf.worker.min.mjs"
+        "public/icons/*.png"
       ],
       "matches": ["<all_urls>"]
     }
