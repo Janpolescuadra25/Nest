@@ -346,6 +346,9 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">QB Journal Entry ID</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Created</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Source</th>
+                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Vendor</th>
+                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Invoice #</th>
+                  <th className="text-right px-3 py-2 text-gray-400 font-medium">Total</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -431,6 +434,18 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             </span>
                           )}
                         </td>
+                        <td className="px-3 py-2 text-gray-300 max-w-[120px] truncate" title={scan.rawScanEntry?.header?.vendor ?? ''}>
+                          {scan.rawScanEntry?.header?.vendor || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-gray-300 font-mono">
+                          {scan.rawScanEntry?.header?.invoiceNumber || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-200 font-mono">
+                          {scan.rawScanEntry?.header?.total
+                            ? `$${scan.rawScanEntry.header.total}`
+                            : '—'
+                          }
+                        </td>
                         <td className="px-3 py-2">
                           {scan.status === 'FAILED' && (
                             <button
@@ -446,7 +461,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                       </tr>
                       {expandedScanId === scan.id && scan.rawScanEntry && (
                         <tr className="border-t border-gray-700/30 bg-gray-900/50">
-                          <td colSpan={6} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
+                          <td colSpan={9} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
                             {(() => {
                               const entry = scan.rawScanEntry as ScanEntry;
                               const header = entry.header ?? {};
@@ -493,7 +508,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                       )}
                       {scan.status === 'FAILED' && latestLog && (latestLog.errorMessage || latestLog.errorType) && (
                         <tr>
-                          <td colSpan={6} className="px-3 pb-2 pt-0">
+                          <td colSpan={9} className="px-3 pb-2 pt-0">
                             {latestLog.errorType === 'AUTH' ? (
                               <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1.5 space-y-1">
                                 <div>QuickBooks connection expired. Please reconnect.</div>
@@ -539,7 +554,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
 
       {/* Info */}
       <p className="text-xs text-gray-700 text-center">
-        Sync journal entries from the Preview tab (⚡ Sync to QuickBooks)
+        Sync bills and journal entries from the Preview tab (⚡ Sync to QuickBooks)
       </p>
 
       {/* Load more */}

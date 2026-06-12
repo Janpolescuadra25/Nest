@@ -38,6 +38,35 @@ function toYMD(date: Date): string {
   return date.toISOString().split('T')[0]!;
 }
 
+function parseScanDate(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+
+  const textual = Date.parse(trimmed);
+  if (!isNaN(textual)) {
+    return toYMD(new Date(textual));
+  }
+
+  const slashMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (slashMatch) {
+    const [, numA, numB, yearStr] = slashMatch;
+    let year = yearStr.length === 2 ? 2000 + parseInt(yearStr, 10) : parseInt(yearStr, 10);
+    const a = parseInt(numA, 10);
+    const b = parseInt(numB, 10);
+
+    if (a > 12) {
+      return `${year}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`;
+    }
+    if (b > 12) {
+      return `${year}-${String(a).padStart(2, '0')}-${String(b).padStart(2, '0')}`;
+    }
+    return `${year}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`;
+  }
+
+  return undefined;
+}
+
 function fmt(amount: number): string {
   return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -172,6 +201,51 @@ export default function VendorCreditPreviewForm({
     if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
   }, [selectedTemplate]);
+
+  useEffect(() => {
+    if (!activeScanEntry) return;
+    if (activeScanEntry.source !== 'image' && activeScanEntry.source !== 'pdf') return;
+    const h = activeScanEntry.header;
+    if (!h || !Object.keys(h).length) return;
+
+    setVendorRef((prev) => {
+      if (prev.value) return prev;
+      const vendorName = (h.vendor || '').trim();
+      if (!vendorName) return prev;
+      const lower = vendorName.toLowerCase();
+      const match = vendors.find((v) => {
+        if (v.DisplayName.toLowerCase() === lower) return true;
+        if (v.CompanyName?.toLowerCase() === lower) return true;
+        if (v.DisplayName.toLowerCase().includes(lower)) return true;
+        if (v.CompanyName?.toLowerCase()?.includes(lower)) return true;
+        if (lower.includes(v.DisplayName.toLowerCase())) return true;
+        if (v.CompanyName && lower.includes(v.CompanyName.toLowerCase())) return true;
+        return false;
+      });
+      if (match) return { value: match.Id, name: match.DisplayName };
+      return prev;
+    });
+
+    setDocNumber((prev) => {
+      if (prev) return prev;
+      return (h.invoiceNumber || '').trim() || prev;
+    });
+
+    const parsedDate = parseScanDate(h.invoiceDate);
+    if (parsedDate) {
+      setTxnDate((prev) => {
+        if (prev && prev !== toYMD(new Date())) return prev;
+        return parsedDate;
+      });
+    }
+
+    if (h.total) {
+      setMemo((prev) => {
+        if (prev) return prev;
+        return `Invoice total: ${h.total}`;
+      });
+    }
+  }, [activeScanEntry, vendors]);
 
   useEffect(() => {
     if (!mappingsLoaded) return;
@@ -509,7 +583,7 @@ export default function VendorCreditPreviewForm({
             <tfoot>
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
                 <td className="px-2 py-2 text-gray-500">{effectiveLines.length}</td>
-                <td colSpan={3} className="px-2 py-2 text-gray-500">Total</td>
+                <td colSpan={4} className="px-2 py-2 text-gray-500">Total</td>
                 <td className="px-2 py-2 text-right font-mono text-blue-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>

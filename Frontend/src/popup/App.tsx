@@ -305,7 +305,7 @@ export default function App() {
         )}
 
         {/* Pipeline progress indicator — shown when scan data is loaded */}
-        {scanData !== null && (() => {
+        {(scanData !== null || scanEntries.length > 0) && (() => {
           const steps: { id: string; label: string }[] = [
             { id: 'scan', label: '① Scan' },
             { id: 'mappings', label: '② Map' },

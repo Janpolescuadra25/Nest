@@ -80,10 +80,11 @@ export default function ScanView({
   const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
   const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
-  const [invoiceScanComplete, setInvoiceScanComplete] = useState(false);
   const [blurWarning, setBlurWarning] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [showInvoiceReview, setShowInvoiceReview] = useState(false);
+  const [invoiceConfirmSuccess, setInvoiceConfirmSuccess] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
   const [parsedInvoiceLineItems, setParsedInvoiceLineItems] = useState<Record<string, string>[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -99,7 +100,6 @@ export default function ScanView({
       if (cached) {
         if ('Food Sales' in cached || 'Beverage Sales' in cached) {
           chrome.storage.local.remove(['lastScanData']);
-          console.log('[Nest] Cleared stale cached scan data (old mock format)');
           return;
         }
         if (!scanData) onScanData(cached);
@@ -135,7 +135,6 @@ export default function ScanView({
     setInvoiceFile(null);
     setInvoicePreviewUrl(null);
     setInvoiceUploadError(null);
-    setInvoiceScanComplete(false);
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
@@ -165,14 +164,18 @@ export default function ScanView({
   const sendScanMessage = (tabId: number): Promise<{ data?: ScanData } | null> => {
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
-        console.warn('[Nest Popup] Scan timed out for tab', tabId);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[Nest Popup] Scan timed out for tab', tabId);
+        }
         resolve(null);
       }, 30000);
 
       chrome.tabs.sendMessage(tabId, { type: 'REQUEST_SCAN' }, (resp) => {
         clearTimeout(timeout);
         if (chrome.runtime.lastError) {
-          console.warn('[Nest Popup] sendMessage error:', chrome.runtime.lastError.message);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('[Nest Popup] sendMessage error:', chrome.runtime.lastError.message);
+          }
           resolve(null);
         } else {
           resolve(resp);
@@ -195,12 +198,12 @@ export default function ScanView({
     setInvoicePreviewUrl(null);
     setInvoiceUploading(false);
     setInvoiceUploadError(null);
-    setInvoiceScanComplete(false);
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
+    setIsDragOver(false);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -215,7 +218,9 @@ export default function ScanView({
       const tab = posResult?.tab;
       const posType = posResult?.posType ?? 'toast';
       const posName = posResult?.posName ?? 'POS';
-      console.log(`[Nest Popup] Scan triggered — found ${posName} tab:`, tab?.id, 'url:', tab?.url);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Nest Popup] Scan triggered — found ${posName} tab:`, tab?.id, 'url:', tab?.url);
+      }
       if (!tab?.id) throw new Error('No POS report tab found — open a supported POS report page');
 
       // Try sending the scan message
@@ -228,14 +233,18 @@ export default function ScanView({
           : posType === 'oracle'
             ? 'content/oracle-scanner.js'
             : 'content/scanner.js';
-        console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
+        }
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             files: [scriptFile],
           });
           await new Promise((r) => setTimeout(r, 1500));
-          console.log('[Nest Popup] Scanner injected — retrying scan...');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('[Nest Popup] Scanner injected — retrying scan...');
+          }
           response = await sendScanMessage(tab.id);
         } catch (injectErr) {
           console.error('[Nest Popup] Failed to inject content script:', injectErr);
@@ -243,8 +252,6 @@ export default function ScanView({
         }
       }
 
-      console.log('[Nest Popup] Response from content script:', response,
-        response?.data ? `| keys: ${Object.keys(response.data).length}` : '| no data');
       if (response?.data) {
         const entry: ScanEntry = {
           id: generateId(),
@@ -264,7 +271,9 @@ export default function ScanView({
               new Date().toISOString().split('T')[0],
               response.data,
             );
-            console.log('[Nest] Scan data saved to backend');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('[Nest] Scan data saved to backend');
+            }
             if (scanRecord?.id && onScanRecordId) {
               onScanRecordId(scanRecord.id);
             }
@@ -315,9 +324,9 @@ export default function ScanView({
     }
     setInvoiceFile(file);
     setInvoiceUploadError(null);
-    setInvoiceScanComplete(false);
     setBlurWarning(false);
     setOcrConfidence(null);
+    setInvoiceConfirmSuccess(false);
     setShowInvoiceReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
@@ -327,11 +336,70 @@ export default function ScanView({
     }
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (invoiceUploading || showInvoiceReview) return;
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    if (scanMode === 'pdf') {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        setInvoiceUploadError('Please drop a PDF file.');
+        return;
+      }
+    } else {
+      if (!file.type.startsWith('image/')) {
+        setInvoiceUploadError('Please drop an image file (JPG, PNG, etc.).');
+        return;
+      }
+    }
+
+    if (invoicePreviewUrl) {
+      URL.revokeObjectURL(invoicePreviewUrl);
+      setInvoicePreviewUrl(null);
+    }
+    setInvoiceFile(file);
+    setInvoiceUploadError(null);
+    setBlurWarning(false);
+    setOcrConfidence(null);
+    setShowInvoiceReview(false);
+    setParsedInvoiceHeader({});
+    setParsedInvoiceLineItems([]);
+
+    if (scanMode === 'image') {
+      setInvoicePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleParseInvoice = async () => {
     if (!invoiceFile || !jwt || !locationId) return;
     setInvoiceUploading(true);
     setInvoiceUploadError(null);
-    setInvoiceScanComplete(false);
 
     try {
       if (scanMode === 'image' && invoiceFile) {
@@ -381,6 +449,8 @@ export default function ScanView({
     setScanEntries([scanEntry]);
     setActiveScanEntryId(scanEntry.id);
     setShowInvoiceReview(false);
+    setInvoiceConfirmSuccess(true);
+    setTimeout(() => setInvoiceConfirmSuccess(false), 3000);
   };
 
   const handleInvoiceRetry = () => {
@@ -389,6 +459,7 @@ export default function ScanView({
     setParsedInvoiceLineItems([]);
     setBlurWarning(false);
     setOcrConfidence(null);
+    setInvoiceConfirmSuccess(false);
     invoiceFileInputRef.current?.click();
   };
 
@@ -448,7 +519,9 @@ export default function ScanView({
         if (failCount > 0) {
           setExcelParseError(`Saved ${savedCount}/${parsedEntries.length} entries. ${failCount} failed to save to backend.`);
         } else {
-          console.log(`[Nest] Excel batch save complete: ${savedCount}/${parsedEntries.length} saved.`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[Nest] Excel batch save complete: ${savedCount}/${parsedEntries.length} saved.`);
+          }
         }
       }
     } catch (err) {
@@ -654,7 +727,13 @@ export default function ScanView({
         </div>
       ) : scanMode === 'image' || scanMode === 'pdf' ? (
         <div className="space-y-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+          <div
+            className={`bg-gray-800 border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-cyan-400 bg-cyan-950/50' : 'border-gray-700'}`}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-white">
@@ -691,7 +770,22 @@ export default function ScanView({
                 )}
               </div>
             ) : (
-              <div className="text-xs text-gray-500">No file selected yet.</div>
+              <div>
+                <div className="text-xs text-gray-500">No file selected yet.</div>
+                {!invoiceFile && !showInvoiceReview && (
+                  <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    isDragOver
+                      ? 'border-cyan-400 text-cyan-300'
+                      : 'border-gray-600 text-gray-500'
+                  }`}>
+                    <div className="text-2xl mb-1">📄</div>
+                    <div className="text-xs">
+                      {isDragOver ? 'Drop your file here' : `Drag & drop a ${scanMode === 'pdf' ? 'PDF' : 'receipt image'} here`}
+                    </div>
+                    <div className="text-[10px] text-gray-600 mt-1">or use the Choose file button above</div>
+                  </div>
+                )}
+              </div>
             )}
             {invoiceUploadError && (
               <div className="rounded-md border border-red-700 bg-red-950/20 px-3 py-2 text-xs text-red-300 flex items-center justify-between gap-3">
@@ -725,14 +819,14 @@ export default function ScanView({
             {(blurWarning || ocrConfidence !== null) && (
               <div className="space-y-2">
                 {blurWarning && (
-                  <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-3">
-                    <p className="text-yellow-800 text-sm">
+                  <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3 mb-3">
+                    <p className="text-yellow-100 text-sm">
                       ⚠ This image appears blurry. For better results, try retaking the photo with better focus and lighting.
                     </p>
                   </div>
                 )}
                 {ocrConfidence !== null && (
-                  <div className={`text-xs mb-2 ${ocrConfidence < 50 ? 'text-red-600' : ocrConfidence < 75 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  <div className={`text-xs mb-2 ${ocrConfidence < 50 ? 'text-red-400' : ocrConfidence < 75 ? 'text-yellow-300' : 'text-green-300'}`}>
                     OCR Confidence: {Math.round(ocrConfidence)}%
                     {ocrConfidence < 50 && ' — Results may be inaccurate. Please review carefully.'}
                   </div>
@@ -748,6 +842,12 @@ export default function ScanView({
                 onRetry={handleInvoiceRetry}
                 onClear={handleClear}
               />
+            )}
+            {invoiceConfirmSuccess && (
+              <div className="bg-green-900/30 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 flex items-center gap-2">
+                <span>✅</span>
+                <span>Invoice data accepted — go to <strong>Map</strong> → <strong>Preview</strong> to create your bill.</span>
+              </div>
             )}
           </div>
         </div>
