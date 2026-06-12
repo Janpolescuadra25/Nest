@@ -5,8 +5,24 @@ import { enforceEffectiveRole } from '../middleware/effective-role';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
+import multer from 'multer';
+import { parseInvoiceWithGemini } from '../lib/gemini';
 
 const router = Router();
+
+// Multer config for AI invoice parsing (memory storage, 10MB limit)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+    }
+  },
+});
 
 router.use(authenticate, enforceEffectiveRole);
 
@@ -141,5 +157,26 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
     throw new AppError('Failed to fetch scan record', 500);
   }
 }));
+
+// AI Invoice Parsing — sends image to Gemini 2.5 Flash
+router.post(
+  '/parse-invoice',
+  upload.single('file'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+      throw new AppError('No file uploaded', 400);
+    }
+
+    try {
+      const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
+      res.json({ success: true, data: result });
+    } catch (err: any) {
+      if (err.message?.includes('GEMINI_API_KEY')) {
+        throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
+      }
+      throw new AppError(`AI parsing failed: ${err.message}`, 500);
+    }
+  })
+);
 
 export default router;
