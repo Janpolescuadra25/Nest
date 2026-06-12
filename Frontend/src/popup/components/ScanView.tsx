@@ -781,7 +781,7 @@ export default function ScanView({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!invoiceFile || invoiceUploading}
+                disabled={!invoiceFile || !jwt || !locationId || invoiceUploading}
                 onClick={handleParseInvoice}
                 className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
