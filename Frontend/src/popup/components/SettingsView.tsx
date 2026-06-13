@@ -227,7 +227,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <div>
             <div className="text-white font-bold text-sm">Nest</div>
             <div className="text-gray-400 text-xs">Version 1.0.0</div>
-            <div className="text-gray-500 text-xs mt-0.5">Bridge between POS and QuickBooks</div>
+            <div className="text-gray-500 text-xs mt-0.5">Restaurant Financial Automation</div>
           </div>
         </div>
 

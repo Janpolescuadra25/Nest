@@ -15,6 +15,7 @@ import MappingView from './components/MappingView';
 import JournalEntryPreview from './components/JournalEntryPreview';
 import BillPreviewForm from './components/BillPreviewForm';
 import VendorCreditPreviewForm from './components/VendorCreditPreviewForm';
+import ChequePreviewForm from './components/ChequePreviewForm';
 import QBDataView from './components/QBDataView';
 import SyncView from './components/SyncView';
 import SettingsView from './components/SettingsView';
@@ -60,7 +61,7 @@ export default function App() {
   const [hasSavedMappings, setHasSavedMappings] = useState(false);
   const [hasSyncedBefore, setHasSyncedBefore] = useState(false);
   const { status: qbStatus } = useQuickBooks(jwt);
-  const { locations } = useLocations(jwt);
+  const { locations, loading: locationsLoading } = useLocations(jwt);
 
   // After password change: refresh auth state by re-fetching session
   const handlePasswordChanged = useCallback(async () => {
@@ -81,6 +82,9 @@ export default function App() {
     (selectedTemplateForScan.transactionType === 'BILL' || selectedTemplateForScan.transactionType === 'VENDOR_CREDIT') &&
     currentScanSource === 'pos';
 
+  const activeLocations = locations.filter((location) => location.isActive);
+  const dropdownLocations = activeLocations.length > 0 ? activeLocations : locations;
+
   useEffect(() => {
     if (user?.emailVerified) {
       setShowEmailVerificationBanner(false);
@@ -88,7 +92,10 @@ export default function App() {
   }, [user?.emailVerified]);
 
   useEffect(() => {
-    if (!jwt || !user || user.role !== 'OWNER' || locations.length === 0) return;
+    if (!jwt || !user || user.role !== 'OWNER' || dropdownLocations.length === 0) return;
+    if (selectedLocationId === '') {
+      setSelectedLocationId(dropdownLocations[0]?.id);
+    }
     let active = true;
 
     const loadMappings = async () => {
@@ -267,10 +274,24 @@ export default function App() {
           </div>
           <div className="flex items-center justify-center gap-2">
             <span className="text-cyan-400 font-bold text-base tracking-tight">🪹 Nest</span>
-            <span className="text-gray-500 text-xs">POS → QuickBooks</span>
+            <span className="text-gray-500 text-xs">Restaurant Financial Automation</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <select
+              value={selectedLocationId}
+              onChange={(e) => setSelectedLocationId(e.target.value)}
+              disabled={locationsLoading || dropdownLocations.length === 0}
+              className="h-8 bg-gray-700 border border-gray-600 text-gray-200 text-[10px] px-2 rounded"
+            >
+              {locationsLoading || dropdownLocations.length === 0 ? (
+                <option value="">{locationsLoading ? 'Loading locations...' : 'No locations'}</option>
+              ) : (
+                dropdownLocations.map((location) => (
+                  <option key={location.id} value={location.id}>{location.name}</option>
+                ))
+              )}
+            </select>
             <button
               onClick={() => setShowHelp(true)}
               className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
@@ -400,6 +421,15 @@ export default function App() {
               />
             ) : selectedTemplateForScan.transactionType === 'VENDOR_CREDIT' ? (
               <VendorCreditPreviewForm
+                jwt={jwt!}
+                scanData={scanData}
+                activeScanEntry={activeScanEntry}
+                selectedLocationId={selectedLocationId}
+                scanRecordId={scanRecordId}
+                selectedTemplate={selectedTemplateForScan}
+              />
+            ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
+              <ChequePreviewForm
                 jwt={jwt!}
                 scanData={scanData}
                 activeScanEntry={activeScanEntry}

@@ -28,6 +28,15 @@ export interface Mapping {
   createdAt: string;
 }
 
+export interface MappingSuggestion {
+  sourceField: string;
+  accountHint: string;
+  accountName: string;
+  accountId?: string;
+  postingType: 'Debit' | 'Credit';
+  reason: string;
+}
+
 export interface Template {
   id: string;
   locationId: string;
@@ -136,6 +145,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   JOURNAL_ENTRY: 'Journal Entry',
   BILL: 'Bill',
   VENDOR_CREDIT: 'Vendor Credit',
+  CHEQUE: 'Cheque',
 };
 
 export const TRANSACTION_TYPES = Object.keys(TRANSACTION_TYPE_LABELS) as (keyof typeof TRANSACTION_TYPE_LABELS)[];

@@ -76,13 +76,13 @@ const SECTIONS: Section[] = [
             Go to the <span className="text-cyan-400">Settings</span> tab and click <span className="text-cyan-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize Nest to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
           </Step>
           <Step num={3} title="Set Up a Location">
-            In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your POS reports to a specific restaurant location. You can have multiple locations.
+            In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your scan data to a specific restaurant location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
-            Navigate to a POS report page (Toast, SALIDO, or Oracle) in the browser. Then click the <span className="text-cyan-400">Scan</span> tab in Nest and hit the scan button. Nest reads the report fields automatically.
+            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/cheque image or Excel file. Then click the <span className="text-cyan-400">Scan</span> tab and scan. Nest extracts the data automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
-            Go to the <span className="text-cyan-400">Mapping</span> tab. Each POS field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
+            Go to the <span className="text-cyan-400">Mapping</span> tab. Each field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
           </Step>
           <Step num={6} title="Preview & Sync">
             Go to the <span className="text-cyan-400">Preview</span> tab. You'll see your journal entry with all mapped amounts. Verify the totals balance (Debits = Credits), then click <span className="text-cyan-400">"Sync to QuickBooks"</span>. Your journal entry is now in QuickBooks! 🎉
@@ -97,10 +97,10 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2">
         <TabInfo icon="🔍" name="Scan">
-          Scans the POS report page currently open in your browser. Shows a summary of all extracted fields and values.
+          Scans POS reports, vendor invoices, cheques, or Excel files. Shows a summary of all extracted fields and values.
         </TabInfo>
         <TabInfo icon="🗺️" name="Mapping">
-          Links each POS field to a QuickBooks account. This is where you tell Nest "Food Sales goes to the Sales Revenue account as a Credit." You can save, edit, and reuse mappings per location.
+          Links each scan field to a QuickBooks account. This is where you tell Nest which account each field belongs to.
         </TabInfo>
         <TabInfo icon="📊" name="Preview">
           Shows the final journal entry before syncing. You can edit amounts, change accounts, add entities (Customer/Vendor/Employee), assign classes, and toggle consolidation. The entry must balance before syncing.
@@ -126,7 +126,7 @@ const SECTIONS: Section[] = [
 
         <SubHeading>How Mapping Works</SubHeading>
         <p className="text-[11px] text-gray-400">
-          Each mapping connects a <span className="text-cyan-400">source field</span> from your POS (left side) to a <span className="text-cyan-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-cyan-400">Debit</span> or <span className="text-cyan-400">Credit</span>.
+          Each mapping connects a <span className="text-cyan-400">source field</span> (left side) to a <span className="text-cyan-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-cyan-400">Debit</span> or <span className="text-cyan-400">Credit</span>.
         </p>
 
         <SubHeading>Quick Tips</SubHeading>
@@ -183,7 +183,7 @@ const SECTIONS: Section[] = [
           </div>
         </div>
 
-        <SubHeading>POS-Specific Guide</SubHeading>
+        <SubHeading>Document Type Guide</SubHeading>
         <ul className="space-y-1.5">
           <Bullet><span className="text-green-400">Debit:</span> Payments section (Cash, Credit Card, etc.) — money received</Bullet>
           <Bullet><span className="text-green-400">Debit:</span> Cash Activity — cash coming in</Bullet>
@@ -210,7 +210,7 @@ const SECTIONS: Section[] = [
 
         <SubHeading>Header Fields</SubHeading>
         <ul className="space-y-1.5">
-          <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the POS report date.</Bullet>
+          <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the report date.</Bullet>
           <Bullet><span className="text-cyan-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
           <Bullet><span className="text-cyan-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
         </ul>
@@ -439,7 +439,7 @@ export default function HelpPanel({ onClose }: Props) {
       {/* Footer */}
       <div className="px-4 py-2 border-t border-gray-700 text-center flex-shrink-0">
         <p className="text-[10px] text-gray-600">
-          Nest — POS → QuickBooks sync
+          Nest — Restaurant Financial Automation
         </p>
         <p className="text-[10px] text-gray-700">
           Created by John Paul O. Escuadra

@@ -9,8 +9,39 @@ import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
-import type { ColumnMapping, ExcelParseResult, Mapping, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
+import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
+import type { QBAccount } from '../../types/qb';
 import type { SelectOption } from '../SearchableSelect';
+
+/**
+ * Validates that a posting type is consistent with an account type.
+ * Returns null if valid, or a warning string if potentially incorrect.
+ *
+ * Basic accounting rules:
+ * - Debit INCREASES: Asset, Expense
+ * - Credit INCREASES: Liability, Equity, Income
+ *
+ * This is advisory only — some edge cases (contra accounts, draws, voids) are valid exceptions.
+ */
+export function validateMappingAccountType(
+  accountType: string | undefined,
+  postingType: 'Debit' | 'Credit',
+): string | null {
+  if (!accountType) return null;
+
+  const debitIncreases = ['Asset', 'Expense'];
+  const creditIncreases = ['Liability', 'Equity', 'Income'];
+
+  if (postingType === 'Debit' && creditIncreases.includes(accountType)) {
+    return `Debit decreases ${accountType} accounts — typically you'd Credit ${accountType} accounts.`;
+  }
+
+  if (postingType === 'Credit' && debitIncreases.includes(accountType)) {
+    return `Credit decreases ${accountType} accounts — typically you'd Debit ${accountType} accounts.`;
+  }
+
+  return null;
+}
 
 export interface LocalMapping {
   localId: string;
@@ -245,6 +276,9 @@ export default function MappingView({
   const [lineItemMappingOpen, setLineItemMappingOpen] = useState(true);
   const [localExcelImportModalOpen, setLocalExcelImportModalOpen] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [mappingSuggestions, setMappingSuggestions] = useState<MappingSuggestion[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
   const showExcelImportModal = showExcelImportModalProp ?? localExcelImportModalOpen;
@@ -327,6 +361,11 @@ export default function MappingView({
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
+
+  useEffect(() => {
+    setMappingSuggestions([]);
+    setSuggestionError(null);
+  }, [selectedTemplateId]);
   const hidePostingType = isBill || isVendorCredit;
   const showMappingControls = true;
   const isExcelMode = activeScanEntry?.source === 'excel';
@@ -817,8 +856,16 @@ export default function MappingView({
       if (localMappings.some((mapping) => mapping.sourceField === field)) return;
       const rule = AUTO_DETECT.find((rule) => rule.patterns.test(field));
       if (!rule) return;
+      const expectedTypesForPostingType = (postingType: 'Debit' | 'Credit'): string[] =>
+        postingType === 'Debit'
+          ? ['Asset', 'Expense']
+          : ['Liability', 'Equity', 'Income'];
+
       const matchedAccount = accounts.find(
-        (account) => account.Active && account.FullyQualifiedName.toLowerCase().includes(rule.accountHint.toLowerCase()),
+        (account) =>
+          account.Active &&
+          account.FullyQualifiedName.toLowerCase().includes(rule.accountHint.toLowerCase()) &&
+          expectedTypesForPostingType(rule.postingType).includes(account.AccountType),
       );
       if (!matchedAccount) return;
       newMappings.push({
@@ -846,6 +893,85 @@ export default function MappingView({
         ? `✅ ${applied} mapping${applied !== 1 ? 's' : ''} auto-detected`
         : 'No new mappings detected',
     );
+    setTimeout(() => setAutoMsg(null), 4000);
+  };
+
+  const suggestMappings = async () => {
+    if (!selectedTemplateId) {
+      setSuggestionError('Select a template first before using AI Suggest.');
+      return;
+    }
+    if (accounts.length === 0) {
+      setSuggestionError('No QuickBooks accounts are loaded. Refresh QB lists first.');
+      return;
+    }
+
+    const sourceFields = scanFieldOptions.map((option) => option.value).filter((value) =>
+      !localMappings.some((mapping) => mapping.sourceField === value),
+    );
+    if (sourceFields.length === 0) {
+      setSuggestionError('No unmapped scan fields are available for suggestion.');
+      return;
+    }
+
+    setSuggesting(true);
+    setSuggestionError(null);
+    setMappingSuggestions([]);
+
+    try {
+      const result = await api.suggestMappings(jwt, locId, sourceFields, selectedTemplate?.transactionType);
+      const suggestions = result.suggestions ?? [];
+      if (suggestions.length === 0) {
+        setSuggestionError('AI did not return any mapping suggestions.');
+        return;
+      }
+      setMappingSuggestions(suggestions);
+      setAutoMsg(`🤖 ${suggestions.length} AI suggestion${suggestions.length !== 1 ? 's' : ''} ready`);
+      setTimeout(() => setAutoMsg(null), 4000);
+    } catch (err) {
+      setSuggestionError(err instanceof Error ? err.message : 'Failed to fetch AI suggestions');
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const applySuggestions = () => {
+    if (mappingSuggestions.length === 0) return;
+
+    const existingFields = new Set(localMappings.map((m) => m.sourceField));
+    const fresh = mappingSuggestions.filter((s) => !existingFields.has(s.sourceField));
+    const skipped = mappingSuggestions.length - fresh.length;
+
+    if (fresh.length === 0) {
+      setAutoMsg(`All ${skipped} suggestion${skipped !== 1 ? 's' : ''} already mapped`);
+      setMappingSuggestions([]);
+      setTimeout(() => setAutoMsg(null), 4000);
+      return;
+    }
+
+    const newMappings: LocalMapping[] = fresh.map((suggestion) => ({
+      localId: `ai-${Date.now()}-${suggestion.sourceField}`,
+      remoteId: undefined,
+      sourceField: suggestion.sourceField,
+      accountId: suggestion.accountId || '',
+      postingType: suggestion.postingType,
+      description: suggestion.sourceField,
+      classId: '',
+      taxCodeId: '',
+      entityType: '' as LocalMapping['entityType'],
+      entityId: '',
+      amountRule: 'Direct Amount',
+      keepSeparate: false,
+      isDirty: true,
+      expanded: false,
+    }));
+
+    setLocalMappings((prev) => [...prev, ...newMappings]);
+    setMappingSuggestions([]);
+    const msg = skipped > 0
+      ? `✅ ${fresh.length} applied, ${skipped} already mapped`
+      : `✅ ${fresh.length} AI suggestion${fresh.length !== 1 ? 's' : ''} applied`;
+    setAutoMsg(msg);
     setTimeout(() => setAutoMsg(null), 4000);
   };
 
@@ -1122,6 +1248,7 @@ export default function MappingView({
         onExport={handleExport}
         onImport={() => fileInputRef.current?.click()}
         onAutoDetect={autoDetect}
+        onAISuggest={suggestMappings}
         onApplyTemplate={applyTemplate}
         onSyncLists={() => void syncAllLists()}
         listsLoading={listsLoading}
@@ -1424,6 +1551,41 @@ export default function MappingView({
         </div>
       )}
       {error && <ErrorCard message={error} onDismiss={() => setError(null)} />}
+      {suggestionError && (
+        <div className="bg-red-900/30 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
+          {suggestionError}
+        </div>
+      )}
+      {mappingSuggestions.length > 0 && (
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-white">AI Mapping Suggestions</div>
+              <div className="text-xs text-gray-400">Review the recommendations below before applying them.</div>
+            </div>
+            <button
+              type="button"
+              onClick={applySuggestions}
+              disabled={suggesting}
+              className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-1.5"
+            >
+              Apply Suggestions
+            </button>
+          </div>
+          <div className="grid gap-2">
+            {mappingSuggestions.map((suggestion) => (
+              <div key={suggestion.sourceField} className="border border-gray-700 rounded-lg p-3 bg-gray-800">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-medium text-white">{suggestion.sourceField}</div>
+                  <span className="text-xs text-gray-400">{suggestion.postingType}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">Account: {suggestion.accountName || suggestion.accountHint}</div>
+                <div className="text-xs text-gray-500 mt-1">{suggestion.reason}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
         <button
@@ -1599,6 +1761,7 @@ export default function MappingView({
           <MappingTable
             localMappings={localMappings}
             accountOptions={accountOptions}
+            accounts={accounts}
             classOptions={classOptions}
             taxCodeOptions={taxCodeOptions}
             scanFieldOptions={scanFieldOptions}

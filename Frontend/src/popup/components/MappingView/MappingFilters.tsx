@@ -13,6 +13,7 @@ interface Props {
   onExport: () => void;
   onImport: () => void;
   onAutoDetect: () => void;
+  onAISuggest: () => void;
   onApplyTemplate: (template: string) => void;
   onSyncLists: () => void;
   listsLoading: boolean;
@@ -31,6 +32,7 @@ export default function MappingFilters({
   onExport,
   onImport,
   onAutoDetect,
+  onAISuggest,
   onApplyTemplate,
   onSyncLists,
   listsLoading,
@@ -42,16 +44,6 @@ export default function MappingFilters({
   return (
     <>
       <div className="flex items-center gap-2">
-        <select
-          value={locId}
-          onChange={(e) => onLocationChange(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
-        >
-          {locations.length === 0 && <option value="">No locations</option>}
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>{location.name}</option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={onExport}
@@ -77,6 +69,13 @@ export default function MappingFilters({
           className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
         >
           🔍 Auto-Detect
+        </button>
+        <button
+          onClick={disableAutoDetect ? undefined : onAISuggest}
+          title={disableAutoDetect ? 'AI Suggest is designed for POS scans' : undefined}
+          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+        >
+          🤖 AI Suggest
         </button>
         {TEMPLATE_NAMES.map((template) => (
           <button

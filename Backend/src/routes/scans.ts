@@ -6,7 +6,7 @@ import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
-import { parseInvoiceWithGemini } from '../lib/gemini';
+import { parseDocumentWithGemini, parseInvoiceWithGemini } from '../lib/gemini';
 
 const router = Router();
 
@@ -170,6 +170,33 @@ router.post(
     try {
       const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
       res.json({ success: true, data: result });
+    } catch (err: any) {
+      if (err.message?.includes('GEMINI_API_KEY')) {
+        throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
+      }
+      throw new AppError(`AI parsing failed: ${err.message}`, 500);
+    }
+  })
+);
+
+router.post(
+  '/parse-document',
+  upload.single('file'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+      throw new AppError('No file uploaded', 400);
+    }
+
+    try {
+      const result = await parseDocumentWithGemini(req.file.buffer, req.file.mimetype);
+      res.json({
+        success: true,
+        data: {
+          classification: result.classification,
+          invoiceData: result.invoiceData,
+          chequeData: result.chequeData,
+        },
+      });
     } catch (err: any) {
       if (err.message?.includes('GEMINI_API_KEY')) {
         throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);

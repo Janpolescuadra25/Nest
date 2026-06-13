@@ -360,6 +360,26 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
       },
     });
 
+    await prisma.mappingPreference.upsert({
+      where: {
+        locationId_sourceField_accountId: {
+          locationId: id,
+          sourceField,
+          accountId: targetAccount,
+        },
+      },
+      update: {
+        timesAccepted: { increment: 1 },
+        lastUsedAt: new Date(),
+      },
+      create: {
+        locationId: id,
+        sourceField,
+        accountId: targetAccount,
+        accountName: targetAccount,
+      },
+    });
+
     res.status(201).json(mapping);
   } catch (err) {
     console.error('[Locations] mapping create error:', err);

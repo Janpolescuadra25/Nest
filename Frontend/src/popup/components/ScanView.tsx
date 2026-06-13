@@ -3,6 +3,8 @@ import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, Exc
 import { api } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
+import ChequeReviewPanel from './ScanView/ChequeReviewPanel';
+import ScanHistory from './ScanHistory';
 import { ErrorCard, EmptyState } from './shared';
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
@@ -22,10 +24,26 @@ async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; po
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
-const parseNumericValue = (value: string): number => {
-  const cleaned = String(value).replace(/[^0-9.-]/g, '').trim();
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : 0;
+const parseNumericValue = (raw: string): number => {
+  const s = String(raw).trim();
+  if (s === '' || s === '-' || s === '—' || s === '–') return 0;
+  if (/^\d{1,2}:\d{2}/.test(s)) return 0;
+  if (/^\(.*\)$/.test(s)) {
+    const inner = s.replace(/[()$,]/g, '');
+    const num = parseFloat(inner);
+    return isNaN(num) ? 0 : -num;
+  }
+  if (s.endsWith('%')) {
+    const num = parseFloat(s.replace(/[^0-9.\-]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+  const cleaned = s.replace(/[$,]/g, '');
+  if (cleaned.endsWith('-') && !cleaned.startsWith('-')) {
+    const num = parseFloat(cleaned.slice(0, -1));
+    return isNaN(num) ? 0 : -num;
+  }
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
 };
 
 interface Props {
@@ -76,12 +94,28 @@ export default function ScanView({
   const [excelParseLoading, setExcelParseLoading] = useState(false);
   const [excelDataResult, setExcelDataResult] = useState<ExcelDataParseResult | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
   const [invoiceUploading, setInvoiceUploading] = useState(false);
   const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
   const [blurWarning, setBlurWarning] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [showInvoiceReview, setShowInvoiceReview] = useState(false);
+  const [documentClassification, setDocumentClassification] = useState<{
+    documentType: string;
+    confidence: number;
+    reasoning: string;
+  } | null>(null);
+  const [parsedChequeData, setParsedChequeData] = useState<{
+    chequeNumber: string;
+    payeeName: string;
+    amount: string;
+    date: string;
+    memo: string;
+    bankName: string;
+    lineItems: { description: string; amount: string }[];
+  } | null>(null);
+  const [showChequeReview, setShowChequeReview] = useState(false);
   const [invoiceConfirmSuccess, setInvoiceConfirmSuccess] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
@@ -137,8 +171,11 @@ export default function ScanView({
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
+    setShowChequeReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
+    setParsedChequeData(null);
+    setDocumentClassification(null);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
@@ -200,12 +237,35 @@ export default function ScanView({
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
+    setShowChequeReview(false);
+    setDocumentClassification(null);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
+    setParsedChequeData(null);
     setIsDragOver(false);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
+  };
+
+  const handleLoadHistory = (scan: {
+    id: string;
+    rawData: Record<string, number>;
+    rawScanEntry?: ScanEntry | null;
+    source: string;
+  }) => {
+    if (scan.source === 'pos' && scan.rawData) {
+      onScanData(scan.rawData);
+      setScanEntries([]);
+      setActiveScanEntryId(null);
+      if (onScanRecordId) onScanRecordId(scan.id);
+    } else if (scan.rawScanEntry) {
+      setScanEntries([scan.rawScanEntry]);
+      setActiveScanEntryId(scan.rawScanEntry.id);
+      onScanData({});
+      if (onScanRecordId) onScanRecordId(scan.id);
+    }
+    setShowHistory(false);
   };
 
   const handleRescan = async () => {
@@ -327,8 +387,10 @@ export default function ScanView({
     setOcrConfidence(null);
     setInvoiceConfirmSuccess(false);
     setShowInvoiceReview(false);
+    setShowChequeReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
+    setParsedChequeData(null);
 
     if (file && scanMode === 'image') {
       setInvoicePreviewUrl(URL.createObjectURL(file));
@@ -403,11 +465,28 @@ export default function ScanView({
       }
 
       // AI invoice parsing via backend Gemini endpoint
-      const parsed = await api.parseInvoiceAI(jwt, invoiceFile);
+      const parsed = await api.parseDocumentAI(jwt, invoiceFile);
+      setDocumentClassification(parsed.classification);
       setOcrConfidence(null);
-      setParsedInvoiceHeader(parsed.header);
-      setParsedInvoiceLineItems(parsed.lineItems);
-      setShowInvoiceReview(true);
+      if (parsed.invoiceData) {
+        setParsedInvoiceHeader(parsed.invoiceData.header);
+        setParsedInvoiceLineItems(parsed.invoiceData.lineItems);
+        setShowInvoiceReview(true);
+        setShowChequeReview(false);
+        setParsedChequeData(null);
+      } else if (parsed.chequeData) {
+        setParsedChequeData(parsed.chequeData);
+        setShowChequeReview(true);
+        setShowInvoiceReview(false);
+        setParsedInvoiceHeader({});
+        setParsedInvoiceLineItems([]);
+      } else {
+        setParsedInvoiceHeader({});
+        setParsedInvoiceLineItems([]);
+        setParsedChequeData(null);
+        setShowInvoiceReview(false);
+        setShowChequeReview(false);
+      }
     } catch (err) {
       setInvoiceUploadError(err instanceof Error ? err.message : 'AI parsing failed. Please try again or upload a clearer image.');
     } finally {
@@ -439,10 +518,49 @@ export default function ScanView({
     setTimeout(() => setInvoiceConfirmSuccess(false), 3000);
   };
 
+  const handleChequeReviewConfirm = (editedData: {
+    chequeNumber: string;
+    payeeName: string;
+    amount: string;
+    date: string;
+    memo: string;
+    bankName: string;
+    lineItems: { description: string; amount: string }[];
+  }) => {
+    const scanEntry: ScanEntry = {
+      id: generateId(),
+      source: 'image' as const,
+      fileName: invoiceFile?.name,
+      header: {
+        chequeNumber: editedData.chequeNumber,
+        payeeName: editedData.payeeName,
+        amount: editedData.amount,
+        date: editedData.date,
+        memo: editedData.memo,
+        bankName: editedData.bankName,
+        ...(ocrConfidence !== null ? { ocrConfidence: String(ocrConfidence) } : {}),
+      },
+      lineItems: editedData.lineItems,
+    };
+
+    const scanDate = new Date().toISOString().split('T')[0];
+    if (locationId) {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source).catch(() => {});
+    }
+
+    setScanEntries([scanEntry]);
+    setActiveScanEntryId(scanEntry.id);
+    setShowChequeReview(false);
+    setInvoiceConfirmSuccess(true);
+    setTimeout(() => setInvoiceConfirmSuccess(false), 3000);
+  };
+
   const handleInvoiceRetry = () => {
     setShowInvoiceReview(false);
+    setShowChequeReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
+    setParsedChequeData(null);
     setBlurWarning(false);
     setOcrConfidence(null);
     setInvoiceConfirmSuccess(false);
@@ -550,7 +668,26 @@ export default function ScanView({
         >
           📷 Image
         </button>
+        <button
+          type="button"
+          onClick={() => setShowHistory((prev) => !prev)}
+          className={`text-xs px-3 py-1.5 rounded font-medium transition-colors ${
+            showHistory
+              ? 'bg-cyan-700 text-white'
+              : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+          }`}
+        >
+          {showHistory ? '✕ History' : '📋 History'}
+        </button>
       </div>
+
+      {showHistory && locationId && (
+        <ScanHistory
+          jwt={jwt}
+          locationId={locationId}
+          onLoadScan={handleLoadHistory}
+        />
+      )}
 
       {scanMode === 'excel' ? (
         <div className="space-y-4">
@@ -778,6 +915,35 @@ export default function ScanView({
                 </button>
               </div>
             )}
+            {documentClassification && (
+              <div className="space-y-2">
+                <div className="bg-cyan-700 text-white px-3 py-1.5 rounded-full text-xs inline-flex items-center gap-1.5">
+                  <span>AI detected:</span>
+                  <span>
+                    {documentClassification.documentType === 'INVOICE'
+                      ? '📄 Invoice'
+                      : documentClassification.documentType === 'CHEQUE'
+                        ? '🏦 Cheque'
+                        : documentClassification.documentType === 'POS_REPORT'
+                          ? '📊 POS Report'
+                          : documentClassification.documentType === 'RECEIPT'
+                            ? '🧾 Receipt'
+                            : '❓ Unknown'}
+                  </span>
+                  <span>({Math.round(documentClassification.confidence * 100)}% confidence)</span>
+                </div>
+                <div className="text-gray-400 text-xs italic mt-1">{documentClassification.reasoning}</div>
+                {documentClassification.documentType !== 'INVOICE' && documentClassification.documentType !== 'CHEQUE' && (
+                  <div className="text-gray-500 text-sm mt-2">
+                    {documentClassification.documentType === 'POS_REPORT'
+                      ? 'POS Report parsing coming soon'
+                      : documentClassification.documentType === 'RECEIPT'
+                        ? 'Receipt parsing coming soon'
+                        : 'Unknown parsing coming soon'}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -818,6 +984,15 @@ export default function ScanView({
                 lineItems={parsedInvoiceLineItems}
                 confidence={ocrConfidence}
                 onConfirm={handleInvoiceReviewConfirm}
+                onRetry={handleInvoiceRetry}
+                onClear={handleClear}
+              />
+            )}
+            {showChequeReview && parsedChequeData && (
+              <ChequeReviewPanel
+                chequeData={parsedChequeData}
+                confidence={ocrConfidence}
+                onConfirm={handleChequeReviewConfirm}
                 onRetry={handleInvoiceRetry}
                 onClear={handleClear}
               />
@@ -901,8 +1076,8 @@ export default function ScanView({
               icon="🍽️"
               title="No scan data yet"
               description={onboardingStep === 4
-                ? 'Navigate to a POS report page, then click Re-scan Page to start your first sync pipeline'
-                : 'Navigate to a POS report page, then click Re-scan Page.'}
+                ? 'Navigate to a POS report page or upload an invoice/cheque image, then scan to start your first sync pipeline'
+                : 'Navigate to a POS report page or upload an invoice/cheque image, then scan.'}
               action={{ label: 'Re-scan Page', onClick: handleRescan }}
             />
           )}

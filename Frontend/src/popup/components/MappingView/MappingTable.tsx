@@ -3,10 +3,13 @@ import SearchableSelect from '../SearchableSelect';
 import MappingEditModal from './MappingEditModal';
 import type { LocalMapping } from './index';
 import type { SelectOption } from '../SearchableSelect';
+import type { QBAccount } from '../../types/qb';
+import { validateMappingAccountType } from './index';
 
 interface Props {
   localMappings: LocalMapping[];
   accountOptions: SelectOption[];
+  accounts: QBAccount[];
   classOptions: SelectOption[];
   taxCodeOptions: SelectOption[];
   scanFieldOptions: SelectOption[];
@@ -35,6 +38,7 @@ export default function MappingTable({
   onSave,
   onDelete,
   onToggleExpand,
+  accounts,
   onAddMapping,
   isBill = false,
   isVendorCredit = false,
@@ -47,6 +51,7 @@ export default function MappingTable({
           mapping={mapping}
           index={index}
           accountOptions={accountOptions}
+          accounts={accounts}
           classOptions={classOptions}
           taxCodeOptions={taxCodeOptions}
           scanFieldOptions={scanFieldOptions}
@@ -78,6 +83,7 @@ interface MappingCardProps {
   mapping: LocalMapping;
   index: number;
   accountOptions: SelectOption[];
+  accounts: QBAccount[];
   classOptions: SelectOption[];
   taxCodeOptions: SelectOption[];
   scanFieldOptions: SelectOption[];
@@ -95,6 +101,7 @@ interface MappingCardProps {
 function MappingCard({
   mapping,
   accountOptions,
+  accounts,
   classOptions,
   taxCodeOptions,
   scanFieldOptions,
@@ -109,6 +116,8 @@ function MappingCard({
   isVendorCredit,
 }: MappingCardProps) {
   const selectedAccount = accountOptions.find((option) => option.value === mapping.accountId);
+  const selectedQBAccount = accounts.find((account) => account.Id === mapping.accountId);
+  const warning = validateMappingAccountType(selectedQBAccount?.AccountType, mapping.postingType);
 
   const amountLabel = scanFieldOptions.find((option) => option.value === mapping.sourceField)?.subtitle ?? '$0.00';
   const hidePostingType = isBill || isVendorCredit;
@@ -192,7 +201,15 @@ function MappingCard({
           placeholder="QB Account…"
         />
         {selectedAccount && (
-          <div className="text-xs text-gray-600 mt-0.5 truncate">{selectedAccount.subtitle}</div>
+          <>
+            <div className="text-xs text-gray-600 mt-0.5 truncate">{selectedAccount.subtitle}</div>
+            {warning && (
+              <div className="text-xs text-amber-400 mt-0.5 flex items-center gap-1 truncate" title={warning}>
+                <span>⚠️</span>
+                <span>{warning}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
 

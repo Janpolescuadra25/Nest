@@ -665,7 +665,7 @@ export default function BillPreviewForm({
               Copy ID
             </button>
             <a
-              href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/purchase?txnId=${syncResult.id}`}
+              href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/bill?txnId=${syncResult.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-cyan-400 hover:underline"

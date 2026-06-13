@@ -4,11 +4,11 @@ import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
-import { CreateBillInput, CreateBillPaymentInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem } from '../types';
+import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem } from '../types';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
-import { billSchema, vendorCreditSchema, billPaymentSchema, journalEntrySchema } from '../lib/validators';
+import { billSchema, chequeSchema, vendorCreditSchema, billPaymentSchema, journalEntrySchema } from '../lib/validators';
 import { encrypt, decryptSafe } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
 
@@ -535,6 +535,121 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
   }
 }));
 
+// ── POST /api/quickbooks/cheque ─────────────────────────────────────────────────
+router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(chequeSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      txnDate,
+      bankAccountRef,
+      payeeRef,
+      amount,
+      memo,
+      docNumber,
+      lines,
+      scanRecordId,
+    } = req.body as {
+      txnDate?: string;
+      bankAccountRef?: { value: string; name?: string };
+      payeeRef?: { value: string; name?: string };
+      amount?: number;
+      memo?: string;
+      docNumber?: string;
+      lines?: QBChequeLineItem[];
+      scanRecordId?: string;
+    };
+
+    if (!txnDate || !bankAccountRef?.value || !payeeRef?.value || amount === undefined || amount === null || amount <= 0 || !lines || !Array.isArray(lines) || lines.length === 0) {
+      throw new AppError('txnDate, bankAccountRef, payeeRef, amount and lines[] are required', 400);
+      return;
+    }
+
+    if (scanRecordId) {
+      const scan = await prisma.scanRecord.findUnique({
+        where: { id: scanRecordId },
+        select: { locationId: true },
+      });
+      if (scan) {
+        const loc = await prisma.location.findFirst({
+          where: { id: scan.locationId, ...locationFilter(req.user!) },
+        });
+        if (!loc) {
+          throw new AppError("You don't have access to this location", 403);
+          return;
+        }
+      }
+
+      const result = await syncSingleCheque(
+        req.user!.userId,
+        scanRecordId,
+        txnDate,
+        bankAccountRef,
+        payeeRef,
+        amount,
+        memo,
+        lines,
+        docNumber,
+      );
+
+      if (result.status === 'SKIPPED') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
+      if (result.status === 'FAILED') {
+        console.error('[QB] cheque error:', result.errorMessage);
+        throw new AppError(process.env.NODE_ENV !== 'production'
+            ? result.errorMessage
+            : 'An unexpected error occurred. Please try again.', 500);
+        return;
+      }
+
+      res.json({
+        message: 'Cheque created successfully',
+        chequeId: result.qbJournalEntryId,
+        txnDate: result.txnDate,
+        totalAmount: result.totalAmount,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
+    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
+      qbService.createCheque({
+        txnDate,
+        docNumber: finalDocNumber,
+        bankAccountRef,
+        payeeRef,
+        amount,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    res.json({
+      message: 'Cheque created successfully',
+      chequeId: result.id,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmt,
+      docNumber: finalDocNumber,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[QB] cheque error:', message);
+    throw new AppError(process.env.NODE_ENV !== 'production'
+        ? message
+        : 'An unexpected error occurred. Please try again.', 500);
+  }
+}));
+
 
 // ── syncSingleScan helper ─────────────────────────────────────────────────────
 
@@ -717,6 +832,99 @@ async function syncSingleVendorCredit(
         errorType,
         attemptCount,
         requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      },
+    }).catch(console.error);
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'FAILED' },
+    }).catch(console.error);
+
+    return { status: 'FAILED', errorType, errorMessage: message };
+  }
+}
+
+async function syncSingleCheque(
+  userId: string,
+  scanRecordId: string,
+  txnDate: string,
+  bankAccountRef: { value: string; name?: string },
+  payeeRef: { value: string; name?: string },
+  amount: number,
+  memo: string | undefined,
+  lines: QBChequeLineItem[],
+  docNumber?: string,
+): Promise<SyncSingleResult> {
+  const existingLogs = await prisma.syncLog.findMany({
+    where: { scanRecordId },
+    select: { id: true },
+  });
+  const attemptCount = existingLogs.length + 1;
+
+  const existingSync = await prisma.syncLog.findFirst({
+    where: { scanRecordId, status: 'SUCCESS' },
+  });
+  if (existingSync) {
+    return {
+      status: 'SKIPPED',
+      reason: 'already_synced',
+      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
+      docNumber: existingSync.docNumber ?? undefined,
+    };
+  }
+
+  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+
+  try {
+    const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
+      qbService.createCheque({
+        txnDate,
+        docNumber: finalDocNumber,
+        bankAccountRef,
+        payeeRef,
+        amount,
+        memo,
+        lines,
+        realmId,
+        accessToken,
+      }),
+    );
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        qbJournalEntryId: result.id,
+        docNumber: finalDocNumber,
+        status: 'SUCCESS',
+        attemptCount,
+        requestPayload: null,
+      },
+    });
+
+    await prisma.scanRecord.update({
+      where: { id: scanRecordId },
+      data: { status: 'SYNCED' },
+    });
+
+    return {
+      status: 'SYNCED',
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      txnDate: result.txnDate,
+      totalAmount: result.totalAmt,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+    await prisma.syncLog.create({
+      data: {
+        scanRecordId,
+        status: 'FAILED',
+        errorMessage: message,
+        errorType,
+        attemptCount,
+        requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
       },
     }).catch(console.error);
 

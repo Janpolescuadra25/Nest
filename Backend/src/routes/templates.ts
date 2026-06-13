@@ -8,11 +8,11 @@ import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const VALID_TRANSACTION_TYPES = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'BILL_PAYMENT'] as const;
+const VALID_TRANSACTION_TYPES = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'BILL_PAYMENT', 'CHEQUE'] as const;
 
 function validateTransactionType(transactionType?: string): void {
   if (transactionType !== undefined && !VALID_TRANSACTION_TYPES.includes(transactionType as typeof VALID_TRANSACTION_TYPES[number])) {
-    throw new AppError('Invalid transactionType. Must be one of: JOURNAL_ENTRY, BILL, VENDOR_CREDIT, BILL_PAYMENT', 400);
+    throw new AppError('Invalid transactionType. Must be one of: JOURNAL_ENTRY, BILL, VENDOR_CREDIT, BILL_PAYMENT, CHEQUE', 400);
   }
 }
 
@@ -154,23 +154,41 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     return;
   }
 
-  const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
+  let workbook;
+  try {
+    workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+  } catch (err) {
+    throw new AppError(
+      'Failed to read Excel file. It may be corrupted, password-protected, or not a valid Excel file.',
+      400
+    );
+  }
+
+  const requestedSheet = req.query.sheet ? String(req.query.sheet).trim() : '';
+  const sheetName = requestedSheet && workbook.SheetNames.includes(requestedSheet)
+    ? requestedSheet
+    : workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   const rows = xlsx.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new AppError('Excel sheet contains no data rows', 400);
+  }
   const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
   const headers = rawHeaders.map((header, index) => header || `Column ${index + 1}`);
+  const headerLookup = new Map<string, number>();
+  headers.forEach((header, index) => {
+    headerLookup.set(header.toLowerCase(), index);
+  });
 
   const mappedRows = rows.slice(1).map((row) => {
     const mapped: Record<string, string> = {};
     for (const [fieldKey, excelHeaderValue] of Object.entries(columnMappings)) {
       const excelHeader = String(excelHeaderValue ?? '').trim();
       if (!excelHeader) continue;
-      const headerIndex = headers.indexOf(excelHeader);
-      const rawValue = headerIndex >= 0 ? row?.[headerIndex] : undefined;
-      const value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
-      if (value !== '') {
-        mapped[fieldKey] = value;
+      const headerIndex = headerLookup.get(excelHeader.toLowerCase());
+      const rawValue = headerIndex !== undefined && headerIndex >= 0 ? row?.[headerIndex] : undefined;
+      if (rawValue !== undefined && rawValue !== null) {
+        mapped[fieldKey] = String(rawValue).trim();
       }
     }
     return mapped;

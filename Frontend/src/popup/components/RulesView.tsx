@@ -545,17 +545,8 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   // ------------------------------------------------------------------
   return (
     <div className="p-3">
-      {/* Location selector + New Rule button */}
-      <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center">
-        <select
-          value={locId}
-          onChange={(e) => onLocationChange(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-600 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none"
-        >
-          {locations.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}</option>
-          ))}
-        </select>
+      {/* New Rule button */}
+      <div className="mb-3">
         <button
           onClick={openCreateForm}
           className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1.5 rounded-lg whitespace-nowrap"

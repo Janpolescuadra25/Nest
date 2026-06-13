@@ -2,11 +2,36 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
+import { qbService } from '../services/qb.service';
+import { suggestMappings } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
 
 router.use(authenticate, enforceEffectiveRole);
+
+async function recordMappingPreference(locationId: string, sourceField: string, accountId: string, accountName: string) {
+  if (!locationId || !sourceField || !accountId) return;
+  await prisma.mappingPreference.upsert({
+    where: {
+      locationId_sourceField_accountId: {
+        locationId,
+        sourceField,
+        accountId,
+      },
+    },
+    update: {
+      timesAccepted: { increment: 1 },
+      lastUsedAt: new Date(),
+    },
+    create: {
+      locationId,
+      sourceField,
+      accountId,
+      accountName,
+    },
+  });
+}
 
 // ── PUT /api/mappings/:id ─────────────────────────────────────────────────────
 router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
@@ -54,6 +79,13 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
       },
     });
 
+    await recordMappingPreference(
+      mapping.locationId,
+      sourceField ?? mapping.sourceField,
+      targetAccount ?? mapping.targetAccount,
+      targetAccount ?? mapping.targetAccount,
+    );
+
     res.json(updated);
   } catch (err) {
     console.error('[Mappings] update error:', err);
@@ -79,6 +111,71 @@ router.delete('/:id', requireFeaturePermission('map', 'write'), asyncHandler(asy
   } catch (err) {
     console.error('[Mappings] delete error:', err);
     throw new AppError('Failed to delete mapping', 500);
+  }
+}));
+
+// ── POST /api/mappings/suggest ─────────────────────────────────────────────────
+router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { locationId, scanFields, transactionType } = req.body as {
+      locationId?: string;
+      scanFields?: string[];
+      transactionType?: string;
+    };
+
+    if (!locationId || !Array.isArray(scanFields) || scanFields.length === 0) {
+      throw new AppError('locationId and scanFields are required', 400);
+    }
+
+    const location = await prisma.location.findFirst({
+      where: { id: locationId, ...locationFilter(req.user!) },
+    });
+
+    if (!location) {
+      throw new AppError('Location not found', 404);
+    }
+
+    const preferenceContext = await prisma.mappingPreference.findMany({
+      where: {
+        locationId,
+        sourceField: { in: scanFields },
+      },
+      orderBy: [{ timesAccepted: 'desc' }, { lastUsedAt: 'desc' }],
+      take: 20,
+    });
+
+    const preferenceText = preferenceContext.length > 0
+      ? preferenceContext.map((preference) =>
+          `- ${preference.sourceField} => ${preference.accountName} (${preference.timesAccepted} accepted)`,
+        ).join('\n')
+      : undefined;
+
+    const suggestions = await qbService.callQB(req.user!.userId, async ({ accessToken, realmId }) => {
+      const accounts = await qbService.getAccounts(realmId, accessToken);
+      const accountNames = accounts.map((account) => account.FullyQualifiedName);
+      const accountTypes = accounts.map((account) => ({
+        name: account.FullyQualifiedName,
+        type: account.AccountType,
+        subType: account.AccountSubType || '',
+      }));
+      const aiSuggestions = await suggestMappings(scanFields, accountNames, transactionType, preferenceText, accountTypes);
+      return aiSuggestions.map((suggestion) => {
+        const matched = accounts.find((account) =>
+          account.FullyQualifiedName.toLowerCase() === suggestion.accountName.toLowerCase() ||
+          account.FullyQualifiedName.toLowerCase().includes(suggestion.accountName.toLowerCase()) ||
+          account.FullyQualifiedName.toLowerCase().includes(suggestion.accountHint.toLowerCase()),
+        );
+        return {
+          ...suggestion,
+          accountId: matched?.Id,
+        };
+      });
+    });
+
+    res.json({ suggestions });
+  } catch (err) {
+    console.error('[Mappings] suggestion error:', err);
+    throw new AppError('Failed to suggest mappings', 500);
   }
 }));
 

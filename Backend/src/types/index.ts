@@ -51,6 +51,42 @@ export interface QBBillLineItem {
   description?: string;
 }
 
+export interface QBChequeLineItem {
+  amount: number;
+  accountRef: { value: string; name?: string };
+  description?: string;
+  classRef?: { value: string; name?: string };
+}
+
+export interface MappingSuggestion {
+  sourceField: string;
+  accountHint: string;
+  accountName: string;
+  accountId?: string;
+  postingType: 'Debit' | 'Credit';
+  reason: string;
+}
+
+export interface CreateChequeInput {
+  realmId: string;
+  accessToken: string;
+  txnDate: string;
+  docNumber?: string;
+  bankAccountRef: { value: string; name?: string };
+  payeeRef: { value: string; name?: string };
+  amount: number;
+  memo?: string;
+  lines: QBChequeLineItem[];
+}
+
+export interface ChequeResponse {
+  id: string;
+  txnDate: string;
+  totalAmt: number;
+  docNumber: string;
+  syncToken: string;
+}
+
 export interface CreateJournalEntryInput {
   txnDate: string;             // YYYY-MM-DD
   docNumber?: string;

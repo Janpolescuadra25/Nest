@@ -90,6 +90,34 @@ export const billSchema = z.object({
   scanRecordId: z.string().optional(),
 });
 
+export const chequeSchema = z.object({
+  txnDate: z.string().min(1, 'Transaction date is required'),
+  bankAccountRef: z.object({
+    value: z.string().min(1, 'Bank account is required'),
+    name: z.string().optional(),
+  }),
+  payeeRef: z.object({
+    value: z.string().min(1, 'Payee is required'),
+    name: z.string().optional(),
+  }),
+  amount: z.number().positive('Amount must be positive'),
+  memo: z.string().optional(),
+  docNumber: z.string().optional(),
+  lines: z.array(z.object({
+    amount: z.number().positive('Amount must be positive'),
+    accountRef: z.object({
+      value: z.string().min(1, 'Account value is required'),
+      name: z.string().optional(),
+    }),
+    description: z.string().optional(),
+    classRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
+  })).min(1, 'At least one line item is required'),
+  scanRecordId: z.string().optional(),
+});
+
 export const vendorCreditSchema = z.object({
   txnDate: z.string().min(1, 'Credit date is required'),
   vendorRef: z.object({

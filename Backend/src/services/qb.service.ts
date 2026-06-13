@@ -1,4 +1,4 @@
-import { CreateBillInput, CreateBillPaymentInput, CreateJournalEntryInput, CreateVendorCreditInput, JournalEntryResponse, OutstandingBill, VendorCreditItem, BillPaymentResponse, QBJournalLineItem, QBBillLineItem } from '../types';
+import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, CreateVendorCreditInput, ChequeResponse, JournalEntryResponse, OutstandingBill, VendorCreditItem, BillPaymentResponse, QBJournalLineItem, QBBillLineItem } from '../types';
 import { QBApiError } from '../lib/qb-errors';
 import { prisma } from '../lib/prisma';
 import { encrypt, decryptSafe } from '../lib/encryption';
@@ -475,6 +475,95 @@ function buildVendorCreditPayload(input: CreateVendorCreditInput): object {
   return payload;
 }
 
+function buildChequePayload(input: CreateChequeInput): object {
+  const lines = input.lines.map((line) => {
+    const lineDetail: Record<string, unknown> = {
+      AccountRef: {
+        value: line.accountRef.value,
+        ...(line.accountRef.name && { name: line.accountRef.name }),
+      },
+    };
+
+    if (line.classRef?.value) {
+      lineDetail.ClassRef = {
+        value: line.classRef.value,
+        ...(line.classRef.name && { name: line.classRef.name }),
+      };
+    }
+
+    const qbLine: Record<string, unknown> = {
+      Amount: line.amount,
+      DetailType: 'AccountBasedExpenseLineDetail',
+      AccountBasedExpenseLineDetail: lineDetail,
+    };
+
+    if (line.description) qbLine.Description = line.description;
+    return qbLine;
+  });
+
+  const payload: Record<string, unknown> = {
+    PaymentType: 'Check',
+    AccountRef: {
+      value: input.bankAccountRef.value,
+      ...(input.bankAccountRef.name && { name: input.bankAccountRef.name }),
+    },
+    PayeeEntityRef: {
+      value: input.payeeRef.value,
+      ...(input.payeeRef.name && { name: input.payeeRef.name }),
+    },
+    TxnDate: input.txnDate,
+    TotalAmt: input.amount,
+    Line: lines,
+    PrintStatus: 'NeedToPrint',
+  };
+
+  if (input.memo) payload.Memo = input.memo;
+  if (input.docNumber) payload.DocNumber = input.docNumber;
+
+  return payload;
+}
+
+async function createCheque(input: CreateChequeInput): Promise<ChequeResponse> {
+  const { realmId, accessToken } = input;
+  const payload = buildChequePayload(input);
+  const url = `${QB_API_BASE_URL}/${realmId}/purchase?minorversion=65`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[QB Service] POST ${url}`);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const responseBody = await response.json() as Record<string, unknown>;
+
+  if (!response.ok) {
+    const fault = responseBody.Fault as Record<string, unknown> | undefined;
+    const faultErrors = fault?.Error as Array<Record<string, unknown>> | undefined;
+    const intuitTid = response.headers.get('intuit_tid') ?? undefined;
+    const errMsg = faultErrors?.[0]?.Message as string | undefined ?? JSON.stringify(fault ?? responseBody);
+    const errCode = faultErrors?.[0]?.code as string | undefined;
+    throw new QBApiError(`QB purchase (cheque) failed (${response.status}): ${errMsg}`, response.status, errCode, intuitTid);
+  }
+
+  const purchase = responseBody.Purchase as Record<string, unknown>;
+
+  return {
+    id: purchase.Id as string,
+    txnDate: purchase.TxnDate as string,
+    totalAmt: purchase.TotalAmt as number,
+    docNumber: purchase.DocNumber as string,
+    syncToken: purchase.SyncToken as string,
+  };
+}
+
 async function createVendorCredit(input: CreateVendorCreditInput): Promise<JournalEntryResponse> {
   const { realmId, accessToken } = input;
   const payload = buildVendorCreditPayload(input);
@@ -657,11 +746,13 @@ export const qbService = {
   createJournalEntry,
   createBill,
   createVendorCredit,
+  createCheque,
   createBillPayment,
   refreshAccessToken,
   buildJournalEntryPayload,
   buildBillPayload,
   buildVendorCreditPayload,
+  buildChequePayload,
   buildBillPaymentPayload,
   getOutstandingBills,
   getVendorCredits,

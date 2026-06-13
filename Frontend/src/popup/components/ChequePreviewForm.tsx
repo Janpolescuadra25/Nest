@@ -11,24 +11,22 @@ import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
 
-interface CreditLine {
+interface ChequeLine {
   localId: string;
   accountId: string;
   accountName: string;
   description: string;
   classId: string;
-  taxCodeId: string;
   amount: string;
 }
 
-function newLine(overrides?: Partial<CreditLine>): CreditLine {
+function newLine(overrides?: Partial<ChequeLine>): ChequeLine {
   return {
     localId: `line-${Date.now()}-${Math.random()}`,
     accountId: '',
     accountName: '',
     description: '',
     classId: '',
-    taxCodeId: '',
     amount: '',
     ...overrides,
   };
@@ -80,7 +78,7 @@ interface Props {
   selectedTemplate?: Template | null;
 }
 
-export default function VendorCreditPreviewForm({
+export default function ChequePreviewForm({
   jwt,
   scanData,
   activeScanEntry,
@@ -94,7 +92,6 @@ export default function VendorCreditPreviewForm({
     accounts,
     classes,
     vendors,
-    taxCodes,
     listsLoaded,
     listsLoading,
     listsError,
@@ -103,11 +100,11 @@ export default function VendorCreditPreviewForm({
 
   const today = toYMD(new Date());
   const [txnDate, setTxnDate] = useState(today);
-  const [vendorRef, setVendorRef] = useState<{ value: string; name?: string }>({ value: '' });
-  const [apAccountRef, setApAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [bankAccountRef, setBankAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [payeeRef, setPayeeRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
-  const [lines, setLines] = useState<CreditLine[]>([newLine(), newLine()]);
+  const [lines, setLines] = useState<ChequeLine[]>([newLine(), newLine()]);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
@@ -136,7 +133,7 @@ export default function VendorCreditPreviewForm({
         setMappingsLoaded(true);
       })
       .catch((err) => {
-        console.error('[Vendor Credit Preview] Failed to load mappings:', err);
+        console.error('[Cheque Preview] Failed to load mappings:', err);
         setMappingsLoaded(true);
       });
   }, [jwt, locId]);
@@ -162,7 +159,7 @@ export default function VendorCreditPreviewForm({
           setRuleTransformedLineItems(result.data);
         }
       } catch (err) {
-        console.error('[Vendor Credit Preview] Failed to apply rules:', err);
+        console.error('[Cheque Preview] Failed to apply rules:', err);
       }
     };
 
@@ -192,12 +189,12 @@ export default function VendorCreditPreviewForm({
   }, [scanData, locId, locations]);
 
   useEffect(() => {
-    if (!selectedTemplate || selectedTemplate.transactionType !== 'VENDOR_CREDIT') return;
+    if (!selectedTemplate || selectedTemplate.transactionType !== 'CHEQUE') return;
     const defaults = selectedTemplate.defaults as Record<string, { value: string; name?: string } | null> | null;
     if (!defaults) return;
 
-    if (defaults.vendorRef) setVendorRef(defaults.vendorRef);
-    if (defaults.apAccountRef) setApAccountRef(defaults.apAccountRef);
+    if (defaults.bankAccountRef) setBankAccountRef(defaults.bankAccountRef);
+    if (defaults.payeeRef) setPayeeRef(defaults.payeeRef);
     if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
   }, [selectedTemplate]);
@@ -208,9 +205,9 @@ export default function VendorCreditPreviewForm({
     const h = activeScanEntry.header;
     if (!h || !Object.keys(h).length) return;
 
-    setVendorRef((prev) => {
+    setPayeeRef((prev) => {
       if (prev.value) return prev;
-      const vendorName = (h.vendor || '').trim();
+      const vendorName = (h.payeeName || h.vendor || '').trim();
       if (!vendorName) return prev;
       const lower = vendorName.toLowerCase();
       const match = vendors.find((v) => {
@@ -228,10 +225,10 @@ export default function VendorCreditPreviewForm({
 
     setDocNumber((prev) => {
       if (prev) return prev;
-      return (h.invoiceNumber || '').trim() || prev;
+      return (h.chequeNumber || '').trim() || prev;
     });
 
-    const parsedDate = parseScanDate(h.invoiceDate);
+    const parsedDate = parseScanDate(h.date || h.chequeDate || h.invoiceDate);
     if (parsedDate) {
       setTxnDate((prev) => {
         if (prev && prev !== toYMD(new Date())) return prev;
@@ -239,13 +236,19 @@ export default function VendorCreditPreviewForm({
       });
     }
 
-    if (h.total) {
+    if (h.memo) {
       setMemo((prev) => {
         if (prev) return prev;
-        return `Invoice total: ${h.total}`;
+        return String(h.memo);
       });
     }
-  }, [activeScanEntry, vendors]);
+
+    if (h.bankName && !bankAccountRef.value) {
+      const bankName = String(h.bankName).toLowerCase();
+      const match = accounts.find((a) => a.FullyQualifiedName.toLowerCase().includes(bankName));
+      if (match) setBankAccountRef({ value: match.Id, name: match.FullyQualifiedName });
+    }
+  }, [activeScanEntry, vendors, accounts, bankAccountRef.value]);
 
   useEffect(() => {
     if (!mappingsLoaded) return;
@@ -258,7 +261,7 @@ export default function VendorCreditPreviewForm({
       ) as Record<string, number>
       : scanData ?? {};
 
-    const creditLines = Object.entries(scanFields)
+    const chequeLines = Object.entries(scanFields)
       .filter(([, amount]) => amount !== 0)
       .map(([field, amount]) => {
         const mapping = decoded.find((m) => m.sourceField === field);
@@ -273,21 +276,27 @@ export default function VendorCreditPreviewForm({
         });
       });
 
-    if (creditLines.length > 0) {
-      setLines(creditLines);
+    if (chequeLines.length > 0) {
+      setLines(chequeLines);
     }
-  }, [activeScanEntry, scanData, savedMappings, mappingsLoaded]);
+  }, [activeScanEntry, scanData, savedMappings, mappingsLoaded, accountsRef]);
 
-  const vendorOptions = useMemo(() =>
+  const payeeOptions = useMemo(() =>
     vendors
       .filter((vendor) => vendor.Active)
       .map((vendor) => ({ value: vendor.Id, label: vendor.DisplayName, subtitle: vendor.CompanyName ?? undefined })),
     [vendors],
   );
 
-  const apAccountOptions = useMemo(() =>
+  const bankAccountOptions = useMemo(() =>
     accounts
       .filter((account) => account.Active)
+      .filter((account) =>
+        account.AccountType === 'Asset' &&
+        (account.AccountSubType?.includes('Bank') ||
+          account.AccountSubType?.includes('Checking') ||
+          account.AccountSubType?.includes('Savings'))
+      )
       .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
     [accounts],
   );
@@ -304,12 +313,7 @@ export default function VendorCreditPreviewForm({
     [classes],
   );
 
-  const taxCodeOptions = useMemo(() =>
-    taxCodes.filter((item) => item.Active).map((item) => ({ value: item.Id, label: item.Name, subtitle: item.Description })),
-    [taxCodes],
-  );
-
-  const updateLine = (localId: string, patch: Partial<CreditLine>) =>
+  const updateLine = (localId: string, patch: Partial<ChequeLine>) =>
     setLines((prev) => prev.map((line) => (line.localId === localId ? { ...line, ...patch } : line)));
 
   const removeLine = (localId: string) =>
@@ -322,12 +326,12 @@ export default function VendorCreditPreviewForm({
   const unmappedCount = effectiveLines.filter((line) => parseFloat(line.amount) > 0 && !line.accountId).length;
   const hasAmount = effectiveLines.some((line) => parseFloat(line.amount) > 0);
   const allMapped = unmappedCount === 0 && hasAmount;
-  const hasHeader = Boolean(vendorRef.value && apAccountRef.value);
+  const hasHeader = Boolean(bankAccountRef.value && payeeRef.value);
 
   const handleClearAll = () => {
     setTxnDate(today);
-    setVendorRef({ value: '' });
-    setApAccountRef({ value: '' });
+    setBankAccountRef({ value: '' });
+    setPayeeRef({ value: '' });
     setMemo('');
     setDocNumber('');
     setLines([newLine(), newLine()]);
@@ -360,21 +364,20 @@ export default function VendorCreditPreviewForm({
         defaultPostingType: 'Debit',
       });
 
-      const creditLines = extracted.map((item) => newLine({
+      const chequeLines = extracted.map((item) => newLine({
         accountId: item.accountId,
         accountName: item.accountName || accounts.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
         description: item.description,
         classId: item.classId ?? '',
-        taxCodeId: item.taxCodeId ?? '',
         amount: item.amount.toFixed(2),
       }));
 
-      setLines(creditLines);
+      setLines(chequeLines);
       setAutoFillSummary(getAutoFillSummary(extracted));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Auto-fill failed');
     }
-  }, [activeScanEntry, accounts, jwt, selectedTemplate]);
+  }, [activeScanEntry, accounts, jwt, selectedTemplate, ruleTransformedLineItems]);
 
   const handleSync = useCallback(async () => {
     if (!hasHeader || !allMapped || !hasAmount) return;
@@ -383,41 +386,41 @@ export default function VendorCreditPreviewForm({
     setSyncResult(null);
 
     try {
-      const creditLines = effectiveLines
+      const chequeLines = effectiveLines
         .filter((line) => parseFloat(line.amount) > 0)
         .map((line) => ({
           amount: parseFloat(line.amount),
           accountRef: { value: line.accountId, name: line.accountName || undefined },
           description: line.description || undefined,
           classRef: line.classId ? { value: line.classId } : undefined,
-          taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
         }));
 
-      const result = await api.createVendorCredit(
+      const result = await api.createCheque(
         jwt,
-        vendorRef,
         txnDate,
-        apAccountRef,
-        creditLines,
+        bankAccountRef,
+        payeeRef,
+        totalAmount,
+        chequeLines,
         scanRecordId ?? undefined,
         memo || undefined,
         docNumber || undefined,
-      ) as { vendorCreditId: string; txnDate: string; docNumber?: string };
+      ) as { chequeId: string; txnDate: string; docNumber?: string };
 
-      setSyncResult({ id: result.vendorCreditId, txnDate: result.txnDate, docNumber: result.docNumber });
+      setSyncResult({ id: result.chequeId, txnDate: result.txnDate, docNumber: result.docNumber });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Vendor credit sync failed');
+      setError(err instanceof Error ? err.message : 'Cheque sync failed');
     } finally {
       setSyncing(false);
     }
-  }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, txnDate, vendorRef]);
+  }, [allMapped, bankAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, totalAmount, txnDate, payeeRef]);
 
   if (!status.connected) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
-        <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync vendor credits</p>
+        <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync cheques</p>
         <button onClick={connect} className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
         </button>
@@ -442,49 +445,49 @@ export default function VendorCreditPreviewForm({
 
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-3">
         <div>
-          <div className="text-xs text-gray-500 mb-1">Credit Date</div>
+          <div className="text-xs text-gray-500 mb-1">Transaction Date</div>
           <SmartDatePicker value={txnDate} onChange={setTxnDate} />
         </div>
         <div>
-          <div className="text-xs text-gray-500 mb-1">Vendor</div>
+          <div className="text-xs text-gray-500 mb-1">Bank Account</div>
           <SearchableSelect
-            options={vendorOptions}
-            value={vendorRef.value}
-            onChange={(value) => {
-              const selected = vendors.find((v) => v.Id === value);
-              setVendorRef({ value, name: selected?.DisplayName });
-            }}
-            placeholder="Select vendor…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 mb-1">AP Account</div>
-          <SearchableSelect
-            options={apAccountOptions}
-            value={apAccountRef.value}
+            options={bankAccountOptions}
+            value={bankAccountRef.value}
             onChange={(value) => {
               const selected = accounts.find((a) => a.Id === value);
-              setApAccountRef({ value, name: selected?.FullyQualifiedName });
+              setBankAccountRef({ value, name: selected?.FullyQualifiedName });
             }}
-            placeholder="Select AP account…"
+            placeholder="Select bank account…"
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Memo / Private Note</div>
-          <input
-            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder={`Nest sync — ${txnDate}`}
+          <div className="text-xs text-gray-500 mb-1">Payee</div>
+          <SearchableSelect
+            options={payeeOptions}
+            value={payeeRef.value}
+            onChange={(value) => {
+              const selected = vendors.find((v) => v.Id === value);
+              setPayeeRef({ value, name: selected?.DisplayName });
+            }}
+            placeholder="Select payee/vendor…"
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Credit No.</div>
+          <div className="text-xs text-gray-500 mb-1">Cheque # / Doc Number</div>
           <input
             className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
-            placeholder="Optional credit number"
+            placeholder="Optional cheque number"
+          />
+        </div>
+        <div className="col-span-2">
+          <div className="text-xs text-gray-500 mb-1">Memo</div>
+          <input
+            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="Optional memo"
           />
         </div>
       </div>
@@ -513,7 +516,6 @@ export default function VendorCreditPreviewForm({
                 <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[180px]">Account</th>
                 <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[160px]">Description</th>
                 <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[120px]">Class</th>
-                <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[120px]">Tax Code</th>
                 <th className="text-gray-400 font-medium text-right px-2 py-2 w-24">Amount</th>
                 <th className="text-gray-400 font-medium text-center px-1 py-2 w-8"></th>
               </tr>
@@ -550,14 +552,6 @@ export default function VendorCreditPreviewForm({
                       placeholder="Class…"
                     />
                   </td>
-                  <td className="px-1 py-1 min-w-[120px] max-w-[160px]">
-                    <SearchableSelect
-                      options={taxCodeOptions}
-                      value={line.taxCodeId}
-                      onChange={(value) => updateLine(line.localId, { taxCodeId: value })}
-                      placeholder="Tax Code…"
-                    />
-                  </td>
                   <td className="px-1 py-1 text-right w-24">
                     <input
                       className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 text-right focus:border-cyan-500 focus:outline-none"
@@ -583,7 +577,7 @@ export default function VendorCreditPreviewForm({
             <tfoot>
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
                 <td className="px-2 py-2 text-gray-500">{effectiveLines.length}</td>
-                <td colSpan={4} className="px-2 py-2 text-gray-500">Total</td>
+                <td colSpan={3} className="px-2 py-2 text-gray-500">Total</td>
                 <td className="px-2 py-2 text-right font-mono text-blue-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>
@@ -607,9 +601,9 @@ export default function VendorCreditPreviewForm({
       )}
       {syncResult && (
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
-          <div>✅ Vendor Credit created — <span className="font-mono">{syncResult.id}</span></div>
-          {syncResult.docNumber && <div>Credit # {syncResult.docNumber}</div>}
-          <div className="flex items-center gap-2">
+          <div>✅ Cheque created — <span className="font-mono">{syncResult.id}</span></div>
+          {syncResult.docNumber && <div>Cheque # {syncResult.docNumber}</div>}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
               className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
@@ -617,7 +611,7 @@ export default function VendorCreditPreviewForm({
               Copy ID
             </button>
             <a
-              href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/vendorcredit?txnId=${syncResult.id}`}
+              href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/expense?txnId=${syncResult.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-cyan-400 hover:underline"
@@ -643,14 +637,14 @@ export default function VendorCreditPreviewForm({
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
-            ? 'Syncing Vendor Credit…'
+            ? 'Syncing Cheque…'
             : !hasHeader
-              ? '⚠️ Vendor and AP account required'
+              ? '⚠️ Bank and payee required'
               : !hasAmount
-                ? '⚠️ Add credit amounts'
+                ? '⚠️ Add cheque amounts'
                 : !allMapped
                   ? '⚠️ Assign all line accounts'
-                  : '⚡ Sync Vendor Credit to QuickBooks'}
+                  : '⚡ Sync Cheque to QuickBooks'}
         </button>
       </div>
     </div>

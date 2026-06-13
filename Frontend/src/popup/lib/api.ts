@@ -1,4 +1,4 @@
-import type { Location, Mapping, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm } from '../../types';
+import type { Location, Mapping, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -289,6 +289,9 @@ export const api = {
 
   deleteMapping: (jwt: string, id: string) => del(`/api/mappings/${id}`, jwt),
 
+  suggestMappings: (jwt: string, locationId: string, scanFields: string[], transactionType?: string) =>
+    post<{ suggestions: MappingSuggestion[] }>('/api/mappings/suggest', { locationId, scanFields, transactionType }, jwt),
+
   // ── Templates ──────────────────────────────────────────────────────────────
   getTemplates: (jwt: string, locationId: string) =>
     get<Template[]>(`/api/locations/${locationId}/templates`, jwt),
@@ -314,6 +317,24 @@ export const api = {
     const form = new FormData();
     form.append('file', file);
     return postForm<ExcelDataParseResult>(`/api/templates/parse-excel-data?templateId=${encodeURIComponent(templateId)}`, form, jwt);
+  },
+
+  parseDocumentAI: async (jwt: string, file: File): Promise<{
+    classification: {
+      documentType: 'INVOICE' | 'CHEQUE' | 'POS_REPORT' | 'RECEIPT' | 'OTHER';
+      confidence: number;
+      reasoning: string;
+    };
+    invoiceData: { header: Record<string, string>; lineItems: Record<string, string>[] } | null;
+    chequeData: { chequeNumber: string; payeeName: string; amount: string; date: string; memo: string; bankName: string; lineItems: { description: string; amount: string }[] } | null;
+  }> => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<{ success: boolean; data: { classification: { documentType: 'INVOICE' | 'CHEQUE' | 'POS_REPORT' | 'RECEIPT' | 'OTHER'; confidence: number; reasoning: string; }; invoiceData: { header: Record<string, string>; lineItems: Record<string, string>[] } | null; chequeData: { chequeNumber: string; payeeName: string; amount: string; date: string; memo: string; bankName: string; lineItems: { description: string; amount: string }[] } | null; } }>(
+      '/api/scans/parse-document',
+      form,
+      jwt
+    ).then(res => res.data);
   },
 
   // ── Rules ──────────────────────────────────────────────────────────────────
@@ -435,6 +456,19 @@ export const api = {
     docNumber?: string,
   ) =>
     post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, docNumber }, jwt),
+
+  createCheque: (
+    jwt: string,
+    txnDate: string,
+    bankAccountRef: { value: string; name?: string },
+    payeeRef: { value: string; name?: string },
+    amount: number,
+    lines: unknown[],
+    scanRecordId?: string,
+    memo?: string,
+    docNumber?: string,
+  ) =>
+    post('/api/quickbooks/cheque', { txnDate, bankAccountRef, payeeRef, amount, lines, scanRecordId, memo, docNumber }, jwt),
 
   syncBatch: (jwt: string, items: BatchSyncItem[]) =>
     post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(

@@ -226,17 +226,6 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       {locations.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 flex-shrink-0">📍 Location:</span>
-            <select
-              className="flex-1 bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none disabled:opacity-60"
-              value={locationId}
-              onChange={(e) => onLocationChange(e.target.value)}
-              disabled={batchSyncing}
-            >
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
             {totalPending > 0 && (
               <span className="text-xs text-yellow-400 bg-yellow-900/30 border border-yellow-800 px-2 py-0.5 rounded flex-shrink-0">
                 {totalPending} pending
@@ -332,7 +321,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <p className="text-gray-500 text-sm">No scans yet</p>
             <p className="text-gray-600 text-xs mt-1">
               {onboardingStep === 4
-                ? 'Begin your first sync — scan a POS report, map it, and push to QuickBooks'
+                ? 'Begin your first sync — scan a report or invoice, map it, and push to QuickBooks'
                 : 'Go to Scan tab and scan a Toast report to get started'}
             </p>
           </div>
@@ -343,7 +332,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                 <tr className="border-b border-gray-700 bg-gray-700/30">
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Scan Date</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">QB Journal Entry ID</th>
+                  <th className="text-left px-3 py-2 text-gray-400 font-medium">QB Document ID</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Created</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Source</th>
                   <th className="text-left px-3 py-2 text-gray-400 font-medium">Vendor</th>
