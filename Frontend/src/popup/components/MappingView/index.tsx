@@ -274,6 +274,7 @@ export default function MappingView({
   const [excelColumnMappings, setExcelColumnMappings] = useState<Record<string, string>>({});
   const [localColMap, setLocalColMap] = useState<Record<string, string>>({});
   const [lineItemMappingOpen, setLineItemMappingOpen] = useState(true);
+  const [lineItemFieldsOpen, setLineItemFieldsOpen] = useState(false);
   const [localExcelImportModalOpen, setLocalExcelImportModalOpen] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
   const [mappingSuggestions, setMappingSuggestions] = useState<MappingSuggestion[]>([]);
@@ -1781,6 +1782,50 @@ export default function MappingView({
           <div className="px-3 py-2 border-t border-gray-700 bg-gray-900/80 text-xs text-gray-400">
             {activeScanEntry.lineItems.length} line item{activeScanEntry.lineItems.length === 1 ? '' : 's'} detected
           </div>
+        </div>
+      )}
+
+      {(isBill || isVendorCredit) && activeScanEntry && activeScanEntry.lineItems.length > 1 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setLineItemFieldsOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="text-xs font-semibold text-gray-300">
+              📄 Line Item Fields ({activeScanEntry.lineItems.length} line items)
+            </span>
+            <span className="text-gray-400 text-xs">
+              {lineItemFieldsOpen ? '▲' : '▼'}
+            </span>
+          </button>
+          {lineItemFieldsOpen && (
+            <div className="px-3 pb-3 space-y-3">
+              <p className="text-xs text-gray-400">
+                Each field below shows values from all scanned line items. The mapping dropdown shows one copy per field type — it applies to all line items.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(['description', 'quantity', 'unitPrice', 'total'] as const).map((field) => (
+                  <div key={field}>
+                    <div className="text-xs text-gray-400 mb-1 capitalize">
+                      {field === 'unitPrice' ? 'Unit Price' : field}
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      {activeScanEntry.lineItems
+                        .map((item) => item[field])
+                        .filter((v) => v && String(v).trim() !== '')
+                        .map((v, i, arr) => (
+                          <span key={i}>
+                            {String(v)}
+                            {i < arr.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
