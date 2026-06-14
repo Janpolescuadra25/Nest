@@ -129,6 +129,7 @@ export default function ScanView({
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
   const previousScanModeRef = useRef<ScanMode>(scanMode);
+  const isInitialMount = useRef(true);
 
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {
@@ -169,6 +170,18 @@ export default function ScanView({
   }, [invoicePreviewUrl]);
 
   useEffect(() => {
+    if (invoiceFile && scanMode === 'image' && !invoicePreviewUrl) {
+      setInvoicePreviewUrl(URL.createObjectURL(invoiceFile));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     setInvoiceFile(null);
     setInvoicePreviewUrl(null);
     setInvoiceUploadError(null);
@@ -901,7 +914,19 @@ export default function ScanView({
             />
             {invoiceFile ? (
               <div className="space-y-2 text-xs text-gray-300">
-                <div>Selected: {invoiceFile.name}</div>
+                <div className="flex items-center justify-between gap-2 text-gray-100">
+                  <span>Selected: {invoiceFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoiceFile(null);
+                      setInvoicePreviewUrl(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-200 text-[10px] font-medium"
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
                 {scanMode === 'image' && invoicePreviewUrl && (
                   <img
                     src={invoicePreviewUrl}
