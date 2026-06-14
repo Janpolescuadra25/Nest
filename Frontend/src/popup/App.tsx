@@ -393,6 +393,7 @@ export default function App() {
               onboardingStep={onboardingState.step}
               onHasMappings={() => setDeferredMappings(true)}
               onSelectedTemplateChange={setSelectedTemplateForScan}
+              initialTemplate={selectedTemplateForScan}
               showExcelImportModal={showExcelImportModal}
               setShowExcelImportModal={setShowExcelImportModal}
             />

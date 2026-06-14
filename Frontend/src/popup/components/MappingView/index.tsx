@@ -114,6 +114,7 @@ interface Props {
   onboardingStep?: number;
   onHasMappings?: () => void;
   onSelectedTemplateChange?: (template: Template | null) => void;
+  initialTemplate?: Template | null;
   showExcelImportModal?: boolean;
   setShowExcelImportModal?: (open: boolean) => void;
 }
@@ -250,7 +251,7 @@ export default function MappingView({
   const [memoOpen, setMemoOpen] = useState(true);
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplate?.id ?? '');
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [billDefaults, setBillDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
