@@ -1,3 +1,4 @@
+import { fuzzyMatch, FUZZY_LOW_CONFIDENCE_THRESHOLD } from './fuzzy-matcher';
 import type { ProductMapping, ExtractedLineItem } from '../../types';
 
 export function extractLineItems(params: {
@@ -25,6 +26,7 @@ export function extractLineItems(params: {
 
   const normalizedMappings = productMappings.map((mapping) => ({
     key: mapping.productName?.trim().toLowerCase(),
+    originalKey: mapping.productName?.trim(),
     mapping,
   }));
 
@@ -50,7 +52,20 @@ export function extractLineItems(params: {
       : null;
 
     const normalizedProductName = productName.trim().toLowerCase();
-    const matchedMapping = normalizedMappings.find((entry) => entry.key === normalizedProductName)?.mapping;
+    const exactMatch = normalizedMappings.find((entry) => entry.key === normalizedProductName);
+    let matchedMapping = exactMatch?.mapping ?? null;
+    let fuzzyMatched = false;
+    let lowConfidence = false;
+
+    if (!matchedMapping && normalizedMappings.length > 0) {
+      const candidates = normalizedMappings.map((entry) => entry.originalKey);
+      const result = fuzzyMatch(productName, candidates);
+      if (result) {
+        matchedMapping = normalizedMappings[result.index].mapping;
+        fuzzyMatched = true;
+        lowConfidence = result.score < FUZZY_LOW_CONFIDENCE_THRESHOLD;
+      }
+    }
 
     const accountId = matchedMapping?.accountId ?? '';
     const accountName = '';
@@ -67,6 +82,8 @@ export function extractLineItems(params: {
       accountName,
       postingType,
       matched,
+      fuzzyMatched,
+      lowConfidence: fuzzyMatched ? lowConfidence : undefined,
     });
 
     return acc;

@@ -117,6 +117,48 @@ export default function CheckPreviewForm({
 
   const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
+  const userHasEditedLinesRef = useRef(false);
+
+  useEffect(() => {
+    userHasEditedLinesRef.current = false;
+  }, [activeScanEntry]);
+
+  useEffect(() => {
+    if (!activeScanEntry) return;
+    if (activeScanEntry.source !== 'image' && activeScanEntry.source !== 'pdf') return;
+    if (!selectedTemplate?.columnMappings || !selectedTemplate?.id) return;
+    if (!jwt || !locId) return;
+    if (userHasEditedLinesRef.current) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
+        if (cancelled) return;
+        const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
+        const extracted = extractLineItems({
+          lineItems: itemsToExtract,
+          columnMappings: selectedTemplate.columnMappings,
+          productMappings,
+          defaultPostingType: 'Debit',
+        });
+        if (cancelled) return;
+
+        setLines(extracted.map((item) => newLine({
+          accountId: item.accountId,
+          accountName: item.accountName || accountsRef.current.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
+          description: item.description,
+          classId: item.classId ?? '',
+          amount: item.amount.toFixed(2),
+        })));
+        setAutoFillSummary(getAutoFillSummary(extracted));
+      } catch {
+        // silent fallback
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeScanEntry, selectedTemplate, jwt, locId, ruleTransformedLineItems]);
 
   useEffect(() => {
     if (!listsLoaded && !listsLoading && !listsError) {
@@ -254,6 +296,7 @@ export default function CheckPreviewForm({
 
   useEffect(() => {
     if (!mappingsLoaded) return;
+    if (activeScanEntry?.source === 'image' || activeScanEntry?.source === 'pdf') return;
     const decoded = savedMappings.map(decodeMapping);
     const scanFields: Record<string, number> = activeScanEntry
       ? Object.fromEntries(
@@ -315,13 +358,20 @@ export default function CheckPreviewForm({
     [classes],
   );
 
-  const updateLine = (localId: string, patch: Partial<CheckLine>) =>
+  const updateLine = (localId: string, patch: Partial<CheckLine>) => {
+    userHasEditedLinesRef.current = true;
     setLines((prev) => prev.map((line) => (line.localId === localId ? { ...line, ...patch } : line)));
+  };
 
-  const removeLine = (localId: string) =>
+  const removeLine = (localId: string) => {
+    userHasEditedLinesRef.current = true;
     setLines((prev) => prev.filter((line) => line.localId !== localId));
+  };
 
-  const addLine = () => setLines((prev) => [...prev, newLine()]);
+  const addLine = () => {
+    userHasEditedLinesRef.current = true;
+    setLines((prev) => [...prev, newLine()]);
+  };
 
   const effectiveLines = lines;
   const totalAmount = effectiveLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0);

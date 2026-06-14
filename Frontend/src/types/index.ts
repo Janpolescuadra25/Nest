@@ -71,6 +71,8 @@ export interface ExtractedLineItem {
   accountName: string;
   postingType: 'Credit' | 'Debit';
   matched: boolean;
+  fuzzyMatched?: boolean;
+  lowConfidence?: boolean;
 }
 
 export interface Product {
