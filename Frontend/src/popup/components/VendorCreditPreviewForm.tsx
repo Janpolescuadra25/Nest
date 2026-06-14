@@ -11,6 +11,7 @@ import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template } from '
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
+import { parseNumericValue } from '../lib/parse-numeric-value';
 
 interface CreditLine {
   localId: string;
@@ -251,12 +252,11 @@ export default function VendorCreditPreviewForm({
 
   useEffect(() => {
     if (!mappingsLoaded) return;
-    if (activeScanEntry?.source === 'image' || activeScanEntry?.source === 'pdf') return;
     const decoded = savedMappings.map(decodeMapping);
     const scanFields: Record<string, number> = activeScanEntry
       ? Object.fromEntries(
         Object.entries(activeScanEntry.lineItems?.[0] ?? {})
-          .map(([key, value]) => [key, Number(value)])
+          .map(([key, value]) => [key, parseNumericValue(value)])
           .filter(([, v]) => !Number.isNaN(v)),
       ) as Record<string, number>
       : scanData ?? {};

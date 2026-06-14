@@ -10,6 +10,7 @@ import type { ScanData, ScanEntry, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { guessPostingType, decodeMapping } from '../lib/je-builder';
+import { parseNumericValue } from '../lib/parse-numeric-value';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -267,7 +268,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     const decoded = savedMappings.map(decodeMapping);
     const currentLineItem = (ruleTransformedLineItems?.[0] ?? activeScanEntry.lineItems?.[0]) ?? {};
     const scanLines: LineItem[] = Object.entries(currentLineItem)
-      .map(([field, rawValue]) => ({ field, amount: Number(rawValue) }))
+      .map(([field, rawValue]) => ({ field, amount: parseNumericValue(rawValue) }))
       .filter((entry) => !Number.isNaN(entry.amount) && entry.amount !== 0)
       .map(({ field, amount }) => {
         const mapping = decoded.find((m) => m.sourceField === field);

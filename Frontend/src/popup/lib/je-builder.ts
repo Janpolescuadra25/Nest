@@ -1,3 +1,4 @@
+import { parseNumericValue } from './parse-numeric-value';
 import type { Mapping, ScanData, ScanEntry, QBJournalLineItem } from '../../types';
 import type { QBAccount } from '../types/qb';
 
@@ -114,7 +115,7 @@ export function buildJEPayload(params: {
   const scanFields: ScanData = scanEntry
     ? Object.fromEntries(
         Object.entries(scanEntry.lineItems?.[0] ?? {})
-          .map(([key, value]) => [key, Number(value)])
+          .map(([key, value]) => [key, parseNumericValue(value)])
           .filter(([, value]) => !Number.isNaN(value)),
       ) as ScanData
     : scanData;

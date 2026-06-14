@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
+import { parseNumericValue } from '../lib/parse-numeric-value';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
 import CheckReviewPanel from './ScanView/CheckReviewPanel';
 import ScanHistory from './ScanHistory';
@@ -23,28 +24,6 @@ async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; po
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
-
-const parseNumericValue = (raw: string): number => {
-  const s = String(raw).trim();
-  if (s === '' || s === '-' || s === '—' || s === '–') return 0;
-  if (/^\d{1,2}:\d{2}/.test(s)) return 0;
-  if (/^\(.*\)$/.test(s)) {
-    const inner = s.replace(/[()$,]/g, '');
-    const num = parseFloat(inner);
-    return isNaN(num) ? 0 : -num;
-  }
-  if (s.endsWith('%')) {
-    const num = parseFloat(s.replace(/[^0-9.\-]/g, ''));
-    return isNaN(num) ? 0 : num;
-  }
-  const cleaned = s.replace(/[$,]/g, '');
-  if (cleaned.endsWith('-') && !cleaned.startsWith('-')) {
-    const num = parseFloat(cleaned.slice(0, -1));
-    return isNaN(num) ? 0 : -num;
-  }
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
-};
 
 interface Props {
   jwt: string;
