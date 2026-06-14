@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
+import ErrorCard from './shared/ErrorCard';
 import type { ScanData, ScanEntry, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
@@ -115,6 +116,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
@@ -524,7 +526,11 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
 
       setSyncResult({ id: result.journalEntryId, txnDate: result.txnDate });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sync failed');
+      if (err instanceof ApiError && err.status === 409) {
+        setDuplicateWarning(err.payload?.error ?? err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Sync failed');
+      }
     } finally {
       setSyncing(false);
     }
@@ -793,6 +799,14 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       </button>
 
       {/* Messages */}
+      {duplicateWarning && (
+        <ErrorCard
+          variant="warning"
+          message={duplicateWarning}
+          onDismiss={() => setDuplicateWarning(null)}
+          onRetry={handleForceSync}
+        />
+      )}
       {error && (
         <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
           {error}

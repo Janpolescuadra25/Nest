@@ -5,12 +5,13 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem } from '../types';
-import { Prisma } from '@prisma/client';
+import { Prisma, SyncType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { billSchema, chequeSchema, vendorCreditSchema, billPaymentSchema, journalEntrySchema } from '../lib/validators';
 import { encrypt, decryptSafe } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
+import { createSyncLogEntry, countSyncAttempts, findDuplicateSync, hashSyncRequest } from '../lib/dedup';
 
 const router = Router();
 
@@ -215,12 +216,13 @@ router.get('/status', authenticate, asyncHandler(async(req: AuthRequest, res: Re
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
 router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(journalEntrySchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { txnDate, lines, privateNote, scanRecordId, docNumber } = req.body as {
+    const { txnDate, lines, privateNote, scanRecordId, docNumber, skipDedupCheck } = req.body as {
       txnDate?: string;
       lines?: QBJournalLineItem[];
       privateNote?: string;
       scanRecordId?: string;
       docNumber?: string;
+      skipDedupCheck?: boolean;
     };
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0) {
@@ -228,7 +230,6 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
       return;
     }
 
-    // Verify scan's location is accessible when scanRecordId is provided
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
@@ -243,10 +244,20 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
           return;
         }
       }
+    }
 
-      const result = await syncSingleScan(req.user!.userId, scanRecordId, txnDate, lines, privateNote, docNumber);
+    const result = await syncSingleScan(
+      req.user!.userId,
+      scanRecordId ?? undefined,
+      txnDate,
+      lines,
+      privateNote,
+      docNumber,
+      Boolean(skipDedupCheck),
+    );
 
-      if (result.status === 'SKIPPED') {
+    if (result.status === 'SKIPPED') {
+      if (result.reason === 'already_synced') {
         res.json({
           success: true,
           skipped: true,
@@ -257,44 +268,29 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
         return;
       }
 
-      if (result.status === 'FAILED') {
-        console.error('[QB] journal-entry error:', result.errorMessage);
-        throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage
-            : 'An unexpected error occurred. Please try again.', 500);
-        return;
-      }
-
-      // SYNCED
-      res.json({
-        message: 'Journal Entry created successfully',
-        journalEntryId: result.qbJournalEntryId,
-        txnDate: result.txnDate,
-        totalAmount: result.totalAmount,
+      res.status(409).json({
+        error: 'Duplicate journal entry detected',
+        reason: result.reason,
+        qbJournalEntryId: result.qbJournalEntryId,
         docNumber: result.docNumber,
       });
       return;
     }
 
-    // No scanRecordId — direct sync without dedup or SyncLog
-    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
-const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
-      qbService.createJournalEntry({
-        txnDate,
-        docNumber: finalDocNumber,
-        lines,
-        privateNote,
-        realmId,
-        accessToken,
-      }),
-    );
+    if (result.status === 'FAILED') {
+      console.error('[QB] journal-entry error:', result.errorMessage);
+      throw new AppError(process.env.NODE_ENV !== 'production'
+          ? result.errorMessage
+          : 'An unexpected error occurred. Please try again.', 500);
+      return;
+    }
 
     res.json({
       message: 'Journal Entry created successfully',
-      journalEntryId: result.id,
+      journalEntryId: result.qbJournalEntryId,
       txnDate: result.txnDate,
       totalAmount: result.totalAmount,
-      docNumber: finalDocNumber,
+      docNumber: result.docNumber,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -361,15 +357,26 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
         memo,
         lines,
         docNumber,
+        Boolean(req.body.skipDedupCheck),
       );
 
       if (result.status === 'SKIPPED') {
-        res.json({
-          success: true,
-          skipped: true,
+        if (result.reason === 'already_synced') {
+          res.json({
+            success: true,
+            skipped: true,
+            qbJournalEntryId: result.qbJournalEntryId,
+            docNumber: result.docNumber,
+            message: 'Already synced',
+          });
+          return;
+        }
+
+        res.status(409).json({
+          error: 'Duplicate bill detected',
+          reason: result.reason,
           qbJournalEntryId: result.qbJournalEntryId,
           docNumber: result.docNumber,
-          message: 'Already synced',
         });
         return;
       }
@@ -392,28 +399,43 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       return;
     }
 
-    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
-    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
-      qbService.createBill({
-        txnDate,
-        docNumber: finalDocNumber,
-        vendorRef,
-        apAccountRef,
-        termsRef,
-        dueDate,
-        memo,
-        lines,
-        realmId,
-        accessToken,
-      }),
+    const result = await syncSingleBill(
+      req.user!.userId,
+      undefined,
+      txnDate,
+      vendorRef,
+      apAccountRef,
+      termsRef,
+      dueDate,
+      memo,
+      lines,
+      docNumber,
+      Boolean(req.body.skipDedupCheck),
     );
+
+    if (result.status === 'SKIPPED') {
+      res.status(409).json({
+        error: 'Duplicate bill detected',
+        reason: result.reason,
+        qbJournalEntryId: result.qbJournalEntryId,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    if (result.status === 'FAILED') {
+      console.error('[QB] bill error:', result.errorMessage);
+      throw new AppError(process.env.NODE_ENV !== 'production'
+          ? result.errorMessage
+          : 'An unexpected error occurred. Please try again.', 500);
+    }
 
     res.json({
       message: 'Bill created successfully',
-      billId: result.id,
+      billId: result.qbJournalEntryId,
       txnDate: result.txnDate,
       totalAmount: result.totalAmount,
-      docNumber: finalDocNumber,
+      docNumber: result.docNumber,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -474,15 +496,26 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
         memo,
         lines,
         docNumber,
+        Boolean(req.body.skipDedupCheck),
       );
 
       if (result.status === 'SKIPPED') {
-        res.json({
-          success: true,
-          skipped: true,
+        if (result.reason === 'already_synced') {
+          res.json({
+            success: true,
+            skipped: true,
+            qbJournalEntryId: result.qbJournalEntryId,
+            docNumber: result.docNumber,
+            message: 'Already synced',
+          });
+          return;
+        }
+
+        res.status(409).json({
+          error: 'Duplicate vendor credit detected',
+          reason: result.reason,
           qbJournalEntryId: result.qbJournalEntryId,
           docNumber: result.docNumber,
-          message: 'Already synced',
         });
         return;
       }
@@ -505,26 +538,41 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       return;
     }
 
-    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
-    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
-      qbService.createVendorCredit({
-        txnDate,
-        docNumber: finalDocNumber,
-        vendorRef,
-        apAccountRef,
-        memo,
-        lines,
-        realmId,
-        accessToken,
-      }),
+    const result = await syncSingleVendorCredit(
+      req.user!.userId,
+      undefined,
+      txnDate,
+      vendorRef,
+      apAccountRef,
+      memo,
+      lines,
+      docNumber,
+      Boolean(req.body.skipDedupCheck),
     );
+
+    if (result.status === 'SKIPPED') {
+      res.status(409).json({
+        error: 'Duplicate vendor credit detected',
+        reason: result.reason,
+        qbJournalEntryId: result.qbJournalEntryId,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    if (result.status === 'FAILED') {
+      console.error('[QB] vendorcredit error:', result.errorMessage);
+      throw new AppError(process.env.NODE_ENV !== 'production'
+          ? result.errorMessage
+          : 'An unexpected error occurred. Please try again.', 500);
+    }
 
     res.json({
       message: 'Vendor Credit created successfully',
-      vendorCreditId: result.id,
+      vendorCreditId: result.qbJournalEntryId,
       txnDate: result.txnDate,
       totalAmount: result.totalAmount,
-      docNumber: finalDocNumber,
+      docNumber: result.docNumber,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -588,15 +636,26 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
         memo,
         lines,
         docNumber,
+        Boolean(req.body.skipDedupCheck),
       );
 
       if (result.status === 'SKIPPED') {
-        res.json({
-          success: true,
-          skipped: true,
+        if (result.reason === 'already_synced') {
+          res.json({
+            success: true,
+            skipped: true,
+            qbJournalEntryId: result.qbJournalEntryId,
+            docNumber: result.docNumber,
+            message: 'Already synced',
+          });
+          return;
+        }
+
+        res.status(409).json({
+          error: 'Duplicate check detected',
+          reason: result.reason,
           qbJournalEntryId: result.qbJournalEntryId,
           docNumber: result.docNumber,
-          message: 'Already synced',
         });
         return;
       }
@@ -619,27 +678,42 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
       return;
     }
 
-    const finalDocNumber = docNumber || `NEST-${randomBytes(4).toString('hex')}`;
-    const result = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
-      qbService.createCheque({
-        txnDate,
-        docNumber: finalDocNumber,
-        bankAccountRef,
-        payeeRef,
-        amount,
-        memo,
-        lines,
-        realmId,
-        accessToken,
-      }),
+    const result = await syncSingleCheque(
+      req.user!.userId,
+      undefined,
+      txnDate,
+      bankAccountRef,
+      payeeRef,
+      amount,
+      memo,
+      lines,
+      docNumber,
+      Boolean(req.body.skipDedupCheck),
     );
+
+    if (result.status === 'SKIPPED') {
+      res.status(409).json({
+        error: 'Duplicate check detected',
+        reason: result.reason,
+        qbJournalEntryId: result.qbJournalEntryId,
+        docNumber: result.docNumber,
+      });
+      return;
+    }
+
+    if (result.status === 'FAILED') {
+      console.error('[QB] cheque error:', result.errorMessage);
+      throw new AppError(process.env.NODE_ENV !== 'production'
+          ? result.errorMessage
+          : 'An unexpected error occurred. Please try again.', 500);
+    }
 
     res.json({
       message: 'Cheque created successfully',
-      chequeId: result.id,
+      chequeId: result.qbJournalEntryId,
       txnDate: result.txnDate,
-      totalAmount: result.totalAmt,
-      docNumber: finalDocNumber,
+      totalAmount: result.totalAmount,
+      docNumber: result.docNumber,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -666,33 +740,46 @@ interface SyncSingleResult {
 
 async function syncSingleScan(
   userId: string,
-  scanRecordId: string,
+  scanRecordId: string | undefined,
   txnDate: string,
   lines: QBJournalLineItem[],
   privateNote?: string,
   docNumber?: string,
+  skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
-  const existingLogs = await prisma.syncLog.findMany({
-    where: { scanRecordId },
-    select: { id: true },
-  });
-  const attemptCount = existingLogs.length + 1;
+  const syncType = SyncType.JOURNAL_ENTRY;
+  const requestHash = hashSyncRequest(syncType, { txnDate, lines, privateNote, docNumber });
 
-  // Dedup check
-  const existingSync = await prisma.syncLog.findFirst({
-    where: { scanRecordId, status: 'SUCCESS' },
-  });
-  if (existingSync) {
+  const attemptCount = scanRecordId
+    ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
+    : (await countSyncAttempts(userId, syncType, requestHash)) + 1;
+
+  const existingScan = scanRecordId
+    ? await prisma.syncLog.findFirst({ where: { scanRecordId, status: 'SUCCESS' } })
+    : null;
+
+  if (existingScan) {
     return {
       status: 'SKIPPED',
       reason: 'already_synced',
-      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
-      docNumber: existingSync.docNumber ?? undefined,
+      qbJournalEntryId: existingScan.qbJournalEntryId ?? undefined,
+      docNumber: existingScan.docNumber ?? undefined,
     };
   }
 
-  // DocNumber generation
-  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+  if (!skipDedupCheck) {
+    const existingDuplicate = await findDuplicateSync(userId, syncType, requestHash);
+    if (existingDuplicate) {
+      return {
+        status: 'SKIPPED',
+        reason: 'duplicate_request',
+        qbJournalEntryId: existingDuplicate.qbJournalEntryId ?? undefined,
+        docNumber: existingDuplicate.docNumber ?? undefined,
+      };
+    }
+  }
+
+  const finalDocNumber = docNumber || (scanRecordId ? `NEST-${scanRecordId.substring(0, 8)}` : `NEST-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -706,21 +793,24 @@ async function syncSingleScan(
       }),
     );
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        qbJournalEntryId: result.id,
-        docNumber: finalDocNumber,
-        status: 'SUCCESS',
-        attemptCount,
-        requestPayload: null,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      requestHash,
+      status: 'SUCCESS',
+      attemptCount,
+      requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
     });
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'SYNCED' },
-    });
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+    }
 
     return {
       status: 'SYNCED',
@@ -733,21 +823,24 @@ async function syncSingleScan(
     const message = err instanceof Error ? err.message : 'Unknown error';
     const errorType = err instanceof QBApiError ? err.category : 'FATAL';
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        status: 'FAILED',
-        errorMessage: message,
-        errorType,
-        attemptCount,
-        requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      requestHash,
+      status: 'FAILED',
+      attemptCount,
+      requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
+      errorMessage: message,
+      errorType,
     }).catch(console.error);
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'FAILED' },
-    }).catch(console.error);
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+    }
 
     return { status: 'FAILED', errorType, errorMessage: message };
   }
@@ -755,23 +848,26 @@ async function syncSingleScan(
 
 async function syncSingleVendorCredit(
   userId: string,
-  scanRecordId: string,
+  scanRecordId: string | undefined,
   txnDate: string,
   vendorRef: { value: string; name?: string },
   apAccountRef: { value: string; name?: string },
   memo: string | undefined,
   lines: QBBillLineItem[],
   docNumber?: string,
+  skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
-  const existingLogs = await prisma.syncLog.findMany({
-    where: { scanRecordId },
-    select: { id: true },
-  });
-  const attemptCount = existingLogs.length + 1;
+  const syncType = SyncType.VENDOR_CREDIT;
+  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, memo, lines, docNumber });
 
-  const existingSync = await prisma.syncLog.findFirst({
-    where: { scanRecordId, status: 'SUCCESS' },
-  });
+  const attemptCount = scanRecordId
+    ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
+    : (await countSyncAttempts(userId, syncType, requestHash)) + 1;
+
+  const existingSync = scanRecordId
+    ? await prisma.syncLog.findFirst({ where: { scanRecordId, status: 'SUCCESS' } })
+    : null;
+
   if (existingSync) {
     return {
       status: 'SKIPPED',
@@ -781,7 +877,19 @@ async function syncSingleVendorCredit(
     };
   }
 
-  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+  if (!skipDedupCheck) {
+    const existingDuplicate = await findDuplicateSync(userId, syncType, requestHash);
+    if (existingDuplicate) {
+      return {
+        status: 'SKIPPED',
+        reason: 'duplicate_request',
+        qbJournalEntryId: existingDuplicate.qbJournalEntryId ?? undefined,
+        docNumber: existingDuplicate.docNumber ?? undefined,
+      };
+    }
+  }
+
+  const finalDocNumber = docNumber || (scanRecordId ? `NEST-${scanRecordId.substring(0, 8)}` : `NEST-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -797,21 +905,24 @@ async function syncSingleVendorCredit(
       }),
     );
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        qbJournalEntryId: result.id,
-        docNumber: finalDocNumber,
-        status: 'SUCCESS',
-        attemptCount,
-        requestPayload: null,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      requestHash,
+      status: 'SUCCESS',
+      attemptCount,
+      requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'SYNCED' },
-    });
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+    }
 
     return {
       status: 'SYNCED',
@@ -824,21 +935,24 @@ async function syncSingleVendorCredit(
     const message = err instanceof Error ? err.message : 'Unknown error';
     const errorType = err instanceof QBApiError ? err.category : 'FATAL';
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        status: 'FAILED',
-        errorMessage: message,
-        errorType,
-        attemptCount,
-        requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      requestHash,
+      status: 'FAILED',
+      attemptCount,
+      requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      errorMessage: message,
+      errorType,
     }).catch(console.error);
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'FAILED' },
-    }).catch(console.error);
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+    }
 
     return { status: 'FAILED', errorType, errorMessage: message };
   }
@@ -846,7 +960,7 @@ async function syncSingleVendorCredit(
 
 async function syncSingleCheque(
   userId: string,
-  scanRecordId: string,
+  scanRecordId: string | undefined,
   txnDate: string,
   bankAccountRef: { value: string; name?: string },
   payeeRef: { value: string; name?: string },
@@ -854,16 +968,19 @@ async function syncSingleCheque(
   memo: string | undefined,
   lines: QBChequeLineItem[],
   docNumber?: string,
+  skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
-  const existingLogs = await prisma.syncLog.findMany({
-    where: { scanRecordId },
-    select: { id: true },
-  });
-  const attemptCount = existingLogs.length + 1;
+  const syncType = SyncType.CHEQUE;
+  const requestHash = hashSyncRequest(syncType, { txnDate, bankAccountRef, payeeRef, amount, memo, lines, docNumber });
 
-  const existingSync = await prisma.syncLog.findFirst({
-    where: { scanRecordId, status: 'SUCCESS' },
-  });
+  const attemptCount = scanRecordId
+    ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
+    : (await countSyncAttempts(userId, syncType, requestHash)) + 1;
+
+  const existingSync = scanRecordId
+    ? await prisma.syncLog.findFirst({ where: { scanRecordId, status: 'SUCCESS' } })
+    : null;
+
   if (existingSync) {
     return {
       status: 'SKIPPED',
@@ -873,7 +990,19 @@ async function syncSingleCheque(
     };
   }
 
-  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+  if (!skipDedupCheck) {
+    const existingDuplicate = await findDuplicateSync(userId, syncType, requestHash);
+    if (existingDuplicate) {
+      return {
+        status: 'SKIPPED',
+        reason: 'duplicate_request',
+        qbJournalEntryId: existingDuplicate.qbJournalEntryId ?? undefined,
+        docNumber: existingDuplicate.docNumber ?? undefined,
+      };
+    }
+  }
+
+  const finalDocNumber = docNumber || (scanRecordId ? `NEST-${scanRecordId.substring(0, 8)}` : `NEST-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -890,21 +1019,24 @@ async function syncSingleCheque(
       }),
     );
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        qbJournalEntryId: result.id,
-        docNumber: finalDocNumber,
-        status: 'SUCCESS',
-        attemptCount,
-        requestPayload: null,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      requestHash,
+      status: 'SUCCESS',
+      attemptCount,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'SYNCED' },
-    });
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+    }
 
     return {
       status: 'SYNCED',
@@ -917,21 +1049,24 @@ async function syncSingleCheque(
     const message = err instanceof Error ? err.message : 'Unknown error';
     const errorType = err instanceof QBApiError ? err.category : 'FATAL';
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        status: 'FAILED',
-        errorMessage: message,
-        errorType,
-        attemptCount,
-        requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      requestHash,
+      status: 'FAILED',
+      attemptCount,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      errorMessage: message,
+      errorType,
     }).catch(console.error);
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'FAILED' },
-    }).catch(console.error);
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+    }
 
     return { status: 'FAILED', errorType, errorMessage: message };
   }
@@ -939,7 +1074,7 @@ async function syncSingleCheque(
 
 async function syncSingleBill(
   userId: string,
-  scanRecordId: string,
+  scanRecordId: string | undefined,
   txnDate: string,
   vendorRef: { value: string; name?: string },
   apAccountRef: { value: string; name?: string },
@@ -948,16 +1083,19 @@ async function syncSingleBill(
   memo: string | undefined,
   lines: QBBillLineItem[],
   docNumber?: string,
+  skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
-  const existingLogs = await prisma.syncLog.findMany({
-    where: { scanRecordId },
-    select: { id: true },
-  });
-  const attemptCount = existingLogs.length + 1;
+  const syncType = SyncType.BILL;
+  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, lines, docNumber });
 
-  const existingSync = await prisma.syncLog.findFirst({
-    where: { scanRecordId, status: 'SUCCESS' },
-  });
+  const attemptCount = scanRecordId
+    ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
+    : (await countSyncAttempts(userId, syncType, requestHash)) + 1;
+
+  const existingSync = scanRecordId
+    ? await prisma.syncLog.findFirst({ where: { scanRecordId, status: 'SUCCESS' } })
+    : null;
+
   if (existingSync) {
     return {
       status: 'SKIPPED',
@@ -967,7 +1105,19 @@ async function syncSingleBill(
     };
   }
 
-  const finalDocNumber = docNumber || `NEST-${scanRecordId.substring(0, 8)}`;
+  if (!skipDedupCheck) {
+    const existingDuplicate = await findDuplicateSync(userId, syncType, requestHash);
+    if (existingDuplicate) {
+      return {
+        status: 'SKIPPED',
+        reason: 'duplicate_request',
+        qbJournalEntryId: existingDuplicate.qbJournalEntryId ?? undefined,
+        docNumber: existingDuplicate.docNumber ?? undefined,
+      };
+    }
+  }
+
+  const finalDocNumber = docNumber || (scanRecordId ? `NEST-${scanRecordId.substring(0, 8)}` : `NEST-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -985,21 +1135,24 @@ async function syncSingleBill(
       }),
     );
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        qbJournalEntryId: result.id,
-        docNumber: finalDocNumber,
-        status: 'SUCCESS',
-        attemptCount,
-        requestPayload: null,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      qbJournalEntryId: result.id,
+      docNumber: finalDocNumber,
+      requestHash,
+      status: 'SUCCESS',
+      attemptCount,
+      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'SYNCED' },
-    });
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+    }
 
     return {
       status: 'SYNCED',
@@ -1012,21 +1165,24 @@ async function syncSingleBill(
     const message = err instanceof Error ? err.message : 'Unknown error';
     const errorType = err instanceof QBApiError ? err.category : 'FATAL';
 
-    await prisma.syncLog.create({
-      data: {
-        scanRecordId,
-        status: 'FAILED',
-        errorMessage: message,
-        errorType,
-        attemptCount,
-        requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
-      },
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      requestHash,
+      status: 'FAILED',
+      attemptCount,
+      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      errorMessage: message,
+      errorType,
     }).catch(console.error);
 
-    await prisma.scanRecord.update({
-      where: { id: scanRecordId },
-      data: { status: 'FAILED' },
-    }).catch(console.error);
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+    }
 
     return { status: 'FAILED', errorType, errorMessage: message };
   }
@@ -1208,7 +1364,7 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
           docNumber: finalDocNumber,
           attemptCount,
           requestPayload: null,
-        },
+        } as Prisma.SyncLogUncheckedCreateInput,
       });
 
       await prisma.scanRecord.update({
@@ -1230,7 +1386,7 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
           errorType,
           attemptCount,
           requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
-        },
+        } as Prisma.SyncLogUncheckedCreateInput,
       }).catch(console.error);
 
       await prisma.scanRecord.update({
@@ -1388,7 +1544,7 @@ router.post('/retry-batch', authenticate, enforceEffectiveRole, requireFeaturePe
             docNumber: finalDocNumber,
             attemptCount,
             requestPayload: null,
-          },
+          } as Prisma.SyncLogUncheckedCreateInput,
         });
 
         await prisma.scanRecord.update({
@@ -1420,7 +1576,7 @@ router.post('/retry-batch', authenticate, enforceEffectiveRole, requireFeaturePe
               privateNote: payload.privateNote,
               docNumber: payload.docNumber,
             } as unknown as Prisma.JsonObject,
-          },
+          } as Prisma.SyncLogUncheckedCreateInput,
         }).catch(console.error);
 
         await prisma.scanRecord.update({

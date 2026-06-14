@@ -85,6 +85,7 @@ model User {
   locations           Location[]     @relation("UserLocations")
   managedLocations    Location[]     @relation("AdminLocations")
   qbTokens            QBToken[]
+  syncLogs            SyncLog[]
   oauthStates         OAuthState[]
   products            Product[]
   approvedRequests     AdminRequest[]       @relation("ApprovedAdminRequests")
@@ -331,24 +332,38 @@ enum ScanStatus {
 
 model SyncLog {
   id               String     @id @default(cuid())
-  scanRecordId     String
+  userId           String?
+  syncType         SyncType
+  scanRecordId     String?
   qbJournalEntryId String?
   docNumber        String?    // for traceability back to QB JE
+  requestHash      String?
   status           SyncStatus
   errorMessage     String?
   errorType        String?    // 'TRANSIENT' | 'AUTH' | 'VALIDATION' | 'FATAL'
   attemptCount     Int        @default(1)
   requestPayload   Json?
   syncedAt         DateTime   @default(now())
-  scanRecord       ScanRecord @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
+  scanRecord       ScanRecord? @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
+  user             User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@index([scanRecordId])
+  @@index([syncType, requestHash])
+  @@index([userId, syncType, requestHash])
   @@map("sync_logs")
 }
 
 enum SyncStatus {
   SUCCESS
   FAILED
+}
+
+enum SyncType {
+  JOURNAL_ENTRY
+  BILL
+  VENDOR_CREDIT
+  CHEQUE
 }
 
 // QB OAuth token storage (one row per user/realm)

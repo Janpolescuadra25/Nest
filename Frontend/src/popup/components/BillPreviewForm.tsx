@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { extractLineItems, getAutoFillSummary } from '../lib/column-extractor';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
+import ErrorCard from './shared/ErrorCard';
 import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
@@ -120,6 +121,7 @@ export default function BillPreviewForm({
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
@@ -398,6 +400,7 @@ export default function BillPreviewForm({
     if (!hasHeader || !allMapped || !hasAmount) return;
     setSyncing(true);
     setError(null);
+    setDuplicateWarning(null);
     setSyncResult(null);
 
     try {
@@ -426,7 +429,55 @@ export default function BillPreviewForm({
 
         setSyncResult({ id: result.billId, txnDate: result.txnDate, docNumber: result.docNumber });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bill sync failed');
+      if (err instanceof ApiError && err.status === 409) {
+        setDuplicateWarning(err.payload?.error ?? err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Bill sync failed');
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [allMapped, apAccountRef, dueDate, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, termsRef, txnDate, docNumber, vendorRef]);
+
+  const handleForceSync = useCallback(async () => {
+    if (!hasHeader || !allMapped || !hasAmount) return;
+    setSyncing(true);
+    setError(null);
+    setDuplicateWarning(null);
+    setSyncResult(null);
+
+    try {
+      const billLines = effectiveLines
+        .filter((line) => parseFloat(line.amount) > 0)
+        .map((line) => ({
+          amount: parseFloat(line.amount),
+          accountRef: { value: line.accountId, name: line.accountName || undefined },
+          description: line.description || undefined,
+          classRef: line.classId ? { value: line.classId } : undefined,
+          taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
+        }));
+
+      const result = await api.createBill(
+        jwt,
+        txnDate,
+        vendorRef,
+        apAccountRef,
+        termsRef.value ? termsRef : undefined,
+        dueDate || undefined,
+        memo || undefined,
+        docNumber || undefined,
+        billLines,
+        scanRecordId ?? undefined,
+        true,
+      ) as { billId: string; txnDate: string; docNumber?: string };
+
+      setSyncResult({ id: result.billId, txnDate: result.txnDate, docNumber: result.docNumber });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setDuplicateWarning(err.payload?.error ?? err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Bill sync failed');
+      }
     } finally {
       setSyncing(false);
     }
@@ -649,6 +700,14 @@ export default function BillPreviewForm({
         + Add Line
       </button>
 
+      {duplicateWarning && (
+        <ErrorCard
+          variant="warning"
+          message={duplicateWarning}
+          onDismiss={() => setDuplicateWarning(null)}
+          onRetry={handleForceSync}
+        />
+      )}
       {error && (
         <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
           {error}

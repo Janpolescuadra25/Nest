@@ -116,6 +116,7 @@ export const chequeSchema = z.object({
     }).optional(),
   })).min(1, 'At least one line item is required'),
   scanRecordId: z.string().optional(),
+  skipDedupCheck: z.boolean().optional(),
 });
 
 export const vendorCreditSchema = z.object({
@@ -147,6 +148,7 @@ export const vendorCreditSchema = z.object({
     }).optional(),
   })).min(1, 'At least one line item is required'),
   scanRecordId: z.string().optional(),
+  skipDedupCheck: z.boolean().optional(),
 });
 
 export const billPaymentSchema = z.object({
@@ -205,6 +207,7 @@ export const journalEntrySchema = z.object({
     memo: z.string().optional(),
   })).min(1, 'At least one line item is required'),
   scanRecordId: z.string().optional(),
+  skipDedupCheck: z.boolean().optional(),
   privateNote: z.string().optional(),
   docNumber: z.string().optional(),
 });

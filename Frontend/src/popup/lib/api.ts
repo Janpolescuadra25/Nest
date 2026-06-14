@@ -2,19 +2,37 @@ import type { Location, Mapping, Template, Rule, RuleFormData, ScanData, ScanRec
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
+export class ApiError extends Error {
+  public readonly status: number;
+  public readonly payload: any;
+
+  constructor(message: string, status: number, payload?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 async function headers(jwt?: string | null): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (jwt) h['Authorization'] = `Bearer ${jwt}`;
   return h;
 }
 
+async function parseResponse<T>(res: Response, path: string): Promise<T> {
+  const payload = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) {
+    const message = payload?.error ?? `API ${path} failed`;
+    throw new ApiError(message, res.status, payload);
+  }
+
+  return payload as T;
+}
+
 async function get<T>(path: string, jwt?: string | null): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, { headers: await headers(jwt) });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
-  return res.json();
+  return parseResponse<T>(res, path);
 }
 
 async function post<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
@@ -23,11 +41,7 @@ async function post<T>(path: string, body: unknown, jwt?: string | null): Promis
     headers: await headers(jwt),
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(res, path);
 }
 
 async function postForm<T>(path: string, form: FormData, jwt?: string | null): Promise<T> {
@@ -36,11 +50,7 @@ async function postForm<T>(path: string, form: FormData, jwt?: string | null): P
     headers: jwt ? { Authorization: `Bearer ${jwt}` } : undefined,
     body: form,
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(res, path);
 }
 
 async function put<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
@@ -427,9 +437,10 @@ export const api = {
     lines: unknown[],
     scanRecordId?: string,
     privateNote?: string,
-    docNumber?: string
+    docNumber?: string,
+    skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote, docNumber }, jwt),
+    post('/api/quickbooks/journal-entry', { txnDate, lines, scanRecordId, privateNote, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   createBill: (
     jwt: string,
@@ -442,8 +453,9 @@ export const api = {
     docNumber: string | undefined,
     lines: unknown[],
     scanRecordId?: string,
+    skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/bill', { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines, scanRecordId }, jwt),
+    post('/api/quickbooks/bill', { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines, scanRecordId, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   createVendorCredit: (
     jwt: string,
@@ -454,8 +466,9 @@ export const api = {
     scanRecordId?: string,
     memo?: string,
     docNumber?: string,
+    skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, docNumber }, jwt),
+    post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   createCheque: (
     jwt: string,
@@ -467,8 +480,9 @@ export const api = {
     scanRecordId?: string,
     memo?: string,
     docNumber?: string,
+    skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/cheque', { txnDate, bankAccountRef, payeeRef, amount, lines, scanRecordId, memo, docNumber }, jwt),
+    post('/api/quickbooks/cheque', { txnDate, bankAccountRef, payeeRef, amount, lines, scanRecordId, memo, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   syncBatch: (jwt: string, items: BatchSyncItem[]) =>
     post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(
