@@ -173,8 +173,32 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
     });
 
     res.json({ suggestions });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Mappings] suggestion error:', err);
+
+    const isRateLimit = err?.status === 429
+      || err?.message?.includes('429')
+      || err?.message?.toLowerCase().includes('rate limit')
+      || err?.message?.includes('Too Many Requests')
+      || err?.message?.toLowerCase().includes('quota');
+
+    if (isRateLimit) {
+      let retrySeconds = 30;
+      try {
+        const retryStr = err?.errorDetails?.[2]?.retryDelay
+          || err?.details?.retryDelay?.seconds
+          || err?.retry_after;
+        if (retryStr) {
+          const parsed = parseInt(String(retryStr), 10);
+          if (parsed > 0) retrySeconds = parsed;
+        }
+      } catch (_) {
+        // use default retrySeconds
+      }
+
+      throw new AppError(`AI rate limited. Please wait ${retrySeconds} seconds and try again.`, 429);
+    }
+
     throw new AppError('Failed to suggest mappings', 500);
   }
 }));

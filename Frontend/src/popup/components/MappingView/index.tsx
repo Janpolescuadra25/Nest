@@ -928,8 +928,13 @@ export default function MappingView({
       setMappingSuggestions(suggestions);
       setAutoMsg(`🤖 ${suggestions.length} AI suggestion${suggestions.length !== 1 ? 's' : ''} ready`);
       setTimeout(() => setAutoMsg(null), 4000);
-    } catch (err) {
-      setSuggestionError(err instanceof Error ? err.message : 'Failed to fetch AI suggestions');
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to fetch AI suggestions';
+      if (msg.includes('rate limited') || msg.includes('429')) {
+        setSuggestionError('⚠️ AI is busy right now. Please wait about 30 seconds, then try again.');
+      } else {
+        setSuggestionError(msg);
+      }
     } finally {
       setSuggesting(false);
     }
