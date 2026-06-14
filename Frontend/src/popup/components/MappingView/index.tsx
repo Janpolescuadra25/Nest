@@ -362,6 +362,21 @@ export default function MappingView({
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
+  const isCheque = selectedTemplate?.transactionType === 'CHEQUE';
+  const isJE = selectedTemplate?.transactionType === 'JOURNAL_ENTRY';
+
+  const getPreviewLabel = () => {
+    switch (selectedTemplate?.transactionType) {
+      case 'BILL':
+        return 'Bill';
+      case 'VENDOR_CREDIT':
+        return 'VC';
+      case 'CHEQUE':
+        return 'Check';
+      default:
+        return 'JE';
+    }
+  };
 
   useEffect(() => {
     setMappingSuggestions([]);
@@ -1865,19 +1880,21 @@ export default function MappingView({
         )
       )}
 
-      {selectedTemplate?.transactionType !== 'BILL' && selectedTemplate?.transactionType !== 'VENDOR_CREDIT' && localMappings.length > 0 && (
+      {localMappings.length > 0 && (
         <div className="border-t border-gray-700 pt-3 space-y-2">
-          <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
-            isBalanced ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'
-          }`}>
-            <span className={isBalanced ? 'text-green-400' : 'text-red-400'}>
-              {isBalanced ? '✓ Balanced' : '⚠️ Unbalanced'}
-            </span>
-            <span className="text-gray-400 font-mono">
-              Dr ${totalDebits.toFixed(2)} / Cr ${totalCredits.toFixed(2)}
-              {!isBalanced && ` (diff: $${Math.abs(diff).toFixed(2)})`}
-            </span>
-          </div>
+          {selectedTemplate?.transactionType === 'JOURNAL_ENTRY' && (
+            <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-lg ${
+              isBalanced ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'
+            }`}>
+              <span className={isBalanced ? 'text-green-400' : 'text-red-400'}>
+                {isBalanced ? '✓ Balanced' : '⚠️ Unbalanced'}
+              </span>
+              <span className="text-gray-400 font-mono">
+                Dr ${totalDebits.toFixed(2)} / Cr ${totalCredits.toFixed(2)}
+                {!isBalanced && ` (diff: $${Math.abs(diff).toFixed(2)})`}
+              </span>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -1892,7 +1909,7 @@ export default function MappingView({
               onClick={() => onTabChange('preview')}
               className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded-lg transition-colors"
             >
-              📋 Preview JE →
+              📋 Preview {getPreviewLabel()} →
             </button>
           </div>
         </div>
