@@ -79,7 +79,7 @@ const SECTIONS: Section[] = [
             In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your scan data to a specific restaurant location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
-            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/cheque image or Excel file. Then click the <span className="text-cyan-400">Scan</span> tab and scan. Nest extracts the data automatically.
+            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/check image or Excel file. Then click the <span className="text-cyan-400">Scan</span> tab and scan. Nest extracts the data automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
             Go to the <span className="text-cyan-400">Mapping</span> tab. Each field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
@@ -97,7 +97,7 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2">
         <TabInfo icon="🔍" name="Scan">
-          Scans POS reports, vendor invoices, cheques, or Excel files. Shows a summary of all extracted fields and values.
+          Scans POS reports, vendor invoices, checks, or Excel files. Shows a summary of all extracted fields and values.
         </TabInfo>
         <TabInfo icon="🗺️" name="Mapping">
           Links each scan field to a QuickBooks account. This is where you tell Nest which account each field belongs to.

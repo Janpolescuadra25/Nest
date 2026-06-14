@@ -145,7 +145,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   JOURNAL_ENTRY: 'Journal Entry',
   BILL: 'Bill',
   VENDOR_CREDIT: 'Vendor Credit',
-  CHEQUE: 'Cheque',
+  CHEQUE: 'Check',
 };
 
 export const TRANSACTION_TYPES = Object.keys(TRANSACTION_TYPE_LABELS) as (keyof typeof TRANSACTION_TYPE_LABELS)[];

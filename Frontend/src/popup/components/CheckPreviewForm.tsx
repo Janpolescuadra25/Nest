@@ -11,7 +11,7 @@ import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
 
-interface ChequeLine {
+interface CheckLine {
   localId: string;
   accountId: string;
   accountName: string;
@@ -20,7 +20,7 @@ interface ChequeLine {
   amount: string;
 }
 
-function newLine(overrides?: Partial<ChequeLine>): ChequeLine {
+function newLine(overrides?: Partial<CheckLine>): CheckLine {
   return {
     localId: `line-${Date.now()}-${Math.random()}`,
     accountId: '',
@@ -78,7 +78,7 @@ interface Props {
   selectedTemplate?: Template | null;
 }
 
-export default function ChequePreviewForm({
+export default function CheckPreviewForm({
   jwt,
   scanData,
   activeScanEntry,
@@ -104,7 +104,7 @@ export default function ChequePreviewForm({
   const [payeeRef, setPayeeRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
-  const [lines, setLines] = useState<ChequeLine[]>([newLine(), newLine()]);
+  const [lines, setLines] = useState<CheckLine[]>([newLine(), newLine()]);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
@@ -133,7 +133,7 @@ export default function ChequePreviewForm({
         setMappingsLoaded(true);
       })
       .catch((err) => {
-        console.error('[Cheque Preview] Failed to load mappings:', err);
+        console.error('[Check Preview] Failed to load mappings:', err);
         setMappingsLoaded(true);
       });
   }, [jwt, locId]);
@@ -159,7 +159,7 @@ export default function ChequePreviewForm({
           setRuleTransformedLineItems(result.data);
         }
       } catch (err) {
-        console.error('[Cheque Preview] Failed to apply rules:', err);
+        console.error('[Check Preview] Failed to apply rules:', err);
       }
     };
 
@@ -261,7 +261,7 @@ export default function ChequePreviewForm({
       ) as Record<string, number>
       : scanData ?? {};
 
-    const chequeLines = Object.entries(scanFields)
+    const checkLines = Object.entries(scanFields)
       .filter(([, amount]) => amount !== 0)
       .map(([field, amount]) => {
         const mapping = decoded.find((m) => m.sourceField === field);
@@ -276,8 +276,8 @@ export default function ChequePreviewForm({
         });
       });
 
-    if (chequeLines.length > 0) {
-      setLines(chequeLines);
+    if (checkLines.length > 0) {
+      setLines(checkLines);
     }
   }, [activeScanEntry, scanData, savedMappings, mappingsLoaded, accountsRef]);
 
@@ -313,7 +313,7 @@ export default function ChequePreviewForm({
     [classes],
   );
 
-  const updateLine = (localId: string, patch: Partial<ChequeLine>) =>
+  const updateLine = (localId: string, patch: Partial<CheckLine>) =>
     setLines((prev) => prev.map((line) => (line.localId === localId ? { ...line, ...patch } : line)));
 
   const removeLine = (localId: string) =>
@@ -364,7 +364,7 @@ export default function ChequePreviewForm({
         defaultPostingType: 'Debit',
       });
 
-      const chequeLines = extracted.map((item) => newLine({
+      const checkLines = extracted.map((item) => newLine({
         accountId: item.accountId,
         accountName: item.accountName || accounts.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
         description: item.description,
@@ -372,7 +372,7 @@ export default function ChequePreviewForm({
         amount: item.amount.toFixed(2),
       }));
 
-      setLines(chequeLines);
+      setLines(checkLines);
       setAutoFillSummary(getAutoFillSummary(extracted));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Auto-fill failed');
@@ -386,7 +386,7 @@ export default function ChequePreviewForm({
     setSyncResult(null);
 
     try {
-      const chequeLines = effectiveLines
+      const checkLines = effectiveLines
         .filter((line) => parseFloat(line.amount) > 0)
         .map((line) => ({
           amount: parseFloat(line.amount),
@@ -401,7 +401,7 @@ export default function ChequePreviewForm({
         bankAccountRef,
         payeeRef,
         totalAmount,
-        chequeLines,
+        checkLines,
         scanRecordId ?? undefined,
         memo || undefined,
         docNumber || undefined,
@@ -409,7 +409,7 @@ export default function ChequePreviewForm({
 
       setSyncResult({ id: result.chequeId, txnDate: result.txnDate, docNumber: result.docNumber });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cheque sync failed');
+      setError(err instanceof Error ? err.message : 'Check sync failed');
     } finally {
       setSyncing(false);
     }
@@ -420,7 +420,7 @@ export default function ChequePreviewForm({
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
-        <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync cheques</p>
+        <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync checks</p>
         <button onClick={connect} className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
         </button>
@@ -473,12 +473,12 @@ export default function ChequePreviewForm({
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Cheque # / Doc Number</div>
+          <div className="text-xs text-gray-500 mb-1">Check # / Doc Number</div>
           <input
             className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
-            placeholder="Optional cheque number"
+            placeholder="Optional check number"
           />
         </div>
         <div className="col-span-2">
@@ -601,8 +601,8 @@ export default function ChequePreviewForm({
       )}
       {syncResult && (
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
-          <div>✅ Cheque created — <span className="font-mono">{syncResult.id}</span></div>
-          {syncResult.docNumber && <div>Cheque # {syncResult.docNumber}</div>}
+          <div>✅ Check created — <span className="font-mono">{syncResult.id}</span></div>
+          {syncResult.docNumber && <div>Check # {syncResult.docNumber}</div>}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
@@ -637,14 +637,14 @@ export default function ChequePreviewForm({
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
-            ? 'Syncing Cheque…'
+            ? 'Syncing Check…'
             : !hasHeader
               ? '⚠️ Bank and payee required'
               : !hasAmount
-                ? '⚠️ Add cheque amounts'
+                ? '⚠️ Add check amounts'
                 : !allMapped
                   ? '⚠️ Assign all line accounts'
-                  : '⚡ Sync Cheque to QuickBooks'}
+                  : '⚡ Sync Check to QuickBooks'}
         </button>
       </div>
     </div>

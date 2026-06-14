@@ -15,7 +15,7 @@ import MappingView from './components/MappingView';
 import JournalEntryPreview from './components/JournalEntryPreview';
 import BillPreviewForm from './components/BillPreviewForm';
 import VendorCreditPreviewForm from './components/VendorCreditPreviewForm';
-import ChequePreviewForm from './components/ChequePreviewForm';
+import CheckPreviewForm from './components/CheckPreviewForm';
 import QBDataView from './components/QBDataView';
 import SyncView from './components/SyncView';
 import SettingsView from './components/SettingsView';
@@ -432,7 +432,7 @@ export default function App() {
                 selectedTemplate={selectedTemplateForScan}
               />
             ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
-              <ChequePreviewForm
+              <CheckPreviewForm
                 jwt={jwt!}
                 scanData={scanData}
                 activeScanEntry={activeScanEntry}

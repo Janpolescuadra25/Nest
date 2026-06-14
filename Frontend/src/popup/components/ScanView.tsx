@@ -3,7 +3,7 @@ import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, Exc
 import { api } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
-import ChequeReviewPanel from './ScanView/ChequeReviewPanel';
+import CheckReviewPanel from './ScanView/CheckReviewPanel';
 import ScanHistory from './ScanHistory';
 import { ErrorCard, EmptyState } from './shared';
 
@@ -109,8 +109,8 @@ export default function ScanView({
     confidence: number;
     reasoning: string;
   } | null>(null);
-  const [parsedChequeData, setParsedChequeData] = useState<{
-    chequeNumber: string;
+  const [parsedCheckData, setParsedCheckData] = useState<{
+    checkNumber: string;
     payeeName: string;
     amount: string;
     date: string;
@@ -118,7 +118,7 @@ export default function ScanView({
     bankName: string;
     lineItems: { description: string; amount: string }[];
   } | null>(null);
-  const [showChequeReview, setShowChequeReview] = useState(false);
+  const [showCheckReview, setShowCheckReview] = useState(false);
   const [invoiceConfirmSuccess, setInvoiceConfirmSuccess] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
@@ -175,10 +175,10 @@ export default function ScanView({
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
-    setShowChequeReview(false);
+    setShowCheckReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
-    setParsedChequeData(null);
+    setParsedCheckData(null);
     setDocumentClassification(null);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
@@ -249,11 +249,11 @@ export default function ScanView({
     setBlurWarning(false);
     setOcrConfidence(null);
     setShowInvoiceReview(false);
-    setShowChequeReview(false);
+    setShowCheckReview(false);
     setDocumentClassification(null);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
-    setParsedChequeData(null);
+    setParsedCheckData(null);
     setIsDragOver(false);
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
@@ -399,10 +399,10 @@ export default function ScanView({
     setOcrConfidence(null);
     setInvoiceConfirmSuccess(false);
     setShowInvoiceReview(false);
-    setShowChequeReview(false);
+    setShowCheckReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
-    setParsedChequeData(null);
+    setParsedCheckData(null);
 
     if (file && scanMode === 'image') {
       setInvoicePreviewUrl(URL.createObjectURL(file));
@@ -484,20 +484,28 @@ export default function ScanView({
         setParsedInvoiceHeader(parsed.invoiceData.header);
         setParsedInvoiceLineItems(parsed.invoiceData.lineItems);
         setShowInvoiceReview(true);
-        setShowChequeReview(false);
-        setParsedChequeData(null);
+        setShowCheckReview(false);
+        setParsedCheckData(null);
       } else if (parsed.chequeData) {
-        setParsedChequeData(parsed.chequeData);
-        setShowChequeReview(true);
+        setParsedCheckData({
+          checkNumber: parsed.chequeData.chequeNumber,
+          payeeName: parsed.chequeData.payeeName,
+          amount: parsed.chequeData.amount,
+          date: parsed.chequeData.date,
+          memo: parsed.chequeData.memo,
+          bankName: parsed.chequeData.bankName,
+          lineItems: parsed.chequeData.lineItems,
+        });
+        setShowCheckReview(true);
         setShowInvoiceReview(false);
         setParsedInvoiceHeader({});
         setParsedInvoiceLineItems([]);
       } else {
         setParsedInvoiceHeader({});
         setParsedInvoiceLineItems([]);
-        setParsedChequeData(null);
+        setParsedCheckData(null);
         setShowInvoiceReview(false);
-        setShowChequeReview(false);
+        setShowCheckReview(false);
       }
     } catch (err: any) {
       const rawMessage = err instanceof Error ? err.message : String(err);
@@ -535,8 +543,8 @@ export default function ScanView({
     setTimeout(() => setInvoiceConfirmSuccess(false), 3000);
   };
 
-  const handleChequeReviewConfirm = (editedData: {
-    chequeNumber: string;
+  const handleCheckReviewConfirm = (editedData: {
+    checkNumber: string;
     payeeName: string;
     amount: string;
     date: string;
@@ -549,7 +557,7 @@ export default function ScanView({
       source: 'image' as const,
       fileName: invoiceFile?.name,
       header: {
-        chequeNumber: editedData.chequeNumber,
+        chequeNumber: editedData.checkNumber,
         payeeName: editedData.payeeName,
         amount: editedData.amount,
         date: editedData.date,
@@ -567,17 +575,17 @@ export default function ScanView({
 
     setScanEntries([scanEntry]);
     setActiveScanEntryId(scanEntry.id);
-    setShowChequeReview(false);
+    setShowCheckReview(false);
     setInvoiceConfirmSuccess(true);
     setTimeout(() => setInvoiceConfirmSuccess(false), 3000);
   };
 
   const handleInvoiceRetry = () => {
     setShowInvoiceReview(false);
-    setShowChequeReview(false);
+    setShowCheckReview(false);
     setParsedInvoiceHeader({});
     setParsedInvoiceLineItems([]);
-    setParsedChequeData(null);
+    setParsedCheckData(null);
     setBlurWarning(false);
     setOcrConfidence(null);
     setInvoiceConfirmSuccess(false);
@@ -940,7 +948,7 @@ export default function ScanView({
                     {documentClassification.documentType === 'INVOICE'
                       ? '📄 Invoice'
                       : documentClassification.documentType === 'CHEQUE'
-                        ? '🏦 Cheque'
+                        ? '🏦 Check'
                         : documentClassification.documentType === 'POS_REPORT'
                           ? '📊 POS Report'
                           : documentClassification.documentType === 'RECEIPT'
@@ -1005,11 +1013,11 @@ export default function ScanView({
                 onClear={handleClear}
               />
             )}
-            {showChequeReview && parsedChequeData && (
-              <ChequeReviewPanel
-                chequeData={parsedChequeData}
+            {showCheckReview && parsedCheckData && (
+              <CheckReviewPanel
+                checkData={parsedCheckData}
                 confidence={ocrConfidence}
-                onConfirm={handleChequeReviewConfirm}
+                onConfirm={handleCheckReviewConfirm}
                 onRetry={handleInvoiceRetry}
                 onClear={handleClear}
               />
@@ -1093,8 +1101,8 @@ export default function ScanView({
               icon="🍽️"
               title="No scan data yet"
               description={onboardingStep === 4
-                ? 'Navigate to a POS report page or upload an invoice/cheque image, then scan to start your first sync pipeline'
-                : 'Navigate to a POS report page or upload an invoice/cheque image, then scan.'}
+                ? 'Navigate to a POS report page or upload an invoice/check image, then scan to start your first sync pipeline'
+                : 'Navigate to a POS report page or upload an invoice/check image, then scan.'}
               action={{ label: 'Re-scan Page', onClick: handleRescan }}
             />
           )}

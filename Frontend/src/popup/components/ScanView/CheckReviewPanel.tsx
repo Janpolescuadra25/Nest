@@ -1,36 +1,36 @@
 import React, { useState } from 'react';
 
-interface ChequeLineItem {
+interface CheckLineItem {
   description: string;
   amount: string;
 }
 
-interface ChequeData {
-  chequeNumber: string;
+interface CheckData {
+  checkNumber: string;
   payeeName: string;
   amount: string;
   date: string;
   memo: string;
   bankName: string;
-  lineItems: ChequeLineItem[];
+  lineItems: CheckLineItem[];
 }
 
-interface ChequeReviewPanelProps {
-  chequeData: ChequeData;
+interface CheckReviewPanelProps {
+  checkData: CheckData;
   confidence: number | null;
-  onConfirm: (editedData: ChequeData) => void;
+  onConfirm: (editedData: CheckData) => void;
   onRetry: () => void;
   onClear: () => void;
 }
 
-export default function ChequeReviewPanel({ chequeData, confidence, onConfirm, onRetry, onClear }: ChequeReviewPanelProps) {
-  const [editData, setEditData] = useState<ChequeData>(chequeData);
+export default function CheckReviewPanel({ checkData, confidence, onConfirm, onRetry, onClear }: CheckReviewPanelProps) {
+  const [editData, setEditData] = useState<CheckData>(checkData);
 
-  const updateField = (key: keyof ChequeData, value: string) => {
+  const updateField = (key: keyof CheckData, value: string) => {
     setEditData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const updateLineItem = (index: number, key: keyof ChequeLineItem, value: string) => {
+  const updateLineItem = (index: number, key: keyof CheckLineItem, value: string) => {
     setEditData((prev) => {
       const updatedLineItems = [...prev.lineItems];
       updatedLineItems[index] = { ...updatedLineItems[index], [key]: value };
@@ -65,7 +65,7 @@ export default function ChequeReviewPanel({ chequeData, confidence, onConfirm, o
 
       <div className="space-y-3">
         {[
-          { label: 'Cheque #', key: 'chequeNumber' },
+          { label: 'Check #', key: 'checkNumber' },
           { label: 'Payee', key: 'payeeName' },
           { label: 'Amount', key: 'amount' },
           { label: 'Date', key: 'date' },
@@ -77,8 +77,8 @@ export default function ChequeReviewPanel({ chequeData, confidence, onConfirm, o
             <input
               id={field.key}
               type="text"
-              value={String(editData[field.key as keyof ChequeData] ?? '')}
-              onChange={(e) => updateField(field.key as keyof ChequeData, e.target.value)}
+              value={String(editData[field.key as keyof CheckData] ?? '')}
+              onChange={(e) => updateField(field.key as keyof CheckData, e.target.value)}
               className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
             />
           </div>
