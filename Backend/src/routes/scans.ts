@@ -198,6 +198,15 @@ router.post(
         },
       });
     } catch (err: any) {
+      const isServiceUnavailable = err?.status === 503
+        || err?.message?.includes('503')
+        || err?.message?.includes('Service Unavailable')
+        || err?.message?.toLowerCase().includes('high demand');
+
+      if (isServiceUnavailable) {
+        throw new AppError('AI service is temporarily busy (high demand). Please wait about 30 seconds and try again.', 503);
+      }
+
       if (err.message?.includes('GEMINI_API_KEY')) {
         throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
       }

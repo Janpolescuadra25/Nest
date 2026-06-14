@@ -499,8 +499,13 @@ export default function ScanView({
         setShowInvoiceReview(false);
         setShowChequeReview(false);
       }
-    } catch (err) {
-      setInvoiceUploadError(err instanceof Error ? err.message : 'AI parsing failed. Please try again or upload a clearer image.');
+    } catch (err: any) {
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      if (rawMessage.includes('503') || rawMessage.includes('temporarily busy') || rawMessage.includes('high demand')) {
+        setInvoiceUploadError('⚠️ AI service is temporarily busy. Please wait about 30 seconds and try again.');
+      } else {
+        setInvoiceUploadError(rawMessage || 'AI parsing failed. Please try again or upload a clearer image.');
+      }
     } finally {
       setInvoiceUploading(false);
     }
