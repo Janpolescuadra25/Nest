@@ -19,6 +19,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMapping, setEditingMapping] = useState<ProductMapping | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<ProductMappingFormData>({
     templateId,
     productId: '',
@@ -192,163 +193,185 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-white">📦 Product Mappings</h2>
-          <p className="text-xs text-gray-400">Bind catalog products to QB accounts for this template.</p>
-        </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2"
-        >
-          + Add Product Mapping
-        </button>
-      </div>
+    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+      >
+        <span className="text-xs font-semibold text-gray-300">
+          ⚙️ Template Configuration: Product Mappings
+        </span>
+        <span className="text-gray-400 text-xs">
+          {isOpen ? '▲' : '▼'}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="px-3 pb-3">
+          <p className="text-xs text-gray-400 mb-3">
+            Pre-configure product → account bindings for this template. When invoices are scanned, matching products will auto-fill the correct account.
+          </p>
 
-      {error && (
-        <div className="text-xs text-red-400 bg-red-950/30 border border-red-900 rounded px-3 py-2">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-xs text-gray-400">Loading product mappings…</div>
-      ) : (
-        <div className="space-y-4">
-          {showForm && (
-            <div className="rounded-lg border border-gray-700 bg-gray-950 p-4 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs text-gray-400">Product</label>
-                  <select
-                    value={formData.productId}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, productId: e.target.value }))}
-                    disabled={Boolean(editingMapping)}
-                    className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                  >
-                    <option value="">Select product</option>
-                    {productOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Account</label>
-                  <select
-                    value={formData.accountId}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, accountId: e.target.value }))}
-                    className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                  >
-                    <option value="">Select account</option>
-                    {accountGroups.map((group) => (
-                      <optgroup key={group.label} label={group.label}>
-                        {group.options.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Posting Type</label>
-                  <select
-                    value={formData.postingType}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, postingType: e.target.value as ProductMappingFormData['postingType'] }))}
-                    className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                  >
-                    {POSTING_TYPES.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-400">Class</label>
-                  <select
-                    value={formData.classId ?? ''}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, classId: e.target.value || undefined }))}
-                    className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                  >
-                    <option value="">None</option>
-                    {classGroups.map((group) => (
-                      <optgroup key={group.label} label={group.label}>
-                        {group.options.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
+          <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-white">📦 Product Mappings</h2>
+                <p className="text-xs text-gray-400">Bind catalog products to QB accounts for this template.</p>
               </div>
+              <button
+                type="button"
+                onClick={openAdd}
+                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2"
+              >
+                + Add Product Mapping
+              </button>
+            </div>
 
-              <div className="flex flex-wrap gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded px-3 py-2"
-                >
-                  {saving ? 'Saving…' : editingMapping ? 'Save Changes' : 'Create Mapping'}
-                </button>
+            {error && (
+              <div className="text-xs text-red-400 bg-red-950/30 border border-red-900 rounded px-3 py-2">
+                {error}
               </div>
-            </div>
-          )}
+            )}
 
-          {mappings.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950 p-4 text-xs text-gray-400">
-              No product mappings yet. Add a mapping to auto-assign accounts when product items are detected in scanned invoices.
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
-              <table className="min-w-full text-left text-xs text-gray-200">
-                <thead>
-                  <tr className="border-b border-gray-700 bg-gray-800 text-gray-300">
-                    <th className="px-3 py-3">Product</th>
-                    <th className="px-3 py-3">Account</th>
-                    <th className="px-3 py-3">Posting Type</th>
-                    <th className="px-3 py-3">Class</th>
-                    <th className="px-3 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mappings.map((mapping) => (
-                    <tr key={mapping.id} className="border-b border-gray-800 hover:bg-gray-900/80">
-                      <td className="px-3 py-3 text-gray-200">{mapping.productName}</td>
-                      <td className="px-3 py-3 text-gray-300">{accountLabel(mapping.accountId)}</td>
-                      <td className={`px-3 py-3 ${mapping.postingType === 'Debit' ? 'text-red-300' : 'text-green-300'}`}>
-                        {mapping.postingType}
-                      </td>
-                      <td className="px-3 py-3 text-gray-300">{classLabel(mapping.classId)}</td>
-                      <td className="px-3 py-3 space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(mapping)}
-                          className="text-xs text-cyan-400 hover:text-cyan-300"
+            {loading ? (
+              <div className="text-xs text-gray-400">Loading product mappings…</div>
+            ) : (
+              <div className="space-y-4">
+                {showForm && (
+                  <div className="rounded-lg border border-gray-700 bg-gray-950 p-4 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs text-gray-400">Product</label>
+                        <select
+                          value={formData.productId}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, productId: e.target.value }))}
+                          disabled={Boolean(editingMapping)}
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
                         >
-                          ✏️
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(mapping)}
-                          className="text-xs text-red-400 hover:text-red-300"
+                          <option value="">Select product</option>
+                          {productOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400">Account</label>
+                        <select
+                          value={formData.accountId}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, accountId: e.target.value }))}
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
                         >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                          <option value="">Select account</option>
+                          {accountGroups.map((group) => (
+                            <optgroup key={group.label} label={group.label}>
+                              {group.options.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400">Posting Type</label>
+                        <select
+                          value={formData.postingType}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, postingType: e.target.value as ProductMappingFormData['postingType'] }))}
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                        >
+                          {POSTING_TYPES.map((option) => (
+                            <option key={option} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400">Class</label>
+                        <select
+                          value={formData.classId ?? ''}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, classId: e.target.value || undefined }))}
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                        >
+                          <option value="">None</option>
+                          {classGroups.map((group) => (
+                            <optgroup key={group.label} label={group.label}>
+                              {group.options.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-2"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded px-3 py-2"
+                      >
+                        {saving ? 'Saving…' : editingMapping ? 'Save Changes' : 'Create Mapping'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {mappings.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950 p-4 text-xs text-gray-400">
+                    No product mappings yet. Add a mapping to auto-assign accounts when product items are detected in scanned invoices.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
+                    <table className="min-w-full text-left text-xs text-gray-200">
+                      <thead>
+                        <tr className="border-b border-gray-700 bg-gray-800 text-gray-300">
+                          <th className="px-3 py-3">Product</th>
+                          <th className="px-3 py-3">Account</th>
+                          <th className="px-3 py-3">Posting Type</th>
+                          <th className="px-3 py-3">Class</th>
+                          <th className="px-3 py-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mappings.map((mapping) => (
+                          <tr key={mapping.id} className="border-b border-gray-800 hover:bg-gray-900/80">
+                            <td className="px-3 py-3 text-gray-200">{mapping.productName}</td>
+                            <td className="px-3 py-3 text-gray-300">{accountLabel(mapping.accountId)}</td>
+                            <td className={`px-3 py-3 ${mapping.postingType === 'Debit' ? 'text-red-300' : 'text-green-300'}`}>
+                              {mapping.postingType}
+                            </td>
+                            <td className="px-3 py-3 text-gray-300">{classLabel(mapping.classId)}</td>
+                            <td className="px-3 py-3 space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(mapping)}
+                                className="text-xs text-cyan-400 hover:text-cyan-300"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(mapping)}
+                                className="text-xs text-red-400 hover:text-red-300"
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
