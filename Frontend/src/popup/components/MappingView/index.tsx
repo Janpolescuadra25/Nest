@@ -1743,6 +1743,42 @@ export default function MappingView({
         </div>
       )}
 
+      {activeScanEntry && activeScanEntry.lineItems.length > 0 && (isBill || isVendorCredit) && (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-900/80 border-b border-gray-700">
+            <div className="text-xs font-semibold text-gray-300">Scanned Line Items</div>
+            <div className="text-xs text-gray-500">Review all detected invoice items before mapping.</div>
+          </div>
+          <div className="max-h-[250px] overflow-y-auto">
+            <table className="min-w-full text-left text-xs text-gray-200">
+              <thead className="bg-gray-900 text-gray-400">
+                <tr>
+                  <th className="px-3 py-2 font-medium">#</th>
+                  <th className="px-3 py-2 font-medium">Description</th>
+                  <th className="px-3 py-2 font-medium">Qty</th>
+                  <th className="px-3 py-2 font-medium">Unit Price</th>
+                  <th className="px-3 py-2 font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeScanEntry.lineItems.map((lineItem, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
+                    <td className="px-3 py-2 align-top text-gray-300">{index + 1}</td>
+                    <td className="px-3 py-2 align-top text-gray-100 break-words">{lineItem.description ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.quantity ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.unitPrice ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.total ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-3 py-2 border-t border-gray-700 bg-gray-900/80 text-xs text-gray-400">
+            {activeScanEntry.lineItems.length} line item{activeScanEntry.lineItems.length === 1 ? '' : 's'} detected
+          </div>
+        </div>
+      )}
+
       {isBill && renderBillHeader()}
       {isVendorCredit && renderVendorCreditHeader()}
       {(

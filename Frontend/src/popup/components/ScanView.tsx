@@ -125,6 +125,7 @@ export default function ScanView({
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
+  const previousScanModeRef = useRef<ScanMode>(scanMode);
 
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {
@@ -180,6 +181,14 @@ export default function ScanView({
       invoiceFileInputRef.current.value = '';
     }
   }, [scanMode]);
+
+  useEffect(() => {
+    if (previousScanModeRef.current === scanMode) return;
+    previousScanModeRef.current = scanMode;
+    setScanEntries([]);
+    setActiveScanEntryId(null);
+    onClearScanData();
+  }, [scanMode, onClearScanData]);
 
   const activeScanData = useMemo(() => {
     if (!activeScanEntry?.lineItems?.[0]) return null;
