@@ -62,6 +62,8 @@ interface Props {
   activeScanEntryId: string | null;
   setActiveScanEntryId: React.Dispatch<React.SetStateAction<string | null>>;
   activeScanEntry: ScanEntry | null;
+  invoiceFile: File | null;
+  setInvoiceFile: (file: File | null) => void;
 }
 
 export default function ScanView({
@@ -80,6 +82,8 @@ export default function ScanView({
   activeScanEntryId,
   setActiveScanEntryId,
   activeScanEntry,
+  invoiceFile,
+  setInvoiceFile,
 }: Props) {
   // MIGRATION PLAN: preserve the current POS scan contract while moving toward ScanEntry-driven ingestion.
   // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
@@ -93,7 +97,6 @@ export default function ScanView({
   const [excelPreviewLoading, setExcelPreviewLoading] = useState(false);
   const [excelParseLoading, setExcelParseLoading] = useState(false);
   const [excelDataResult, setExcelDataResult] = useState<ExcelDataParseResult | null>(null);
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [invoicePreviewUrl, setInvoicePreviewUrl] = useState<string | null>(null);
   const [invoiceUploading, setInvoiceUploading] = useState(false);
@@ -180,7 +183,7 @@ export default function ScanView({
     if (invoiceFileInputRef.current) {
       invoiceFileInputRef.current.value = '';
     }
-  }, [scanMode]);
+  }, [scanMode, setInvoiceFile]);
 
   useEffect(() => {
     if (previousScanModeRef.current === scanMode) return;

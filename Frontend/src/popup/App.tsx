@@ -51,6 +51,7 @@ export default function App() {
   const [scanRecordId, setScanRecordId] = useState<string | null>(null);
   const [scanEntries, setScanEntries] = useState<ScanEntry[]>([]);
   const [activeScanEntryId, setActiveScanEntryId] = useState<string | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
@@ -375,6 +376,8 @@ export default function App() {
               activeScanEntryId={activeScanEntryId}
               setActiveScanEntryId={setActiveScanEntryId}
               activeScanEntry={activeScanEntry}
+              invoiceFile={invoiceFile}
+              setInvoiceFile={setInvoiceFile}
             />
           )}
           {effectiveTab === 'mappings' && (
