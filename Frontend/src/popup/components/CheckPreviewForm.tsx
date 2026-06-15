@@ -11,6 +11,7 @@ import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template } from '
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
+import { parseNumericValue } from '../lib/parse-numeric-value';
 
 interface CheckLine {
   localId: string;
@@ -301,8 +302,8 @@ export default function CheckPreviewForm({
     const scanFields: Record<string, number> = activeScanEntry
       ? Object.fromEntries(
         Object.entries(activeScanEntry.lineItems?.[0] ?? {})
-          .map(([key, value]) => [key, Number(value)])
-          .filter(([, v]) => !Number.isNaN(v)),
+          .map(([key, value]) => [key, parseNumericValue(value)])
+          .filter(([, v]) => v !== 0),
       ) as Record<string, number>
       : scanData ?? {};
 
@@ -387,6 +388,7 @@ export default function CheckPreviewForm({
     setMemo('');
     setDocNumber('');
     setLines([newLine(), newLine()]);
+    userHasEditedLinesRef.current = false;
     setError(null);
     setSyncResult(null);
     setAutoFillSummary(null);

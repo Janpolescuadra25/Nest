@@ -402,6 +402,7 @@ export default function BillPreviewForm({
     setMemo('');
     setDocNumber('');
     setLines([newLine(), newLine()]);
+    userHasEditedLinesRef.current = false;
     setError(null);
     setSyncResult(null);
     setAutoFillSummary(null);
