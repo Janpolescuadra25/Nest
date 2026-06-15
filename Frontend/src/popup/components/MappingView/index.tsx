@@ -223,6 +223,7 @@ export default function MappingView({
   onboardingStep = 0,
   onHasMappings,
   onSelectedTemplateChange,
+  initialTemplate,
   showExcelImportModal: showExcelImportModalProp,
   setShowExcelImportModal: setShowExcelImportModalProp,
 }: Props) {
