@@ -123,13 +123,15 @@ export default function VendorCreditPreviewForm({
   accountsRef.current = accounts;
   const userHasEditedLinesRef = useRef(false);
 
+  const locId = selectedLocationId || locations[0]?.id || '';
+
   useEffect(() => {
     userHasEditedLinesRef.current = false;
   }, [activeScanEntry]);
 
   useEffect(() => {
     if (!activeScanEntry) return;
-    if (activeScanEntry.source !== 'image' && activeScanEntry.source !== 'pdf') return;
+    if (activeScanEntry.source === 'pos') return;
     if (!selectedTemplate?.columnMappings || !selectedTemplate?.id) return;
     if (!jwt || !locId) return;
     if (userHasEditedLinesRef.current) return;
@@ -170,8 +172,6 @@ export default function VendorCreditPreviewForm({
       void syncAllLists();
     }
   }, [listsLoaded, listsLoading, listsError, syncAllLists]);
-
-  const locId = selectedLocationId || locations[0]?.id || '';
 
   useEffect(() => {
     if (!jwt || !locId) return;
@@ -250,7 +250,7 @@ export default function VendorCreditPreviewForm({
 
   useEffect(() => {
     if (!activeScanEntry) return;
-    if (activeScanEntry.source !== 'image' && activeScanEntry.source !== 'pdf') return;
+    if (activeScanEntry.source === 'pos') return;
     const h = activeScanEntry.header;
     if (!h || !Object.keys(h).length) return;
 
