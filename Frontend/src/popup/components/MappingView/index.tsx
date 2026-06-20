@@ -8,10 +8,11 @@ import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
+import TemplateWizard from '../TemplateWizard';
 import SearchableSelect from '../SearchableSelect';
 import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
-import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
+import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
 import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
 
@@ -264,8 +265,6 @@ export default function MappingView({
   const [vendorCreditDefaults, setVendorCreditDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
   const [vendorCreditDefaultsDirty, setVendorCreditDefaultsDirty] = useState(false);
   const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
-  const [newTemplateType, setNewTemplateType] = useState<keyof typeof TRANSACTION_TYPE_LABELS>('JOURNAL_ENTRY');
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -750,49 +749,8 @@ export default function MappingView({
     setSelectedTemplateId(templateId);
   };
 
-  const resetNewTemplateForm = () => {
-    setShowNewTemplateForm(false);
-    setNewTemplateName('');
-    setNewTemplateType('JOURNAL_ENTRY');
-  };
-
   const openNewTemplateForm = () => {
-    setNewTemplateName('');
-    setNewTemplateType('JOURNAL_ENTRY');
     setShowNewTemplateForm(true);
-  };
-
-  const handleSubmitNewTemplate = async () => {
-    if (!locId || !jwt || !newTemplateName.trim()) return;
-    setTemplatesLoading(true);
-    try {
-      const created = await api.createTemplate(jwt, locId, {
-        name: newTemplateName.trim(),
-        transactionType: newTemplateType,
-      });
-      setTemplates((prev) => [...prev, created]);
-      setSelectedTemplateId(created.id);
-      await loadTemplates();
-      showToast('Template created', 'success');
-      resetNewTemplateForm();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to create template', 'error');
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
-
-  const handleNewTemplateKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (newTemplateName.trim()) {
-        await handleSubmitNewTemplate();
-      }
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      resetNewTemplateForm();
-    }
   };
 
 
@@ -1400,49 +1358,18 @@ export default function MappingView({
         {selectedTemplateHasMappings && (
           <div className="text-xs text-orange-300">Changing type may affect existing mappings.</div>
         )}
-        {showNewTemplateForm && (
-          <div className="space-y-2">
-            <div className="grid gap-2 sm:grid-cols-[1.6fr_1fr]">
-              <input
-                type="text"
-                autoFocus
-                placeholder="Template name"
-                value={newTemplateName}
-                onChange={(e) => setNewTemplateName(e.target.value)}
-                onKeyDown={handleNewTemplateKeyDown}
-                className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
-              />
-              <select
-                value={newTemplateType}
-                onChange={(e) => setNewTemplateType(e.target.value as keyof typeof TRANSACTION_TYPE_LABELS)}
-                className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
-              >
-                {TRANSACTION_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {TRANSACTION_TYPE_LABELS[type]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!newTemplateName.trim() || templatesLoading}
-                onClick={handleSubmitNewTemplate}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
-              >
-                Create
-              </button>
-              <button
-                type="button"
-                onClick={resetNewTemplateForm}
-                className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        <TemplateWizard
+          isOpen={showNewTemplateForm}
+          onClose={() => setShowNewTemplateForm(false)}
+          onTemplateCreated={(template) => {
+            setTemplates((prev) => [...prev, template]);
+            setShowNewTemplateForm(false);
+            setSelectedTemplateId(template.id);
+            showToast('Template created', 'success');
+          }}
+          jwt={jwt}
+          locationId={locId}
+        />
         {templatesError ? (
           <div className="text-xs text-red-400 truncate overflow-hidden text-ellipsis whitespace-nowrap">{templatesError}</div>
         ) : null}

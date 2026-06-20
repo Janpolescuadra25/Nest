@@ -1,4 +1,4 @@
-import type { Location, Mapping, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion } from '../../types';
+import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -309,7 +309,7 @@ export const api = {
   getTemplate: (jwt: string, id: string) =>
     get<Template>(`/api/templates/${id}`, jwt),
 
-  createTemplate: (jwt: string, locationId: string, data: { name: string; transactionType?: string; memoTemplate?: string; docNumberTemplate?: string }) =>
+  createTemplate: (jwt: string, locationId: string, data: { name: string; transactionType?: string; scanMode?: ScanMode; posSystem?: string | null; memoTemplate?: string; docNumberTemplate?: string }) =>
     post<Template>(`/api/locations/${locationId}/templates`, data, jwt),
 
   updateTemplate: (jwt: string, id: string, data: Partial<Template>) =>
