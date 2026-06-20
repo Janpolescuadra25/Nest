@@ -87,6 +87,16 @@ export interface ProductFormData {
   name: string;
 }
 
+export type MatchingRuleType = 'EXACT' | 'CONTAINS' | 'STARTS_WITH' | 'FUZZY' | 'REGEX';
+
+export interface MatchingRule {
+  type: MatchingRuleType;
+  pattern?: string;
+  threshold?: number;
+  direction?: 'input_contains_catalog' | 'catalog_contains_input' | 'either';
+  isActive: boolean;
+}
+
 export interface ProductMapping {
   id: string;
   templateId: string;
@@ -95,6 +105,7 @@ export interface ProductMapping {
   accountId: string;
   postingType: 'Credit' | 'Debit';
   classId: string | null;
+  matchingRule?: MatchingRule | null;
   createdAt: string;
 }
 
@@ -104,6 +115,7 @@ export interface ProductMappingFormData {
   accountId: string;
   postingType: 'Credit' | 'Debit';
   classId?: string;
+  matchingRule?: MatchingRule | null;
 }
 
 export interface ExcelSheetPreview {

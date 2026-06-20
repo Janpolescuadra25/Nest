@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
@@ -17,7 +18,7 @@ async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) 
   return template;
 }
 
-function serializeProductMapping(mapping: { id: string; templateId: string; productId: string; accountId: string; postingType: string; classId: string | null; createdAt: Date; product: { name: string } }) {
+function serializeProductMapping(mapping: { id: string; templateId: string; productId: string; accountId: string; postingType: string; classId: string | null; matchingRule: unknown; createdAt: Date; product: { name: string } }) {
   return {
     id: mapping.id,
     templateId: mapping.templateId,
@@ -26,6 +27,7 @@ function serializeProductMapping(mapping: { id: string; templateId: string; prod
     accountId: mapping.accountId,
     postingType: mapping.postingType,
     classId: mapping.classId,
+    matchingRule: mapping.matchingRule,
     createdAt: mapping.createdAt,
   };
 }
@@ -87,10 +89,11 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
 
 router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
-  const { accountId, postingType, classId } = req.body as {
+  const { accountId, postingType, classId, matchingRule } = req.body as {
     accountId?: string;
     postingType?: string;
     classId?: string | null;
+    matchingRule?: Record<string, unknown> | null;
   };
 
   const mapping = await prisma.productMapping.findUnique({ where: { id } });
@@ -109,6 +112,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
       ...(accountId !== undefined ? { accountId: accountId.trim() } : {}),
       ...(postingType !== undefined ? { postingType } : {}),
       ...(classId !== undefined ? { classId: classId?.trim() || null } : {}),
+      ...(matchingRule !== undefined ? { matchingRule: matchingRule as unknown as Prisma.InputJsonValue } : {}),
     },
     include: { product: { select: { name: true } } },
   });

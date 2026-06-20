@@ -1,5 +1,99 @@
 import { fuzzyMatch, FUZZY_LOW_CONFIDENCE_THRESHOLD } from './fuzzy-matcher';
-import type { ProductMapping, ExtractedLineItem } from '../../types';
+import type { ProductMapping, ExtractedLineItem, MatchingRule } from '../../types';
+
+function normalizeText(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function evaluateProductMatch(
+  inputName: string,
+  catalogName: string,
+  rule?: MatchingRule | null,
+): { matched: boolean; confidence: number; matchType: string } {
+  const normalizedInput = normalizeText(inputName);
+  const normalizedCatalog = normalizeText(catalogName);
+
+  const exactMatch = normalizedInput === normalizedCatalog;
+  if (!rule) {
+    if (exactMatch) {
+      return { matched: true, confidence: 1.0, matchType: 'EXACT' };
+    }
+
+    const fuzzy = fuzzyMatch(inputName, [catalogName]);
+    if (fuzzy && fuzzy.score >= 0.8) {
+      return { matched: true, confidence: fuzzy.score, matchType: 'FUZZY' };
+    }
+
+    if (normalizedInput.includes(normalizedCatalog)) {
+      return { matched: true, confidence: 0.5, matchType: 'SUBSTRING' };
+    }
+
+    return { matched: false, confidence: 0, matchType: 'NONE' };
+  }
+
+  if (!rule.isActive) {
+    return { matched: false, confidence: 0, matchType: 'DISABLED' };
+  }
+
+  const direction = rule.direction ?? 'either';
+  const inputContainsCatalog = normalizedInput.includes(normalizedCatalog);
+  const catalogContainsInput = normalizedCatalog.includes(normalizedInput);
+  const inputStartsWithCatalog = normalizedInput.startsWith(normalizedCatalog);
+  const catalogStartsWithInput = normalizedCatalog.startsWith(normalizedInput);
+
+  switch (rule.type) {
+    case 'EXACT':
+      return exactMatch
+        ? { matched: true, confidence: 1.0, matchType: 'EXACT' }
+        : { matched: false, confidence: 0, matchType: 'EXACT' };
+    case 'CONTAINS': {
+      const matches =
+        direction === 'input_contains_catalog'
+          ? inputContainsCatalog
+          : direction === 'catalog_contains_input'
+            ? catalogContainsInput
+            : inputContainsCatalog || catalogContainsInput;
+      return matches
+        ? { matched: true, confidence: 1.0, matchType: 'CONTAINS' }
+        : { matched: false, confidence: 0, matchType: 'CONTAINS' };
+    }
+    case 'STARTS_WITH': {
+      const matches =
+        direction === 'input_contains_catalog'
+          ? inputStartsWithCatalog
+          : direction === 'catalog_contains_input'
+            ? catalogStartsWithInput
+            : inputStartsWithCatalog || catalogStartsWithInput;
+      return matches
+        ? { matched: true, confidence: 1.0, matchType: 'STARTS_WITH' }
+        : { matched: false, confidence: 0, matchType: 'STARTS_WITH' };
+    }
+    case 'FUZZY': {
+      const threshold = rule.threshold ?? 0.8;
+      const result = fuzzyMatch(inputName, [catalogName]);
+      if (result && result.score >= threshold) {
+        return { matched: true, confidence: result.score, matchType: 'FUZZY' };
+      }
+      return { matched: false, confidence: 0, matchType: 'FUZZY' };
+    }
+    case 'REGEX': {
+      if (!rule.pattern) {
+        return { matched: false, confidence: 0, matchType: 'REGEX' };
+      }
+      try {
+        const regex = new RegExp(rule.pattern, 'i');
+        const matches = regex.test(inputName) || regex.test(catalogName);
+        return matches
+          ? { matched: true, confidence: 1.0, matchType: 'REGEX' }
+          : { matched: false, confidence: 0, matchType: 'REGEX' };
+      } catch {
+        return { matched: false, confidence: 0, matchType: 'REGEX' };
+      }
+    }
+    default:
+      return { matched: false, confidence: 0, matchType: 'UNKNOWN' };
+  }
+}
 
 export function extractLineItems(params: {
   lineItems: Record<string, string>[];
@@ -41,12 +135,6 @@ export function extractLineItems(params: {
         ? (rawProductValue as any).productName ?? (rawProductValue as any).product?.name ?? (rawProductValue as any).name ?? ''
         : rawProductValue ?? ''
     ).trim();
-    console.log('[column-extractor] Product name resolved:', productName, '| source:', JSON.stringify({
-      rawValue: rawProductValue,
-      productName: (rawProductValue as any)?.productName,
-      productDotName: (rawProductValue as any)?.product?.name,
-      name: (rawProductValue as any)?.name,
-    }));
     const amountRaw = String(row[amountColumn] ?? '').trim();
     const amountValue = parseFloat(amountRaw.replace(/[^0-9.-]+/g, ''));
 
@@ -67,35 +155,34 @@ export function extractLineItems(params: {
       : null;
 
     const normalizedProductName = productName.trim().toLowerCase();
-    const exactMatch = normalizedMappings.find((entry) => entry.key === normalizedProductName);
-    let matchedMapping = exactMatch?.mapping ?? null;
-    let fuzzyMatched = false;
-    let lowConfidence = false;
+    const matchEvaluations = normalizedMappings.map((entry) => {
+      const result = evaluateProductMatch(productName, entry.originalKey, entry.mapping.matchingRule);
+      return {
+        mapping: entry.mapping,
+        ...result,
+      };
+    });
 
-    if (!matchedMapping && normalizedMappings.length > 0) {
-      const candidates = normalizedMappings.map((entry) => entry.originalKey);
-      const result = fuzzyMatch(productName, candidates);
-      if (result) {
-        matchedMapping = normalizedMappings[result.index].mapping;
-        fuzzyMatched = true;
-        lowConfidence = result.score < FUZZY_LOW_CONFIDENCE_THRESHOLD;
+    const bestMatch = matchEvaluations.reduce((best, current) => {
+      if (!current.matched) return best;
+      if (!best.matched) return current;
+      if (current.confidence > best.confidence) return current;
+      if (current.confidence === best.confidence) {
+        const precedence = ['EXACT', 'CONTAINS', 'STARTS_WITH', 'REGEX', 'FUZZY', 'SUBSTRING'];
+        const currentRank = precedence.indexOf(current.matchType);
+        const bestRank = precedence.indexOf(best.matchType);
+        return currentRank < bestRank ? current : best;
       }
-    }
+      return best;
+    }, { matched: false, confidence: 0, matchType: 'NONE', mapping: null as ProductMapping | null });
 
-    // Substring fallback: check if any mapping key is contained in the product name
-    if (!matchedMapping && normalizedMappings.length > 0) {
-      const substringMatch = normalizedMappings.find((entry) =>
-        normalizedProductName.includes(entry.key)
-      );
-      if (substringMatch) {
-        matchedMapping = substringMatch.mapping;
-      }
-    }
-
+    const matchedMapping = bestMatch.mapping;
     const accountId = matchedMapping?.accountId ?? '';
     const accountName = '';
     const postingType = matchedMapping?.postingType ?? defaultPostingType;
     const matched = Boolean(matchedMapping);
+    const fuzzyMatched = bestMatch.matchType === 'FUZZY';
+    const lowConfidence = fuzzyMatched ? bestMatch.confidence < FUZZY_LOW_CONFIDENCE_THRESHOLD : false;
 
     acc.push({
       productName,

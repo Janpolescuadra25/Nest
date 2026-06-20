@@ -272,6 +272,7 @@ model ProductMapping {
   accountId   String
   postingType String   @default("Credit")
   classId     String?
+  matchingRule Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
