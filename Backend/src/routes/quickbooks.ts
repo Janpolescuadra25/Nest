@@ -4,7 +4,7 @@ import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
-import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem } from '../types';
+import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem, BillPaymentLine } from '../types';
 import { Prisma, SyncType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
@@ -1188,6 +1188,104 @@ async function syncSingleBill(
   }
 }
 
+async function syncSingleBillPayment(
+  userId: string,
+  scanRecordId: string | undefined,
+  vendorRef: { value: string; name?: string },
+  payType: 'Cash' | 'Check' | 'CreditCard' | 'Other',
+  txnDate: string,
+  totalAmt: number,
+  lines: BillPaymentLine[],
+  bankAccountRef: { value: string; name?: string } | undefined,
+  checkNum: string | undefined,
+  skipDedupCheck = false,
+): Promise<SyncSingleResult> {
+  const syncType = SyncType.BILL_PAYMENT;
+  const requestHash = hashSyncRequest(syncType, { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum });
+
+  const attemptCount = scanRecordId
+    ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
+    : (await countSyncAttempts(userId, syncType, requestHash)) + 1;
+
+  const existingSync = scanRecordId
+    ? await prisma.syncLog.findFirst({ where: { scanRecordId, status: 'SUCCESS' } })
+    : null;
+
+  if (existingSync) {
+    return {
+      status: 'SKIPPED',
+      reason: 'already_synced',
+      qbJournalEntryId: existingSync.qbJournalEntryId ?? undefined,
+    };
+  }
+
+  if (!skipDedupCheck) {
+    const existingDuplicate = await findDuplicateSync(userId, syncType, requestHash);
+    if (existingDuplicate) {
+      return {
+        status: 'SKIPPED',
+        reason: 'duplicate_request',
+        qbJournalEntryId: existingDuplicate.qbJournalEntryId ?? undefined,
+      };
+    }
+  }
+
+  try {
+    const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
+      qbService.createBillPayment({ vendorRef, payType, txnDate, totalAmt, lines, realmId, accessToken, bankAccountRef, checkNum }),
+    );
+
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      qbJournalEntryId: result.id,
+      requestHash,
+      status: 'SUCCESS',
+      attemptCount,
+      requestPayload: { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum } as unknown as Prisma.JsonObject,
+    });
+
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'SYNCED' },
+      });
+    }
+
+    return {
+      status: 'SYNCED',
+      qbJournalEntryId: result.id,
+      totalAmount: result.totalAmt,
+      txnDate: result.txnDate,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    const errorType = err instanceof QBApiError ? err.category : 'FATAL';
+
+    await createSyncLogEntry({
+      userId,
+      syncType,
+      scanRecordId: scanRecordId ?? undefined,
+      requestHash,
+      status: 'FAILED',
+      attemptCount,
+      requestPayload: { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum } as unknown as Prisma.JsonObject,
+      errorMessage: message,
+      errorType,
+    }).catch(console.error);
+
+    if (scanRecordId) {
+      await prisma.scanRecord.update({
+        where: { id: scanRecordId },
+        data: { status: 'FAILED' },
+      }).catch(console.error);
+    }
+
+    return { status: 'FAILED', errorType, errorMessage: message };
+  }
+}
+
 // ── POST /api/quickbooks/sync-batch ──────────────────────────────────────────
 router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1764,21 +1862,54 @@ router.get('/vendor-credits', authenticate, requireFeaturePermission('sync', 'ex
 // ── POST /api/quickbooks/bill-payment ────────────────────────────────────────
 router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(billPaymentSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const body = req.body as CreateBillPaymentInput;
-    const billPayment = await qbService.callQB(req.user!.userId, ({ accessToken, realmId }) =>
-      qbService.createBillPayment({ ...body, realmId, accessToken }),
+    const body = req.body as CreateBillPaymentInput & { scanRecordId?: string; skipDedupCheck?: boolean };
+    const { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum, scanRecordId, skipDedupCheck } = body;
+
+    const result = await syncSingleBillPayment(
+      req.user!.userId,
+      scanRecordId,
+      vendorRef,
+      payType,
+      txnDate,
+      totalAmt,
+      lines,
+      bankAccountRef,
+      checkNum,
+      skipDedupCheck ?? false,
     );
 
-    res.json({
-      message: 'Bill Payment created successfully',
-      billPaymentId: billPayment.id,
-      txnDate: billPayment.txnDate,
-      totalAmount: billPayment.totalAmt,
-    });
+    if (result.status === 'SYNCED') {
+      res.json({
+        message: 'Bill Payment created successfully',
+        billPaymentId: result.qbJournalEntryId,
+        totalAmount: result.totalAmount,
+        txnDate: result.txnDate,
+      });
+      return;
+    }
+
+    if (result.status === 'SKIPPED') {
+      if (result.reason === 'already_synced') {
+        res.json({ success: true, skipped: true, message: 'Already synced' });
+        return;
+      }
+      if (result.reason === 'duplicate_request') {
+        res.status(409).json({ error: 'Duplicate bill payment detected', reason: result.reason });
+        return;
+      }
+    }
+
+    if (result.status === 'FAILED') {
+      console.error('[QB] bill payment error:', result.errorMessage);
+      throw new AppError(process.env.NODE_ENV !== 'production' ? result.errorMessage ?? 'An unexpected error occurred. Please try again.' : 'An unexpected error occurred. Please try again.', 500);
+    }
+
+    throw new AppError('Unexpected bill payment result', 500);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] bill payment error:', message);
-    throw new AppError('Failed to create bill payment', 500);
+    throw new AppError(process.env.NODE_ENV !== 'production' ? message : 'An unexpected error occurred. Please try again.', 500);
   }
 }));
 

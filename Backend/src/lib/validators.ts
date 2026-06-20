@@ -88,6 +88,7 @@ export const billSchema = z.object({
     }).optional(),
   })).min(1, 'At least one line item is required'),
   scanRecordId: z.string().optional(),
+  skipDedupCheck: z.boolean().optional(),
 });
 
 export const chequeSchema = z.object({
@@ -171,6 +172,8 @@ export const billPaymentSchema = z.object({
       txnType: z.enum(['Bill', 'VendorCredit']),
     }),
   })).min(1, 'At least one linked transaction is required'),
+  scanRecordId: z.string().optional(),
+  skipDedupCheck: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   if ((data.payType === 'Check' || data.payType === 'CreditCard') && !data.bankAccountRef?.value) {
     ctx.addIssue({

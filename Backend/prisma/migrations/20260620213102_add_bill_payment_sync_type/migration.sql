@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "SyncType" ADD VALUE 'BILL_PAYMENT';
