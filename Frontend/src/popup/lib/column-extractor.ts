@@ -3,7 +3,7 @@ import type { ProductMapping, ExtractedLineItem } from '../../types';
 
 export function extractLineItems(params: {
   lineItems: Record<string, string>[];
-  columnMappings: Record<string, unknown>;
+  columnMappings: Record<string, unknown> | null;
   productMappings: ProductMapping[];
   defaultPostingType: 'Credit' | 'Debit';
 }): ExtractedLineItem[] {
@@ -13,6 +13,10 @@ export function extractLineItems(params: {
     productMappings,
     defaultPostingType,
   } = params;
+
+  if (!columnMappings) {
+    return [];
+  }
 
   const productColumn = String(columnMappings.productColumn ?? '').trim();
   const amountColumn = String(columnMappings.amountColumn ?? '').trim();
@@ -31,7 +35,18 @@ export function extractLineItems(params: {
   }));
 
   return lineItems.reduce<ExtractedLineItem[]>((acc, row) => {
-    const productName = String(row[productColumn] ?? '').trim();
+    const rawProductValue = row[productColumn] as unknown;
+    const productName = String(
+      rawProductValue && typeof rawProductValue === 'object' && rawProductValue !== null
+        ? (rawProductValue as any).productName ?? (rawProductValue as any).product?.name ?? (rawProductValue as any).name ?? ''
+        : rawProductValue ?? ''
+    ).trim();
+    console.log('[column-extractor] Product name resolved:', productName, '| source:', JSON.stringify({
+      rawValue: rawProductValue,
+      productName: (rawProductValue as any)?.productName,
+      productDotName: (rawProductValue as any)?.product?.name,
+      name: (rawProductValue as any)?.name,
+    }));
     const amountRaw = String(row[amountColumn] ?? '').trim();
     const amountValue = parseFloat(amountRaw.replace(/[^0-9.-]+/g, ''));
 
@@ -64,6 +79,16 @@ export function extractLineItems(params: {
         matchedMapping = normalizedMappings[result.index].mapping;
         fuzzyMatched = true;
         lowConfidence = result.score < FUZZY_LOW_CONFIDENCE_THRESHOLD;
+      }
+    }
+
+    // Substring fallback: check if any mapping key is contained in the product name
+    if (!matchedMapping && normalizedMappings.length > 0) {
+      const substringMatch = normalizedMappings.find((entry) =>
+        normalizedProductName.includes(entry.key)
+      );
+      if (substringMatch) {
+        matchedMapping = substringMatch.mapping;
       }
     }
 

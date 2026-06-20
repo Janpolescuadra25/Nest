@@ -42,6 +42,8 @@ export interface Template {
   locationId: string;
   name: string;
   transactionType: string;
+  scanMode?: ScanMode;
+  posSystem?: string | null;
   lineType: string;
   version: number;
   defaults: Record<string, unknown> | null;
@@ -126,12 +128,13 @@ export interface ScanEntry {
   lineItems: Record<string, string>[];
 }
 
+export type ScanMode = 'IMAGE' | 'EXCEL' | 'POS';
+export type ScanSource = 'pos' | 'excel' | 'image';
+
 export interface ExtractedInvoice {
   header: Record<string, string>;
   lineItems: Record<string, string>[];
 }
-
-export type ScanMode = 'pos' | 'excel' | 'image';
 
 export interface ExcelDataParseResult {
   transactions: {

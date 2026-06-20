@@ -34,7 +34,11 @@ enum AdminRequestStatus {
   APPROVED
   REJECTED
 }
-
+enum ScanMode {
+  IMAGE
+  EXCEL
+  POS
+}
 // ── Core Models ───────────────────────────────────────────────────────────────
 
 model User {
@@ -198,6 +202,8 @@ model Template {
   locationId        String
   name              String
   transactionType   String          @default("JOURNAL_ENTRY")
+  scanMode          ScanMode        @default(IMAGE)
+  posSystem         String?
   lineType          String          @default("journal_entry")
   version           Int             @default(1)
   defaults          Json?

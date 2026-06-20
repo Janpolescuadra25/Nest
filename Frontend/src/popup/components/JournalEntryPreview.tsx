@@ -537,6 +537,12 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     }
   }, [jwt, effectiveDisplayLines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced, consolidate]);
 
+  const handleForceSync = useCallback(() => {
+    if (!isBalanced) return;
+    setDuplicateWarning(null);
+    void handleSync();
+  }, [handleSync, isBalanced]);
+
   if (!status.connected) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">

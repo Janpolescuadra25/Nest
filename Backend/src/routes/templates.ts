@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import xlsx from 'xlsx';
-import { Prisma } from '@prisma/client';
+import { Prisma, ScanMode } from '@prisma/client';
 import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
@@ -13,6 +13,23 @@ const VALID_TRANSACTION_TYPES = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'BILL
 function validateTransactionType(transactionType?: string): void {
   if (transactionType !== undefined && !VALID_TRANSACTION_TYPES.includes(transactionType as typeof VALID_TRANSACTION_TYPES[number])) {
     throw new AppError('Invalid transactionType. Must be one of: JOURNAL_ENTRY, BILL, VENDOR_CREDIT, BILL_PAYMENT, CHEQUE', 400);
+  }
+}
+
+function validateModeTypeCompatibility(scanMode: string, transactionType: string): void {
+  const compatibleModes: Record<string, string[]> = {
+    POS: ['JOURNAL_ENTRY'],
+    IMAGE: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
+    EXCEL: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
+  };
+
+  const allowed = compatibleModes[scanMode];
+  if (!allowed || !allowed.includes(transactionType)) {
+    throw new AppError(
+      `Incompatible scan mode "${scanMode}" with transaction type "${transactionType}". ` +
+      `POS mode only supports JOURNAL_ENTRY. IMAGE and EXCEL support all types.`,
+      400,
+    );
   }
 }
 
@@ -41,7 +58,13 @@ async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) 
 
 router.get('/', requireFeaturePermission('templates', 'read'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const locationId = String(req.query.locationId || '');
-  const where = locationId ? { locationId, location: { ...locationFilter(req.user!) } } : { location: { ...locationFilter(req.user!) } };
+  const scanModeFilter = String(req.query.scanMode || '').trim();
+  const where: any = locationId ? { locationId, location: { ...locationFilter(req.user!) } } : { location: { ...locationFilter(req.user!) } };
+
+  if (scanModeFilter) {
+    Object.assign(where, { scanMode: scanModeFilter as any });
+  }
+
   const templates = await prisma.template.findMany({
     where,
     orderBy: { createdAt: 'desc' },
@@ -54,6 +77,8 @@ router.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(as
     locationId?: string;
     name?: string;
     transactionType?: string;
+    scanMode?: string;
+    posSystem?: string | null;
     memoTemplate?: string;
     docNumberTemplate?: string;
     defaults?: Record<string, unknown> | null;
@@ -65,6 +90,9 @@ router.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(as
   }
 
   validateTransactionType(body.transactionType);
+  if (body.scanMode) {
+    validateModeTypeCompatibility(body.scanMode, body.transactionType ?? 'JOURNAL_ENTRY');
+  }
   await getLocationOrFail(body.locationId, req.user);
 
   const template = await prisma.template.create({
@@ -72,6 +100,8 @@ router.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(as
       locationId: body.locationId,
       name: body.name.trim(),
       ...(body.transactionType && { transactionType: body.transactionType as string }),
+      scanMode: (body.scanMode ?? 'IMAGE') as ScanMode,
+      posSystem: body.posSystem ?? null,
       memoTemplate: body.memoTemplate ?? null,
       docNumberTemplate: body.docNumberTemplate ?? null,
       ...(body.defaults !== undefined && { defaults: body.defaults as unknown as Prisma.InputJsonValue }),
@@ -243,6 +273,8 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), asyncHandler(
   const template = await getTemplateOrFail(String(req.params.id), req.user);
   const body = req.body as {
     name?: string;
+    scanMode?: string;
+    posSystem?: string | null;
     transactionType?: string;
     memoTemplate?: string | null;
     docNumberTemplate?: string | null;
@@ -252,17 +284,26 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), asyncHandler(
   };
 
   validateTransactionType(body.transactionType);
+  if (body.scanMode) {
+    validateModeTypeCompatibility(body.scanMode, template.transactionType);
+  }
+
+  const updateData: any = {
+    ...(body.name !== undefined && { name: body.name.trim() }),
+    // transactionType is intentionally NOT updatable — locked at creation
+    ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
+    ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
+    ...(body.isActive !== undefined && { isActive: body.isActive }),
+    ...(body.defaults !== undefined && { defaults: body.defaults as unknown as Prisma.InputJsonValue }),
+    ...(body.columnMappings !== undefined && { columnMappings: body.columnMappings as unknown as Prisma.InputJsonValue }),
+  };
+
+  if (body.scanMode !== undefined) updateData.scanMode = body.scanMode as ScanMode;
+  if (body.posSystem !== undefined) updateData.posSystem = body.posSystem;
+
   const updated = await prisma.template.update({
     where: { id: template.id },
-    data: {
-      ...(body.name !== undefined && { name: body.name.trim() }),
-      // transactionType is intentionally NOT updatable — locked at creation
-      ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
-      ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
-      ...(body.isActive !== undefined && { isActive: body.isActive }),
-      ...(body.defaults !== undefined && { defaults: body.defaults as unknown as Prisma.InputJsonValue }),
-      ...(body.columnMappings !== undefined && { columnMappings: body.columnMappings as unknown as Prisma.InputJsonValue }),
-    },
+    data: updateData,
   });
 
   res.json(updated);
@@ -293,6 +334,8 @@ export function createLocationTemplateRouter() {
     const body = req.body as {
       name?: string;
       transactionType?: string;
+      scanMode?: string;
+      posSystem?: string | null;
       memoTemplate?: string;
       docNumberTemplate?: string;
       defaults?: Record<string, unknown> | null;
@@ -304,11 +347,16 @@ export function createLocationTemplateRouter() {
     }
 
     validateTransactionType(body.transactionType);
+    if (body.scanMode) {
+      validateModeTypeCompatibility(body.scanMode, body.transactionType ?? 'JOURNAL_ENTRY');
+    }
     const template = await prisma.template.create({
       data: {
         locationId,
         name: body.name.trim(),
         ...(body.transactionType && { transactionType: body.transactionType as string }),
+        scanMode: (body.scanMode ?? 'IMAGE') as ScanMode,
+        posSystem: body.posSystem ?? null,
         memoTemplate: body.memoTemplate ?? null,
         docNumberTemplate: body.docNumberTemplate ?? null,
         ...(body.defaults !== undefined && { defaults: body.defaults as unknown as Prisma.InputJsonValue }),

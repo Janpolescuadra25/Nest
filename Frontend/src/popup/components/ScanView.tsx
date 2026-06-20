@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { ScanData, ScanEntry, ScanMode, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
+import type { ScanData, ScanEntry, ScanSource, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
 import { api } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
 import { parseNumericValue } from '../lib/parse-numeric-value';
@@ -68,7 +68,7 @@ export default function ScanView({
   // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
   // - New ScanEntry records are stored locally in ScanView for both POS and Excel scan modes.
   // - activeScanEntry.lineItems[0] is converted into numeric `scanData` for legacy mapping bindings.
-  const [scanMode, setScanMode] = useState<ScanMode>('pos');
+  const [scanMode, setScanMode] = useState<ScanSource>('pos');
   const [uploadedExcelFile, setUploadedExcelFile] = useState<File | null>(null);
   const [excelPreviewSheets, setExcelPreviewSheets] = useState<ExcelParseResult['sheets']>([]);
   const [excelPreviewSheetName, setExcelPreviewSheetName] = useState<string>('');
@@ -107,7 +107,7 @@ export default function ScanView({
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
-  const previousScanModeRef = useRef<ScanMode>(scanMode);
+  const previousScanModeRef = useRef<ScanSource>(scanMode);
   const isInitialMount = useRef(true);
 
   // Load cached scan data and detect POS tab on mount

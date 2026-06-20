@@ -8,6 +8,7 @@ import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
+import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
 import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
@@ -265,6 +266,7 @@ export default function MappingView({
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const templateReadyRef = useRef(false);
 
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
   const [importWarning, setImportWarning] = useState<string | null>(null);
@@ -362,6 +364,27 @@ export default function MappingView({
   const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
+  const activeScanMode = useMemo(() => {
+    if (selectedTemplate?.scanMode) return selectedTemplate.scanMode;
+    if (activeScanEntry?.source) return sourceToScanMode(activeScanEntry.source);
+    return 'IMAGE' as const;
+  }, [selectedTemplate?.scanMode, activeScanEntry?.source]);
+  const hasProductNameColumn = useMemo(() => {
+    if (!selectedTemplate?.columnMappings) return false;
+    try {
+      const mappings = typeof selectedTemplate.columnMappings === 'string'
+        ? JSON.parse(selectedTemplate.columnMappings)
+        : selectedTemplate.columnMappings;
+
+      return Object.values(mappings).some((v: any) => v && typeof v === 'string' && (
+        v === 'productName' ||
+        v === 'productColumn' ||
+        v.toLowerCase().includes('product')
+      ));
+    } catch {
+      return false;
+    }
+  }, [selectedTemplate?.columnMappings]);
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
   const isCheque = selectedTemplate?.transactionType === 'CHEQUE';
@@ -634,11 +657,17 @@ export default function MappingView({
     if (!selectedTemplate) {
       setMemoTemplate('');
       setDocNumberTemplate('');
+      templateReadyRef.current = false;
       return;
     }
     setMemoTemplate(selectedTemplate.memoTemplate ?? '');
     setDocNumberTemplate(selectedTemplate.docNumberTemplate ?? '');
+    templateReadyRef.current = true;
   }, [selectedTemplate]);
+
+  useEffect(() => {
+    templateReadyRef.current = false;
+  }, [selectedTemplateId, activeScanEntry?.id]);
 
   const debouncedSaveTemplates = useCallback((memo: string, doc: string) => {
     if (!selectedTemplateId || !jwt) return;
@@ -671,12 +700,13 @@ export default function MappingView({
   }, [jwt, locId, selectedTemplateId]);
 
   useEffect(() => {
+    if (!templateReadyRef.current) return;
     if (!locId || !selectedTemplateId) {
       setLocalMappings([]);
       return;
     }
     void loadMappings();
-  }, [loadMappings, locId, selectedTemplateId]);
+  }, [loadMappings, locId, selectedTemplateId, selectedTemplate]);
 
   const handleTemplateChange = (templateId: string) => {
     if (localMappings.some((mapping) => mapping.isDirty)) {
@@ -1264,6 +1294,15 @@ export default function MappingView({
           </button>
         </div>
       )}
+      {activeScanEntry && (
+        <div className="flex items-center gap-2 px-3 py-1.5 mb-3 rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-800">
+          <span className="font-medium">Scan Mode:</span>
+          <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{getScanModeDisplay(activeScanMode)}</span>
+          {selectedTemplate?.posSystem && (
+            <span className="text-blue-600 inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap">({selectedTemplate.posSystem})</span>
+          )}
+        </div>
+      )}
       <MappingFilters
         locId={locId}
         locations={locations}
@@ -1309,7 +1348,7 @@ export default function MappingView({
               </button>
             )}
             {selectedTemplate && !showNewTemplateForm && (
-              <div className="text-xs text-gray-400 px-3 py-1.5 rounded border border-gray-700">
+              <div className="text-xs text-gray-400 px-3 py-1.5 rounded border border-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
                 {TRANSACTION_TYPE_LABELS[selectedTemplate.transactionType] ?? selectedTemplate.transactionType}
               </div>
             )}
@@ -1372,7 +1411,7 @@ export default function MappingView({
           </div>
         )}
         {templatesError ? (
-          <div className="text-xs text-red-400">{templatesError}</div>
+          <div className="text-xs text-red-400 truncate overflow-hidden text-ellipsis whitespace-nowrap">{templatesError}</div>
         ) : null}
         {templatesLoading ? (
           <div className="text-xs text-gray-400">Loading templates…</div>
@@ -1473,7 +1512,7 @@ export default function MappingView({
                     {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.rows ?? []).map((row, rowIndex) => (
                       <tr key={rowIndex} className="odd:bg-gray-950 even:bg-gray-900">
                         {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers ?? []).map((header) => (
-                          <td key={header} className="px-2 py-2 text-gray-300 truncate max-w-[10rem]">{row[header]}</td>
+                          <td key={header} className="px-2 py-2 text-gray-300 truncate max-w-[10rem] overflow-hidden text-ellipsis whitespace-nowrap">{row[header]}</td>
                         ))}
                       </tr>
                     ))}
@@ -1508,7 +1547,7 @@ export default function MappingView({
           <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 w-80 space-y-3">
             <h3 className="text-sm font-semibold text-white">Import Template</h3>
             <p className="text-xs text-gray-400">
-              Import from: <span className="text-gray-200">{pendingImport.sourceLocationName || 'Unknown'}</span>
+              Import from: <span className="text-gray-200 inline-block max-w-full truncate overflow-hidden text-ellipsis whitespace-nowrap">{pendingImport.sourceLocationName || 'Unknown'}</span>
             </p>
             <div className="text-xs text-gray-400 space-y-1">
               <p>{pendingImport.mappings.length} mappings, {pendingImport.rules.length} rules</p>
@@ -1599,11 +1638,11 @@ export default function MappingView({
             {mappingSuggestions.map((suggestion) => (
               <div key={suggestion.sourceField} className="border border-gray-700 rounded-lg p-3 bg-gray-800">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm font-medium text-white">{suggestion.sourceField}</div>
-                  <span className="text-xs text-gray-400">{suggestion.postingType}</span>
+                  <div className="text-sm font-medium text-white overflow-hidden text-ellipsis whitespace-nowrap">{suggestion.sourceField}</div>
+                  <span className="text-xs text-gray-400 overflow-hidden text-ellipsis whitespace-nowrap">{suggestion.postingType}</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-1">Account: {suggestion.accountName || suggestion.accountHint}</div>
-                <div className="text-xs text-gray-500 mt-1">{suggestion.reason}</div>
+                <div className="text-xs text-gray-400 mt-1 overflow-hidden text-ellipsis whitespace-nowrap">Account: {suggestion.accountName || suggestion.accountHint}</div>
+                <div className="text-xs text-gray-500 mt-1 overflow-hidden line-clamp-2">{suggestion.reason}</div>
               </div>
             ))}
           </div>
@@ -1705,11 +1744,11 @@ export default function MappingView({
         )}
       </div>
 
-      {(isBill || isVendorCredit) && selectedTemplateId && (
+      {isSectionVisible('productMatching', activeScanMode, selectedTemplate?.transactionType, { hasProductNameColumn }) && selectedTemplateId && (
         <ProductMappingSection jwt={jwt} templateId={selectedTemplateId} />
       )}
 
-      {(isBill || isVendorCredit) && selectedTemplateId && (
+      {isSectionVisible('columnMapping', activeScanMode, selectedTemplate?.transactionType) && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           <button
             type="button"
@@ -1787,10 +1826,10 @@ export default function MappingView({
                 {activeScanEntry.lineItems.map((lineItem, index) => (
                   <tr key={index} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
                     <td className="px-3 py-2 align-top text-gray-300">{index + 1}</td>
-                    <td className="px-3 py-2 align-top text-gray-100 break-words">{lineItem.description ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.quantity ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.unitPrice ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-300">{lineItem.total ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-100 overflow-hidden line-clamp-2">{lineItem.description ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.quantity ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.unitPrice ?? ''}</td>
+                    <td className="px-3 py-2 align-top text-gray-300 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.total ?? ''}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1832,7 +1871,7 @@ export default function MappingView({
                         .map((item) => item[field])
                         .filter((v) => v && String(v).trim() !== '')
                         .map((v, i, arr) => (
-                          <span key={i}>
+                          <span key={i} className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
                             {String(v)}
                             {i < arr.length - 1 ? ', ' : ''}
                           </span>
@@ -1846,8 +1885,8 @@ export default function MappingView({
         </div>
       )}
 
-      {isBill && renderBillHeader()}
-      {isVendorCredit && renderVendorCreditHeader()}
+      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isBill && renderBillHeader()}
+      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isVendorCredit && renderVendorCreditHeader()}
       {(
         loading ? (
           <DashboardSkeleton type="list" rows={3} />
