@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { useQBContext } from '../../contexts/QBContext';
-import type { Product, ProductMapping, ProductMappingFormData } from '../../../types';
+import type { Product, ProductMapping, ProductMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
 
 interface Props {
   jwt: string;
@@ -27,6 +27,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
     postingType: 'Credit',
     classId: undefined,
   });
+  const [useRuleEnabled, setUseRuleEnabled] = useState(false);
+  const [ruleType, setRuleType] = useState<MatchingRuleType>('EXACT');
+  const [ruleThreshold, setRuleThreshold] = useState(0.80);
+  const [rulePattern, setRulePattern] = useState('');
+  const [ruleDirection, setRuleDirection] = useState<'input_contains_catalog' | 'catalog_contains_input' | 'either'>('either');
 
   useEffect(() => {
     if (!templateId) {
@@ -113,6 +118,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
       postingType: 'Credit',
       classId: undefined,
     });
+    setUseRuleEnabled(false);
+    setRuleType('EXACT');
+    setRuleThreshold(0.80);
+    setRulePattern('');
+    setRuleDirection('either');
     setError(null);
   };
 
@@ -130,6 +140,19 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
       postingType: mapping.postingType,
       classId: mapping.classId ?? undefined,
     });
+    if (mapping.matchingRule) {
+      setUseRuleEnabled(true);
+      setRuleType(mapping.matchingRule.type);
+      setRuleThreshold(mapping.matchingRule.threshold ?? 0.80);
+      setRulePattern(mapping.matchingRule.pattern ?? '');
+      setRuleDirection(mapping.matchingRule.direction ?? 'either');
+    } else {
+      setUseRuleEnabled(false);
+      setRuleType('EXACT');
+      setRuleThreshold(0.80);
+      setRulePattern('');
+      setRuleDirection('either');
+    }
     setError(null);
     setShowForm(true);
   };
@@ -156,15 +179,20 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
     setError(null);
 
     try {
+      const matchingRule: MatchingRule | null = useRuleEnabled
+        ? { type: ruleType, threshold: ruleThreshold, pattern: rulePattern || undefined, direction: ruleDirection, isActive: true }
+        : null;
+
       if (editingMapping) {
         const updated = await api.updateProductMapping(jwt, editingMapping.id, {
           accountId: formData.accountId,
           postingType: formData.postingType,
           classId: formData.classId || undefined,
+          matchingRule,
         });
         setMappings((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       } else {
-        const created = await api.createProductMapping(jwt, formData);
+        const created = await api.createProductMapping(jwt, { ...formData, matchingRule });
         setMappings((prev) => [...prev, created].sort((a, b) => a.productName.localeCompare(b.productName)));
       }
       resetForm();
@@ -302,6 +330,75 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                       </div>
                     </div>
 
+                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-700">
+                      <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                        <input type="checkbox" checked={useRuleEnabled} onChange={(e) => setUseRuleEnabled(e.target.checked)} className="rounded" />
+                        Custom matching rule
+                      </label>
+                    </div>
+
+                    {useRuleEnabled && (
+                      <div className="grid gap-3 sm:grid-cols-2 mt-3">
+                        <div>
+                          <label className="text-xs text-gray-400">Rule Type</label>
+                          <select
+                            value={ruleType}
+                            onChange={(e) => setRuleType(e.target.value as MatchingRuleType)}
+                            className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                          >
+                            <option value="EXACT">Exact Match</option>
+                            <option value="CONTAINS">Contains</option>
+                            <option value="STARTS_WITH">Starts With</option>
+                            <option value="FUZZY">Fuzzy Match</option>
+                            <option value="REGEX">Regex</option>
+                          </select>
+                        </div>
+
+                        {(ruleType === 'CONTAINS' || ruleType === 'STARTS_WITH') && (
+                          <div>
+                            <label className="text-xs text-gray-400">Direction</label>
+                            <select
+                              value={ruleDirection}
+                              onChange={(e) => setRuleDirection(e.target.value as any)}
+                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                            >
+                              <option value="either">Either direction</option>
+                              <option value="input_contains_catalog">Input contains catalog</option>
+                              <option value="catalog_contains_input">Catalog contains input</option>
+                            </select>
+                          </div>
+                        )}
+
+                        {ruleType === 'FUZZY' && (
+                          <div>
+                            <label className="text-xs text-gray-400">Threshold ({ruleThreshold.toFixed(2)})</label>
+                            <input
+                              type="range"
+                              min="0.50"
+                              max="1.00"
+                              step="0.05"
+                              value={ruleThreshold}
+                              onChange={(e) => setRuleThreshold(parseFloat(e.target.value))}
+                              className="mt-1 w-full"
+                            />
+                          </div>
+                        )}
+
+                        {ruleType === 'REGEX' && (
+                          <div>
+                            <label className="text-xs text-gray-400">Pattern</label>
+                            <input
+                              type="text"
+                              value={rulePattern}
+                              onChange={(e) => setRulePattern(e.target.value)}
+                              placeholder="e.g. ^COCA-\\d+"
+                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2 justify-end">
                       <button
                         type="button"
@@ -335,6 +432,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                           <th className="px-3 py-3">Account</th>
                           <th className="px-3 py-3">Posting Type</th>
                           <th className="px-3 py-3">Class</th>
+                          <th className="px-3 py-3">Match Rule</th>
                           <th className="px-3 py-3">Actions</th>
                         </tr>
                       </thead>
@@ -347,6 +445,22 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                               {mapping.postingType}
                             </td>
                             <td className="px-3 py-3 text-gray-300">{classLabel(mapping.classId)}</td>
+                            <td className="px-3 py-2">
+                              {mapping.matchingRule ? (
+                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                                  mapping.matchingRule.type === 'EXACT' ? 'bg-green-900/50 text-green-300' :
+                                  mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-900/50 text-amber-300' :
+                                  mapping.matchingRule.type === 'REGEX' ? 'bg-purple-900/50 text-purple-300' :
+                                  mapping.matchingRule.type === 'CONTAINS' ? 'bg-blue-900/50 text-blue-300' :
+                                  mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-cyan-900/50 text-cyan-300' :
+                                  'bg-gray-700 text-gray-300'
+                                }`}>
+                                  {mapping.matchingRule.type}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-500">Default</span>
+                              )}
+                            </td>
                             <td className="px-3 py-3 space-x-2">
                               <button
                                 type="button"
