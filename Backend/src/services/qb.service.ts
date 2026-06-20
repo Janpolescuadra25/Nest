@@ -143,10 +143,11 @@ async function getTerms(realmId: string, accessToken: string): Promise<QBTerm[]>
 }
 
 async function getOutstandingBills(realmId: string, accessToken: string): Promise<OutstandingBill[]> {
-  const query = "SELECT Id, TxnDate, DueDate, TotalAmt, Balance, VendorRef, DocNumber FROM Bill WHERE Balance > 0 ORDERBY TxnDate ASC MAXRESULTS 1000";
+  const query = "SELECT Id, TxnDate, DueDate, TotalAmt, Balance, VendorRef, DocNumber FROM Bill ORDERBY TxnDate ASC MAXRESULTS 1000";
   const result = await qbQuery<{ Bill: Record<string, unknown>[] | Record<string, unknown> }>(realmId, accessToken, query);
   const raw = Array.isArray(result.Bill) ? result.Bill : result.Bill ? [result.Bill] : [];
-  return raw.map((b) => ({
+  const outstanding = raw.filter((b) => Number(b.Balance) > 0);
+  return outstanding.map((b) => ({
     id: b.Id as string,
     txnDate: b.TxnDate as string,
     dueDate: b.DueDate as string | undefined,
@@ -158,10 +159,11 @@ async function getOutstandingBills(realmId: string, accessToken: string): Promis
 }
 
 async function getVendorCredits(realmId: string, accessToken: string): Promise<VendorCreditItem[]> {
-  const query = "SELECT Id, TxnDate, TotalAmt, Balance, VendorRef, DocNumber FROM VendorCredit WHERE Balance > 0 ORDERBY TxnDate ASC MAXRESULTS 1000";
+  const query = "SELECT Id, TxnDate, TotalAmt, Balance, VendorRef, DocNumber FROM VendorCredit ORDERBY TxnDate ASC MAXRESULTS 1000";
   const result = await qbQuery<{ VendorCredit: Record<string, unknown>[] | Record<string, unknown> }>(realmId, accessToken, query);
   const raw = Array.isArray(result.VendorCredit) ? result.VendorCredit : result.VendorCredit ? [result.VendorCredit] : [];
-  return raw.map((vc) => ({
+  const outstanding = raw.filter((vc) => Number(vc.Balance) > 0);
+  return outstanding.map((vc) => ({
     id: vc.Id as string,
     txnDate: vc.TxnDate as string,
     totalAmt: vc.TotalAmt as number,
