@@ -8,11 +8,12 @@ import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
+import SearchableSelect from '../SearchableSelect';
+import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, TRANSACTION_TYPES, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
 import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
-import type { SelectOption } from '../SearchableSelect';
 
 /**
  * Validates that a posting type is consistent with an account type.
@@ -233,6 +234,8 @@ export default function MappingView({
     accounts,
     classes,
     taxCodes,
+    vendors,
+    terms,
     listsLoaded,
     listsLoading,
     listsError,
@@ -480,6 +483,31 @@ export default function MappingView({
     setBillDefaultsDirty(true);
   };
 
+  const vendorOptions = useMemo<SelectOption[]>(() =>
+    vendors.map((vendor) => ({ value: vendor.Id, label: vendor.DisplayName })),
+    [vendors],
+  );
+
+  const termOptions = useMemo<SelectOption[]>(() =>
+    terms.map((term) => ({ value: term.Id, label: term.Name })),
+    [terms],
+  );
+
+  const net30Term = useMemo(() =>
+    terms.find((term) => term.Name.toLowerCase() === 'net 30'),
+    [terms],
+  );
+
+  useEffect(() => {
+    if (selectedTemplate?.transactionType !== 'BILL') return;
+    if (!net30Term) return;
+    if (billDefaults.termsRef?.value) return;
+    setBillDefaults((prev) => ({
+      ...prev,
+      termsRef: prev.termsRef ?? { value: net30Term.Id, name: net30Term.Name },
+    }));
+  }, [selectedTemplate?.transactionType, net30Term, billDefaults.termsRef]);
+
   const saveBillDefaults = async () => {
     if (!selectedTemplateId || !jwt) return;
     setTemplatesLoading(true);
@@ -524,41 +552,46 @@ export default function MappingView({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.vendorRef}</div>
-          <input
-            type="text"
+          <SearchableSelect
+            options={vendorOptions}
             value={billDefaults.vendorRef?.value ?? ''}
-            onChange={(e) => updateBillDefault('vendorRef', e.target.value)}
-            placeholder="e.g. ABC Vendor"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.apAccountRef}</div>
-          <input
-            type="text"
-            value={billDefaults.apAccountRef?.value ?? ''}
-            onChange={(e) => updateBillDefault('apAccountRef', e.target.value)}
-            placeholder="e.g. 33"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            onChange={(value) => {
+              const selected = vendors.find((vendor) => vendor.Id === value);
+              setBillDefaults((prev) => ({
+                ...prev,
+                vendorRef: { value, name: selected?.DisplayName ?? '' },
+              }));
+              setBillDefaultsDirty(true);
+            }}
+            placeholder="Select vendor…"
           />
         </div>
         <div>
           <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.termsRef}</div>
-          <input
-            type="text"
-            value={billDefaults.termsRef?.value ?? ''}
-            onChange={(e) => updateBillDefault('termsRef', e.target.value)}
-            placeholder="e.g. Net 30"
+          <select
+            value={billDefaults.termsRef?.value ?? net30Term?.Id ?? ''}
+            onChange={(e) => {
+              const selected = terms.find((term) => term.Id === e.target.value);
+              setBillDefaults((prev) => ({
+                ...prev,
+                termsRef: { value: e.target.value, name: selected?.Name ?? '' },
+              }));
+              setBillDefaultsDirty(true);
+            }}
             className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
-          />
+          >
+            <option value="" disabled>Select terms…</option>
+            {termOptions.map((term) => (
+              <option key={term.value} value={term.value}>{term.label}</option>
+            ))}
+          </select>
         </div>
         <div>
           <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.dueDate}</div>
           <input
-            type="text"
+            type="date"
             value={billDefaults.dueDate?.value ?? ''}
             onChange={(e) => updateBillDefault('dueDate', e.target.value)}
-            placeholder="e.g. 30"
             className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
           />
         </div>

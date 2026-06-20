@@ -544,13 +544,13 @@ export default function CheckPreviewForm({
         </button>
       </div>
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-3">
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-4">
         <div>
-          <div className="text-xs text-gray-500 mb-1">Transaction Date</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Transaction Date</div>
           <SmartDatePicker value={txnDate} onChange={setTxnDate} />
         </div>
         <div>
-          <div className="text-xs text-gray-500 mb-1">Bank Account</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Bank Account</div>
           <SearchableSelect
             options={bankAccountOptions}
             value={bankAccountRef.value}
@@ -559,10 +559,11 @@ export default function CheckPreviewForm({
               setBankAccountRef({ value, name: selected?.FullyQualifiedName });
             }}
             placeholder="Select bank account…"
+            disabled={true}
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Payee</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Payee</div>
           <SearchableSelect
             options={payeeOptions}
             value={payeeRef.value}
@@ -574,18 +575,18 @@ export default function CheckPreviewForm({
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Check # / Doc Number</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Check # / Doc Number</div>
           <input
-            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
             placeholder="Optional check number"
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Memo</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Memo</div>
           <input
-            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="Optional memo"
@@ -610,22 +611,22 @@ export default function CheckPreviewForm({
           ) : null}
         </div>
         <div className="overflow-x-auto overflow-y-auto max-h-[320px]">
-          <table className="w-full text-xs border-collapse min-w-[680px]">
-            <thead>
-              <tr className="border-b border-gray-700 bg-gray-700/50">
-                <th className="text-gray-400 font-medium text-left px-2 py-2 w-8">#</th>
-                <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[180px]">Account</th>
-                <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[160px]">Description</th>
-                <th className="text-gray-400 font-medium text-left px-2 py-2 min-w-[120px]">Class</th>
-                <th className="text-gray-400 font-medium text-right px-2 py-2 w-24">Amount</th>
-                <th className="text-gray-400 font-medium text-center px-1 py-2 w-8"></th>
+          <table className="w-full text-sm border-collapse min-w-[680px]">
+            <thead className="bg-slate-900/80 text-slate-300">
+              <tr>
+                <th className="text-left px-3 py-3 w-8">#</th>
+                <th className="text-left px-3 py-3 min-w-[180px]">Account</th>
+                <th className="text-left px-3 py-3 min-w-[160px]">Description</th>
+                <th className="text-left px-3 py-3 min-w-[120px]">Class</th>
+                <th className="text-right px-3 py-3 w-24">Amount</th>
+                <th className="text-center px-3 py-3 w-8"></th>
               </tr>
             </thead>
             <tbody>
               {effectiveLines.map((line, idx) => (
                 <tr key={line.localId} className={`border-b border-gray-700/60 ${idx % 2 === 1 ? 'bg-gray-800/40' : ''}`}>
-                  <td className="px-2 py-1 text-gray-600 text-center text-xs">{idx + 1}</td>
-                  <td className="px-1 py-1 min-w-[180px] max-w-[240px]">
+                  <td className="px-3 py-2 text-gray-400 text-center text-xs">{idx + 1}</td>
+                  <td className="px-3 py-2 min-w-[180px] max-w-[240px]">
                     <SearchableSelect
                       options={accountOptions}
                       value={line.accountId}
@@ -636,16 +637,16 @@ export default function CheckPreviewForm({
                       placeholder="Account…"
                     />
                   </td>
-                  <td className="px-1 py-1 min-w-[160px]">
+                  <td className="px-3 py-2 min-w-[160px]">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-cyan-500 focus:outline-none"
                       value={line.description}
                       onChange={(e) => updateLine(line.localId, { description: e.target.value })}
                       placeholder="Description…"
                       maxLength={4000}
                     />
                   </td>
-                  <td className="px-1 py-1 min-w-[120px] max-w-[160px]">
+                  <td className="px-3 py-2 min-w-[120px] max-w-[160px]">
                     <SearchableSelect
                       options={classOptions}
                       value={line.classId}
@@ -653,20 +654,20 @@ export default function CheckPreviewForm({
                       placeholder="Class…"
                     />
                   </td>
-                  <td className="px-1 py-1 text-right w-24">
+                  <td className="px-3 py-2 text-right w-24">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 text-right focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-cyan-500 focus:outline-none"
                       value={line.amount}
                       onChange={(e) => updateLine(line.localId, { amount: e.target.value })}
                       placeholder="0.00"
                       inputMode="decimal"
                     />
                   </td>
-                  <td className="px-1 py-1 text-center">
+                  <td className="px-3 py-2 text-center">
                     <button
                       type="button"
                       onClick={() => removeLine(line.localId)}
-                      className="text-gray-400 hover:text-red-400"
+                      className="text-gray-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={effectiveLines.length <= 1}
                     >
                       ✕
@@ -677,9 +678,9 @@ export default function CheckPreviewForm({
             </tbody>
             <tfoot>
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
-                <td className="px-2 py-2 text-gray-500">{effectiveLines.length}</td>
-                <td colSpan={3} className="px-2 py-2 text-gray-500">Total</td>
-                <td className="px-2 py-2 text-right font-mono text-blue-300">${fmt(totalAmount)}</td>
+                <td className="px-3 py-3 text-gray-400">{effectiveLines.length}</td>
+                <td colSpan={3} className="px-3 py-3 text-gray-400">Total</td>
+                <td className="px-3 py-3 text-right font-mono text-cyan-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>
             </tfoot>
