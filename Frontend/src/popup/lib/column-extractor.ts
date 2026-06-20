@@ -5,7 +5,7 @@ function normalizeText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function evaluateProductMatch(
+export function evaluateProductMatch(
   inputName: string,
   catalogName: string,
   rule?: MatchingRule | null,

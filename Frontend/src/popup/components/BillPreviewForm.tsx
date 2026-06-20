@@ -119,6 +119,7 @@ export default function BillPreviewForm({
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
   const [autoFillSummary, setAutoFillSummary] = useState<{ total: number; mapped: number; unmapped: number } | null>(null);
+  const [unmatchedItems, setUnmatchedItems] = useState<{ productName: string }[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +185,7 @@ export default function BillPreviewForm({
           amount: item.amount.toFixed(2),
         })));
         setAutoFillSummary(getAutoFillSummary(extracted));
+        setUnmatchedItems(extracted.filter((item) => !item.matched).map((item) => ({ productName: item.productName })));
       } catch (err) {
         console.error('Auto-fill error:', err);
         // silent fallback: user can still click Auto-fill
@@ -427,6 +429,7 @@ export default function BillPreviewForm({
     setError(null);
     setSyncResult(null);
     setAutoFillSummary(null);
+    setUnmatchedItems([]);
     setRuleTransformedLineItems(null);
   };
 
@@ -464,6 +467,7 @@ export default function BillPreviewForm({
 
       setLines(billLines);
       setAutoFillSummary(getAutoFillSummary(extracted));
+      setUnmatchedItems(extracted.filter((item) => !item.matched).map((item) => ({ productName: item.productName })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Auto-fill failed');
     }
@@ -679,6 +683,18 @@ export default function BillPreviewForm({
             </div>
           ) : null}
         </div>
+        {unmatchedItems.length > 0 && (
+          <details className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+            <summary className="text-xs font-medium text-amber-400 cursor-pointer select-none">
+              {unmatchedItems.length} unmatched product{unmatchedItems.length !== 1 ? 's' : ''}
+            </summary>
+            <div className="mt-2 space-y-1">
+              {unmatchedItems.map((item, idx) => (
+                <div key={idx} className="text-xs text-gray-300">• {item.productName}</div>
+              ))}
+            </div>
+          </details>
+        )}
         <div className="overflow-x-auto overflow-y-auto max-h-[320px]">
           <table className="w-full text-sm border-collapse min-w-[680px]">
             <thead className="bg-slate-900/80 text-slate-300">
