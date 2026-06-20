@@ -6,7 +6,7 @@ function jaroDistance(a: string, b: string): number {
   const bLen = b.length;
   if (aLen === 0) return bLen === 0 ? 1 : 0;
 
-  const matchDistance = Math.floor(Math.max(aLen, bLen) / 2) - 1;
+  const matchDistance = Math.max(0, Math.floor(Math.max(aLen, bLen) / 2) - 1);
   const aMatches = new Array(aLen).fill(false);
   const bMatches = new Array(bLen).fill(false);
 

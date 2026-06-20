@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
+import { evaluateProductMatch } from '../../lib/column-extractor';
 import { useQBContext } from '../../contexts/QBContext';
 import type { Product, ProductMapping, ProductMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
 
@@ -32,6 +33,23 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   const [ruleThreshold, setRuleThreshold] = useState(0.80);
   const [rulePattern, setRulePattern] = useState('');
   const [ruleDirection, setRuleDirection] = useState<'input_contains_catalog' | 'catalog_contains_input' | 'either'>('either');
+  const [testInput, setTestInput] = useState('');
+  const [testResults, setTestResults] = useState<{ mappingId: string; productName: string; matched: boolean; confidence: number; matchType: string }[]>([]);
+
+  const handleTestMatch = () => {
+    if (!testInput.trim()) return;
+    const results = mappings.map((mapping) => {
+      const result = evaluateProductMatch(testInput.trim(), mapping.productName, mapping.matchingRule ?? undefined);
+      return {
+        mappingId: mapping.id,
+        productName: mapping.productName,
+        matched: result.matched,
+        confidence: result.confidence,
+        matchType: result.matchType,
+      };
+    }).sort((a, b) => b.confidence - a.confidence);
+    setTestResults(results);
+  };
 
   useEffect(() => {
     if (!templateId) {
@@ -481,6 +499,47 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </div>
+            )}
+            {mappings.length > 0 && (
+              <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-3">
+                <div className="text-sm font-semibold text-white">Test Matcher</div>
+                <div className="text-xs text-gray-400">Type a product name to see which mapping it would match.</div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={testInput}
+                    onChange={(e) => setTestInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleTestMatch(); }}
+                    placeholder="e.g. Coca Cola 2L"
+                    className="flex-1 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={handleTestMatch}
+                    disabled={!testInput.trim()}
+                    className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Test
+                  </button>
+                </div>
+                {testResults.length > 0 && (
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {testResults.map((result) => (
+                      <div key={result.mappingId} className="flex items-center justify-between text-xs rounded px-3 py-2 bg-gray-800">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full ${result.matched ? 'bg-green-400' : 'bg-gray-600'}`} />
+                          <span className="text-gray-200">{result.productName}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 font-mono">{result.matchType}</span>
+                          <span className={`font-mono ${result.matched ? 'text-green-400' : 'text-gray-500'}`}>
+                            {(result.confidence * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
