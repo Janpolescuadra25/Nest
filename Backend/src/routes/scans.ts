@@ -79,6 +79,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (
 
     res.status(201).json(scan);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Scans] create error:', err);
     throw new AppError('Failed to save scan record', 500);
   }
@@ -130,6 +131,7 @@ router.get('/health', asyncHandler(async (req: AuthRequest, res: Response): Prom
       lastFailureAt: lastFailure?.createdAt ?? null,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Scans] health error:', err);
     throw new AppError('Failed to fetch scan health', 500);
   }
@@ -157,6 +159,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
 
     res.json(scan);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Scans] get error:', err);
     throw new AppError('Failed to fetch scan record', 500);
   }
