@@ -519,10 +519,11 @@ export const api = {
     lines: BillPaymentLineItem[],
     bankAccountRef?: { value: string; name?: string },
     checkNum?: string,
+    skipDedupCheck?: boolean,
   ) =>
     post<{ message: string; billPaymentId: string; txnDate: string; totalAmount: number }>(
       '/api/quickbooks/bill-payment',
-      { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum },
+      { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum, skipDedupCheck },
       jwt,
     ),
   getQBClasses: (jwt: string) => get<{ classes: QBClass[] }>('/api/quickbooks/classes', jwt),

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useQBContext } from '../contexts/QBContext';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
+import ErrorCard from './shared/ErrorCard';
 import type { OutstandingBill, VendorCreditItem, BillPaymentLineItem } from '../../types';
 import type { QBAccount } from '../types/qb';
 
@@ -33,6 +34,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ billPaymentId: string; totalAmount: number; txnDate: string } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const selectedVendor = vendors.find((vendor) => vendor.Id === selectedVendorId);
   const bankAccounts = useMemo(
@@ -183,7 +185,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
     }));
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (skipDedupCheck = false) => {
     if (!selectedVendor) {
       setError('Vendor is required');
       return;
@@ -234,6 +236,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setDuplicateWarning(null);
 
     try {
       const result = await api.createBillPayment(
@@ -245,6 +248,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         lines,
         bankAccountRef ? { value: bankAccountRef.Id, name: bankAccountRef.FullyQualifiedName } : undefined,
         checkNum || undefined,
+        skipDedupCheck,
       );
 
       setSuccess({ billPaymentId: result.billPaymentId, totalAmount: result.totalAmount, txnDate: result.txnDate });
@@ -252,11 +256,17 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
       setBills((prev) => prev.map((bill) => ({ ...bill, selected: false, paymentAmount: 0 })));
       setCredits((prev) => prev.map((credit) => ({ ...credit, selected: false, applyAmount: 0 })));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bill payment failed');
+      if (err instanceof ApiError && err.status === 409) {
+        setDuplicateWarning(err.payload?.error ?? err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Bill payment failed');
+      }
     } finally {
       setLoading(false);
     }
   }, [bankAccountId, bankAccounts, bills, checkNum, jwt, netPaymentAmount, paymentDate, payType, selectedVendor, credits]);
+
+  const handleForceSync = () => void handleSubmit(true);
 
   if (!status.connected) {
     return (
@@ -354,6 +364,14 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
 
       {loading && (
         <div className="px-3 py-2 text-xs text-gray-400">Loading bills and credits…</div>
+      )}
+      {duplicateWarning && (
+        <ErrorCard
+          variant="warning"
+          message={duplicateWarning}
+          onDismiss={() => setDuplicateWarning(null)}
+          onRetry={handleForceSync}
+        />
       )}
       {error && (
         <div className="px-3 py-2 bg-red-900/30 border border-red-700 text-sm text-red-200 rounded-lg">{error}</div>
@@ -523,7 +541,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         <div className="text-sm text-gray-200">Net Payment: <span className="font-semibold text-white">${netPaymentAmount.toFixed(2)}</span></div>
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={() => void handleSubmit()}
           disabled={loading || !selectedVendorId || netPaymentAmount <= 0 || ((payType === 'Check' || payType === 'CreditCard') && !bankAccountId)}
           className="rounded bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
