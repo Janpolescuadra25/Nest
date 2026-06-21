@@ -10,7 +10,7 @@ import { prisma } from '../lib/prisma';
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const VALID_TRANSACTION_TYPES = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'BILL_PAYMENT', 'CHEQUE'] as const;
 
-function validateTransactionType(transactionType?: string): void {
+export function validateTransactionType(transactionType?: string): void {
   if (transactionType !== undefined && !VALID_TRANSACTION_TYPES.includes(transactionType as typeof VALID_TRANSACTION_TYPES[number])) {
     throw new AppError('Invalid transactionType. Must be one of: JOURNAL_ENTRY, BILL, VENDOR_CREDIT, BILL_PAYMENT, CHEQUE', 400);
   }

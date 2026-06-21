@@ -7,6 +7,7 @@ import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
 import { parseDocumentWithGemini, parseInvoiceWithGemini } from '../lib/gemini';
+import { validateTransactionType } from './templates';
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (
       source?: string;
       transactionType?: string;
     };
+    validateTransactionType(transactionType);
 
     if (!locationId || !scanDate) {
       throw new AppError('locationId and scanDate are required', 400);
