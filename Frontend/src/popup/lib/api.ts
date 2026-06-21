@@ -370,11 +370,11 @@ export const api = {
     post<ImportResult>(`/api/locations/${locationId}/import-template`, data, jwt),
 
   // ── Scans ──────────────────────────────────────────────────────────────────
-  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData }, jwt),
+  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData, transactionType?: string) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData, ...(transactionType ? { transactionType } : {}) }, jwt),
 
-  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source }, jwt),
+  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}) }, jwt),
 
   parseInvoiceAI: async (jwt: string, file: File): Promise<{ header: Record<string, string>; lineItems: Record<string, string>[] }> => {
     const form = new FormData();

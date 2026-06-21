@@ -163,6 +163,7 @@ export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   BILL: 'Bill',
   VENDOR_CREDIT: 'Vendor Credit',
   CHEQUE: 'Check',
+  BILL_PAYMENT: 'Bill Payment',
 };
 
 export const TRANSACTION_TYPES = Object.keys(TRANSACTION_TYPE_LABELS) as (keyof typeof TRANSACTION_TYPE_LABELS)[];
@@ -210,6 +211,7 @@ export interface ScanRecord {
   rawData: Record<string, number>;
   rawScanEntry?: ScanEntry | null;
   source?: string;
+  transactionType?: string;
   status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED';
   createdAt: string;
   syncLogs?: SyncLog[];

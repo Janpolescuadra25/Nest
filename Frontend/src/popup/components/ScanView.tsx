@@ -333,6 +333,7 @@ export default function ScanView({
               locationId,
               new Date().toISOString().split('T')[0],
               response.data,
+              selectedTemplate?.transactionType,
             );
             if (process.env.NODE_ENV !== 'production') {
               console.log('[Nest] Scan data saved to backend');
@@ -525,7 +526,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source).catch(() => {});
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {});
     }
 
     setScanEntries([scanEntry]);
@@ -562,7 +563,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source).catch(() => {});
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {});
     }
 
     setScanEntries([scanEntry]);
@@ -630,6 +631,7 @@ export default function ScanView({
               new Date().toISOString().split('T')[0],
               entry,
               'excel',
+              selectedTemplate?.transactionType,
             );
             savedCount++;
           } catch (saveErr) {

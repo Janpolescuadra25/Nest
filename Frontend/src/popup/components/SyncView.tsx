@@ -151,7 +151,21 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
 
       const mappings = await api.getMappings(jwt, locationId);
 
-      const items = allPending
+      // Filter to JE-only scans for batch sync (non-JE types require manual sync from preview forms)
+      const nonJECount = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'JOURNAL_ENTRY').length;
+      const scansToSync = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') === 'JOURNAL_ENTRY');
+
+      if (nonJECount > 0) {
+        const nonJETypes = [...new Set(allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'JOURNAL_ENTRY').map((s) => TRANSACTION_TYPE_LABELS[s.transactionType as keyof typeof TRANSACTION_TYPE_LABELS] ?? s.transactionType))];
+        showToast(`${nonJECount} ${nonJETypes.join('/')} scan(s) skipped — sync these from their preview forms`, 'info');
+      }
+
+      if (scansToSync.length === 0) {
+        showToast('No Journal Entry scans to sync', 'info');
+        return;
+      }
+
+      const items = scansToSync
         .map((scan) => buildJEPayload({
           scanRecordId: scan.id,
           scanData: scan.rawData,

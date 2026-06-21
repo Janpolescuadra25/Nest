@@ -314,10 +314,11 @@ model ScanRecord {
   id            String       @id @default(cuid())
   locationId    String
   scanDate      DateTime
-  rawData       Json         // all extracted Toast fields
-  rawScanEntry  Json?        // full ScanEntry for Excel/image/pdf sources
-  source        String       @default("pos")   // pos | excel | image | pdf
-  status        ScanStatus   @default(PENDING)
+  rawData          Json         // all extracted Toast fields
+  rawScanEntry     Json?        // full ScanEntry for Excel/image/pdf sources
+  source           String       @default("pos")   // pos | excel | image | pdf
+  transactionType  String       @default("JOURNAL_ENTRY")
+  status           ScanStatus   @default(PENDING)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   location      Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)

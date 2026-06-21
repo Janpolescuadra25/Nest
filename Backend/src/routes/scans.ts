@@ -30,12 +30,13 @@ router.use(authenticate, enforceEffectiveRole);
 // Save raw Toast POS scan data for a location
 router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { locationId, scanDate, rawData, rawScanEntry, source } = req.body as {
+    const { locationId, scanDate, rawData, rawScanEntry, source, transactionType } = req.body as {
       locationId?: string;
       scanDate?: string;
       rawData?: ScanRawData;
       rawScanEntry?: unknown;
       source?: string;
+      transactionType?: string;
     };
 
     if (!locationId || !scanDate) {
@@ -70,6 +71,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (
         rawScanEntry: rawScanEntry ? rawScanEntry as unknown as Prisma.InputJsonValue : null,
         source: source || 'pos',
         status: 'PENDING',
+        ...(transactionType ? { transactionType } : {}),
       },
     });
 
