@@ -115,7 +115,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [colVis, setColVis] = useState<Record<ColKey, boolean>>(loadColVis);
   const [showColMenu, setShowColMenu] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; skipped?: boolean; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
@@ -469,10 +469,11 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     setSyncResult(null);
   };
 
-  const handleSync = useCallback(async () => {
+  const handleSync = useCallback(async (skipDedupCheck = false) => {
     if (!isBalanced) return;
     setSyncing(true);
     setError(null);
+    setDuplicateWarning(null);
     setSyncResult(null);
     try {
       const jeLines = effectiveDisplayLines
@@ -523,9 +524,15 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         scanRecordId ?? undefined,
         privateNote || `Nest sync — ${txnDate} — ${locations[0]?.name ?? ''}`,
         docNumber || undefined,
-      ) as { journalEntryId: string; txnDate: string };
+        skipDedupCheck,
+      ) as { journalEntryId?: string; qbJournalEntryId?: string; txnDate?: string; skipped?: boolean; docNumber?: string };
 
-      setSyncResult({ id: result.journalEntryId, txnDate: result.txnDate });
+      setSyncResult({
+        id: result.journalEntryId ?? result.qbJournalEntryId ?? '',
+        txnDate: result.txnDate ?? txnDate,
+        skipped: Boolean(result.skipped),
+        docNumber: result.docNumber,
+      });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setDuplicateWarning(err.payload?.error ?? err.message);
@@ -539,8 +546,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
 
   const handleForceSync = useCallback(() => {
     if (!isBalanced) return;
-    setDuplicateWarning(null);
-    void handleSync();
+    void handleSync(true);
   }, [handleSync, isBalanced]);
 
   if (!status.connected) {
@@ -821,7 +827,13 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       )}
       {syncResult && (
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
-          <div>✅ Journal Entry created — <span className="font-mono">{syncResult.id}</span> ({syncResult.txnDate})</div>
+          <div>
+            {syncResult.skipped ? '✅ Journal Entry already synced' : '✅ Journal Entry created'} —
+            <span className="font-mono">{syncResult.id}</span> ({syncResult.txnDate})
+          </div>
+          {syncResult.docNumber && (
+            <div className="text-green-200 text-[11px]">Doc #: {syncResult.docNumber}</div>
+          )}
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
