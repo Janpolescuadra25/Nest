@@ -33,7 +33,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
   const [credits, setCredits] = useState<Array<VendorCreditItem & { selected: boolean; applyAmount: number }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ billPaymentId: string; totalAmount: number; txnDate: string } | null>(null);
+  const [success, setSuccess] = useState<{ billPaymentId: string; totalAmount: number; txnDate: string; skipped?: boolean } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
   const selectedVendor = vendors.find((vendor) => vendor.Id === selectedVendorId);
@@ -251,7 +251,12 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         skipDedupCheck,
       );
 
-      setSuccess({ billPaymentId: result.billPaymentId, totalAmount: result.totalAmount, txnDate: result.txnDate });
+      const r = result as { billPaymentId?: string; totalAmount?: number; txnDate?: string; skipped?: boolean; message?: string };
+      if (r.skipped) {
+        setSuccess({ billPaymentId: r.billPaymentId ?? '', totalAmount: r.totalAmount ?? 0, txnDate: r.txnDate ?? '', skipped: true });
+      } else {
+        setSuccess({ billPaymentId: r.billPaymentId ?? '', totalAmount: r.totalAmount ?? 0, txnDate: r.txnDate ?? '' });
+      }
       setError(null);
       setBills((prev) => prev.map((bill) => ({ ...bill, selected: false, paymentAmount: 0 })));
       setCredits((prev) => prev.map((credit) => ({ ...credit, selected: false, applyAmount: 0 })));
@@ -378,7 +383,11 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
       )}
       {success && (
         <div className="px-3 py-2 bg-green-900/30 border border-green-700 text-sm text-green-200 rounded-lg">
-          Bill Payment created successfully. ID: <span className="font-semibold text-white">{success.billPaymentId}</span> for <span className="font-semibold text-white">${success.totalAmount.toFixed(2)}</span> on {success.txnDate}.
+          {success.skipped ? (
+            <span>✅ Bill Payment already synced</span>
+          ) : (
+            <>Bill Payment created successfully. ID: <span className="font-semibold text-white">{success.billPaymentId}</span> for <span className="font-semibold text-white">${(success.totalAmount ?? 0).toFixed(2)}</span> on {success.txnDate}.</>
+          )}
         </div>
       )}
 
