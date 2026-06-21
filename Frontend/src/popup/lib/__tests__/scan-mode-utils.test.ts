@@ -3,7 +3,7 @@ import { isSectionVisible, sourceToScanMode, isTransactionTypeCompatible } from 
 
 describe('scan-mode-utils', () => {
   describe('isSectionVisible()', () => {
-it('hides fieldMapping for non-JOURNAL_ENTRY types', () => {
+    it('hides fieldMapping for non-JOURNAL_ENTRY types', () => {
       expect(isSectionVisible('fieldMapping', 'IMAGE', 'JOURNAL_ENTRY')).toBe(true);
       expect(isSectionVisible('fieldMapping', 'POS', 'JOURNAL_ENTRY')).toBe(true);
       expect(isSectionVisible('fieldMapping', 'EXCEL', 'BILL')).toBe(false);

@@ -137,34 +137,23 @@ export default function BillPreviewForm({
 
   useEffect(() => {
     if (!activeScanEntry) {
-      console.log('[AutoFill] blocked: no activeScanEntry');
       return;
     }
     if (activeScanEntry.source === 'pos') {
-      console.log('[AutoFill] blocked: source is pos');
       return;
     }
     if (!selectedTemplate?.columnMappings || !selectedTemplate?.id) {
-      console.log('[AutoFill] blocked: missing columnMappings or template id', {
-        hasColumnMappings: !!selectedTemplate?.columnMappings,
-        columnMappingsValue: selectedTemplate?.columnMappings,
-        templateId: selectedTemplate?.id,
-        source: activeScanEntry.source,
-      });
       return;
     }
     if (!jwt || !locId) return;
     if (userHasEditedLinesRef.current) {
-      console.log('[AutoFill] blocked: userHasEditedLinesRef is true');
       return;
     }
-    console.log('[AutoFill] PASSED all guards, proceeding...');
 
     let cancelled = false;
     (async () => {
       try {
         const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
-        console.log('[AutoFill] productMappings received:', productMappings.length, productMappings.map((m) => m.productName));
         if (cancelled) return;
         const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
         const extracted = extractLineItems({
@@ -173,7 +162,6 @@ export default function BillPreviewForm({
           productMappings,
           defaultPostingType: 'Credit',
         });
-        console.log('[AutoFill] extracted line items:', JSON.stringify(extracted));
         if (cancelled) return;
 
         setLines(extracted.map((item) => newLine({
