@@ -6,6 +6,7 @@ import { useQBContext } from '../contexts/QBContext';
 import { useToast } from './Toast';
 import { buildJEPayload } from '../lib/je-builder';
 import type { ScanRecord, ScanEntry } from '../../types';
+import { TRANSACTION_TYPE_LABELS } from '../../types';
 
 interface Props {
   jwt: string;
@@ -78,9 +79,13 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     setIsRetryingId(scanId);
     try {
       const result = await api.retryScan(jwt, scanId);
+      const scan = scans.find(s => s.id === scanId);
+      const syncType = scan?.syncLogs?.[0]?.syncType;
+      const label = syncType ? (TRANSACTION_TYPE_LABELS[syncType] ?? 'Transaction') : 'Transaction';
+
       if (result.success) {
         showToast(
-          `Retry succeeded — JE ${result.docNumber ?? result.qbJournalEntryId ?? 'created'} (attempt ${result.attemptCount})`,
+          `Retry succeeded — ${label} ${result.docNumber ?? result.qbJournalEntryId ?? 'created'} (attempt ${result.attemptCount})`,
           'success',
         );
       } else {
@@ -345,10 +350,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                 {filteredScans.map((scan) => {
                   const latestLog = scan.syncLogs?.slice().sort((a, b) => new Date(b.syncedAt).getTime() - new Date(a.syncedAt).getTime())[0];
                   const attempts = latestLog?.attemptCount ?? 1;
-                  const jeId = latestLog?.qbJournalEntryId;
+                  const txnId = latestLog?.qbJournalEntryId;
                   const qbBaseUrl = status.environment === 'sandbox'
                     ? 'https://app.sandbox.qbo.intuit.com'
                     : 'https://app.qbo.intuit.com';
+                  const qbPath = latestLog?.syncType === 'BILL' ? 'bill'
+                    : latestLog?.syncType === 'CHEQUE' ? 'expense'
+                    : latestLog?.syncType === 'VENDOR_CREDIT' ? 'vendorcredit'
+                    : 'journal';
                   const retryDisabled = scan.syncLogs?.some((l) => l.attemptCount >= 3) ?? false;
                   const attention = getScanAttention(scan);
                   const scanSource = (scan.source ?? 'pos').toLowerCase();
@@ -372,8 +381,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                           </span>
                         </td>
                         <td className="px-3 py-2 font-mono text-gray-400">
-                          {jeId
-                            ? <a href={`${qbBaseUrl}/app/journal?txnId=${jeId}`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline" title="View in QuickBooks">{jeId} ↗</a>
+                          {txnId
+                            ? <a href={`${qbBaseUrl}/app/${qbPath}?txnId=${txnId}`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline" title="View in QuickBooks">{txnId} ↗</a>
                             : '—'
                           }
                         </td>

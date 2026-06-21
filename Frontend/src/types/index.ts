@@ -218,6 +218,7 @@ export interface ScanRecord {
 export interface SyncLog {
   id: string;
   scanRecordId: string;
+  syncType?: string;
   qbJournalEntryId?: string;
   docNumber?: string;
   status: 'SUCCESS' | 'FAILED';
