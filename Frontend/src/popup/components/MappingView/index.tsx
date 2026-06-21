@@ -1847,7 +1847,7 @@ export default function MappingView({
 
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isBill && renderBillHeader()}
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isVendorCredit && renderVendorCreditHeader()}
-      {(
+      {isSectionVisible('fieldMapping', activeScanMode, selectedTemplate?.transactionType) && (
         loading ? (
           <DashboardSkeleton type="list" rows={3} />
         ) : localMappings.length === 0 ? (

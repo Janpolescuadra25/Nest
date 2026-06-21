@@ -53,7 +53,7 @@ export function isSectionVisible(
 
   switch (section) {
     case 'fieldMapping':
-      return true;
+      return transactionType === 'JOURNAL_ENTRY';
 
     case 'columnMapping':
       return mode === 'EXCEL';
