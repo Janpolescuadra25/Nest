@@ -121,7 +121,7 @@ export default function BillPreviewForm({
   const [autoFillSummary, setAutoFillSummary] = useState<{ total: number; mapped: number; unmapped: number } | null>(null);
   const [unmatchedItems, setUnmatchedItems] = useState<{ productName: string }[]>([]);
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string; skipped?: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
@@ -473,7 +473,7 @@ export default function BillPreviewForm({
     }
   }, [activeScanEntry, accounts, jwt, selectedTemplate]);
 
-  const handleSync = useCallback(async () => {
+  const handleSync = useCallback(async (skipDedupCheck = false) => {
     if (!hasHeader || !allMapped || !hasAmount) return;
     setSyncing(true);
     setError(null);
@@ -502,9 +502,10 @@ export default function BillPreviewForm({
         docNumber || undefined,
         billLines,
         scanRecordId ?? undefined,
-      ) as { billId: string; txnDate: string; docNumber?: string };
+        skipDedupCheck,
+      ) as { billId?: string; qbJournalEntryId?: string; txnDate?: string; docNumber?: string; skipped?: boolean };
 
-        setSyncResult({ id: result.billId, txnDate: result.txnDate, docNumber: result.docNumber });
+      setSyncResult({ id: result.billId ?? result.qbJournalEntryId ?? '', txnDate: result.txnDate ?? txnDate, skipped: Boolean(result.skipped), docNumber: result.docNumber });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setDuplicateWarning(err.payload?.error ?? err.message);
@@ -516,49 +517,10 @@ export default function BillPreviewForm({
     }
   }, [allMapped, apAccountRef, dueDate, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, termsRef, txnDate, docNumber, vendorRef]);
 
-  const handleForceSync = useCallback(async () => {
+  const handleForceSync = useCallback(() => {
     if (!hasHeader || !allMapped || !hasAmount) return;
-    setSyncing(true);
-    setError(null);
-    setDuplicateWarning(null);
-    setSyncResult(null);
-
-    try {
-      const billLines = effectiveLines
-        .filter((line) => parseFloat(line.amount) > 0)
-        .map((line) => ({
-          amount: parseFloat(line.amount),
-          accountRef: { value: line.accountId, name: line.accountName || undefined },
-          description: line.description || undefined,
-          classRef: line.classId ? { value: line.classId } : undefined,
-          taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
-        }));
-
-      const result = await api.createBill(
-        jwt,
-        txnDate,
-        vendorRef,
-        apAccountRef,
-        termsRef.value ? termsRef : undefined,
-        dueDate || undefined,
-        memo || undefined,
-        docNumber || undefined,
-        billLines,
-        scanRecordId ?? undefined,
-        true,
-      ) as { billId: string; txnDate: string; docNumber?: string };
-
-      setSyncResult({ id: result.billId, txnDate: result.txnDate, docNumber: result.docNumber });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setDuplicateWarning(err.payload?.error ?? err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Bill sync failed');
-      }
-    } finally {
-      setSyncing(false);
-    }
-  }, [allMapped, apAccountRef, dueDate, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, termsRef, txnDate, docNumber, vendorRef]);
+    void handleSync(true);
+  }, [handleSync, hasHeader, allMapped, hasAmount]);
 
   if (!status.connected) {
     return (
@@ -805,7 +767,7 @@ export default function BillPreviewForm({
       )}
       {syncResult && (
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
-          <div>✅ Bill created — <span className="font-mono">{syncResult.id}</span></div>
+          <div>{syncResult.skipped ? '✅ Bill already synced' : '✅ Bill created'} — <span className="font-mono">{syncResult.id}</span></div>
           {syncResult.docNumber && <div>Bill # {syncResult.docNumber}</div>}
           <div className="flex flex-wrap items-center gap-2">
             <button

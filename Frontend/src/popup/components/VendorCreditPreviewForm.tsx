@@ -116,7 +116,7 @@ export default function VendorCreditPreviewForm({
   const [autoFillSummary, setAutoFillSummary] = useState<{ total: number; mapped: number; unmapped: number } | null>(null);
   const [unmatchedItems, setUnmatchedItems] = useState<{ productName: string }[]>([]);
   const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string; skipped?: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
@@ -435,7 +435,7 @@ export default function VendorCreditPreviewForm({
     }
   }, [activeScanEntry, accounts, jwt, selectedTemplate]);
 
-  const handleSync = useCallback(async () => {
+  const handleSync = useCallback(async (skipDedupCheck = false) => {
     if (!hasHeader || !allMapped || !hasAmount) return;
     setSyncing(true);
     setError(null);
@@ -462,9 +462,10 @@ export default function VendorCreditPreviewForm({
         scanRecordId ?? undefined,
         memo || undefined,
         docNumber || undefined,
-      ) as { vendorCreditId: string; txnDate: string; docNumber?: string };
+        skipDedupCheck,
+      ) as { vendorCreditId?: string; qbJournalEntryId?: string; txnDate?: string; docNumber?: string; skipped?: boolean };
 
-      setSyncResult({ id: result.vendorCreditId, txnDate: result.txnDate, docNumber: result.docNumber });
+      setSyncResult({ id: result.vendorCreditId ?? result.qbJournalEntryId ?? '', txnDate: result.txnDate ?? txnDate, skipped: Boolean(result.skipped), docNumber: result.docNumber });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setDuplicateWarning(err.payload?.error ?? err.message);
@@ -476,47 +477,10 @@ export default function VendorCreditPreviewForm({
     }
   }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, txnDate, vendorRef]);
 
-  const handleForceSync = useCallback(async () => {
+  const handleForceSync = useCallback(() => {
     if (!hasHeader || !allMapped || !hasAmount) return;
-    setSyncing(true);
-    setError(null);
-    setDuplicateWarning(null);
-    setSyncResult(null);
-
-    try {
-      const creditLines = effectiveLines
-        .filter((line) => parseFloat(line.amount) > 0)
-        .map((line) => ({
-          amount: parseFloat(line.amount),
-          accountRef: { value: line.accountId, name: line.accountName || undefined },
-          description: line.description || undefined,
-          classRef: line.classId ? { value: line.classId } : undefined,
-          taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
-        }));
-
-      const result = await api.createVendorCredit(
-        jwt,
-        vendorRef,
-        txnDate,
-        apAccountRef,
-        creditLines,
-        scanRecordId ?? undefined,
-        memo || undefined,
-        docNumber || undefined,
-        true,
-      ) as { vendorCreditId: string; txnDate: string; docNumber?: string };
-
-      setSyncResult({ id: result.vendorCreditId, txnDate: result.txnDate, docNumber: result.docNumber });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setDuplicateWarning(err.payload?.error ?? err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Vendor credit sync failed');
-      }
-    } finally {
-      setSyncing(false);
-    }
-  }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, txnDate, vendorRef]);
+    void handleSync(true);
+  }, [handleSync, hasHeader, allMapped, hasAmount]);
 
   if (!status.connected) {
     return (
@@ -734,7 +698,7 @@ export default function VendorCreditPreviewForm({
       )}
       {syncResult && (
         <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
-          <div>✅ Vendor Credit created — <span className="font-mono">{syncResult.id}</span></div>
+          <div>{syncResult.skipped ? '✅ Vendor Credit already synced' : '✅ Vendor Credit created'} — <span className="font-mono">{syncResult.id}</span></div>
           {syncResult.docNumber && <div>Credit # {syncResult.docNumber}</div>}
           <div className="flex items-center gap-2">
             <button
