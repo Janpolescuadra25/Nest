@@ -159,15 +159,15 @@ async function getOutstandingBills(realmId: string, accessToken: string): Promis
 }
 
 async function getVendorCredits(realmId: string, accessToken: string): Promise<VendorCreditItem[]> {
-  const query = "SELECT Id, TxnDate, TotalAmt, Balance, VendorRef, DocNumber FROM VendorCredit ORDERBY TxnDate ASC MAXRESULTS 1000";
+  const query = "SELECT Id, TxnDate, TotalAmt, VendorRef, DocNumber FROM VendorCredit ORDERBY TxnDate ASC MAXRESULTS 1000";
   const result = await qbQuery<{ VendorCredit: Record<string, unknown>[] | Record<string, unknown> }>(realmId, accessToken, query);
   const raw = Array.isArray(result.VendorCredit) ? result.VendorCredit : result.VendorCredit ? [result.VendorCredit] : [];
-  const outstanding = raw.filter((vc) => Number(vc.Balance) > 0);
+  const outstanding = raw.filter((vc) => Number(vc.TotalAmt) > 0);
   return outstanding.map((vc) => ({
     id: vc.Id as string,
     txnDate: vc.TxnDate as string,
     totalAmt: vc.TotalAmt as number,
-    balance: vc.Balance as number,
+    balance: vc.TotalAmt as number,
     vendorRef: vc.VendorRef as { value: string; name?: string },
     docNumber: vc.DocNumber as string | undefined,
   }));
