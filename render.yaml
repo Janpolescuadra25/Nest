@@ -12,8 +12,6 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: DEBUG_OTP
-        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
@@ -21,11 +19,11 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: QB_CLIENT_ID
-        value: "ABnJGWv9uA34NkQf17It4i15yM82XWVPSIePLe0XRhv9llLnms"
+        sync: false
       - key: QB_CLIENT_SECRET
-        value: "XmvpXiOAm5HbTT2EEN5AeXXVGGX5ute63iv4L9WV"
+        sync: false
       - key: QB_REDIRECT_URI
-        value: "https://nest-backend-mddn.onrender.com/api/quickbooks/callback"
+        sync: false
       - key: QB_AUTH_URL
         value: https://appcenter.intuit.com/connect/oauth2
       - key: QB_TOKEN_URL
@@ -35,4 +33,4 @@ services:
       - key: QB_ENVIRONMENT
         value: production
       - key: APP_URL
-        value: "https://nest-backend-mddn.onrender.com"
+        sync: false
