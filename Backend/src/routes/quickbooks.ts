@@ -293,6 +293,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
       docNumber: result.docNumber,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] journal-entry error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'
@@ -438,6 +439,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       docNumber: result.docNumber,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] bill error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'
@@ -575,6 +577,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       docNumber: result.docNumber,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] vendorcredit error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'
@@ -716,6 +719,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
       docNumber: result.docNumber,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] cheque error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'
@@ -1381,6 +1385,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
 
     res.json({ results, summary });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-batch error:', message);
     throw new AppError('Batch sync failed', 500);
@@ -1630,6 +1635,7 @@ router.post('/retry-batch', authenticate, enforceEffectiveRole, requireFeaturePe
 
     res.json({ results, summary });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] retry-batch error:', message);
     throw new AppError('Batch retry failed', 500);
