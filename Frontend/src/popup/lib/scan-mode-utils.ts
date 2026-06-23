@@ -64,7 +64,7 @@ export function isSectionVisible(
       return true;
 
     case 'templateDefaults':
-      return ['BILL', 'VENDOR_CREDIT'].includes(transactionType || '');
+      return ['BILL', 'VENDOR_CREDIT', 'CHEQUE'].includes(transactionType || '');
 
     default:
       return false;

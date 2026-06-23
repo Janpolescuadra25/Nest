@@ -26,10 +26,10 @@ describe('scan-mode-utils', () => {
       expect(isSectionVisible('productMatching', 'POS', 'JOURNAL_ENTRY')).toBe(false);
     });
 
-    it('shows templateDefaults only for BILL, VENDOR_CREDIT', () => {
+    it('shows templateDefaults for BILL, VENDOR_CREDIT, and CHEQUE', () => {
       expect(isSectionVisible('templateDefaults', 'IMAGE', 'BILL')).toBe(true);
       expect(isSectionVisible('templateDefaults', 'IMAGE', 'VENDOR_CREDIT')).toBe(true);
-      expect(isSectionVisible('templateDefaults', 'IMAGE', 'CHEQUE')).toBe(false);
+      expect(isSectionVisible('templateDefaults', 'IMAGE', 'CHEQUE')).toBe(true);
       expect(isSectionVisible('templateDefaults', 'IMAGE', 'JOURNAL_ENTRY')).toBe(false);
       expect(isSectionVisible('templateDefaults', 'POS', 'JOURNAL_ENTRY')).toBe(false);
     });

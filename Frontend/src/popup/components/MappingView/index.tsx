@@ -264,6 +264,8 @@ export default function MappingView({
   const [billDefaultsDirty, setBillDefaultsDirty] = useState(false);
   const [vendorCreditDefaults, setVendorCreditDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
   const [vendorCreditDefaultsDirty, setVendorCreditDefaultsDirty] = useState(false);
+  const [chequeDefaults, setChequeDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
+  const [chequeDefaultsDirty, setChequeDefaultsDirty] = useState(false);
   const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -461,16 +463,29 @@ export default function MappingView({
       setBillDefaultsDirty(false);
       setVendorCreditDefaults({});
       setVendorCreditDefaultsDirty(false);
+      setChequeDefaults({});
+      setChequeDefaultsDirty(false);
     } else if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
       setVendorCreditDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
       setVendorCreditDefaultsDirty(false);
       setBillDefaults({});
       setBillDefaultsDirty(false);
+      setChequeDefaults({});
+      setChequeDefaultsDirty(false);
+    } else if (selectedTemplate?.transactionType === 'CHEQUE') {
+      setChequeDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
+      setChequeDefaultsDirty(false);
+      setBillDefaults({});
+      setBillDefaultsDirty(false);
+      setVendorCreditDefaults({});
+      setVendorCreditDefaultsDirty(false);
     } else {
       setBillDefaults({});
       setBillDefaultsDirty(false);
       setVendorCreditDefaults({});
       setVendorCreditDefaultsDirty(false);
+      setChequeDefaults({});
+      setChequeDefaultsDirty(false);
     }
   }, [selectedTemplate]);
 
@@ -490,6 +505,25 @@ export default function MappingView({
   const termOptions = useMemo<SelectOption[]>(() =>
     terms.map((term) => ({ value: term.Id, label: term.Name })),
     [terms],
+  );
+
+  const bankAccountOptions = useMemo<SelectOption[]>(() =>
+    accounts
+      .filter((account) => account.Active)
+      .filter((account) =>
+        account.AccountType === 'Asset' &&
+        (account.AccountSubType?.includes('Bank') ||
+         account.AccountSubType?.includes('Checking') ||
+         account.AccountSubType?.includes('Savings')),
+      )
+      .map((account) => ({
+        value: account.Id,
+        label: account.FullyQualifiedName,
+        subtitle: account.AccountSubType,
+        group: account.Classification || account.AccountType,
+      }))
+      .sort((a, b) => (a.group ?? '').localeCompare(b.group ?? '') || a.label.localeCompare(b.label)),
+    [accounts],
   );
 
   const net30Term = useMemo(() =>
@@ -545,6 +579,29 @@ export default function MappingView({
     }
   };
 
+  const updateChequeDefault = (key: string, value: string) => {
+    setChequeDefaults((prev) => ({
+      ...prev,
+      [key]: { value, name: value },
+    }));
+    setChequeDefaultsDirty(true);
+  };
+
+  const saveChequeDefaults = async () => {
+    if (!selectedTemplateId || !jwt) return;
+    setTemplatesLoading(true);
+    try {
+      await api.updateTemplate(jwt, selectedTemplateId, { defaults: chequeDefaults });
+      await loadTemplates();
+      setChequeDefaultsDirty(false);
+      showToast('Check defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save check defaults', 'error');
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
   const renderBillHeader = () => (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
       <div className="text-xs font-semibold text-white">Bill Defaults</div>
@@ -563,6 +620,31 @@ export default function MappingView({
               setBillDefaultsDirty(true);
             }}
             placeholder="Select vendor…"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.apAccountRef}</div>
+          <SearchableSelect
+            options={accountOptions}
+            value={billDefaults.apAccountRef?.value ?? ''}
+            onChange={(value) => {
+              const selected = accounts.find((account) => account.Id === value);
+              setBillDefaults((prev) => ({
+                ...prev,
+                apAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
+              }));
+              setBillDefaultsDirty(true);
+            }}
+            placeholder="Select AP account…"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.dueDate}</div>
+          <input
+            type="date"
+            value={billDefaults.dueDate?.value ?? ''}
+            onChange={(e) => updateBillDefault('dueDate', e.target.value)}
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
           />
         </div>
         <div>
@@ -586,11 +668,22 @@ export default function MappingView({
           </select>
         </div>
         <div>
-          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.dueDate}</div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.memo}</div>
           <input
-            type="date"
-            value={billDefaults.dueDate?.value ?? ''}
-            onChange={(e) => updateBillDefault('dueDate', e.target.value)}
+            type="text"
+            value={billDefaults.memo?.value ?? ''}
+            onChange={(e) => updateBillDefault('memo', e.target.value)}
+            placeholder="Memo"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{BILL_FIELD_LABELS.docNumber}</div>
+          <input
+            type="text"
+            value={billDefaults.docNumber?.value ?? ''}
+            onChange={(e) => updateBillDefault('docNumber', e.target.value)}
+            placeholder="Bill No."
             className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
           />
         </div>
@@ -614,25 +707,47 @@ export default function MappingView({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.vendorRef}</div>
-          <input
-            type="text"
+          <SearchableSelect
+            options={vendorOptions}
             value={vendorCreditDefaults.vendorRef?.value ?? ''}
-            onChange={(e) => updateVendorCreditDefault('vendorRef', e.target.value)}
-            placeholder="e.g. ABC Vendor"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            onChange={(value) => {
+              const selected = vendors.find((vendor) => vendor.Id === value);
+              setVendorCreditDefaults((prev) => ({
+                ...prev,
+                vendorRef: { value, name: selected?.DisplayName ?? '' },
+              }));
+              setVendorCreditDefaultsDirty(true);
+            }}
+            placeholder="Select vendor…"
           />
         </div>
         <div>
           <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.apAccountRef}</div>
+          <SearchableSelect
+            options={accountOptions}
+            value={vendorCreditDefaults.apAccountRef?.value ?? ''}
+            onChange={(value) => {
+              const selected = accounts.find((account) => account.Id === value);
+              setVendorCreditDefaults((prev) => ({
+                ...prev,
+                apAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
+              }));
+              setVendorCreditDefaultsDirty(true);
+            }}
+            placeholder="Select AP account…"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.memo}</div>
           <input
             type="text"
-            value={vendorCreditDefaults.apAccountRef?.value ?? ''}
-            onChange={(e) => updateVendorCreditDefault('apAccountRef', e.target.value)}
-            placeholder="e.g. 33"
+            value={vendorCreditDefaults.memo?.value ?? ''}
+            onChange={(e) => updateVendorCreditDefault('memo', e.target.value)}
+            placeholder="Memo"
             className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
           />
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <div className="text-xs text-gray-400 mb-1">{VENDOR_CREDIT_FIELD_LABELS.docNumber}</div>
           <input
             type="text"
@@ -648,6 +763,76 @@ export default function MappingView({
           type="button"
           disabled={!vendorCreditDefaultsDirty || templatesLoading}
           onClick={saveVendorCreditDefaults}
+          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+        >
+          Save Defaults
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderChequeHeader = () => (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+      <div className="text-xs font-semibold text-white">Check Defaults</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Bank Account</div>
+          <SearchableSelect
+            options={bankAccountOptions}
+            value={chequeDefaults.bankAccountRef?.value ?? ''}
+            onChange={(value) => {
+              const selected = accounts.find((account) => account.Id === value);
+              setChequeDefaults((prev) => ({
+                ...prev,
+                bankAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
+              }));
+              setChequeDefaultsDirty(true);
+            }}
+            placeholder="Select bank account…"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Payee</div>
+          <SearchableSelect
+            options={vendorOptions}
+            value={chequeDefaults.payeeRef?.value ?? ''}
+            onChange={(value) => {
+              const selected = vendors.find((vendor) => vendor.Id === value);
+              setChequeDefaults((prev) => ({
+                ...prev,
+                payeeRef: { value, name: selected?.DisplayName ?? '' },
+              }));
+              setChequeDefaultsDirty(true);
+            }}
+            placeholder="Select payee…"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Memo</div>
+          <input
+            type="text"
+            value={chequeDefaults.memo?.value ?? ''}
+            onChange={(e) => updateChequeDefault('memo', e.target.value)}
+            placeholder="Memo"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+        <div>
+          <div className="text-xs text-gray-400 mb-1">Check No.</div>
+          <input
+            type="text"
+            value={chequeDefaults.docNumber?.value ?? ''}
+            onChange={(e) => updateChequeDefault('docNumber', e.target.value)}
+            placeholder="Check No."
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          disabled={!chequeDefaultsDirty || templatesLoading}
+          onClick={saveChequeDefaults}
           className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
         >
           Save Defaults
@@ -1847,6 +2032,7 @@ export default function MappingView({
 
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isBill && renderBillHeader()}
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isVendorCredit && renderVendorCreditHeader()}
+      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isCheque && renderChequeHeader()}
       {isSectionVisible('fieldMapping', activeScanMode, selectedTemplate?.transactionType) && (
         loading ? (
           <DashboardSkeleton type="list" rows={3} />
