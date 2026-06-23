@@ -518,13 +518,7 @@ export default function MappingView({
 
   const bankAccountOptions = useMemo<SelectOption[]>(() =>
     accounts
-      .filter((account) => account.Active)
-      .filter((account) =>
-        account.AccountType === 'Asset' &&
-        (account.AccountSubType?.includes('Bank') ||
-         account.AccountSubType?.includes('Checking') ||
-         account.AccountSubType?.includes('Savings')),
-      )
+      .filter((account) => account.Active && account.AccountType === 'Bank')
       .map((account) => ({
         value: account.Id,
         label: account.FullyQualifiedName,

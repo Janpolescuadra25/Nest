@@ -338,13 +338,7 @@ export default function CheckPreviewForm({
 
   const bankAccountOptions = useMemo(() =>
     accounts
-      .filter((account) => account.Active)
-      .filter((account) =>
-        account.AccountType === 'Asset' &&
-        (account.AccountSubType?.includes('Bank') ||
-          account.AccountSubType?.includes('Checking') ||
-          account.AccountSubType?.includes('Savings'))
-      )
+      .filter((account) => account.Active && account.AccountType === 'Bank')
       .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
     [accounts],
   );
