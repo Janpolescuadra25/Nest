@@ -12,7 +12,7 @@ import TemplateWizard from '../TemplateWizard';
 import SearchableSelect from '../SearchableSelect';
 import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
-import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS } from '../../../types';
+import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS, CHEQUE_FIELD_LABELS } from '../../../types';
 import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
 
@@ -425,6 +425,9 @@ export default function MappingView({
     if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
       return ['vendorRef', 'apAccountRef', 'memo', 'docNumber'];
     }
+    if (selectedTemplate?.transactionType === 'CHEQUE') {
+      return ['bankAccountRef', 'payeeRef', 'memo', 'docNumber'];
+    }
     return ['memo', 'docNumber'];
   }, [selectedTemplate?.transactionType]);
 
@@ -454,7 +457,13 @@ export default function MappingView({
   }, [selectedTemplate]);
 
   const getColumnFieldLabel = (field: string) => {
-    return BILL_FIELD_LABELS[field] ?? VENDOR_CREDIT_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
+    if (selectedTemplate?.transactionType === 'CHEQUE') {
+      return CHEQUE_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
+    }
+    if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
+      return VENDOR_CREDIT_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
+    }
+    return BILL_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
   };
 
   useEffect(() => {
@@ -776,7 +785,7 @@ export default function MappingView({
       <div className="text-xs font-semibold text-white">Check Defaults</div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <div className="text-xs text-gray-400 mb-1">Bank Account</div>
+          <div className="text-xs text-gray-400 mb-1">{CHEQUE_FIELD_LABELS.bankAccountRef}</div>
           <SearchableSelect
             options={bankAccountOptions}
             value={chequeDefaults.bankAccountRef?.value ?? ''}
@@ -792,7 +801,7 @@ export default function MappingView({
           />
         </div>
         <div>
-          <div className="text-xs text-gray-400 mb-1">Payee</div>
+          <div className="text-xs text-gray-400 mb-1">{CHEQUE_FIELD_LABELS.payeeRef}</div>
           <SearchableSelect
             options={vendorOptions}
             value={chequeDefaults.payeeRef?.value ?? ''}
@@ -808,7 +817,7 @@ export default function MappingView({
           />
         </div>
         <div>
-          <div className="text-xs text-gray-400 mb-1">Memo</div>
+          <div className="text-xs text-gray-400 mb-1">{CHEQUE_FIELD_LABELS.memo}</div>
           <input
             type="text"
             value={chequeDefaults.memo?.value ?? ''}
@@ -818,7 +827,7 @@ export default function MappingView({
           />
         </div>
         <div>
-          <div className="text-xs text-gray-400 mb-1">Check No.</div>
+          <div className="text-xs text-gray-400 mb-1">{CHEQUE_FIELD_LABELS.docNumber}</div>
           <input
             type="text"
             value={chequeDefaults.docNumber?.value ?? ''}
@@ -1950,7 +1959,7 @@ export default function MappingView({
         </div>
       )}
 
-      {activeScanEntry && activeScanEntry.lineItems.length > 0 && (isBill || isVendorCredit) && (
+      {activeScanEntry && activeScanEntry.lineItems.length > 0 && (isBill || isVendorCredit || isCheque) && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           <div className="px-3 py-2 bg-gray-900/80 border-b border-gray-700">
             <div className="text-xs font-semibold text-gray-300">Scanned Line Items</div>
@@ -1986,7 +1995,7 @@ export default function MappingView({
         </div>
       )}
 
-      {(isBill || isVendorCredit) && activeScanEntry && activeScanEntry.lineItems.length > 1 && (
+      {(isBill || isVendorCredit || isCheque) && activeScanEntry && activeScanEntry.lineItems.length > 1 && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           <button
             type="button"

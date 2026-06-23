@@ -184,6 +184,13 @@ export const VENDOR_CREDIT_FIELD_LABELS: Record<string, string> = {
   docNumber: 'Credit No.',
 };
 
+export const CHEQUE_FIELD_LABELS: Record<string, string> = {
+  bankAccountRef: 'Bank Account',
+  payeeRef: 'Payee',
+  memo: 'Memo',
+  docNumber: 'Check No.',
+};
+
 export interface Rule {
   id: string;
   locationId: string;
