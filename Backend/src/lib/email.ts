@@ -93,7 +93,9 @@ export async function sendWelcomeEmail({
       subject: 'Welcome to Nest',
       html,
     });
-    console.log(`[Email] Welcome email sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Welcome email sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendWelcomeEmail failed:', err);
   }
@@ -139,7 +141,9 @@ export async function sendVerificationEmail({
       subject: 'Verify your Nest email',
       html,
     });
-    console.log(`[Email] Verification email sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Verification email sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendVerificationEmail failed:', err);
   }
@@ -184,7 +188,9 @@ export async function sendTrialWarning({
       subject: `Your Nest trial expires in ${daysRemaining} ${dayLabel}`,
       html,
     });
-    console.log(`[Email] Trial warning (${daysRemaining}d) sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Trial warning (${daysRemaining}d) sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendTrialWarning failed:', err);
   }
@@ -246,7 +252,9 @@ export async function sendSyncFailureAlert({
       subject: `Action needed: ${total} scan${total !== 1 ? 's' : ''} need${total === 1 ? 's' : ''} attention`,
       html,
     });
-    console.log(`[Email] Sync failure alert sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Sync failure alert sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendSyncFailureAlert failed:', err);
   }
@@ -288,7 +296,9 @@ export async function sendTrialExpired({
       subject: 'Your Nest trial has expired',
       html,
     });
-    console.log(`[Email] Trial expired email sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Trial expired email sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendTrialExpired failed:', err);
   }
@@ -330,7 +340,9 @@ export async function sendTrialRenewed({
       subject: 'Your Nest trial has been renewed',
       html,
     });
-    console.log(`[Email] Trial renewed email sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Trial renewed email sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendTrialRenewed failed:', err);
   }
@@ -376,7 +388,9 @@ export async function sendPasswordResetEmail({
       subject: 'Reset your Nest password',
       html,
     });
-    console.log(`[Email] Password reset email sent to ${to}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Password reset email sent to ${to}`);
+    }
   } catch (err) {
     console.error('[Email] sendPasswordResetEmail failed:', err);
   }

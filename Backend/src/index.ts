@@ -85,7 +85,9 @@ app.use(globalLimiter);
 
 // ── Request Logger ─────────────────────────────────────────────────────────
 app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
-  console.log(`[${req.method}] ${req.path}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[${req.method}] ${req.path}`);
+  }
   next();
 });
 

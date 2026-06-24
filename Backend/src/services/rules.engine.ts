@@ -39,7 +39,9 @@ export function applyRules(
             return sum + (result[field] ?? 0);
           }, 0);
           result[targetField] = combined;
-          console.log(`[RulesEngine] COMBINE "${rule.name}": ${sourceFields.join(' + ')} = ${combined} → ${targetField}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[RulesEngine] COMBINE "${rule.name}": ${sourceFields.join(' + ')} = ${combined} → ${targetField}`);
+          }
           break;
         }
 
@@ -51,7 +53,9 @@ export function applyRules(
             return sum + (result[field] ?? 0);
           }, 0);
           result[targetField] = base - deduction;
-          console.log(`[RulesEngine] DEDUCT "${rule.name}": ${base} - ${deduction} = ${result[targetField]} → ${targetField}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[RulesEngine] DEDUCT "${rule.name}": ${base} - ${deduction} = ${result[targetField]} → ${targetField}`);
+          }
           break;
         }
 
@@ -60,7 +64,9 @@ export function applyRules(
           if (!sourceFields || threshold === undefined || !targetField) break;
           const value = result[sourceFields[0]] ?? 0;
           result[targetField] = value >= threshold ? value : 0;
-          console.log(`[RulesEngine] THRESHOLD "${rule.name}": ${value} >= ${threshold}? → ${result[targetField]}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[RulesEngine] THRESHOLD "${rule.name}": ${value} >= ${threshold}? → ${result[targetField]}`);
+          }
           break;
         }
 
@@ -74,7 +80,9 @@ export function applyRules(
           const compiled = safeMath.compile(evaluatable);
           const value = compiled.evaluate() as number;
           result[targetField] = value;
-          console.log(`[RulesEngine] FORMULA "${rule.name}": ${evaluatable} = ${value} → ${targetField}`);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[RulesEngine] FORMULA "${rule.name}": ${evaluatable} = ${value} → ${targetField}`);
+          }
           break;
         }
       }

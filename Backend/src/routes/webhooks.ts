@@ -162,7 +162,9 @@ router.post(
       }
 
       default:
-        console.log(`Unhandled Stripe event type: ${event.type}`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Unhandled Stripe event type: ${event.type}`);
+        }
     }
 
     res.json({ received: true });
