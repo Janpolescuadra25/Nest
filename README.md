@@ -1,309 +1,261 @@
+# Nest
 
-# 🪹 Nest — Toast POS → QuickBooks Sync
+> Seamless restaurant POS to QuickBooks sync, right from your browser.
 
-> Bridge between Toast POS and QuickBooks Online. Scan sales reports, map fields to journal entries, and sync seamlessly.
+Nest is a Chrome extension that bridges restaurant point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
 
-Created by **John Paul O. Escuadra** · Made with ❤️ in the Philippines
+## Features
 
----
+### Transaction Sync
+- **5 transaction types**: Journal Entries, Bills, Vendor Credits, Cheques, and Bill Payments
+- **Batch sync**: Sync multiple transactions at once with per-item error handling (synced / skipped / failed)
+- **Duplicate detection**: Automatic dedup with configurable rules and force-sync override
+- **Retry**: Retry failed syncs individually or in bulk from the sync log
+- **Sync log**: Full history of all sync attempts with status tracking
 
-## What It Does
+### Scan and Capture
+- **POS text**: Paste or scrape text output from POS terminal screens
+- **Image OCR**: Upload receipt or invoice photos, parsed via Google Gemini AI
+- **Excel import**: Upload .xlsx files with transaction data, auto-parsed into scan records
 
-Nest is a Chrome extension + backend that automates the daily journal entry process for restaurants using Toast POS and QuickBooks Online:
+### Template System
+- **Per-type templates**: Create export templates for each transaction type (Journal Entry, Bill, Vendor Credit, Cheque)
+- **Column mapping**: Map POS data columns to QuickBooks fields with a visual mapping editor
+- **Default values**: Set default vendor, account, department, payment terms, and more per template
+- **Template wizard**: Create templates from a live scan preview
+- **Active/inactive management**: Enable or disable templates without deleting them
 
-1. **Scan** — Reads the Toast Sales Summary page (17 sections, 100+ fields)
-2. **Map** — Links each Toast field to a QuickBooks account with Debit/Credit posting
-3. **Preview** — Shows the journal entry with auto-balance, consolidation, and entity assignment
-4. **Sync** — Creates the journal entry directly in QuickBooks Online
+### Product Intelligence
+- **Fuzzy matching**: Automatically match product names using configurable rules (contains, starts with, exact, regex)
+- **Auto-suggest mappings**: Product matches suggest column mappings with confidence scoring
+- **Unmatched panel**: Review and manually handle unmatched products
 
----
+### Team and Access
+- **Role hierarchy**: Owner (full access) and Admin (location-scoped access)
+- **Invite-based onboarding**: Send invite links to add team members without sharing passwords
+- **Multi-location**: Each admin manages their assigned restaurant locations
+- **Email verification**: Verify email addresses during signup
+- **Password reset**: Secure password reset flow via email
+
+### Billing
+- **Stripe integration**: Checkout sessions and webhook-powered event handling
+- **Multiple plans**: Tiered pricing with configurable plan IDs
 
 ## Architecture
 
 ```
-┌─────────────────────┐       ┌─────────────────────┐       ┌──────────────────┐
-│  Toast POS Page      │       │  Nest Backend        │       │  QuickBooks API  │
-│  (Sales Summary)     │       │  (Express + Prisma)  │       │  (OAuth 2.0)     │
-│                      │       │                      │       │                  │
-│  scanner.ts ─────────┼──►   │  /api/scans          │       │                  │
-│  (content script)    │       │  /api/mappings       │       │                  │
-│                      │       │  /api/quickbooks/*   │──────►│  JournalEntry    │
-└─────────────────────┘       │  /api/auth/*         │       │  Account, Class  │
-                              │  /api/locations       │       │  Vendor, etc.    │
-┌─────────────────────┐       │                      │       └──────────────────┘
-│  Chrome Extension    │       │  PostgreSQL          │
-│  (Popup + Service    │──────►│  (Render hosted)     │
-│   Worker)            │       └─────────────────────┘
-└─────────────────────┘
+                    +-------------------+
+                    |   Restaurant POS  |
+                    |                   |
+                    |   Receipts        |
+                    |   Invoices        |
+                    |   Excel Exports   |
+                    +--------+----------+
+                             |
+                             v
+              +------------------------------+
+              |    Nest Chrome Extension     |
+              |                              |
+              |  Scan Modes:                 |
+              |    - POS text scraping        |
+              |    - Image OCR (Gemini AI)    |
+              |    - Excel file upload        |
+              |                              |
+              |  Template Engine:            |
+              |    - Column-to-field mapping  |
+              |    - Default values per type  |
+              |    - Active/inactive mgmt     |
+              |                              |
+              |  Sync Operations:            |
+              |    - Single and batch sync    |
+              |    - Duplicate detection      |
+              |    - Retry failed items       |
+              |    - Force-sync override      |
+              +--------------+---------------+
+                             |
+                             v
+              +------------------------------+
+              |       Nest Backend API       |
+              |     (Express + Prisma)       |
+              |                              |
+              |  Transaction Types:          |
+              |    Journal Entry | Bill      |
+              |    Vendor Credit | Cheque    |
+              |    Bill Payment              |
+              |                              |
+              |  Platform:                   |
+              |    Team and location mgmt    |
+              |    Stripe subscriptions      |
+              |    Email verification        |
+              |    Product matching (fuzzy)  |
+              +--------------+---------------+
+                             |
+                             v
+                   +------------------+
+                   | QuickBooks Online |
+                   +------------------+
 ```
 
----
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 14+
+- A QuickBooks Online developer account (sandbox or production)
+- A Google AI Studio API key (for image OCR)
+- A Stripe account (for subscription billing)
+- A Resend account (for transactional emails)
+- Google Chrome (for loading the extension)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Janpolescuadra25/Nest.git
+cd Nest
+```
+
+2. Install backend dependencies:
+```bash
+cd Backend
+npm install
+```
+
+3. Install frontend dependencies:
+```bash
+cd ../Frontend
+npm install
+```
+
+4. Set up the database:
+```bash
+cd Backend
+npx prisma migrate deploy
+npx prisma db seed
+```
+
+5. Configure environment variables (see Environment Variables section below)
+
+6. Start the backend:
+```bash
+cd Backend
+npm run dev
+```
+
+7. Build and load the Chrome extension:
+```bash
+cd Frontend
+npm run build
+```
+Then go to `chrome://extensions`, enable Developer Mode, and load the `Frontend/dist` directory as an unpacked extension.
+
+## Environment Variables
+
+Copy `.env.example` and `.env.production.example` from `Backend/` and fill in the values.
+
+### QuickBooks
+| Variable | Description |
+|----------|-------------|
+| `QB_CLIENT_ID` | QuickBooks app client ID |
+| `QB_CLIENT_SECRET` | QuickBooks app client secret |
+| `QB_REDIRECT_URI` | OAuth callback URL |
+| `QB_ENVIRONMENT` | `sandbox` or `production` |
+
+### Database and Auth
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | JWT signing secret |
+| `ENCRYPTION_KEY` | Encryption key for QB OAuth tokens |
+
+### Application
+| Variable | Description |
+|----------|-------------|
+| `APP_URL` | Backend base URL (for email links and redirects) |
+| `FRONTEND_URL` | Frontend URL (CORS allowed origin) |
+| `ALLOWED_EXTENSION_ID` | Chrome extension ID for auth |
+| `GEMINI_API_KEY` | Google Gemini API key (OCR) |
+| `RESEND_API_KEY` | Resend API key (emails) |
+| `RESEND_FROM_ADDRESS` | Sender email address |
+| `PORT` | Backend port (default: 5000) |
+
+### Stripe
+| Variable | Description |
+|----------|-------------|
+| `STRIPE_SECRET_KEY` | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
+| `STRIPE_*_PRICE_ID` | Price IDs for each plan tier (4 plans) |
+
+### Initial Seed
+| Variable | Description |
+|----------|-------------|
+| `OWNER_EMAIL` | Initial owner account email |
+| `OWNER_PASSWORD` | Initial owner account password |
+| `OWNER_NAME` | Initial owner display name |
 
 ## Project Structure
 
 ```
 Nest/
-├── Backend/                  # Express API server
+├── Backend/
+│   ├── src/
+│   │   ├── routes/            # API route handlers (auth, owner, admin, scans, quickbooks, etc.)
+│   │   ├── lib/               # Shared utilities (errors, prisma client, email, encryption, stripe)
+│   │   ├── middleware/        # Auth, rate limiting, role validation, audit logging
+│   │   ├── services/          # Business logic (QuickBooks service, etc.)
+│   │   └── utils/             # Helper functions (invite utils, etc.)
 │   ├── prisma/
-│   │   ├── schema.prisma     # Database schema (PostgreSQL)
-│   │   └── seed.ts           # Admin user seeder
+│   │   ├── schema.prisma      # Database schema (User, Location, ScanRecord, SyncLog, Template, etc.)
+│   │   └── migrations/        # Database migrations (21 migrations)
+│   ├── tests/                 # Backend tests
+│   └── .env.example           # Environment variable template
+├── Frontend/
 │   ├── src/
-│   │   ├── index.ts          # Express server entry point
-│   │   ├── middleware/       # JWT auth middleware
-│   │   ├── routes/           # API route handlers
-│   │   │   ├── auth.ts       # Login, signup, password reset
-│   │   │   ├── quickbooks.ts # QB OAuth, JE creation, list sync
-│   │   │   ├── locations.ts  # Multi-location management
-│   │   │   ├── mappings.ts   # Field → account mappings CRUD
-│   │   │   ├── rules.ts      # Rules engine CRUD
-│   │   │   ├── scans.ts      # Scan record storage
-│   │   │   ├── admin.ts      # Admin dashboard APIs
-│   │   │   └── password.ts   # Password reset flow
-│   │   ├── services/
-│   │   │   └── qb.service.ts # QB API calls (JE, accounts, token refresh)
-│   │   └── types/
-│   │       └── index.ts      # Shared TypeScript types
-│   ├── .env.production.example
-│   └── package.json
-│
-├── Frontend/                 # Chrome Extension (Manifest V3)
-│   ├── manifest.json         # Extension config
-│   ├── src/
-│   │   ├── background/
-│   │   │   └── service-worker.ts  # Floating window, scan save, QB auth
-│   │   ├── content/
-│   │   │   └── scanner.ts        # DOM scraper for Toast pages
-│   │   ├── popup/
-│   │   │   ├── App.tsx            # Main app with tab navigation
-│   │   │   ├── components/
-│   │   │   │   ├── ScanView.tsx           # Scan tab
-│   │   │   │   ├── MappingView.tsx        # Mapping tab
-│   │   │   │   ├── JournalEntryPreview.tsx # Preview & sync tab
-│   │   │   │   ├── QBDataView.tsx         # QB data browser
-│   │   │   │   ├── SyncView.tsx           # Sync history
-│   │   │   │   ├── SettingsView.tsx       # QB connect, locations
-│   │   │   │   ├── HelpPanel.tsx          # Help & guide overlay
-│   │   │   │   ├── SearchableSelect.tsx   # Dropdown with search
-│   │   │   │   ├── SmartDatePicker.tsx    # Date picker
-│   │   │   │   ├── LoginView.tsx          # Login/signup
-│   │   │   │   └── AdminDashboard.tsx     # Admin panel
-│   │   │   ├── hooks/              # useAuth, useLocations, useQuickBooks
-│   │   │   ├── contexts/           # QBContext (shared QB lists)
-│   │   │   ├── lib/
-│   │   │   │   └── api.ts          # Backend API client
-│   │   │   └── types/
-│   │   │       └── qb.ts           # QB entity types
-│   │   └── types/
-│   │       └── index.ts            # Shared types (Mapping, ScanData, etc.)
-│   └── package.json
-│
-├── docs/                     # Development prompts & documentation
-└── render.yaml               # Render deployment config
+│   │   ├── popup/             # Extension popup UI
+│   │   │   ├── components/    # React components (SyncView, MappingView, ScanView, etc.)
+│   │   │   ├── lib/           # Utilities (API client, payload builders, mapping utils)
+│   │   │   ├── hooks/         # Custom React hooks
+│   │   │   └── contexts/      # React contexts (QuickBooks connection, etc.)
+│   │   ├── types/             # TypeScript type definitions (index.ts, qb.ts)
+│   │   └── background/        # Service worker
+│   └── dist/                  # Built extension (loaded in Chrome)
+├── docs/                      # Documentation
+└── render.yaml                # Root Render config
 ```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Node.js** 18+
-- **PostgreSQL** database (local or hosted)
-- **Intuit Developer** account with a QuickBooks app ([developer.intuit.com](https://developer.intuit.com))
-- **Google Chrome** (for the extension)
-
-### 1. Backend Setup
-
-```bash
-cd Backend
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.production.example .env
-# Edit .env with your actual values (see Environment Variables below)
-
-# Generate Prisma client & push schema
-npx prisma generate
-npx prisma db push
-
-# Seed the admin user
-npm run prisma:seed
-
-# Start the dev server
-npm run dev
-```
-
-### 2. Frontend (Chrome Extension) Setup
-
-```bash
-cd Frontend
-
-# Install dependencies
-npm install
-
-# Build the extension
-npm run build
-```
-
-### 3. Load the Extension in Chrome
-
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked**
-4. Select the `Frontend` folder
-5. The 🪹 Nest icon appears in your toolbar
-
-### 4. First-Time Use
-
-1. Click the Nest icon — a floating window opens
-2. Log in with your admin credentials (from the seed)
-3. Go to **Settings** → Connect QuickBooks
-4. Navigate to a Toast Sales Summary page
-5. Click **Scan** → **Mapping** → **Preview** → **Sync**
-
----
-
-## Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/nest` |
-| `JWT_SECRET` | Secret for JWT tokens (min 32 chars) | `your-long-random-string` |
-| `JWT_EXPIRES_IN` | JWT token expiry | `7d` |
-| `QB_CLIENT_ID` | Intuit app client ID | From Intuit Developer portal |
-| `QB_CLIENT_SECRET` | Intuit app client secret | From Intuit Developer portal |
-| `QB_REDIRECT_URI` | OAuth callback URL | `https://your-backend.onrender.com/api/quickbooks/callback` |
-| `QB_AUTH_URL` | Intuit OAuth authorize URL | `https://appcenter.intuit.com/connect/oauth2` |
-| `QB_TOKEN_URL` | Intuit token exchange URL | `https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer` |
-| `QB_API_BASE_URL` | QB API base URL | `https://quickbooks.api.intuit.com/v3/company` (production) or `https://sandbox-quickbooks.api.intuit.com/v3/company` (sandbox) |
-| `QB_ENVIRONMENT` | `production` or `development` | `production` |
-| `PORT` | Server port | `3000` |
-| `NODE_ENV` | Environment | `production` |
-
----
-
-## Scanner — 17 Toast Sections
-
-The content script extracts data from these Toast Sales Summary sections using `data-testid` selectors:
-
-| # | Section | Type | Selector Pattern |
-|---|---------|------|------------------|
-| 1 | Revenue Summary | Key-Value | `revenue-summary-table-body` |
-| 2 | Net Sales Summary | Key-Value | `net-sales-summary-table-body` |
-| 3 | Tip Summary | Key-Value | `tip-summary-table-body` |
-| 4 | Cash Activity | Key-Value | `cash-activity-table-body` |
-| 5 | Cash Summary | Key-Value | `cash-summary-table-body` |
-| 6 | Unpaid Orders | Key-Value | `unpaid-orders-summary-data-table-body` |
-| 7 | Void Summary | Key-Value | `void-summary-table-body` |
-| 8 | Payments Summary | Multi-Column | `payments-summary-table-*` |
-| 9 | Sales Category | Multi-Column | `sales-categories-data-table-*` |
-| 10 | Tax Summary | Multi-Column | `tax-summary-data-table-*` |
-| 11 | Discount | Multi-Column | `discount-data-table-*` |
-| 12 | Service Charge | Multi-Column | `service-charge-data-table-*` |
-| 13 | Revenue Center | Multi-Column | `RevenueTable-data-table-*` |
-| 14 | Service Daypart | Multi-Column | `Services-data-table-*` |
-| 15 | Dining Options | Multi-Column | `dining-options-data-table-*` |
-| 16 | Service Mode | Multi-Column | `service-mode-summary-data-table-*` |
-| 17 | Deferred | Multi-Column | `Deferred-data-table-*` |
-
----
-
-## API Endpoints
-
-### Auth
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/auth/login` | Email/password login |
-| POST | `/api/auth/request-access` | Request account |
-| POST | `/api/auth/forgot-password` | Password reset request |
-
-### Locations
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/locations` | List user's locations |
-| POST | `/api/locations` | Create location |
-| PUT | `/api/locations/:id` | Update location |
-| DELETE | `/api/locations/:id` | Delete location |
-
-### Mappings
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/locations/:id/mappings` | List mappings for location |
-| POST | `/api/locations/:id/mappings` | Create mapping |
-| PUT | `/api/mappings/:id` | Update mapping |
-| DELETE | `/api/mappings/:id` | Delete mapping |
-
-### QuickBooks
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/quickbooks/auth-url` | Get OAuth authorization URL |
-| GET | `/api/quickbooks/callback` | OAuth callback (browser redirect) |
-| GET | `/api/quickbooks/status` | Check QB connection status |
-| POST | `/api/quickbooks/journal-entry` | Create journal entry in QB |
-| GET | `/api/quickbooks/accounts` | Fetch QB accounts |
-| GET | `/api/quickbooks/classes` | Fetch QB classes |
-| GET | `/api/quickbooks/employees` | Fetch QB employees |
-| GET | `/api/quickbooks/vendors` | Fetch QB vendors |
-| GET | `/api/quickbooks/customers` | Fetch QB customers |
-| GET | `/api/quickbooks/tax-codes` | Fetch QB tax codes |
-| GET | `/api/quickbooks/sync-all` | Sync all QB lists at once |
-
-### Scans
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/scans` | Save scan data |
-| GET | `/api/locations/:id/scans` | List scans for location |
-
-### Admin
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/admin/requests` | List access requests |
-| POST | `/api/admin/requests/:id/approve` | Approve request |
-| POST | `/api/admin/requests/:id/reject` | Reject request |
-| GET | `/api/admin/users` | List all users |
-| DELETE | `/api/admin/users/:id` | Delete user |
-
----
-
-## Deployment (Render)
-
-The `render.yaml` file configures automatic deployment:
-
-1. Push to your GitHub repo
-2. Connect the repo to [Render](https://render.com)
-3. Render auto-detects `render.yaml` and deploys the backend
-4. Set `DATABASE_URL` and `JWT_SECRET` as secret env vars in Render dashboard
-5. Update `QB_REDIRECT_URI` to match your Render URL
-6. Update the `BASE_URL` in `Frontend/src/popup/lib/api.ts` and `Frontend/src/background/service-worker.ts` to match
-
----
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Extension | Chrome Manifest V3, React 18, TypeScript, Tailwind CSS |
-| Build | esbuild (extension), tsc (backend) |
-| Backend | Express, Prisma ORM, TypeScript |
-| Database | PostgreSQL |
-| Auth | JWT (email/password), Intuit OAuth 2.0 |
-| Hosting | Render (free tier) |
-| Email | Resend (password reset, access requests) |
+### Backend
+- **Runtime**: Node.js + TypeScript
+- **Framework**: Express.js
+- **ORM**: Prisma (PostgreSQL)
+- **QuickBooks**: Intuit QuickBooks Node.js SDK
+- **AI / OCR**: Google Generative AI (Gemini)
+- **Payments**: Stripe
+- **Email**: Resend
+- **Excel**: xlsx (SheetJS)
+- **Validation**: Zod
+- **Security**: Helmet, express-rate-limit, bcryptjs
+- **File Upload**: Multer
+- **Math**: mathjs
 
----
+### Frontend (Chrome Extension)
+- **UI**: React 18 + TypeScript
+- **Styling**: Tailwind CSS
+- **Build**: esbuild
+- **Testing**: Vitest
+
+## Deployment
+
+Nest is configured for deployment on [Render.com](https://render.com):
+
+1. Create a new Web Service on Render
+2. Connect your GitHub repository
+3. Set the environment variables listed above in the Render dashboard
+4. The `render.yaml` configuration handles build commands, start commands, and environment variable keys
+
+The backend automatically runs `prisma migrate deploy` on each deploy to keep the database schema in sync.
 
 ## License
 
-Private project — all rights reserved.
-
----
-
-## Contact
-
-For technical support, bugs, or feature requests:
-
-✉️ paulescuadra25@gmail.com
-
-Created by **John Paul O. Escuadra**
+Private repository. All rights reserved.

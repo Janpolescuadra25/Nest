@@ -80,6 +80,7 @@ router.get('/team', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, r
     ]);
     return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] getTeam error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -126,6 +127,7 @@ router.get('/stats', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, 
       totalPending,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] stats error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -159,6 +161,7 @@ router.get('/audit-log', requireRole('ADMIN'), asyncHandler(async(req: AuthReque
 
     return res.json({ logs, total, page, limit });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] audit-log error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -224,6 +227,7 @@ router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), valid
       tempPassword,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] inviteTeamMember error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -302,6 +306,7 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] createInviteLink error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -337,6 +342,7 @@ router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
 
     return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] listInviteLinks error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -365,6 +371,7 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
 
     return res.json({ message: 'Invite revoked' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] revokeInviteLink error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -561,6 +568,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
 
     return res.json({ user: safeUpdated });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] patchTeamMember error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -587,6 +595,7 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
 
     return res.json({ message: 'User disabled successfully.' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] disableTeamMember error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -653,6 +662,7 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] setTimeBomb error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -717,6 +727,7 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] clearTimeBomb error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -794,6 +805,7 @@ router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Respon
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Admin] changeUserRole error:', err);
     throw new AppError('Internal server error.', 500);
   }

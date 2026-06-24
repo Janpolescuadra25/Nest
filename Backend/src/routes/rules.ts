@@ -62,6 +62,7 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(asyn
 
     res.json(updated);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Rules] update error:', err);
     throw new AppError('Failed to update rule', 500);
   }
@@ -83,6 +84,7 @@ router.delete('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(a
     await prisma.rule.delete({ where: { id } });
     res.json({ message: 'Rule deleted' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Rules] delete error:', err);
     throw new AppError('Failed to delete rule', 500);
   }

@@ -82,6 +82,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Auth] Login error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -157,6 +158,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Auth] Register error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -186,6 +188,7 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
 
     return res.json({ message: 'Password changed successfully.' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Auth] Change password error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -240,6 +243,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
     const billing = mergeTeamBilling(user);
     return res.json({ user: { ...user, ...billing, admin: undefined } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Auth] Me error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -291,6 +295,7 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
     const billing = mergeTeamBilling(user);
     return res.json({ user: { ...user, ...billing, admin: undefined } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
       throw new AppError('Session expired', 401);
     }

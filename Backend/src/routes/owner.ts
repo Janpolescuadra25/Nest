@@ -65,6 +65,7 @@ router.get('/admins', asyncHandler(async(req: AuthRequest, res: Response) => {
 
     return res.json({ admins: result, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] getAdmins error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -106,6 +107,7 @@ router.get('/stats', asyncHandler(async(req: AuthRequest, res: Response) => {
       totalPending,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] stats error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -151,6 +153,7 @@ router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
 
     return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] listInviteLinks error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -174,6 +177,7 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
 
     return res.json({ message: 'Invite revoked' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] revokeInviteLink error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -231,6 +235,7 @@ router.patch('/admins/:id', validate(updateAdminSchema), asyncHandler(async(req:
 
     return res.json({ admin: updated });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] patchAdmin error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -318,6 +323,7 @@ router.get('/users', asyncHandler(async(req: AuthRequest, res: Response) => {
 
     return res.json({ users: result, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] getUsers error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -383,6 +389,7 @@ router.get('/users/:id', asyncHandler(async(req: AuthRequest, res: Response) => 
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] getUser error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -448,6 +455,7 @@ router.patch('/users/:id/block', asyncHandler(async(req: AuthRequest, res: Respo
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] blockUser error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -574,6 +582,7 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] setTimeBomb error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -633,6 +642,7 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] clearTimeBomb error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -701,6 +711,7 @@ router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Respon
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] changeUserRole error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -742,6 +753,7 @@ router.patch('/users/:id/permissions-reset', asyncHandler(async(req: AuthRequest
 
     return res.json({ user: updated });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] permissions-reset error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -813,6 +825,7 @@ router.patch('/users/:id/permissions', asyncHandler(async(req: AuthRequest, res:
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] setPermissionOverrides error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -857,6 +870,7 @@ router.post('/users/:id/approve', asyncHandler(async(req: AuthRequest, res: Resp
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] approveUser error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -901,6 +915,7 @@ router.post('/users/:id/reject', asyncHandler(async(req: AuthRequest, res: Respo
 
     return res.json({ user: updated, message: 'User rejected and disabled' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] rejectUser error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -959,6 +974,7 @@ router.post('/transfer', asyncHandler(async(req: AuthRequest, res: Response) => 
 
     return res.json({ previousOwner, newOwner });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] transferOwnership error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -997,6 +1013,7 @@ router.get('/admins/:id/team', asyncHandler(async(req: AuthRequest, res: Respons
 
     return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] getAdminTeam error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -1042,6 +1059,7 @@ router.get('/audit-log', asyncHandler(async(req: AuthRequest, res: Response) => 
 
     return res.json({ logs, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Owner] getAuditLog error:', err);
     throw new AppError('Internal server error.', 500);
   }

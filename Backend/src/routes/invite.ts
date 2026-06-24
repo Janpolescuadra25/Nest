@@ -41,6 +41,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     try {
       invite = await validateInviteLink(tokenParam);
     } catch (err) {
+      if (err instanceof AppError) throw err;
       if (err instanceof InviteError) {
         const statusMap: Record<string, number> = {
           NOT_FOUND: 404,
@@ -151,6 +152,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Invite] signupViaInvite error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -174,6 +176,7 @@ router.get('/:token', asyncHandler(async (req: Request, res: Response) => {
     try {
       invite = await validateInviteLink(tokenParam);
     } catch (err) {
+      if (err instanceof AppError) throw err;
       if (err instanceof InviteError) {
         const statusMap: Record<string, number> = {
           NOT_FOUND: 404,
@@ -207,6 +210,7 @@ router.get('/:token', asyncHandler(async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Invite] getInvite error:', err);
     throw new AppError('Internal server error.', 500);
   }

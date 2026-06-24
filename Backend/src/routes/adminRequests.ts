@@ -56,6 +56,7 @@ router.post('/', validate(adminRequestSchema), asyncHandler(async(req: Request, 
       createdAt: request.createdAt,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[AdminRequests] create error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -85,6 +86,7 @@ router.get('/', authenticate, requireRole('OWNER'), asyncHandler(async(req: Auth
 
     return res.json({ requests, total, page, limit });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[AdminRequests] list error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -162,6 +164,7 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
       tempPassword,
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[AdminRequests] approve error:', err);
     throw new AppError('Internal server error.', 500);
   }
@@ -191,6 +194,7 @@ router.post('/:id/reject', authenticate, requireRole('OWNER'), asyncHandler(asyn
 
     return res.json({ message: 'Request rejected.' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[AdminRequests] reject error:', err);
     throw new AppError('Internal server error.', 500);
   }

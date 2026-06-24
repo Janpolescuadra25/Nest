@@ -5,7 +5,8 @@ import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import { useToast } from './Toast';
 import { buildJEPayload } from '../lib/je-builder';
-import type { ScanRecord, ScanEntry } from '../../types';
+import { buildBillLikePayload, buildChequePayload } from '../lib/batch-payload-builder';
+import type { BatchSyncItem, ScanRecord, ScanEntry } from '../../types';
 import { TRANSACTION_TYPE_LABELS } from '../../types';
 
 interface Props {
@@ -150,36 +151,111 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       }
 
       const mappings = await api.getMappings(jwt, locationId);
+      const templates = await api.getTemplates(jwt, locationId);
 
-      // Filter to JE-only scans for batch sync (non-JE types require manual sync from preview forms)
-      const nonJECount = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'JOURNAL_ENTRY').length;
-      const scansToSync = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') === 'JOURNAL_ENTRY');
+      const billPaymentCount = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') === 'BILL_PAYMENT').length;
+      const syncableScans = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'BILL_PAYMENT');
 
-      if (nonJECount > 0) {
-        const nonJETypes = [...new Set(allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'JOURNAL_ENTRY').map((s) => TRANSACTION_TYPE_LABELS[s.transactionType as keyof typeof TRANSACTION_TYPE_LABELS] ?? s.transactionType))];
-        showToast(`${nonJECount} ${nonJETypes.join('/')} scan(s) skipped — sync these from their preview forms`, 'info');
+      if (billPaymentCount > 0) {
+        showToast(`${billPaymentCount} Bill Payment scan(s) skipped — sync from the Bill Payment preview form`, 'info');
       }
 
-      if (scansToSync.length === 0) {
-        showToast('No Journal Entry scans to sync', 'info');
-        return;
+      const skippedReasons: { type: string; reason: string; count: number }[] = [];
+      const items: BatchSyncItem[] = [];
+
+      for (const scan of syncableScans) {
+        const txnType = (scan.transactionType ?? 'JOURNAL_ENTRY').toUpperCase();
+        const sharedScanEntry = scan.source && scan.source !== 'pos' && scan.rawScanEntry ? scan.rawScanEntry as ScanEntry : undefined;
+
+        if (txnType === 'JOURNAL_ENTRY') {
+          const payload = buildJEPayload({
+            scanRecordId: scan.id,
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            txnDate: scan.scanDate.slice(0, 10),
+            scanEntry: sharedScanEntry,
+          });
+
+          if (payload.lines.length > 0) {
+            items.push({ ...payload, transactionType: 'JOURNAL_ENTRY' });
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
+
+        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT') {
+          const template = templates.find((t) => t.transactionType === txnType && t.isActive);
+          if (!template?.defaults || !template.defaults.vendorRef || !template.defaults.apAccountRef) {
+            const reason = 'missing header defaults (set up in Mapping tab)';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+            continue;
+          }
+
+          const payload = buildBillLikePayload({
+            scanRecordId: scan.id,
+            transactionType: txnType as 'BILL' | 'VENDOR_CREDIT',
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            txnDate: scan.scanDate.slice(0, 10),
+            defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
+            scanEntry: sharedScanEntry,
+          });
+
+          if (payload) {
+            items.push(payload);
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
+
+        if (txnType === 'CHEQUE') {
+          const template = templates.find((t) => t.transactionType === 'CHEQUE' && t.isActive);
+          if (!template?.defaults || !template.defaults.bankAccountRef || !template.defaults.payeeRef) {
+            const reason = 'missing header defaults (set up in Mapping tab)';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+            continue;
+          }
+
+          const payload = buildChequePayload({
+            scanRecordId: scan.id,
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            txnDate: scan.scanDate.slice(0, 10),
+            defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
+            scanEntry: sharedScanEntry,
+          });
+
+          if (payload) {
+            items.push(payload);
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
       }
 
-      const items = scansToSync
-        .map((scan) => buildJEPayload({
-          scanRecordId: scan.id,
-          scanData: scan.rawData,
-          mappings,
-          accounts,
-          txnDate: scan.scanDate.slice(0, 10),
-          scanEntry: scan.source && scan.source !== 'pos' && scan.rawScanEntry
-            ? scan.rawScanEntry as ScanEntry
-            : undefined,
-        }))
-        .filter((item) => item.lines.length > 0);
+      for (const skip of skippedReasons) {
+        const label = TRANSACTION_TYPE_LABELS[skip.type as keyof typeof TRANSACTION_TYPE_LABELS] ?? skip.type;
+        showToast(`${skip.count} ${label} scan(s) skipped — ${skip.reason}`, 'info');
+      }
 
       if (items.length === 0) {
-        showToast('No scans with mapped lines to sync', 'info');
+        if (skippedReasons.length === 0) {
+          showToast('No pending scans to sync', 'info');
+        }
         return;
       }
 

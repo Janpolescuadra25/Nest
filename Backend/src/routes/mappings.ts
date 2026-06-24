@@ -88,6 +88,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
 
     res.json(updated);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Mappings] update error:', err);
     throw new AppError('Failed to update mapping', 500);
   }
@@ -109,6 +110,7 @@ router.delete('/:id', requireFeaturePermission('map', 'write'), asyncHandler(asy
     await prisma.mapping.delete({ where: { id } });
     res.json({ message: 'Mapping deleted' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[Mappings] delete error:', err);
     throw new AppError('Failed to delete mapping', 500);
   }

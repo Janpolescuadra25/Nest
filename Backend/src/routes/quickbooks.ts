@@ -51,6 +51,7 @@ router.get('/auth-url', authenticate, asyncHandler(async(req: AuthRequest, res: 
     const authUrl = `${QB_AUTH_URL}?${params.toString()}`;
     res.json({ authUrl, state });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[QB] Failed to generate auth URL:', err);
     throw new AppError('Failed to generate authorization URL', 500);
   }
@@ -208,6 +209,7 @@ router.get('/status', authenticate, asyncHandler(async(req: AuthRequest, res: Re
       environment: process.env.QB_ENVIRONMENT ?? 'production',
     });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[QB] status error:', err);
     throw new AppError('Failed to check QB status', 500);
   }
@@ -1296,10 +1298,19 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
     const { items } = req.body as {
       items?: Array<{
         scanRecordId: string;
-        txnDate: string;
-        lines: QBJournalLineItem[];
+        transactionType?: string;
+        txnDate?: string;
+        lines?: QBJournalLineItem[] | QBBillLineItem[] | QBChequeLineItem[];
         privateNote?: string;
         docNumber?: string;
+        vendorRef?: { value: string; name?: string };
+        apAccountRef?: { value: string; name?: string };
+        termsRef?: { value: string; name?: string };
+        dueDate?: string;
+        memo?: string;
+        bankAccountRef?: { value: string; name?: string };
+        payeeRef?: { value: string; name?: string };
+        amount?: number;
       }>;
     };
 
@@ -1314,8 +1325,8 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
     }
 
     for (const item of items) {
-      if (!item.scanRecordId || !item.txnDate || !Array.isArray(item.lines) || item.lines.length === 0) {
-        throw new AppError('Each item must have scanRecordId, txnDate, and lines[]', 400);
+      if (!item.scanRecordId) {
+        throw new AppError('Each item must have a scanRecordId', 400);
         return;
       }
     }
@@ -1336,6 +1347,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
 
     type BatchResult = {
       scanRecordId: string;
+      transactionType: string;
       status: 'SYNCED' | 'SKIPPED' | 'FAILED';
       qbJournalEntryId?: string;
       docNumber?: string;
@@ -1353,6 +1365,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
       if (!scan || !accessibleLocationIds.has(scan.locationId)) {
         results.push({
           scanRecordId: item.scanRecordId,
+          transactionType: item.transactionType ?? 'JOURNAL_ENTRY',
           status: 'FAILED',
           errorType: 'VALIDATION',
           errorMessage: 'Scan not found or access denied',
@@ -1360,16 +1373,135 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
         continue;
       }
 
-      const result = await syncSingleScan(
-        req.user!.userId,
-        item.scanRecordId,
-        item.txnDate,
-        item.lines,
-        item.privateNote,
-        item.docNumber,
-      );
+      const txnType = (item.transactionType ?? 'JOURNAL_ENTRY').toUpperCase();
 
-      results.push({ scanRecordId: item.scanRecordId, ...result });
+      if (txnType === 'BILL_PAYMENT') {
+        results.push({
+          scanRecordId: item.scanRecordId,
+          transactionType: txnType,
+          status: 'FAILED',
+          errorType: 'VALIDATION',
+          errorMessage: 'Bill Payments cannot be batch synced. Sync from the Bill Payment preview form.',
+        });
+        continue;
+      }
+
+      let result: SyncSingleResult;
+
+      switch (txnType) {
+        case 'JOURNAL_ENTRY': {
+          if (!item.txnDate || !Array.isArray(item.lines) || item.lines.length === 0) {
+            results.push({
+              scanRecordId: item.scanRecordId,
+              transactionType: txnType,
+              status: 'FAILED',
+              errorType: 'VALIDATION',
+              errorMessage: 'JE items require txnDate and non-empty lines[]',
+            });
+            continue;
+          }
+
+          result = await syncSingleScan(
+            req.user!.userId,
+            item.scanRecordId,
+            item.txnDate,
+            item.lines as QBJournalLineItem[],
+            item.privateNote,
+            item.docNumber,
+          );
+          break;
+        }
+
+        case 'VENDOR_CREDIT': {
+          if (!item.txnDate || !item.vendorRef?.value || !item.apAccountRef?.value || !Array.isArray(item.lines) || item.lines.length === 0) {
+            results.push({
+              scanRecordId: item.scanRecordId,
+              transactionType: txnType,
+              status: 'FAILED',
+              errorType: 'VALIDATION',
+              errorMessage: 'Vendor Credit items require txnDate, vendorRef, apAccountRef, and non-empty lines[]',
+            });
+            continue;
+          }
+
+          result = await syncSingleVendorCredit(
+            req.user!.userId,
+            item.scanRecordId,
+            item.txnDate,
+            item.vendorRef,
+            item.apAccountRef,
+            item.memo,
+            item.lines as QBBillLineItem[],
+            item.docNumber,
+          );
+          break;
+        }
+
+        case 'CHEQUE': {
+          if (!item.txnDate || !item.bankAccountRef?.value || !item.payeeRef?.value || !item.amount || item.amount <= 0 || !Array.isArray(item.lines) || item.lines.length === 0) {
+            results.push({
+              scanRecordId: item.scanRecordId,
+              transactionType: txnType,
+              status: 'FAILED',
+              errorType: 'VALIDATION',
+              errorMessage: 'Cheque items require txnDate, bankAccountRef, payeeRef, amount > 0, and non-empty lines[]',
+            });
+            continue;
+          }
+
+          result = await syncSingleCheque(
+            req.user!.userId,
+            item.scanRecordId,
+            item.txnDate,
+            item.bankAccountRef,
+            item.payeeRef,
+            item.amount,
+            item.memo,
+            item.lines as QBChequeLineItem[],
+            item.docNumber,
+          );
+          break;
+        }
+
+        case 'BILL': {
+          if (!item.txnDate || !item.vendorRef?.value || !item.apAccountRef?.value || !Array.isArray(item.lines) || item.lines.length === 0) {
+            results.push({
+              scanRecordId: item.scanRecordId,
+              transactionType: txnType,
+              status: 'FAILED',
+              errorType: 'VALIDATION',
+              errorMessage: 'Bill items require txnDate, vendorRef, apAccountRef, and non-empty lines[]',
+            });
+            continue;
+          }
+
+          result = await syncSingleBill(
+            req.user!.userId,
+            item.scanRecordId,
+            item.txnDate,
+            item.vendorRef,
+            item.apAccountRef,
+            item.termsRef,
+            item.dueDate,
+            item.memo,
+            item.lines as QBBillLineItem[],
+            item.docNumber,
+          );
+          break;
+        }
+
+        default:
+          results.push({
+            scanRecordId: item.scanRecordId,
+            transactionType: txnType,
+            status: 'FAILED',
+            errorType: 'VALIDATION',
+            errorMessage: `Unsupported transaction type for batch sync: ${txnType}`,
+          });
+          continue;
+      }
+
+      results.push({ scanRecordId: item.scanRecordId, transactionType: txnType, ...result });
 
       if (i < items.length - 1) {
         await sleep(200);
@@ -1462,6 +1594,7 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
       });
     }
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] retry error:', message);
     throw err instanceof AppError ? err : new AppError(message, 500);
@@ -1731,6 +1864,7 @@ router.delete('/token', authenticate, asyncHandler(async(req: AuthRequest, res: 
 
     res.json({ success: true });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[QB] disconnect error:', err);
     throw new AppError('Failed to disconnect QuickBooks', 500);
   }
@@ -1744,6 +1878,7 @@ router.get('/accounts', authenticate, requireFeaturePermission('sync', 'execute'
     );
     res.json({ accounts });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] accounts error:', message);
     throw new AppError('Failed to fetch accounts', 500);
@@ -1758,6 +1893,7 @@ router.get('/classes', authenticate, requireFeaturePermission('sync', 'execute')
     );
     res.json({ classes });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] classes error:', message);
     throw new AppError('Failed to fetch classes', 500);
@@ -1772,6 +1908,7 @@ router.get('/employees', authenticate, requireFeaturePermission('sync', 'execute
     );
     res.json({ employees });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] employees error:', message);
     throw new AppError('Failed to fetch employees', 500);
@@ -1786,6 +1923,7 @@ router.get('/vendors', authenticate, requireFeaturePermission('sync', 'execute')
     );
     res.json({ vendors });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] vendors error:', message);
     throw new AppError('Failed to fetch vendors', 500);
@@ -1800,6 +1938,7 @@ router.get('/customers', authenticate, requireFeaturePermission('sync', 'execute
     );
     res.json({ customers });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] customers error:', message);
     throw new AppError('Failed to fetch customers', 500);
@@ -1814,6 +1953,7 @@ router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute
     );
     res.json({ taxCodes });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] tax-codes error:', message);
     throw new AppError('Failed to fetch tax codes', 500);
@@ -1831,6 +1971,7 @@ router.get('/bills', authenticate, requireFeaturePermission('sync', 'execute'), 
     const filteredBills = vendorId ? bills.filter((bill) => bill.vendorRef.value === vendorId) : bills;
     res.json({ bills: filteredBills });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] bills error:', message);
     throw new AppError('Failed to fetch bills', 500);
@@ -1848,6 +1989,7 @@ router.get('/vendor-credits', authenticate, requireFeaturePermission('sync', 'ex
     const filteredCredits = vendorId ? vendorCredits.filter((credit) => credit.vendorRef.value === vendorId) : vendorCredits;
     res.json({ vendorCredits: filteredCredits });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] vendor credits error:', message);
     throw new AppError('Failed to fetch vendor credits', 500);
@@ -1925,6 +2067,7 @@ router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'
     });
     res.json(entities);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[QB] sync-all error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'

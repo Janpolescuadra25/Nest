@@ -31,6 +31,7 @@ router.post('/request', authenticate, emailVerificationLimiter, asyncHandler(asy
 
     return res.json({ message: 'Verification email sent' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[EmailVerification] request error:', err);
     throw new AppError('Internal server error', 500);
   }

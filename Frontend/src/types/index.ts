@@ -283,6 +283,13 @@ export interface QBTerm {
   Active?: boolean;
 }
 
+export interface QBChequeLineItem {
+  amount: number;
+  accountRef: { value: string; name?: string };
+  description?: string;
+  classRef?: { value: string; name?: string };
+}
+
 export interface OutstandingBill {
   id: string;
   txnDate: string;
@@ -312,14 +319,24 @@ export interface BillPaymentLineItem {
 
 export interface BatchSyncItem {
   scanRecordId: string;
+  transactionType: 'JOURNAL_ENTRY' | 'BILL' | 'VENDOR_CREDIT' | 'CHEQUE';
   txnDate: string;
-  lines: QBJournalLineItem[];
+  lines: QBJournalLineItem[] | QBBillLineItem[] | QBChequeLineItem[];
   privateNote?: string;
   docNumber?: string;
+  vendorRef?: { value: string; name?: string };
+  apAccountRef?: { value: string; name?: string };
+  termsRef?: { value: string; name?: string };
+  dueDate?: string;
+  memo?: string;
+  bankAccountRef?: { value: string; name?: string };
+  payeeRef?: { value: string; name?: string };
+  amount?: number;
 }
 
 export interface BatchSyncResult {
   scanRecordId: string;
+  transactionType?: string;
   status: 'SYNCED' | 'SKIPPED' | 'FAILED';
   qbJournalEntryId?: string;
   docNumber?: string;

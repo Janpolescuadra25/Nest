@@ -48,6 +48,7 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
 
     return res.json(GENERIC_RESPONSE);
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[PasswordReset] request error:', err);
     throw new AppError('Internal server error', 500);
   }
@@ -112,6 +113,7 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
 
     return res.json({ message: 'Password updated successfully. You can now log in.' });
   } catch (err) {
+    if (err instanceof AppError) throw err;
     console.error('[PasswordReset] verify error:', err);
     throw new AppError('Internal server error', 500);
   }
