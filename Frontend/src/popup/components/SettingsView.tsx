@@ -177,7 +177,22 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
               >
                 Contact owner for billing
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPricing(true)}
+                className="w-full rounded-lg bg-cyan-700 hover:bg-cyan-600 text-white py-2 text-xs font-semibold"
+              >
+                Choose a plan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => window.open('mailto:paulescuadra25@gmail.com?subject=Nest Billing Help', '_blank')}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 text-gray-300 py-2 text-xs font-semibold hover:bg-gray-800"
+            >
+              Billing help
+            </button>
           </div>
         </div>
       </div>
