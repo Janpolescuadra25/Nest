@@ -604,7 +604,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                   onClick={() => {
                                     api.getQBAuthUrl(jwt)
                                       .then(({ authUrl }) => window.open(authUrl, '_blank'))
-                                      .catch(() => {});
+                                      .catch(() => showToast('Failed to start QuickBooks reconnection', 'error'));
                                   }}
                                   className="text-xs text-orange-400 hover:text-orange-300 border border-orange-800 hover:border-orange-600 px-2 py-0.5 rounded transition-colors"
                                 >

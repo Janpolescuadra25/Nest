@@ -118,6 +118,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; skipped?: boolean; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [autoBalancePending, setAutoBalancePending] = useState(false);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
@@ -820,6 +821,17 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           onRetry={handleForceSync}
         />
       )}
+      {autoBalancePending && (
+        <ErrorCard
+          variant="warning"
+          message="Journal entry requires auto-balance adjustment to sync. Proceed with adjusted amounts?"
+          onRetry={() => {
+            setAutoBalancePending(false);
+            void handleSync();
+          }}
+          onDismiss={() => setAutoBalancePending(false)}
+        />
+      )}
       {error && (
         <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
           {error}
@@ -863,7 +875,13 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           Clear All
         </button>
         <button
-          onClick={() => void handleSync()}
+          onClick={() => {
+            if (autoBalanced && !autoBalancePending) {
+              setAutoBalancePending(true);
+              return;
+            }
+            void handleSync();
+          }}
           disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
         >

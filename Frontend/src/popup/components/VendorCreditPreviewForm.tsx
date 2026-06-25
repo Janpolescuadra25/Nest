@@ -537,7 +537,6 @@ export default function VendorCreditPreviewForm({
               setApAccountRef({ value, name: selected?.FullyQualifiedName });
             }}
             placeholder="Select AP account…"
-            disabled={true}
           />
         </div>
         <div className="col-span-2">

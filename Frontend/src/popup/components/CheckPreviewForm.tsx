@@ -521,7 +521,6 @@ export default function CheckPreviewForm({
               setBankAccountRef({ value, name: selected?.FullyQualifiedName });
             }}
             placeholder="Select bank account…"
-            disabled={true}
           />
         </div>
         <div className="col-span-2">

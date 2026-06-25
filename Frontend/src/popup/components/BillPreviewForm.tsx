@@ -565,7 +565,6 @@ export default function BillPreviewForm({
               setApAccountRef({ value, name: selected?.FullyQualifiedName });
             }}
             placeholder="Accounts Payable"
-            disabled={true}
           />
         </div>
         <div>

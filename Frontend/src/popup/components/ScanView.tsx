@@ -7,6 +7,7 @@ import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
 import CheckReviewPanel from './ScanView/CheckReviewPanel';
 import ScanHistory from './ScanHistory';
 import { ErrorCard, EmptyState } from './shared';
+import { useToast } from './Toast';
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
   toast: { pattern: /toasttab\.com/, name: 'Toast' },
@@ -83,6 +84,7 @@ export default function ScanView({
   const [blurWarning, setBlurWarning] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [showInvoiceReview, setShowInvoiceReview] = useState(false);
+  const { showToast } = useToast();
   const [documentClassification, setDocumentClassification] = useState<{
     documentType: string;
     confidence: number;
@@ -526,7 +528,9 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {});
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {
+        showToast('Failed to save scanned invoice data', 'error');
+      });
     }
 
     setScanEntries([scanEntry]);
@@ -563,7 +567,9 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {});
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {
+        showToast('Failed to save scanned check data', 'error');
+      });
     }
 
     setScanEntries([scanEntry]);
