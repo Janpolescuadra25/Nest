@@ -20,10 +20,6 @@ async function main(): Promise<void> {
       role: 'OWNER',
       status: 'ACTIVE',
       name: ownerName,
-      canScan: true,
-      canMap: true,
-      canSync: true,
-      canManageLocs: true,
       subscriptionSource: 'owner',
     },
     create: {
@@ -32,10 +28,6 @@ async function main(): Promise<void> {
       password: hashedPassword,
       role: 'OWNER',
       status: 'ACTIVE',
-      canScan: true,
-      canMap: true,
-      canSync: true,
-      canManageLocs: true,
       subscriptionSource: 'owner',
     },
   });

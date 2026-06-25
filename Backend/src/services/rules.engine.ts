@@ -1,7 +1,29 @@
 import { create, all } from 'mathjs';
 import { RuleConfig } from '../types';
 
-const safeMath = create(all);
+const ALLOWED_FACTORIES = new Set([
+  // Arithmetic
+  'add', 'subtract', 'multiply', 'divide',
+  'abs', 'round', 'floor', 'ceil',
+  'pow', 'sqrt', 'max', 'min',
+  'log', 'log10', 'log2', 'mod', 'exp',
+  'unaryMinus', 'unaryPlus',
+  // Comparison
+  'equal', 'unequal', 'smaller', 'larger', 'smallerEq', 'largerEq',
+  'compare',
+  // Logical
+  'and', 'or', 'not',
+  // Conditional & types
+  'conditional', 'number', 'string', 'boolean', 'parenthesis',
+]);
+
+const safeFactories: Record<string, any> = {};
+for (const [name, factory] of Object.entries(all)) {
+  if (ALLOWED_FACTORIES.has(name)) {
+    safeFactories[name] = factory;
+  }
+}
+const safeMath = create(safeFactories);
 
 export interface RuleDefinition {
   id: string;

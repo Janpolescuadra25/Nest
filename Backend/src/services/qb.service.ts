@@ -731,7 +731,7 @@ async function callQB<T>(userId: string, fn: (creds: { accessToken: string; real
 }
 
 async function revokeAccessToken(accessToken: string): Promise<void> {
-  await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+  const response = await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
     method: 'POST',
     headers: {
       Authorization: `Basic ${Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64')}`,
@@ -740,6 +740,9 @@ async function revokeAccessToken(accessToken: string): Promise<void> {
     },
     body: JSON.stringify({ token: accessToken }),
   });
+  if (!response.ok) {
+    console.warn(`[QB] Token revocation returned status ${response.status}, proceeding with local deletion`);
+  }
 }
 
 export const qbService = {

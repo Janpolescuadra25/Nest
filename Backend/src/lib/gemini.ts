@@ -246,9 +246,11 @@ export async function suggestMappings(
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
+  const ACCOUNT_CAP = 100;
+
   const fieldsText = scanFields.map((field) => `- ${field}`).join('\n');
-  const accountsText = (accountTypes ?? accountNames.slice(0, 50).map((name) => ({ name, type: '', subType: '' })))
-    .slice(0, 50)
+  const accountsText = (accountTypes ?? accountNames.slice(0, ACCOUNT_CAP).map((name) => ({ name, type: '', subType: '' })))
+    .slice(0, ACCOUNT_CAP)
     .map((account) => `- ${account.name} (${account.type}${account.subType ? ` • ${account.subType}` : ''})`)
     .join('\n');
   const preferenceText = preferenceContext
@@ -282,7 +284,7 @@ ACCOUNTING RULES:
 - Return ONLY valid JSON that matches the schema. No extra commentary.`,
   });
 
-  const prompt = `Scan Fields:\n${fieldsText}\n\nAvailable QuickBooks Accounts (Type • SubType):\n${accountsText}${accountTypes && accountTypes.length > 50 ? '\n- ...and more' : ''}\n\nTransaction Type: ${transactionType ?? 'Unknown'}${preferenceText}`;
+  const prompt = `Scan Fields:\n${fieldsText}\n\nAvailable QuickBooks Accounts (Type • SubType):\n${accountsText}${accountTypes && accountTypes.length > ACCOUNT_CAP ? '\n- ...and more' : ''}\n\nTransaction Type: ${transactionType ?? 'Unknown'}${preferenceText}`;
   const result = await model.generateContent([{ text: prompt }]);
   const text = result.response.text();
   const parsed = JSON.parse(text);

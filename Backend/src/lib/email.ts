@@ -68,7 +68,7 @@ export async function sendWelcomeEmail({
   to: string;
   name: string | null | undefined;
   tempPassword: string;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const resend = getResendClient();
     const displayName = name?.trim() || to;
@@ -96,8 +96,10 @@ export async function sendWelcomeEmail({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Welcome email sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendWelcomeEmail failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -111,7 +113,7 @@ export async function sendVerificationEmail({
   to: string;
   name: string | null | undefined;
   verificationLink: string;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   if (!process.env.APP_URL) {
     console.warn('[Email] APP_URL not configured — verification links will be broken');
   }
@@ -144,8 +146,10 @@ export async function sendVerificationEmail({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Verification email sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendVerificationEmail failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -163,7 +167,7 @@ export async function sendTrialWarning({
   trialExpiresAt: Date | string | null;
   daysRemaining: number;
   customExpiryMessage: string | null | undefined;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const resend = getResendClient();
     const displayName = name?.trim() || to;
@@ -191,8 +195,10 @@ export async function sendTrialWarning({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Trial warning (${daysRemaining}d) sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendTrialWarning failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -210,7 +216,7 @@ export async function sendSyncFailureAlert({
   maxRetriedCount: number;
   oldFailureCount: number;
   dashboardLink: string;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const resend = getResendClient();
     const displayName = name?.trim() || to;
@@ -255,8 +261,10 @@ export async function sendSyncFailureAlert({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Sync failure alert sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendSyncFailureAlert failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -272,7 +280,7 @@ export async function sendTrialExpired({
   name: string | null | undefined;
   trialExpiresAt: Date | string | null;
   customExpiryMessage: string | null | undefined;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const resend = getResendClient();
     const displayName = name?.trim() || to;
@@ -299,8 +307,10 @@ export async function sendTrialExpired({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Trial expired email sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendTrialExpired failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -316,7 +326,7 @@ export async function sendTrialRenewed({
   name: string | null | undefined;
   newExpiryDate: Date;
   customExpiryMessage: string | null | undefined;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   try {
     const resend = getResendClient();
     const displayName = name?.trim() || to;
@@ -343,8 +353,10 @@ export async function sendTrialRenewed({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Trial renewed email sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendTrialRenewed failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
@@ -358,7 +370,7 @@ export async function sendPasswordResetEmail({
   to: string;
   name: string | null | undefined;
   resetLink: string;
-}): Promise<void> {
+}): Promise<{ success: boolean; error?: string }> {
   if (!process.env.APP_URL) {
     console.warn('[Email] APP_URL not configured — password reset links will be broken');
   }
@@ -391,7 +403,9 @@ export async function sendPasswordResetEmail({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[Email] Password reset email sent to ${to}`);
     }
+    return { success: true };
   } catch (err) {
     console.error('[Email] sendPasswordResetEmail failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
