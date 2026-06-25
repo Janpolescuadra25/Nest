@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useQBContext } from '../contexts/QBContext';
 import { useQuickBooks } from '../hooks/useQuickBooks';
+import { useLocations } from '../hooks/useLocations';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ErrorCard from './shared/ErrorCard';
@@ -35,6 +36,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ billPaymentId: string; totalAmount: number; txnDate: string; skipped?: boolean } | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const { locations } = useLocations(jwt);
 
   const selectedVendor = vendors.find((vendor) => vendor.Id === selectedVendorId);
   const bankAccounts = useMemo(
@@ -363,7 +365,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
           <div className="text-sm text-gray-200">Selected Bills: ${totalBills.toFixed(2)}</div>
           <div className="text-sm text-gray-200">Credits Applied: -${totalCredits.toFixed(2)}</div>
           <div className="text-lg font-semibold text-white">Net Payment: ${netPaymentAmount.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">Location: {selectedLocationId || 'Not selected'}</div>
+          <div className="text-xs text-gray-500">Location: {locations.find((l) => l.id === selectedLocationId)?.name || selectedLocationId || 'Not selected'}</div>
         </div>
       </div>
 

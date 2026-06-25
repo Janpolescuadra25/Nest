@@ -108,9 +108,12 @@ export function applyRulesToLineItems(
       }
     }
     const transformed = applyRules(numericRow, rules);
+    const targetFields = new Set(rules.map((r) => r.config.targetField));
     const resultRow: Record<string, string> = { ...row };
     for (const [key, value] of Object.entries(transformed)) {
-      resultRow[key] = String(value);
+      if (targetFields.has(key)) {
+        resultRow[key] = String(value);
+      }
     }
     return resultRow;
   });

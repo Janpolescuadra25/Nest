@@ -728,8 +728,6 @@ async function callQB<T>(userId: string, fn: (creds: { accessToken: string; real
       throw err;
     }
   }
-
-  throw new QBApiError('Max QB retry attempts exceeded', 429);
 }
 
 async function revokeAccessToken(accessToken: string): Promise<void> {

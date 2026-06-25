@@ -464,7 +464,6 @@ export interface OwnerAuditLogEntry {
 // Chrome extension message types
 export interface ExtMessage {
   type:
-    | 'SCAN_DATA'
     | 'REQUEST_SCAN'
     | 'OPEN_QB_AUTH'
     | 'QB_AUTH_COMPLETE'
