@@ -220,11 +220,12 @@ router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), valid
       },
     });
 
-    sendWelcomeEmail({ to: newUser.email, name: newUser.name, tempPassword }).catch(() => {});
+    const emailResult = await sendWelcomeEmail({ to: newUser.email, name: newUser.name, tempPassword });
 
     return res.status(201).json({
       user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, adminId: newUser.adminId },
       tempPassword,
+      emailWarning: !emailResult.success ? 'Account created but welcome email failed to send. Please share the temporary password manually.' : undefined,
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
@@ -538,6 +539,8 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     }
 
     // ── Trial-reset post-processing ───────────────────────────────────────────
+    let trialEmailResult: { success: boolean; error?: string } | undefined;
+
     if (isTrialReset && newExpiryDate) {
       // Always delete old warning logs so the cron re-fires for the new expiry
       await prisma.auditLog.deleteMany({
@@ -558,15 +561,18 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
         },
       });
 
-      sendTrialRenewed({
+      trialEmailResult = await sendTrialRenewed({
         to: updated.email,
         name: updated.name,
         newExpiryDate,
         customExpiryMessage: updated.customExpiryMessage,
-      }).catch(() => {});
+      });
     }
 
-    return res.json({ user: safeUpdated });
+    return res.json({
+      user: safeUpdated,
+      emailWarning: !trialEmailResult?.success ? 'Trial was renewed but the notification email failed to send.' : undefined,
+    });
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error('[Admin] patchTeamMember error:', err);

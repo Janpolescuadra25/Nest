@@ -74,6 +74,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     // Create user + increment invite in a transaction (atomic)
     const role = invite.roleHint ?? 'VIEWER';
     const perms = permissionDefaultsMap[role] || permissionDefaultsMap.VIEWER;
+    let emailResult: { success: boolean; error?: string } | undefined;
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -111,13 +112,16 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
         prisma.emailVerificationToken.deleteMany({ where: { userId: result.id } }),
         prisma.emailVerificationToken.create({ data: { userId: result.id, token: verificationToken, expiresAt } }),
       ]);
-      await sendVerificationEmail({
+      emailResult = await sendVerificationEmail({
         to: result.email,
         name: result.name,
         verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
       });
+      if (!emailResult.success) {
+        console.error('[Invite] Verification email failed:', emailResult.error);
+      }
     } catch (emailErr) {
-      console.error('[Invite] Verification email failed:', emailErr);
+      console.error('[Invite] signup setup error:', emailErr);
     }
 
     // Log audit actions
@@ -150,6 +154,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
         mustChangePassword: result.mustChangePassword,
         permissions: result.permissions as Record<string, boolean> | null,
       },
+      emailWarning: !emailResult?.success ? 'Account created but verification email failed. Please request a new verification link from Settings.' : undefined,
     });
   } catch (err) {
     if (err instanceof AppError) throw err;

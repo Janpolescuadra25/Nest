@@ -127,7 +127,7 @@ export async function processTrialWarnings(prisma: PrismaClient): Promise<number
         });
 
         if (!existing) {
-          sendTrialWarning({
+          const emailResult = await sendTrialWarning({
             to: user.email,
             name: user.name,
             trialExpiresAt: user.trialExpiresAt,
@@ -135,16 +135,22 @@ export async function processTrialWarnings(prisma: PrismaClient): Promise<number
             customExpiryMessage: user.customExpiryMessage,
           });
 
-          await prisma.auditLog.create({
-            data: {
-              actorId: user.id,
-              targetUserId: user.id,
-              action: 'TRIAL_EXPIRY_WARNING',
-              details: { daysBefore: threshold, daysRemaining: daysRemaining, trialExpiresAt: user.trialExpiresAt },
-            },
-          });
+          if (!emailResult?.success) {
+            console.error('[TeamStatus] Trial warning email failed:', emailResult?.error ?? 'No result returned');
+          }
 
-          warningsSent += 1;
+          if (emailResult?.success) {
+            await prisma.auditLog.create({
+              data: {
+                actorId: user.id,
+                targetUserId: user.id,
+                action: 'TRIAL_EXPIRY_WARNING',
+                details: { daysBefore: threshold, daysRemaining: daysRemaining, trialExpiresAt: user.trialExpiresAt },
+              },
+            });
+
+            warningsSent += 1;
+          }
         }
       }
     }

@@ -23,11 +23,14 @@ router.post('/request', authenticate, emailVerificationLimiter, asyncHandler(asy
       prisma.emailVerificationToken.create({ data: { userId: user.id, token, expiresAt } }),
     ]);
 
-    await sendVerificationEmail({
+    const result = await sendVerificationEmail({
       to: user.email,
       name: user.name,
       verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${token}`,
     });
+    if (!result.success) {
+      throw new AppError('Failed to send verification email. Please try again.', 500);
+    }
 
     return res.json({ message: 'Verification email sent' });
   } catch (err) {

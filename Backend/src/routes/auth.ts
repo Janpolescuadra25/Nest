@@ -115,6 +115,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
       },
     });
 
+    let emailResult: { success: boolean; error?: string } | undefined;
     try {
       const verificationToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -122,13 +123,16 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } }),
         prisma.emailVerificationToken.create({ data: { userId: user.id, token: verificationToken, expiresAt } }),
       ]);
-      await sendVerificationEmail({
+      emailResult = await sendVerificationEmail({
         to: user.email,
         name: user.name,
         verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
       });
+      if (!emailResult.success) {
+        console.error('[Auth] Verification email failed:', emailResult.error);
+      }
     } catch (emailErr) {
-      console.error('[Auth] Verification email failed:', emailErr);
+      console.error('[Auth] Registration setup error:', emailErr);
     }
 
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -156,6 +160,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         maxUsers: user.maxUsers ?? null,
         maxLocations: user.maxLocations ?? null,
       },
+      emailWarning: !emailResult?.success ? 'Account created but verification email failed. Please request a new verification link from Settings.' : undefined,
     });
   } catch (err) {
     if (err instanceof AppError) throw err;

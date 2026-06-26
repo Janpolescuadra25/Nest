@@ -38,13 +38,14 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
       prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt } }),
     ]);
 
-    sendPasswordResetEmail({
+    const emailResult = await sendPasswordResetEmail({
       to: user.email,
       name: user.name,
       resetLink: `${process.env.APP_URL}/reset-password?token=${token}`,
-    }).catch((err) => {
-      console.error('[PasswordReset] Failed to send reset email:', err);
     });
+    if (!emailResult.success) {
+      console.error('[PasswordReset] Failed to send reset email:', emailResult.error);
+    }
 
     return res.json(GENERIC_RESPONSE);
   } catch (err) {

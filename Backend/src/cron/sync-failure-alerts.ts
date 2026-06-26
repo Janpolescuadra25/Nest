@@ -141,30 +141,33 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
         ? `${process.env.APP_URL}/dashboard`
         : 'https://nestapp.io/dashboard';
 
-      sendSyncFailureAlert({
+      const emailResult = await sendSyncFailureAlert({
         to: data.email,
         name: data.name,
         staleCount: data.staleCount,
         maxRetriedCount: data.maxRetriedCount,
         oldFailureCount: data.oldFailureCount,
         dashboardLink,
-      }).catch((err) => {
-        console.error('[sync-failure-alerts] sendSyncFailureAlert failed:', err);
       });
+      if (!emailResult.success) {
+        console.error('[sync-failure-alerts] sendSyncFailureAlert failed:', emailResult.error);
+      }
 
-      await prisma.auditLog.create({
-        data: {
-          actorId: leadId,
-          targetUserId: leadId,
-          action: 'SYNC_FAILURE_ALERT',
-          details: {
-            staleCount: data.staleCount,
-            maxRetriedCount: data.maxRetriedCount,
-            oldFailureCount: data.oldFailureCount,
-            totalScans: total,
+      if (emailResult.success) {
+        await prisma.auditLog.create({
+          data: {
+            actorId: leadId,
+            targetUserId: leadId,
+            action: 'SYNC_FAILURE_ALERT',
+            details: {
+              staleCount: data.staleCount,
+              maxRetriedCount: data.maxRetriedCount,
+              oldFailureCount: data.oldFailureCount,
+              totalScans: total,
+            },
           },
-        },
-      });
+        });
+      }
     }
   } catch (error) {
     console.error('[sync-failure-alerts] Error checking sync failures:', error);

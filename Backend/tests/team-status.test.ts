@@ -9,8 +9,9 @@ import {
 import { PrismaClient } from '@prisma/client';
 
 jest.mock('../src/lib/email', () => ({
-  sendTrialExpired: jest.fn(),
-  sendTrialWarning: jest.fn(),
+  __esModule: true,
+  sendTrialExpired: jest.fn().mockResolvedValue({ success: true }),
+  sendTrialWarning: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 const mockSendTrialExpired = jest.requireMock('../src/lib/email').sendTrialExpired as jest.Mock;
@@ -18,7 +19,7 @@ const mockSendTrialWarning = jest.requireMock('../src/lib/email').sendTrialWarni
 
 describe('team-status lib', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
   });
 
