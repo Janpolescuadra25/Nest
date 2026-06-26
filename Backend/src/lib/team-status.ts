@@ -84,6 +84,10 @@ export async function processTrialExpiry(prisma: PrismaClient): Promise<number> 
         name: user.name,
         trialExpiresAt: user.trialExpiresAt,
         customExpiryMessage: user.customExpiryMessage,
+      }).then((result) => {
+        if (!result?.success) {
+          console.error(`[TeamStatus] Trial expired email failed for ${user.email}:`, result?.error ?? 'No result returned');
+        }
       })
     ),
   ]);
