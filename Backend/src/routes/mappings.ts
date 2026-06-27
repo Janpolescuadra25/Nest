@@ -5,6 +5,8 @@ import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { suggestMappings } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
+import type { Prisma } from '@prisma/client';
+import { validateMappingConditions } from '../lib/validate-conditions';
 
 const router = Router();
 
@@ -46,11 +48,17 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
       throw new AppError('Mapping not found', 404);
     }
 
-    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, templateId } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, conditions, templateId } =
       req.body as {
         sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean; targetClass?: string;
-        targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; templateId?: string | null;
+        targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; conditions?: Prisma.JsonValue | null; templateId?: string | null;
       };
+
+    const conditionsValidation = validateMappingConditions(conditions);
+    if (!conditionsValidation.valid) {
+      throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
+    }
+    const conditionsInput = conditions as Prisma.JsonValue | null;
 
     if (templateId !== undefined) {
       if (templateId !== null && templateId !== '') {
@@ -63,20 +71,23 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
       }
     }
 
+    const updateData: Prisma.MappingUncheckedUpdateInput = {
+      ...(sourceField !== undefined && { sourceField }),
+      ...(targetAccount !== undefined && { targetAccount }),
+      ...(postingType !== undefined && { postingType }),
+      ...(keepSeparate !== undefined && { keepSeparate }),
+      ...(targetClass !== undefined && { targetClass }),
+      ...(targetName !== undefined && { targetName }),
+      ...(targetDescription !== undefined && { targetDescription }),
+      ...(targetMemo !== undefined && { targetMemo }),
+      ...(conditions !== undefined && { conditions: conditionsInput }),
+      ...(priority !== undefined && { priority }),
+      ...(templateId !== undefined && { templateId }),
+    };
+
     const updated = await prisma.mapping.update({
       where: { id },
-      data: {
-        ...(sourceField !== undefined && { sourceField }),
-        ...(targetAccount !== undefined && { targetAccount }),
-        ...(postingType !== undefined && { postingType }),
-        ...(keepSeparate !== undefined && { keepSeparate }),
-        ...(targetClass !== undefined && { targetClass }),
-        ...(targetName !== undefined && { targetName }),
-        ...(targetDescription !== undefined && { targetDescription }),
-        ...(targetMemo !== undefined && { targetMemo }),
-        ...(priority !== undefined && { priority }),
-        ...(templateId !== undefined && { templateId: templateId || null }),
-      },
+      data: updateData,
     });
 
     await recordMappingPreference(

@@ -11,6 +11,7 @@ import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template } from '
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
+import { resolveMapping } from '../lib/mapping-conditions';
 import { parseNumericValue } from '../lib/parse-numeric-value';
 
 interface BillLine {
@@ -334,7 +335,7 @@ export default function BillPreviewForm({
     const billLines = Object.entries(scanFields)
       .filter(([, amount]) => amount !== 0)
       .map(([field, amount]) => {
-        const mapping = decoded.find((m) => m.sourceField === field);
+        const mapping = resolveMapping(decoded, field, scanFields);
         const accountId = mapping?.accountId ?? '';
         const accountName = accountsRef.current.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
         return newLine({

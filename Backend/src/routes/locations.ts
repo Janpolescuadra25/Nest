@@ -4,8 +4,10 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { createLocationTemplateRouter } from './templates';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
+import { validateMappingConditions } from '../lib/validate-conditions';
 
 const router = Router();
 
@@ -218,6 +220,11 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
           const sf = String(m['sourceField'] ?? '');
           const ta = String(m['targetAccount'] ?? '');
           if (!sf || !ta) continue;
+          const conditionsValidation = validateMappingConditions(m['conditions']);
+          if (!conditionsValidation.valid) {
+            throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
+          }
+          const conditionsInput = (m['conditions'] ?? null) as Prisma.JsonValue | null;
           await tx.mapping.create({
             data: {
               locationId: id,
@@ -230,6 +237,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
               targetName: m['targetName'] ? String(m['targetName']) : null,
               targetDescription: m['targetDescription'] ? String(m['targetDescription']) : null,
               targetMemo: m['targetMemo'] ? String(m['targetMemo']) : null,
+              conditions: conditionsInput,
               priority: Number(m['priority']) || 0,
             },
           });
@@ -329,11 +337,17 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
       return;
     }
 
-    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, templateId } =
+    const { sourceField, targetAccount, postingType, keepSeparate, targetClass, targetName, targetDescription, targetMemo, priority, conditions, templateId } =
       req.body as {
         sourceField?: string; targetAccount?: string; postingType?: string; keepSeparate?: boolean;
-        targetClass?: string; targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; templateId?: string;
+        targetClass?: string; targetName?: string; targetDescription?: string; targetMemo?: string; priority?: number; conditions?: Prisma.JsonValue | null; templateId?: string;
       };
+
+    const conditionsValidation = validateMappingConditions(conditions);
+    if (!conditionsValidation.valid) {
+      throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
+    }
+    const conditionsInput = conditions as Prisma.JsonValue | null;
 
     if (!sourceField || !targetAccount) {
       throw new AppError('sourceField and targetAccount are required', 400);
@@ -362,6 +376,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
         targetName,
         targetDescription,
         targetMemo,
+        conditions: conditionsInput,
         priority: priority ?? 0,
       },
     });

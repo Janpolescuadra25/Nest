@@ -1,5 +1,6 @@
 import { parseNumericValue } from './parse-numeric-value';
 import { decodeMapping } from './je-builder';
+import { resolveMapping } from './mapping-conditions';
 import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem } from '../../types';
 import type { QBAccount } from '../types/qb';
 
@@ -29,7 +30,7 @@ export function buildBillLikePayload(params: {
   const lines: QBBillLineItem[] = Object.entries(scanFields)
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
-      const mapping = decoded.find((m) => m.sourceField === field);
+      const mapping = resolveMapping(decoded, field, scanFields);
       const accountId = mapping?.accountId ?? '';
       const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
       const description = mapping?.description ?? field;
@@ -82,7 +83,7 @@ export function buildChequePayload(params: {
   const lines: QBChequeLineItem[] = Object.entries(scanFields)
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
-      const mapping = decoded.find((m) => m.sourceField === field);
+      const mapping = resolveMapping(decoded, field, scanFields);
       const accountId = mapping?.accountId ?? '';
       const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
       const description = mapping?.description ?? field;

@@ -1,5 +1,6 @@
 import { parseNumericValue } from './parse-numeric-value';
-import type { Mapping, ScanData, ScanEntry, QBJournalLineItem } from '../../types';
+import { resolveMapping } from './mapping-conditions';
+import type { Mapping, MappingCondition, ScanData, ScanEntry, QBJournalLineItem } from '../../types';
 import type { QBAccount } from '../types/qb';
 
 // ── Decoded mapping ───────────────────────────────────────────────────────────
@@ -11,6 +12,8 @@ export interface DecodedMapping {
   classId?: string;
   description?: string;
   keepSeparate?: boolean;
+  priority: number;
+  conditions?: MappingCondition[] | null;
 }
 
 // ── JE Payload ────────────────────────────────────────────────────────────────
@@ -91,6 +94,8 @@ export function decodeMapping(m: Mapping): DecodedMapping {
     classId,
     description: m.targetDescription ?? undefined,
     keepSeparate,
+    priority: m.priority ?? 0,
+    conditions: (m.conditions as MappingCondition[] | null) ?? null,
   };
 }
 
@@ -123,7 +128,7 @@ export function buildJEPayload(params: {
   const jeLines: QBJournalLineItem[] = Object.entries(scanFields)
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
-      const mapping = decoded.find((m) => m.sourceField === field);
+      const mapping = resolveMapping(decoded, field, scanFields);
       const rawSide = mapping
         ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
         : guessPostingType(field);

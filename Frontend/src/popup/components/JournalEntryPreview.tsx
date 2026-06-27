@@ -10,6 +10,7 @@ import type { ScanData, ScanEntry, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { guessPostingType, decodeMapping } from '../lib/je-builder';
+import { resolveMapping } from '../lib/mapping-conditions';
 import { parseNumericValue } from '../lib/parse-numeric-value';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -268,11 +269,16 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     if (!activeScanEntry || !mappingsLoaded) return;
     const decoded = savedMappings.map(decodeMapping);
     const currentLineItem = (ruleTransformedLineItems?.[0] ?? activeScanEntry.lineItems?.[0]) ?? {};
+    const scanFields: ScanData = Object.fromEntries(
+      Object.entries(currentLineItem)
+        .map(([key, value]) => [key, parseNumericValue(value)])
+        .filter(([, v]) => !Number.isNaN(v)),
+    ) as ScanData;
     const scanLines: LineItem[] = Object.entries(currentLineItem)
       .map(([field, rawValue]) => ({ field, amount: parseNumericValue(rawValue) }))
       .filter((entry) => !Number.isNaN(entry.amount) && entry.amount !== 0)
       .map(({ field, amount }) => {
-        const mapping = decoded.find((m) => m.sourceField === field);
+        const mapping = resolveMapping(decoded, field, scanFields);
         const rawSide = mapping
           ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
           : guessPostingType(field);
@@ -304,7 +310,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     const scanLines: LineItem[] = Object.entries(data)
       .filter(([, v]) => v !== 0)
       .map(([field, amount]) => {
-        const mapping = decoded.find((m) => m.sourceField === field);
+        const mapping = resolveMapping(decoded, field, data);
         const rawSide = mapping
           ? mapping.postingType.toLowerCase() as 'debit' | 'credit'
           : guessPostingType(field);

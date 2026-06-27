@@ -13,7 +13,7 @@ import SearchableSelect from '../SearchableSelect';
 import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS, CHEQUE_FIELD_LABELS } from '../../../types';
-import type { ColumnMapping, ExcelParseResult, Mapping, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
+import type { ColumnMapping, ExcelParseResult, Mapping, MappingCondition, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
 
 /**
@@ -62,6 +62,8 @@ export interface LocalMapping {
   keepSeparate: boolean;
   isDirty: boolean;
   expanded: boolean;
+  priority: number;
+  conditions?: MappingCondition[] | null;
 }
 
 const AUTO_DETECT: { patterns: RegExp; postingType: 'Debit' | 'Credit'; accountHint: string }[] = [
@@ -122,7 +124,7 @@ interface Props {
   setShowExcelImportModal?: (open: boolean) => void;
 }
 
-function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'locationId' | 'createdAt'> {
+function encodeToApi(m: LocalMapping): Omit<Mapping, 'id' | 'locationId' | 'createdAt'> {
   return {
     sourceField: m.sourceField,
     targetAccount: m.accountId,
@@ -137,7 +139,8 @@ function encodeToApi(m: LocalMapping, priority: number): Omit<Mapping, 'id' | 'l
       entityId: m.entityId || undefined,
     }),
     templateId: m.templateId || undefined,
-    priority,
+    conditions: m.conditions ?? null,
+    priority: m.priority,
   };
 }
 
@@ -183,6 +186,8 @@ function decodeFromApi(m: Mapping): LocalMapping {
     keepSeparate,
     isDirty: false,
     expanded: false,
+    priority: m.priority ?? 0,
+    conditions: (m.conditions as MappingCondition[] | null) ?? null,
   };
 }
 
@@ -1014,11 +1019,13 @@ export default function MappingView({
       keepSeparate: false,
       isDirty: true,
       expanded: true,
+      priority: 0,
+      conditions: null,
     };
     setLocalMappings((prev) => [...prev, newMapping]);
   };
 
-  const saveMapping = async (mapping: LocalMapping, priority: number) => {
+  const saveMapping = async (mapping: LocalMapping) => {
     if (!mapping.sourceField || !mapping.accountId) {
       setError('Source field and QB Account are required');
       return;
@@ -1026,7 +1033,7 @@ export default function MappingView({
     setSaving(mapping.localId);
     setError(null);
     try {
-      const payload = encodeToApi(mapping, priority);
+      const payload = encodeToApi(mapping);
       if (mapping.remoteId) {
         await api.updateMapping(jwt, mapping.remoteId, payload);
       } else {
@@ -1110,6 +1117,8 @@ export default function MappingView({
         keepSeparate: false,
         isDirty: true,
         expanded: false,
+        priority: 0,
+        conditions: null,
       });
       applied += 1;
     });
@@ -1196,6 +1205,8 @@ export default function MappingView({
       keepSeparate: false,
       isDirty: true,
       expanded: false,
+      priority: 0,
+      conditions: null,
     }));
 
     setLocalMappings((prev) => [...prev, ...newMappings]);
@@ -1264,6 +1275,8 @@ export default function MappingView({
           keepSeparate: false,
           isDirty: true,
           expanded: false,
+          priority: 0,
+          conditions: null,
         };
       });
 
@@ -1296,6 +1309,7 @@ export default function MappingView({
           targetName: mapping.targetName ?? undefined,
           targetDescription: mapping.targetDescription ?? undefined,
           targetMemo: mapping.targetMemo ?? undefined,
+          conditions: mapping.conditions ?? null,
           priority: mapping.priority,
         })),
         rules: rules.map((rule) => ({
@@ -2088,7 +2102,7 @@ export default function MappingView({
           <div className="flex gap-2">
             <button
               onClick={() => {
-                localMappings.filter((mapping) => mapping.isDirty).forEach((mapping, index) => void saveMapping(mapping, index));
+                localMappings.filter((mapping) => mapping.isDirty).forEach((mapping) => void saveMapping(mapping));
               }}
               disabled={!localMappings.some((mapping) => mapping.isDirty)}
               className="flex-1 text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white py-2 rounded-lg transition-colors"

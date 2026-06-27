@@ -17,7 +17,7 @@ interface Props {
   saving: string | null;
   deleting: string | null;
   onUpdate: (localId: string, patch: Partial<LocalMapping>) => void;
-  onSave: (mapping: LocalMapping, index: number) => void;
+  onSave: (mapping: LocalMapping) => void;
   onDelete: (mapping: LocalMapping) => void;
   onToggleExpand: (localId: string) => void;
   onAddMapping?: () => void;
@@ -45,11 +45,10 @@ export default function MappingTable({
 }: Props) {
   return (
     <div className="space-y-2">
-      {localMappings.map((mapping, index) => (
+      {localMappings.map((mapping) => (
         <MappingCard
           key={mapping.localId}
           mapping={mapping}
-          index={index}
           accountOptions={accountOptions}
           accounts={accounts}
           classOptions={classOptions}
@@ -59,7 +58,7 @@ export default function MappingTable({
           isSaving={saving === mapping.localId}
           isDeleting={deleting === mapping.localId}
           onUpdate={(patch) => onUpdate(mapping.localId, patch)}
-          onSave={() => onSave(mapping, index)}
+          onSave={() => onSave(mapping)}
           onDelete={() => onDelete(mapping)}
           onToggleExpand={() => onToggleExpand(mapping.localId)}
           isBill={isBill}
@@ -81,7 +80,6 @@ export default function MappingTable({
 
 interface MappingCardProps {
   mapping: LocalMapping;
-  index: number;
   accountOptions: SelectOption[];
   accounts: QBAccount[];
   classOptions: SelectOption[];

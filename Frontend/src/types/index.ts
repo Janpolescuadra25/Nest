@@ -24,9 +24,30 @@ export interface Mapping {
   targetName?: string;
   targetDescription?: string;
   targetMemo?: string;
+  conditions?: MappingCondition[] | null;
   priority: number;
   createdAt: string;
 }
+
+export interface MappingCondition {
+  field: string;
+  operator: MappingConditionOperator;
+  value: number | string;
+}
+
+export type MappingConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'greater_than'
+  | 'greater_than_or_equal'
+  | 'less_than'
+  | 'less_than_or_equal'
+  | 'contains'
+  | 'not_contains'
+  | 'begins_with'
+  | 'ends_with'
+  | 'not_begins_with'
+  | 'not_ends_with';
 
 export interface MappingSuggestion {
   sourceField: string;
@@ -488,6 +509,7 @@ export interface ExportTemplate {
     targetName?: string;
     targetDescription?: string;
     targetMemo?: string;
+    conditions?: MappingCondition[] | null;
     priority: number;
   }>;
   rules: Array<{
