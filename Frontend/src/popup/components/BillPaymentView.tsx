@@ -121,6 +121,12 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
     }
   }, [payType]);
 
+  useEffect(() => {
+    if (!listsLoaded && !listsLoading && !listsError) {
+      void syncAllLists();
+    }
+  }, [listsLoaded, listsLoading, listsError, syncAllLists]);
+
   const totalBills = useMemo(
     () => bills.filter((bill) => bill.selected).reduce((sum, bill) => sum + bill.paymentAmount, 0),
     [bills],
@@ -302,6 +308,9 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+      {listsError && (
+        <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
+      )}
 
       <div className="grid lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2 grid gap-3">

@@ -1774,6 +1774,9 @@ export default function MappingView({
           {autoMsg}
         </div>
       )}
+      {listsError && (
+        <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
+      )}
       {error && <ErrorCard message={error} onDismiss={() => setError(null)} />}
       {suggestionError && (
         <div className="bg-red-900/30 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">

@@ -589,6 +589,9 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+      {listsError && (
+        <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
+      )}
 
       {scanEntries.length > 1 && activeScanEntry && (
         <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg">

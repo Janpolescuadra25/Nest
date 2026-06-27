@@ -510,6 +510,9 @@ export default function VendorCreditPreviewForm({
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+      {listsError && (
+        <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
+      )}
 
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-4">
         <div>
