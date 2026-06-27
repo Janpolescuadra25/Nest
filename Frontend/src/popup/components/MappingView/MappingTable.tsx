@@ -149,6 +149,11 @@ function MappingCard({
             />
           )}
         </div>
+        {mapping.conditions && mapping.conditions.length > 0 && (
+          <span className="text-[10px] text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded shrink-0">
+            🔀 {mapping.conditions.length}
+          </span>
+        )}
         {hidePostingType ? (
           <div className="flex flex-col items-end text-right text-xs text-gray-400 shrink-0">
             <span>Amount</span>
@@ -217,6 +222,7 @@ function MappingCard({
           classOptions={classOptions}
           taxCodeOptions={taxCodeOptions}
           entityOptions={entityOptions}
+          scanFieldOptions={scanFieldOptions}
           onUpdate={onUpdate}
           onSave={onSave}
           isSaving={isSaving}
