@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { ConfirmDialog } from './shared';
 import type { Product, ProductFormData } from '../../types';
 
 interface Props {
@@ -16,6 +17,7 @@ export default function ProductCatalogView({ jwt }: Props) {
   const [formData, setFormData] = useState<ProductFormData>({ name: '' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteProductDialog, setDeleteProductDialog] = useState<{ open: boolean; product: Product | null }>({ open: false, product: null });
 
   useEffect(() => {
     const load = async () => {
@@ -77,8 +79,13 @@ export default function ProductCatalogView({ jwt }: Props) {
   };
 
   const handleDelete = async (product: Product) => {
-    const confirmed = window.confirm(`Delete "${product.name}"? This cannot be undone.`);
-    if (!confirmed) return;
+    setDeleteProductDialog({ open: true, product });
+  };
+
+  const confirmDeleteProduct = async () => {
+    if (!deleteProductDialog.product) return;
+    const product = deleteProductDialog.product;
+    setDeleteProductDialog({ open: false, product: null });
     try {
       await api.deleteProduct(jwt, product.id);
       setProducts((prev) => prev.filter((item) => item.id !== product.id));
@@ -202,6 +209,16 @@ export default function ProductCatalogView({ jwt }: Props) {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteProductDialog.open}
+        title="Delete Product"
+        message={`Delete "${deleteProductDialog.product?.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteProduct}
+        onCancel={() => setDeleteProductDialog({ open: false, product: null })}
+        variant="danger"
+      />
     </div>
   );
 }

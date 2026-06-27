@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import SearchableSelect, { type SelectOption } from './SearchableSelect';
 import { TRANSACTION_TYPE_LABELS } from '../../types';
+import { ConfirmDialog } from './shared';
 import type { Rule, RuleFormData, Template } from '../../types';
 
 interface RulesViewProps {
@@ -130,6 +131,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteRuleDialog, setDeleteRuleDialog] = useState<{ open: boolean; ruleId: string | null }>({ open: false, ruleId: null });
 
   // Form visibility & edit state
   const [showForm, setShowForm] = useState(false);
@@ -380,7 +382,13 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this rule?')) return;
+    setDeleteRuleDialog({ open: true, ruleId: id });
+  };
+
+  const confirmDeleteRule = async () => {
+    if (!deleteRuleDialog.ruleId) return;
+    const id = deleteRuleDialog.ruleId;
+    setDeleteRuleDialog({ open: false, ruleId: null });
     try {
       await api.deleteRule(jwt, id);
       await loadRules();
@@ -715,6 +723,16 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={deleteRuleDialog.open}
+        title="Delete Rule"
+        message="Delete this rule? This cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteRule}
+        onCancel={() => setDeleteRuleDialog({ open: false, ruleId: null })}
+        variant="danger"
+      />
     </div>
   );
 }

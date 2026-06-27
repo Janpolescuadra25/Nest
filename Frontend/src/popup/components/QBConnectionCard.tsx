@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { ConfirmDialog } from './shared';
 import type { QBStatus } from '../../types';
 
 interface QBConnectionCardProps {
@@ -8,6 +10,7 @@ interface QBConnectionCardProps {
 
 export function QBConnectionCard({ qbStatus, onReconnect, onDisconnect }: QBConnectionCardProps) {
   const isExpired = !qbStatus.connected && (qbStatus.reason === 'token_expired' || qbStatus.tokenExpired);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
@@ -17,17 +20,28 @@ export function QBConnectionCard({ qbStatus, onReconnect, onDisconnect }: QBConn
           <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
           <p className="text-xs text-gray-400">Token expires: {qbStatus.expiresAt ? new Date(qbStatus.expiresAt).toLocaleString() : '-'}</p>
           {onDisconnect && (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Disconnect QuickBooks? You\'ll need to reconnect to sync data.')) {
+            <>
+              <button
+                type="button"
+                onClick={() => setShowDisconnectDialog(true)}
+                className="mt-1 text-xs bg-slate-700 hover:bg-slate-600 text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-3 py-1 rounded transition-colors"
+              >
+                Disconnect
+              </button>
+              <ConfirmDialog
+                open={showDisconnectDialog}
+                title="Disconnect QuickBooks"
+                message="Disconnect QuickBooks? You'll need to reconnect to sync data."
+                confirmText="Disconnect"
+                cancelText="Cancel"
+                onConfirm={() => {
+                  setShowDisconnectDialog(false);
                   onDisconnect();
-                }
-              }}
-              className="mt-1 text-xs bg-slate-700 hover:bg-slate-600 text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-3 py-1 rounded transition-colors"
-            >
-              Disconnect
-            </button>
+                }}
+                onCancel={() => setShowDisconnectDialog(false)}
+                variant="danger"
+              />
+            </>
           )}
         </>
       ) : isExpired ? (

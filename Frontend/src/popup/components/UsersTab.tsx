@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
-import { ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
+import { ConfirmDialog, ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
 import { trialCountdown } from '../lib/utils';
 
 interface OwnerUser {
@@ -70,6 +70,7 @@ export default function UsersTab({ jwt }: Props) {
   const [trialDate, setTrialDate] = useState<Record<string, string>>({});
   const [trialEnabled, setTrialEnabled] = useState<Record<string, boolean>>({});
   const [collapsedAdmins, setCollapsedAdmins] = useState<Record<string, boolean>>({});
+  const [resetPermissionsDialog, setResetPermissionsDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -123,9 +124,13 @@ export default function UsersTab({ jwt }: Props) {
   };
 
   const handleResetCanX = async (user: OwnerUser) => {
-    if (!window.confirm(`Reset ${user.name ?? user.email}'s operational permissions to role defaults?`)) {
-      return;
-    }
+    setResetPermissionsDialog({ open: true, user });
+  };
+
+  const confirmResetCanX = async () => {
+    if (!resetPermissionsDialog.user) return;
+    const user = resetPermissionsDialog.user;
+    setResetPermissionsDialog({ open: false, user: null });
     setActionLoading(p => ({ ...p, [`reset_${user.id}`]: true }));
     try {
       await api.ownerResetPermissions(jwt, user.id);
@@ -307,6 +312,16 @@ export default function UsersTab({ jwt }: Props) {
           </div>
         ))
       )}
+      <ConfirmDialog
+        open={resetPermissionsDialog.open}
+        title="Reset Permissions"
+        message={`Reset ${resetPermissionsDialog.user?.name ?? resetPermissionsDialog.user?.email}'s operational permissions to role defaults?`}
+        confirmText="Reset"
+        cancelText="Cancel"
+        onConfirm={confirmResetCanX}
+        onCancel={() => setResetPermissionsDialog({ open: false, user: null })}
+        variant="default"
+      />
     </div>
   );
 }

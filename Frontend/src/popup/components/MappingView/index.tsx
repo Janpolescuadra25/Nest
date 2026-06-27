@@ -4,7 +4,7 @@ import { useLocations } from '../../hooks/useLocations';
 import { useQBContext } from '../../contexts/QBContext';
 import { useQuickBooks } from '../../hooks/useQuickBooks';
 import { useToast } from '../Toast';
-import { ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
+import { ConfirmDialog, ErrorCard, DashboardSkeleton, EmptyState } from '../shared';
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
@@ -276,6 +276,11 @@ export default function MappingView({
   const docInputRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const templateReadyRef = useRef(false);
+  const [pendingSwitchTemplateId, setPendingSwitchTemplateId] = useState<string | null>(null);
+  const [showSwitchTemplateConfirm, setShowSwitchTemplateConfirm] = useState(false);
+  const [showDeleteTemplateConfirm, setShowDeleteTemplateConfirm] = useState(false);
+  const [showDeleteMappingConfirm, setShowDeleteMappingConfirm] = useState(false);
+  const [pendingDeleteMapping, setPendingDeleteMapping] = useState<LocalMapping | null>(null);
 
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
   const [importWarning, setImportWarning] = useState<string | null>(null);
@@ -935,11 +940,18 @@ export default function MappingView({
 
   const handleTemplateChange = (templateId: string) => {
     if (localMappings.some((mapping) => mapping.isDirty)) {
-      if (!window.confirm('You have unsaved mapping changes. Switch templates anyway?')) {
-        return;
-      }
+      setPendingSwitchTemplateId(templateId);
+      setShowSwitchTemplateConfirm(true);
+      return;
     }
     setSelectedTemplateId(templateId);
+  };
+
+  const confirmSwitchTemplate = () => {
+    if (!pendingSwitchTemplateId) return;
+    setShowSwitchTemplateConfirm(false);
+    setSelectedTemplateId(pendingSwitchTemplateId);
+    setPendingSwitchTemplateId(null);
   };
 
   const openNewTemplateForm = () => {
@@ -949,7 +961,12 @@ export default function MappingView({
 
   const handleDeleteTemplate = async () => {
     if (!selectedTemplateId || templates.length <= 1) return;
-    if (!window.confirm('Delete this template and ALL its mappings? This cannot be undone.')) return;
+    setShowDeleteTemplateConfirm(true);
+  };
+
+  const confirmDeleteTemplate = async () => {
+    if (!selectedTemplateId) return;
+    setShowDeleteTemplateConfirm(false);
 
     setTemplatesLoading(true);
     try {
@@ -1056,14 +1073,26 @@ export default function MappingView({
   };
 
   const deleteMapping = async (mapping: LocalMapping) => {
-    if (mapping.remoteId && !window.confirm('Delete this mapping?')) return;
     if (!mapping.remoteId) {
       setLocalMappings((prev) => prev.filter((item) => item.localId !== mapping.localId));
       return;
     }
+    setPendingDeleteMapping(mapping);
+    setShowDeleteMappingConfirm(true);
+  };
+
+  const confirmDeleteMapping = async () => {
+    if (!pendingDeleteMapping?.remoteId) {
+      setShowDeleteMappingConfirm(false);
+      setPendingDeleteMapping(null);
+      return;
+    }
+    const mapping = pendingDeleteMapping;
+    setShowDeleteMappingConfirm(false);
+    setPendingDeleteMapping(null);
     setDeleting(mapping.localId);
     try {
-      await api.deleteMapping(jwt, mapping.remoteId);
+      await api.deleteMapping(jwt, mapping.remoteId as string);
       setLocalMappings((prev) => prev.filter((item) => item.localId !== mapping.localId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
@@ -2121,6 +2150,42 @@ export default function MappingView({
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={showSwitchTemplateConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved mapping changes. Switch templates anyway?"
+        confirmText="Switch"
+        cancelText="Cancel"
+        onConfirm={confirmSwitchTemplate}
+        onCancel={() => {
+          setShowSwitchTemplateConfirm(false);
+          setPendingSwitchTemplateId(null);
+        }}
+        variant="default"
+      />
+      <ConfirmDialog
+        open={showDeleteTemplateConfirm}
+        title="Delete Template"
+        message="Delete this template and ALL its mappings? This cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteTemplate}
+        onCancel={() => setShowDeleteTemplateConfirm(false)}
+        variant="danger"
+      />
+      <ConfirmDialog
+        open={showDeleteMappingConfirm}
+        title="Delete Mapping"
+        message="Delete this mapping?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteMapping}
+        onCancel={() => {
+          setShowDeleteMappingConfirm(false);
+          setPendingDeleteMapping(null);
+        }}
+        variant="danger"
+      />
     </div>
   );
 }

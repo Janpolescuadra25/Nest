@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
 import { evaluateProductMatch } from '../../lib/column-extractor';
 import { useQBContext } from '../../contexts/QBContext';
+import { ConfirmDialog } from '../shared';
 import type { Product, ProductMapping, ProductMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
 
 interface Props {
@@ -35,6 +36,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   const [ruleDirection, setRuleDirection] = useState<'input_contains_catalog' | 'catalog_contains_input' | 'either'>('either');
   const [testInput, setTestInput] = useState('');
   const [testResults, setTestResults] = useState<{ mappingId: string; productName: string; matched: boolean; confidence: number; matchType: string }[]>([]);
+  const [deleteMappingDialog, setDeleteMappingDialog] = useState<{ open: boolean; mapping: ProductMapping | null }>({ open: false, mapping: null });
 
   const handleTestMatch = () => {
     if (!testInput.trim()) return;
@@ -223,8 +225,13 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   };
 
   const handleDelete = async (mapping: ProductMapping) => {
-    const confirmed = window.confirm(`Delete product mapping for "${mapping.productName}"? This cannot be undone.`);
-    if (!confirmed) return;
+    setDeleteMappingDialog({ open: true, mapping });
+  };
+
+  const confirmDeleteMapping = async () => {
+    if (!deleteMappingDialog.mapping) return;
+    const mapping = deleteMappingDialog.mapping;
+    setDeleteMappingDialog({ open: false, mapping: null });
 
     try {
       await api.deleteProductMapping(jwt, mapping.id);
@@ -547,6 +554,16 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteMappingDialog.open}
+        title="Delete Product Mapping"
+        message={`Delete product mapping for "${deleteMappingDialog.mapping?.productName}"? This cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteMapping}
+        onCancel={() => setDeleteMappingDialog({ open: false, mapping: null })}
+        variant="danger"
+      />
     </div>
   );
 }

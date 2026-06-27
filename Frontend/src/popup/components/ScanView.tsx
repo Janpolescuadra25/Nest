@@ -972,9 +972,7 @@ export default function ScanView({
                 <div className="text-gray-400 text-xs italic mt-1">{documentClassification.reasoning}</div>
                 {documentClassification.documentType !== 'INVOICE' && documentClassification.documentType !== 'CHEQUE' && documentClassification.documentType !== 'RECEIPT' && (
                   <div className="text-gray-500 text-sm mt-2">
-                    {documentClassification.documentType === 'POS_REPORT'
-                      ? 'This document type is not supported for image upload. Try POS scan or Excel import instead.'
-                      : 'This document type is not supported for image upload. Try POS scan or Excel import instead.'}
+                    This document type is not supported for image upload. Try POS scan or Excel import instead.
                   </div>
                 )}
               </div>
