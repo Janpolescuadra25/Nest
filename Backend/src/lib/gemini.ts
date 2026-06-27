@@ -207,7 +207,7 @@ export async function parseDocumentWithGemini(
   let invoiceData = null;
   let chequeData = null;
 
-  if (classification.documentType === 'INVOICE') {
+  if (classification.documentType === 'INVOICE' || classification.documentType === 'RECEIPT') {
     invoiceData = await parseInvoiceWithGemini(imageBuffer, mimeType);
   } else if (classification.documentType === 'CHEQUE') {
     chequeData = await parseChequeWithGemini(imageBuffer, mimeType);
