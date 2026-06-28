@@ -728,6 +728,8 @@ async function callQB<T>(userId: string, fn: (creds: { accessToken: string; real
       throw err;
     }
   }
+
+  throw new Error('callQB: unreachable — retry loop exhausted without return');
 }
 
 async function revokeAccessToken(accessToken: string): Promise<void> {
