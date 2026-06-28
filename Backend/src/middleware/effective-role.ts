@@ -133,12 +133,12 @@ export function hasPermission(
  *
  * Blocks writes when:
  * - effective.isBlocked === true (BLOCKED users)
+ * - effective.status === 'EXPIRED' (subscription cancelled)
  * - effective.status === 'TIME_BOMBED' (past grace period, downgraded to VIEWER)
  * - effective.status === 'PENDING_APPROVAL' (not yet approved)
  *
  * Does NOT block:
  * - GRACE_PERIOD users (still have full access per getEffectiveAccess)
- * - EXPIRED users (existing behavior — they have read access)
  * - Normal ACTIVE users with any role (including VIEWER — they may have
  *   legitimate write access on some routes via stored booleans)
  */

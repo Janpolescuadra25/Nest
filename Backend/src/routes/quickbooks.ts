@@ -242,7 +242,6 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0) {
       throw new AppError('txnDate and lines[] are required', 400);
-      return;
     }
 
     if (scanRecordId) {
@@ -344,7 +343,6 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0 || !vendorRef?.value || !apAccountRef?.value) {
       throw new AppError('txnDate, vendorRef, apAccountRef and lines[] are required', 400);
-      return;
     }
 
     if (scanRecordId) {
@@ -486,7 +484,6 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
 
     if (!vendorRef?.value || !txnDate || !apAccountRef?.value || !lines || !Array.isArray(lines) || lines.length === 0) {
       throw new AppError('vendorRef, txnDate, apAccountRef and lines[] are required', 400);
-      return;
     }
 
     if (scanRecordId) {
@@ -500,7 +497,6 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
         });
         if (!loc) {
           throw new AppError("You don't have access to this location", 403);
-          return;
         }
       }
 
@@ -626,7 +622,6 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
 
     if (!txnDate || !bankAccountRef?.value || !payeeRef?.value || amount === undefined || amount === null || amount <= 0 || !lines || !Array.isArray(lines) || lines.length === 0) {
       throw new AppError('txnDate, bankAccountRef, payeeRef, amount and lines[] are required', 400);
-      return;
     }
 
     if (scanRecordId) {
@@ -1329,18 +1324,15 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
 
     if (!Array.isArray(items) || items.length === 0) {
       throw new AppError('items must be a non-empty array', 400);
-      return;
     }
 
     if (items.length > 100) {
       throw new AppError('Batch size cannot exceed 100 items', 400);
-      return;
     }
 
     for (const item of items) {
       if (!item.scanRecordId) {
         throw new AppError('Each item must have a scanRecordId', 400);
-        return;
       }
     }
 

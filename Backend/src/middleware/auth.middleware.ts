@@ -26,7 +26,6 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new AppError('Missing or malformed Authorization header', 401));
-    return;
   }
 
   const token = authHeader.slice(7);
@@ -60,12 +59,10 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
     if (!user) {
       return next(new AppError('User not found', 401));
-      return;
     }
 
     if (user.status === 'DISABLED') {
       return next(new AppError('Account is disabled', 403));
-      return;
     }
 
     req.user = {
@@ -112,7 +109,6 @@ export function requireRole(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new AppError('Not authenticated', 401));
-      return;
     }
 
     const userForAccess: UserForAccess = {
@@ -128,17 +124,14 @@ export function requireRole(...roles: string[]) {
 
     if (effectiveAccess.isBlocked) {
       return next(new AppError('Account suspended', 403));
-      return;
     }
 
     if (effectiveAccess.status === 'PENDING_APPROVAL') {
       return next(new AppError('Account pending approval', 403));
-      return;
     }
 
     if (!roles.includes(effectiveAccess.role)) {
       return next(new AppError('Insufficient permissions', 403));
-      return;
     }
 
     req.effectiveAccess = effectiveAccess;
@@ -196,7 +189,6 @@ export const requireFeaturePermission = (feature: Feature, action: Action) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       return next(new AppError('Not authenticated', 401));
-      return;
     }
 
     const userForAccess: UserForAccess = {
@@ -210,7 +202,6 @@ export const requireFeaturePermission = (feature: Feature, action: Action) => {
 
     if (!hasPermission(userForAccess, feature, action)) {
       return next(new AppError('Insufficient permissions', 403));
-      return;
     }
 
     next();

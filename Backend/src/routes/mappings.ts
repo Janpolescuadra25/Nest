@@ -187,6 +187,7 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
 
     res.json({ suggestions });
   } catch (err: any) {
+    if (err instanceof AppError) throw err;
     console.error('[Mappings] suggestion error:', err);
 
     const isRateLimit = err?.status === 429
