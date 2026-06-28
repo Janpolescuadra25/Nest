@@ -49,7 +49,7 @@ export function getStepLabel(step: OnboardingStep): string {
     1: 'Connect QuickBooks',
     2: 'Add Your First Location',
     3: 'Create a Mapping',
-    4: 'Begin Your First Sync',
+    4: 'Scan Your First Report',
   };
   return labels[step];
 }
@@ -59,7 +59,7 @@ export function getStepCTA(step: OnboardingStep): string {
     1: 'Connect QuickBooks',
     2: 'Add Location',
     3: 'Create Mapping',
-    4: 'Begin Sync Pipeline',
+    4: 'Start Scanning',
   };
   return ctas[step];
 }
