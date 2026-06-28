@@ -8,19 +8,19 @@ async function main(): Promise<void> {
   console.log('[Seed] Starting seed...');
 
   // ── 0. Create / update Owner user ──────────────────────────────────────────
-  const ownerEmail   = process.env.OWNER_EMAIL    ?? process.env.ADMIN_EMAIL ?? 'paulescuadra25@gmail.com';
-  const ownerPassword = process.env.OWNER_PASSWORD ?? process.env.ADMIN_PASSWORD ?? 'ChangeMe123!';
-  const ownerName    = process.env.OWNER_NAME     ?? process.env.ADMIN_NAME  ?? 'John Paul O. Escuadra';
+  const ownerEmail    = process.env.OWNER_EMAIL    ?? 'paulescuadra25@gmail.com';
+  const ownerPassword = process.env.OWNER_PASSWORD ?? 'ChangeMe123!';
+  const ownerName     = process.env.OWNER_NAME     ?? 'John Paul O. Escuadra';
   const hashedPassword = await bcrypt.hash(ownerPassword, 12);
 
   const ownerUser = await prisma.user.upsert({
     where: { email: ownerEmail },
     update: {
-      password: hashedPassword,
       role: 'OWNER',
       status: 'ACTIVE',
       name: ownerName,
       subscriptionSource: 'owner',
+      // password intentionally omitted — only set on create, then managed via app UI
     },
     create: {
       email: ownerEmail,
@@ -31,7 +31,7 @@ async function main(): Promise<void> {
       subscriptionSource: 'owner',
     },
   });
-  console.log(`[Seed] Owner: ${ownerUser.email} / password: ${ownerPassword}`);
+  console.log(`[Seed] Owner: ${ownerUser.email}`);
 
   // ── 1. Assign all orphan locations (adminId IS NULL) to the Owner ──────────
   const { count: assigned } = await prisma.location.updateMany({
@@ -124,6 +124,11 @@ async function main(): Promise<void> {
   ];
 
   for (const loc of [downtown, uptown]) {
+    // Delete existing mappings for this location before re-seeding (idempotency)
+    await prisma.mapping.deleteMany({
+      where: { locationId: loc.id },
+    });
+
     for (const tmpl of mappingTemplates) {
       await prisma.mapping.create({
         data: { locationId: loc.id, ...tmpl },
@@ -134,6 +139,10 @@ async function main(): Promise<void> {
 
   // ── 5. Create sample rules ─────────────────────────────────────────────────
   for (const loc of [downtown, uptown]) {
+    await prisma.rule.deleteMany({
+      where: { locationId: loc.id, name: 'Total F&B Revenue' },
+    });
+
     await prisma.rule.create({
       data: {
         locationId: loc.id,
