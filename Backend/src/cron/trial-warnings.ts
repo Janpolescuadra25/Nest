@@ -12,5 +12,6 @@ async function checkTrialWarnings(prisma: PrismaClient): Promise<void> {
 
 export function startTrialWarningCron(prisma: PrismaClient): void {
   checkTrialWarnings(prisma);
-  setInterval(() => checkTrialWarnings(prisma), 21_600_000);
+  const interval = setInterval(() => checkTrialWarnings(prisma), 21_600_000);
+  interval.unref();
 }

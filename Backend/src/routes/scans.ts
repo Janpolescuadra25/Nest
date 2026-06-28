@@ -168,6 +168,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
 // AI Invoice Parsing — sends image to Gemini 2.5 Flash
 router.post(
   '/parse-invoice',
+  requireFeaturePermission('scan', 'read'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
@@ -188,6 +189,7 @@ router.post(
 
 router.post(
   '/parse-document',
+  requireFeaturePermission('scan', 'read'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {

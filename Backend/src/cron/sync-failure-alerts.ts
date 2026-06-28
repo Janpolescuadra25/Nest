@@ -7,7 +7,8 @@ const MS_PER_DAY = 86_400_000;
 
 export function startSyncFailureAlertCron(prisma: PrismaClient): void {
   checkSyncFailures(prisma);
-  setInterval(() => checkSyncFailures(prisma), CHECK_INTERVAL_MS);
+  const interval = setInterval(() => checkSyncFailures(prisma), CHECK_INTERVAL_MS);
+  interval.unref();
 }
 
 async function checkSyncFailures(prisma: PrismaClient): Promise<void> {

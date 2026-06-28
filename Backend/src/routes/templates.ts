@@ -172,7 +172,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   }
 
   const template = await prisma.template.findFirst({
-    where: { id: templateId },
+    where: { id: templateId, location: { ...locationFilter(req.user!) } },
   });
   if (!template) {
     throw new AppError('Template not found', 404);

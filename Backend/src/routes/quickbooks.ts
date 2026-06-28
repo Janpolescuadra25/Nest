@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { AppError, asyncHandler } from '../lib/errors';
 import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
@@ -24,6 +24,19 @@ if (!QB_CLIENT_ID || !QB_CLIENT_SECRET) {
 const QB_REDIRECT_URI = process.env.QB_REDIRECT_URI ?? '';
 const QB_AUTH_URL = process.env.QB_AUTH_URL ?? 'https://appcenter.intuit.com/connect/oauth2';
 const QB_TOKEN_URL = process.env.QB_TOKEN_URL ?? 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+
+function restrictSkipDedup(req: AuthRequest, _res: Response, next: NextFunction) {
+  if (req.body?.skipDedupCheck) {
+    const role = req.user?.role;
+    if (role !== 'OWNER' && role !== 'ADMIN') {
+      console.warn(
+        `[Security] User ${req.user?.id} (${role}) attempted skipDedupCheck without OWNER/ADMIN role`
+      );
+      req.body.skipDedupCheck = false;
+    }
+  }
+  next();
+}
 
 // ── GET /api/quickbooks/auth-url ──────────────────────────────────────────────
 // Requires JWT — binds the CSRF state to this user and persists it in the DB
@@ -216,7 +229,7 @@ router.get('/status', authenticate, asyncHandler(async(req: AuthRequest, res: Re
 }))
 
 // ── POST /api/quickbooks/journal-entry ────────────────────────────────────────
-router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(journalEntrySchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(journalEntrySchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { txnDate, lines, privateNote, scanRecordId, docNumber, skipDedupCheck } = req.body as {
       txnDate?: string;
@@ -305,7 +318,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
 }));
 
 // ── POST /api/quickbooks/bill ───────────────────────────────────────────────
-router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(billSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(billSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
       txnDate,
@@ -451,7 +464,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
 }));
 
 // ── POST /api/quickbooks/vendorcredit ───────────────────────────────────────
-router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(vendorCreditSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(vendorCreditSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
       vendorRef,
@@ -589,7 +602,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
 }));
 
 // ── POST /api/quickbooks/cheque ─────────────────────────────────────────────────
-router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(chequeSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(chequeSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
       txnDate,
@@ -1997,7 +2010,7 @@ router.get('/vendor-credits', authenticate, requireFeaturePermission('sync', 'ex
 }));
 
 // ── POST /api/quickbooks/bill-payment ────────────────────────────────────────
-router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), validate(billPaymentSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(billPaymentSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const body = req.body as CreateBillPaymentInput & { scanRecordId?: string; skipDedupCheck?: boolean };
     const { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum, scanRecordId, skipDedupCheck } = body;

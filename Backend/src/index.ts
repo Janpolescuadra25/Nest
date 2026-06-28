@@ -38,40 +38,67 @@ app.set('trust proxy', 1);
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedExtensionId = process.env.ALLOWED_EXTENSION_ID;
-    if (!origin || origin === 'undefined') {
+    // No origin = server-to-server request (webhooks, health checks). Always allow.
+    if (!origin) {
       return callback(null, true);
     }
+
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+
+    // In production, only allow whitelisted origins
+    const allowedOrigins = [process.env.APP_URL].filter(Boolean);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow the specific Chrome extension by ID (if configured)
+    const allowedExtensionId = process.env.ALLOWED_EXTENSION_ID;
     if (allowedExtensionId && origin === `chrome-extension://${allowedExtensionId}`) {
       return callback(null, true);
     }
-    if (!allowedExtensionId && origin.startsWith('chrome-extension://')) {
-      return callback(null, true);
+
+    // Reject all chrome-extension:// origins unless explicitly configured.
+    if (origin.startsWith('chrome-extension://')) {
+      return callback(new Error('Not allowed by CORS'));
     }
-    const appUrl = process.env.APP_URL;
-    if (appUrl && origin === appUrl) {
-      return callback(null, true);
-    }
-    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
+
+    // Reject non-whitelisted origins — server-side rejection, route handler never executes
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '1mb' }), webhookRoutes);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      // TODO: Refactor inline scripts in reset-password and verify-email HTML pages to external files to remove 'unsafe-inline'
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:'],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+    },
+  },
 }));
 
 // ── Health Check — before globalLimiter so Render's poller is never 429'd ──
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'nest-backend', timestamp: new Date().toISOString() });
+app.get('/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', service: 'nest-backend', database: 'connected', timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error('[Health] Database check failed:', err);
+    res.status(503).json({ status: 'error', service: 'nest-backend', database: 'disconnected', timestamp: new Date().toISOString() });
+  }
 });
 
 const globalLimiter = rateLimit({
@@ -129,9 +156,27 @@ app.use(createErrorHandler());
 startTimeBombCron(prisma);
 startTrialWarningCron(prisma);
 startSyncFailureAlertCron(prisma);
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[Nest] Server running on http://localhost:${PORT}`);
   console.log(`[Nest] Environment: ${process.env.NODE_ENV ?? 'development'}`);
 });
+
+function gracefulShutdown(signal: string) {
+  console.log(`[Nest] ${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('[Nest] HTTP server closed.');
+    prisma.$disconnect().then(() => {
+      console.log('[Nest] Database disconnected.');
+      process.exit(0);
+    });
+  });
+  setTimeout(() => {
+    console.error('[Nest] Forced shutdown after timeout.');
+    process.exit(1);
+  }, 10_000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;

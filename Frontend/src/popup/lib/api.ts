@@ -59,11 +59,7 @@ async function put<T>(path: string, body: unknown, jwt?: string | null): Promise
     headers: await headers(jwt),
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(res, path);
 }
 
 async function patch<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
@@ -72,11 +68,7 @@ async function patch<T>(path: string, body: unknown, jwt?: string | null): Promi
     headers: await headers(jwt),
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
-  return res.json() as Promise<T>;
+  return parseResponse<T>(res, path);
 }
 
 async function del(path: string, jwt?: string | null): Promise<void> {
@@ -84,10 +76,7 @@ async function del(path: string, jwt?: string | null): Promise<void> {
     method: 'DELETE',
     headers: await headers(jwt),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-    throw new Error(err.error ?? `API ${path} failed`);
-  }
+  return parseResponse<void>(res, path);
 }
 
 export interface Plan {

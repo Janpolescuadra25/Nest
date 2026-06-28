@@ -175,6 +175,12 @@ export function enforceEffectiveRole(req: RequestWithUser, res: Response, next: 
       res.status(403).json({ error: 'Your account is pending approval.' });
       return;
     }
+    if (effective.status === 'EXPIRED') {
+      res.status(403).json({
+        error: 'Your write access has been restricted. Contact your administrator to restore full access.',
+      });
+      return;
+    }
     if (effective.status === 'TIME_BOMBED') {
       res.status(403).json({
         error: 'Your write access has been restricted. Contact your administrator to restore full access.',

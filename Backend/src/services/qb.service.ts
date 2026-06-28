@@ -3,6 +3,22 @@ import { QBApiError } from '../lib/qb-errors';
 import { prisma } from '../lib/prisma';
 import { encrypt, decryptSafe } from '../lib/encryption';
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 30_000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new QBApiError('QuickBooks API request timed out after 30 seconds', 504);
+    }
+    throw err;
+  }
+}
+
 const QB_CLIENT_ID = process.env.QB_CLIENT_ID;
 const QB_CLIENT_SECRET = process.env.QB_CLIENT_SECRET;
 if (!QB_CLIENT_ID || !QB_CLIENT_SECRET) {
@@ -60,7 +76,7 @@ async function qbQuery<T>(realmId: string, accessToken: string, query: string): 
   if (process.env.NODE_ENV !== 'production') {
     console.log(`[QB Service] QUERY ${url}`);
   }
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/json',
@@ -218,7 +234,7 @@ async function createBillPayment(input: CreateBillPaymentInput): Promise<BillPay
     console.log(`[QB Service] POST ${url}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -324,7 +340,7 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
     console.log(`[QB Service] POST ${url}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -406,7 +422,7 @@ async function createBill(input: CreateBillInput): Promise<JournalEntryResponse>
     console.log(`[QB Service] POST ${url}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -534,7 +550,7 @@ async function createCheque(input: CreateChequeInput): Promise<ChequeResponse> {
     console.log(`[QB Service] POST ${url}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -575,7 +591,7 @@ async function createVendorCredit(input: CreateVendorCreditInput): Promise<Journ
     console.log(`[QB Service] POST ${url}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -623,7 +639,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{
     refresh_token: refreshToken,
   });
 
-  const response = await fetch(QB_TOKEN_URL, {
+  const response = await fetchWithTimeout(QB_TOKEN_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${credentials}`,
@@ -733,7 +749,7 @@ async function callQB<T>(userId: string, fn: (creds: { accessToken: string; real
 }
 
 async function revokeAccessToken(accessToken: string): Promise<void> {
-  const response = await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+  const response = await fetchWithTimeout('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
     method: 'POST',
     headers: {
       Authorization: `Basic ${Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64')}`,

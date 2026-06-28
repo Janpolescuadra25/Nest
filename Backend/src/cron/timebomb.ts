@@ -18,10 +18,11 @@ export function startTimeBombCron(prisma: PrismaClient): void {
   checkTimeBombs(prisma);
 
   // Then every 60 minutes
-  setInterval(() => {
+  const interval = setInterval(() => {
     checkTrialExpiry(prisma);
     checkTimeBombs(prisma);
   }, 3_600_000);
+  interval.unref();
 }
 
 async function checkTimeBombs(prisma: PrismaClient): Promise<void> {
