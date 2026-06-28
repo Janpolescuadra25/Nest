@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getStepCTA, STEP_TAB_MAP } from '../lib/onboarding';
 import type { OnboardingState } from '../lib/onboarding';
 import type { TabId } from '../../types';
@@ -10,6 +10,16 @@ interface Props {
 
 export function OnboardingBanner({ state, onNavigate }: Props) {
   const [visible, setVisible] = useState(true);
+  const dismissKey = `onboarding_dismissed_${state.step}`;
+
+  useEffect(() => {
+    chrome.storage.local.get(dismissKey, (result) => {
+      if (result[dismissKey]) {
+        setVisible(false);
+      }
+    });
+  }, [dismissKey]);
+
   if (!visible || state.step === 0) return null;
 
   const ctaLabel = getStepCTA(state.step);
@@ -25,7 +35,10 @@ export function OnboardingBanner({ state, onNavigate }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => setVisible(false)}
+          onClick={() => {
+            chrome.storage.local.set({ [dismissKey]: true });
+            setVisible(false);
+          }}
           className="text-white/60 hover:text-white text-xs"
           aria-label="Dismiss onboarding banner"
         >

@@ -153,6 +153,14 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   const formulaInputRef = useRef<HTMLInputElement>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
+  const [rulesTipVisible, setRulesTipVisible] = useState(true);
+  const rulesTipKey = 'tip_dismissed_rules';
+
+  useEffect(() => {
+    chrome.storage.local.get(rulesTipKey, (result) => {
+      if (result[rulesTipKey]) setRulesTipVisible(false);
+    });
+  }, [rulesTipKey]);
 
   useEffect(() => {
     if (!locId) return;
@@ -553,6 +561,13 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   // ------------------------------------------------------------------
   return (
     <div className="p-3">
+      {rulesTipVisible && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-300">
+          <span className="mt-0.5 shrink-0">ℹ️</span>
+          <p className="flex-1">Rules transform scanned values before syncing — combine fields, apply formulas, set thresholds. Not required for simple 1:1 mappings.</p>
+          <button onClick={() => { chrome.storage.local.set({ [rulesTipKey]: true }); setRulesTipVisible(false); }} className="shrink-0 text-cyan-400 hover:text-cyan-200">✕</button>
+        </div>
+      )}
       {/* New Rule button */}
       <div className="mb-3">
         <button

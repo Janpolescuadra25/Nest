@@ -124,6 +124,14 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
   const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
+  const [previewTipVisible, setPreviewTipVisible] = useState(true);
+  const previewTipKey = 'tip_dismissed_preview';
+
+  useEffect(() => {
+    chrome.storage.local.get(previewTipKey, (result) => {
+      if (result[previewTipKey]) setPreviewTipVisible(false);
+    });
+  }, [previewTipKey]);
   const rulesAppliedRef = useRef(false);
   const [consolidate, setConsolidate] = useState(false);
 
@@ -571,6 +579,13 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
 
   return (
     <div className="p-3 flex flex-col gap-3">
+      {previewTipVisible && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-300">
+          <span className="mt-0.5 shrink-0">ℹ️</span>
+          <p className="flex-1">After scanning a report and creating a mapping, your data appears here pre-filled. You can also enter data manually.</p>
+          <button onClick={() => { chrome.storage.local.set({ [previewTipKey]: true }); setPreviewTipVisible(false); }} className="shrink-0 text-cyan-400 hover:text-cyan-200">✕</button>
+        </div>
+      )}
       {/* QB Status */}
       <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg">
         <span className="text-green-400">✅ QB Connected</span>
