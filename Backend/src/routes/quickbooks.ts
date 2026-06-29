@@ -30,7 +30,7 @@ function restrictSkipDedup(req: AuthRequest, _res: Response, next: NextFunction)
     const role = req.user?.role;
     if (role !== 'OWNER' && role !== 'ADMIN') {
       console.warn(
-        `[Security] User ${req.user?.id} (${role}) attempted skipDedupCheck without OWNER/ADMIN role`
+        `[Security] User ${req.user?.userId} (${role}) attempted skipDedupCheck without OWNER/ADMIN role`
       );
       req.body.skipDedupCheck = false;
     }

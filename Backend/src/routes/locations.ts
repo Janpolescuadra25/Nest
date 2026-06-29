@@ -290,6 +290,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
 
     res.json(result);
   } catch (err: unknown) {
+    if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Import failed';
     console.error('[import-template]', message);
     throw new AppError(process.env.NODE_ENV !== 'production'

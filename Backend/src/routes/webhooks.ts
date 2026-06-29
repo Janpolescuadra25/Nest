@@ -94,7 +94,7 @@ router.post(
           currentPeriodEnd: periodEnd,
           cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
           paymentIssue: false,
-          status: subscription.status === 'active' ? 'ACTIVE' : 'EXPIRED',
+          status: ['active', 'trialing', 'past_due'].includes(subscription.status ?? '') ? 'ACTIVE' : 'EXPIRED',
         };
 
         if (planKey) {
