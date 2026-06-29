@@ -3,6 +3,8 @@ import { QBApiError } from '../lib/qb-errors';
 import { prisma } from '../lib/prisma';
 import { encrypt, decryptSafe } from '../lib/encryption';
 
+const pendingRefreshes = new Map<string, Promise<{ accessToken: string; realmId: string }>>();
+
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 30_000): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -674,23 +676,35 @@ async function getValidToken(userId: string): Promise<{ accessToken: string; rea
   }
 
   if (qbToken.expiresAt < new Date()) {
-    const refreshToken = decryptSafe(qbToken.refreshToken);
-    try {
-      const refreshed = await refreshAccessToken(refreshToken);
-      await prisma.qBToken.update({
-        where: { userId },
-        data: {
-          accessToken: encrypt(refreshed.accessToken),
-          refreshToken: encrypt(refreshed.refreshToken),
-          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
-          stale: false,
-        },
-      });
-      return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
-    } catch (refreshError) {
-      await prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
-      throw refreshError;
-    }
+    // Deduplicate concurrent refreshes for the same user
+    const pending = pendingRefreshes.get(userId);
+    if (pending) return pending;
+
+    const refreshPromise = (async () => {
+      try {
+        const decryptedRefresh = decryptSafe(qbToken.refreshToken);
+        const refreshed = await refreshAccessToken(decryptedRefresh);
+        await prisma.qBToken.update({
+          where: { userId },
+          data: {
+            accessToken: encrypt(refreshed.accessToken),
+            refreshToken: encrypt(refreshed.refreshToken),
+            expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+            stale: false,
+          },
+        });
+        return { accessToken: refreshed.accessToken, realmId: qbToken.realmId };
+      } catch (err) {
+        // Mark token stale so next call retries from scratch
+        prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
+        throw err;
+      } finally {
+        pendingRefreshes.delete(userId);
+      }
+    })();
+
+    pendingRefreshes.set(userId, refreshPromise);
+    return refreshPromise;
   }
 
   return { accessToken: decryptSafe(qbToken.accessToken), realmId: qbToken.realmId };
@@ -705,20 +719,24 @@ async function forceRefreshToken(userId: string): Promise<string> {
     throw new QBApiError('QB token is stale — reconnect required', 401);
   }
 
-  const decryptedRefresh = decryptSafe(tokenRow.refreshToken);
-  const result = await refreshAccessToken(decryptedRefresh);
-
-  await prisma.qBToken.update({
-    where: { userId },
-    data: {
-      accessToken: encrypt(result.accessToken),
-      refreshToken: encrypt(result.refreshToken),
-      expiresAt: new Date(Date.now() + result.expiresIn * 1000),
-      stale: false,
-    },
-  });
-
-  return result.accessToken;
+  try {
+    const decryptedRefreshToken = decryptSafe(tokenRow.refreshToken);
+    const refreshed = await refreshAccessToken(decryptedRefreshToken);
+    await prisma.qBToken.update({
+      where: { userId },
+      data: {
+        accessToken: encrypt(refreshed.accessToken),
+        refreshToken: encrypt(refreshed.refreshToken),
+        expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+        stale: false,
+      },
+    });
+    return refreshed.accessToken;
+  } catch (err) {
+    // Mark stale so getValidToken retries fresh on next call
+    prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
+    throw err;
+  }
 }
 
 function sleep(ms: number): Promise<void> {

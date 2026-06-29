@@ -12,15 +12,15 @@ async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
   }
 }
 
-export function startTimeBombCron(prisma: PrismaClient): void {
-  // Run immediately on startup
-  checkTrialExpiry(prisma);
-  checkTimeBombs(prisma);
+export async function startTimeBombCron(prisma: PrismaClient): Promise<void> {
+  // Run immediately on startup — sequential
+  await checkTrialExpiry(prisma);
+  await checkTimeBombs(prisma);
 
-  // Then every 60 minutes
-  const interval = setInterval(() => {
-    checkTrialExpiry(prisma);
-    checkTimeBombs(prisma);
+  // Then every 60 minutes — also sequential
+  const interval = setInterval(async () => {
+    await checkTrialExpiry(prisma);
+    await checkTimeBombs(prisma);
   }, 3_600_000);
   interval.unref();
 }

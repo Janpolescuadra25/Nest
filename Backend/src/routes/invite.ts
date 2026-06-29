@@ -12,6 +12,7 @@ import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { permissionDefaultsMap } from '../lib/permissions';
 import { sendVerificationEmail } from '../lib/email';
+import { getPlanLimits, isSoloPlan } from '../lib/stripe';
 
 const router = Router();
 
@@ -76,6 +77,26 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     const perms = permissionDefaultsMap[role] || permissionDefaultsMap.VIEWER;
     let emailResult: { success: boolean; error?: string } | undefined;
     const result = await prisma.$transaction(async (tx) => {
+      // Re-check capacity at consumption time
+      const creator = invite.creator;
+      const teamLeadId = creator.adminId ?? creator.id;
+      const teamLead = await tx.user.findUnique({ where: { id: teamLeadId } });
+      if (teamLead) {
+        if (teamLead.subscriptionSource === 'stripe' && teamLead.currentPlan && !isSoloPlan(teamLead.currentPlan)) {
+          const currentCount = await tx.user.count({ where: { adminId: teamLeadId } });
+          const planKeys = ['starter', 'growth', 'enterprise'] as const;
+          const planKey = planKeys.includes(teamLead.currentPlan as any)
+            ? (teamLead.currentPlan as typeof planKeys[number])
+            : undefined;
+          if (planKey) {
+            const maxUsers = getPlanLimits(planKey).maxUsers ?? 1;
+            if (currentCount >= maxUsers) {
+              throw new AppError('This team has reached its user limit. Please upgrade your plan.', 403);
+            }
+          }
+        }
+      }
+
       const user = await tx.user.create({
         data: {
           name: req.body.name,

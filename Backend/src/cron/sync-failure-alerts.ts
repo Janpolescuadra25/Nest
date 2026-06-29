@@ -39,7 +39,10 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
     });
 
     const failedScans = await prisma.scanRecord.findMany({
-      where: { status: 'FAILED' },
+      where: {
+        status: 'FAILED',
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
       include: {
         location: {
           include: {
