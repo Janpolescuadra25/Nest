@@ -6,12 +6,13 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middl
 import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail } from '../lib/email';
 import { validate } from '../middleware/validate';
+import { authLimiter } from '../middleware/rate-limit';
 import { adminRequestSchema } from '../lib/validators';
 
 const router = Router();
 
 // ── POST /api/admin-requests  (public — no auth) ──────────────────────────────
-router.post('/', validate(adminRequestSchema), asyncHandler(async(req: Request, res: Response) => {
+router.post('/', authLimiter, validate(adminRequestSchema), asyncHandler(async(req: Request, res: Response) => {
   try {
     const { email, name, description, company } = req.body as {
       email?: string;

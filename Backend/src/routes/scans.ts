@@ -182,7 +182,8 @@ router.post(
       if (err.message?.includes('GEMINI_API_KEY')) {
         throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
       }
-      throw new AppError(`AI parsing failed: ${err.message}`, 500);
+      const detail = process.env.NODE_ENV !== 'production' ? `: ${err.message}` : '. Please try again.';
+      throw new AppError(`AI parsing failed${detail}`, 500);
     }
   })
 );
@@ -219,7 +220,8 @@ router.post(
       if (err.message?.includes('GEMINI_API_KEY')) {
         throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
       }
-      throw new AppError(`AI parsing failed: ${err.message}`, 500);
+      const detail = process.env.NODE_ENV !== 'production' ? `: ${err.message}` : '. Please try again.';
+      throw new AppError(`AI parsing failed${detail}`, 500);
     }
   })
 );

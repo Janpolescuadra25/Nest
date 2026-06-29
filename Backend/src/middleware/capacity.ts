@@ -8,17 +8,18 @@ type CapacityAction = 'user' | 'location';
 
 export function requireCapacity(action: CapacityAction) {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    const teamId = req.user!.adminId ?? req.user!.userId;
-    const team = await prisma.user.findUnique({
-      where: { id: teamId },
-      select: {
-        id: true,
-        subscriptionSource: true,
-        currentPlan: true,
-        maxUsers: true,
-        maxLocations: true,
-      },
-    });
+    try {
+      const teamId = req.user!.adminId ?? req.user!.userId;
+      const team = await prisma.user.findUnique({
+        where: { id: teamId },
+        select: {
+          id: true,
+          subscriptionSource: true,
+          currentPlan: true,
+          maxUsers: true,
+          maxLocations: true,
+        },
+      });
 
     if (!team) {
       return next(new AppError('Team not found', 404));
@@ -70,5 +71,8 @@ export function requireCapacity(action: CapacityAction) {
     }
 
     next();
+  } catch (err) {
+    next(err);
+  }
   };
 }

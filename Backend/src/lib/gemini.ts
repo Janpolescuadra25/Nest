@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, ArraySchema, ObjectSchema, SchemaType } from '@google/generative-ai';
+import { AppError } from './errors';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -139,7 +140,15 @@ Return only valid JSON that matches the schema. Do not include any extra comment
   ]);
 
   const text = result.response.text();
-  const parsed = JSON.parse(text);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
 
   const documentType = String(parsed.documentType || 'OTHER').toUpperCase() as DocumentType;
   return {
@@ -183,7 +192,15 @@ RULES:
   ]);
 
   const text = result.response.text();
-  const parsed = JSON.parse(text);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
 
   return {
     chequeNumber: String(parsed.chequeNumber || ''),
@@ -287,7 +304,15 @@ ACCOUNTING RULES:
   const prompt = `Scan Fields:\n${fieldsText}\n\nAvailable QuickBooks Accounts (Type • SubType):\n${accountsText}${accountTypes && accountTypes.length > ACCOUNT_CAP ? '\n- ...and more' : ''}\n\nTransaction Type: ${transactionType ?? 'Unknown'}${preferenceText}`;
   const result = await model.generateContent([{ text: prompt }]);
   const text = result.response.text();
-  const parsed = JSON.parse(text);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
 
   if (!Array.isArray(parsed)) {
     return [];
@@ -342,7 +367,15 @@ RULES:
   ]);
 
   const text = result.response.text();
-  const parsed = JSON.parse(text);
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
 
   return {
     header: {
