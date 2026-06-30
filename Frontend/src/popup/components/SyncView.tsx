@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
@@ -84,20 +84,19 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       const syncType = scan?.syncLogs?.[0]?.syncType;
       const label = syncType ? (TRANSACTION_TYPE_LABELS[syncType] ?? 'Transaction') : 'Transaction';
 
-      if (result.success) {
-        showToast(
-          `Retry succeeded — ${label} ${result.docNumber ?? result.qbJournalEntryId ?? 'created'} (attempt ${result.attemptCount})`,
-          'success',
-        );
-      } else {
-        showToast(
-          `Retry failed: ${result.errorMessage ?? 'Unknown error'} (attempt ${result.attemptCount}/3)`,
-          'error',
-        );
-      }
+      showToast(
+        `Retry succeeded — ${label} ${result.docNumber ?? result.qbJournalEntryId ?? 'created'} (attempt ${result.attemptCount})`,
+        'success',
+      );
       await refreshScans();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Retry error', 'error');
+      if (err instanceof ApiError) {
+        const attemptCount = err.payload?.attemptCount;
+        const message = `${err.message}${attemptCount ? ` (attempt ${attemptCount}/3)` : ''}`;
+        showToast(message, 'error');
+      } else {
+        showToast(err instanceof Error ? err.message : 'Retry error', 'error');
+      }
     } finally {
       setIsRetryingId(null);
     }

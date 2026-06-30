@@ -485,7 +485,7 @@ export const api = {
     ),
 
   retryScan: (jwt: string, scanRecordId: string) =>
-    post<{ success: boolean; qbJournalEntryId?: string; docNumber?: string; errorMessage?: string; errorType?: string; attemptCount: number }>(
+    post<{ success: boolean; qbJournalEntryId?: string; docNumber?: string; error?: string; errorType?: string; attemptCount: number }>(
       `/api/quickbooks/retry/${scanRecordId}`,
       {},
       jwt,

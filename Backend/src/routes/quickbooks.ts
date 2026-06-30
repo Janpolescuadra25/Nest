@@ -1587,13 +1587,13 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
     } else if (result.status === 'SKIPPED') {
       res.status(409).json({
         success: false,
-        errorMessage: result.reason ?? 'Duplicate detected',
+        error: result.reason ?? 'Duplicate detected',
         attemptCount,
       });
     } else {
-      res.json({
+      res.status(422).json({
         success: false,
-        errorMessage: result.errorMessage ?? 'Retry failed',
+        error: result.errorMessage ?? 'Retry failed',
         errorType: result.errorType,
         attemptCount,
       });
