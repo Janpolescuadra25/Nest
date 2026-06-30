@@ -30,7 +30,8 @@ type AuditAction =
   | 'PASSWORD_RESET'
   | 'EMAIL_VERIFIED'
   | 'CANX_RESET'
-  | 'PERMISSIONS_RESET';
+  | 'PERMISSIONS_RESET'
+  | 'SYNC_FAILURE_ALERT';
 
 export async function logAction(params: {
   actorId: string;

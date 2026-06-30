@@ -63,7 +63,8 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
     if (user.status === 'DISABLED') throw new AppError('Account is disabled.', 403);
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new AppError('Invalid email or password.', 401);
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
+    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
     const billing = mergeTeamBilling(user);
     return res.json({
       token,
@@ -135,7 +136,8 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
       console.error('[Auth] Registration setup error:', emailErr);
     }
 
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
+    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
     return res.status(201).json({
       token,
       user: {

@@ -179,6 +179,7 @@ router.post(
       const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
       res.json({ success: true, data: result });
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       if (err.message?.includes('GEMINI_API_KEY')) {
         throw new AppError('AI scanning is not configured. Please set GEMINI_API_KEY.', 503);
       }
@@ -208,6 +209,7 @@ router.post(
         },
       });
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       const isServiceUnavailable = err?.status === 503
         || err?.message?.includes('503')
         || err?.message?.includes('Service Unavailable')

@@ -12,7 +12,7 @@ import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { permissionDefaultsMap } from '../lib/permissions';
 import { sendVerificationEmail } from '../lib/email';
-import { getPlanLimits, isSoloPlan } from '../lib/stripe';
+import { isSoloPlan } from '../lib/stripe';
 
 const router = Router();
 
@@ -84,15 +84,9 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       if (teamLead) {
         if (teamLead.subscriptionSource === 'stripe' && teamLead.currentPlan && !isSoloPlan(teamLead.currentPlan)) {
           const currentCount = await tx.user.count({ where: { adminId: teamLeadId } });
-          const planKeys = ['starter', 'growth', 'enterprise'] as const;
-          const planKey = planKeys.includes(teamLead.currentPlan as any)
-            ? (teamLead.currentPlan as typeof planKeys[number])
-            : undefined;
-          if (planKey) {
-            const maxUsers = getPlanLimits(planKey).maxUsers ?? 1;
-            if (currentCount >= maxUsers) {
-              throw new AppError('This team has reached its user limit. Please upgrade your plan.', 403);
-            }
+          const maxUsers = teamLead.maxUsers ?? 1;
+          if (currentCount >= maxUsers) {
+            throw new AppError('This team has reached its user limit. Please upgrade your plan.', 403);
           }
         }
       }
@@ -160,7 +154,8 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     });
 
     // Generate JWT — same pattern as auth.ts
-    const token = jwt.sign({ sub: result.id }, JWT_SECRET, { expiresIn: '7d' });
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
+    const token = jwt.sign({ sub: result.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
 
     // Return response matching login response shape exactly
     return res.status(201).json({

@@ -27,6 +27,10 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
     throw new ApiError(message, res.status, payload);
   }
 
+  if ('success' in payload && !payload.success) {
+    throw new ApiError(payload.error ?? 'Request failed', payload.statusCode ?? 500, payload);
+  }
+
   return payload as T;
 }
 

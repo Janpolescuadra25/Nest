@@ -31,7 +31,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   const token = authHeader.slice(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string };
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { sub: string };
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.sub },

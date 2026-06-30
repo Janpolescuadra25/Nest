@@ -719,24 +719,38 @@ async function forceRefreshToken(userId: string): Promise<string> {
     throw new QBApiError('QB token is stale — reconnect required', 401);
   }
 
-  try {
-    const decryptedRefreshToken = decryptSafe(tokenRow.refreshToken);
-    const refreshed = await refreshAccessToken(decryptedRefreshToken);
-    await prisma.qBToken.update({
-      where: { userId },
-      data: {
-        accessToken: encrypt(refreshed.accessToken),
-        refreshToken: encrypt(refreshed.refreshToken),
-        expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
-        stale: false,
-      },
-    });
-    return refreshed.accessToken;
-  } catch (err) {
-    // Mark stale so getValidToken retries fresh on next call
-    prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
-    throw err;
+  // Deduplicate: if getValidToken or another forceRefreshToken is already refreshing, share it
+  const pending = pendingRefreshes.get(userId);
+  if (pending) {
+    const result = await pending;
+    return result.accessToken;
   }
+
+  const refreshPromise = (async () => {
+    try {
+      const decryptedRefreshToken = decryptSafe(tokenRow.refreshToken);
+      const refreshed = await refreshAccessToken(decryptedRefreshToken);
+      await prisma.qBToken.update({
+        where: { userId },
+        data: {
+          accessToken: encrypt(refreshed.accessToken),
+          refreshToken: encrypt(refreshed.refreshToken),
+          expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
+          stale: false,
+        },
+      });
+      return { accessToken: refreshed.accessToken, realmId: tokenRow.realmId };
+    } catch (err) {
+      prisma.qBToken.update({ where: { userId }, data: { stale: true } }).catch(() => {});
+      throw err;
+    } finally {
+      pendingRefreshes.delete(userId);
+    }
+  })();
+
+  pendingRefreshes.set(userId, refreshPromise);
+  const { accessToken } = await refreshPromise;
+  return accessToken;
 }
 
 function sleep(ms: number): Promise<void> {

@@ -33,12 +33,12 @@ router.post('/', authLimiter, validate(adminRequestSchema), asyncHandler(async(r
     const existing = await prisma.adminRequest.findFirst({
       where: { email: normalizedEmail, status: 'PENDING' },
     });
-    if (existing) throw new AppError('You already have a pending request.', 409);
+    if (existing) throw new AppError('This email is not available for an admin request. Please contact support if you believe this is an error.', 409);
 
     const existingAdmin = await prisma.user.findFirst({
       where: { email: normalizedEmail, role: 'ADMIN' },
     });
-    if (existingAdmin) throw new AppError('An admin with this email already exists.', 409);
+    if (existingAdmin) throw new AppError('This email is not available for an admin request. Please contact support if you believe this is an error.', 409);
 
     const request = await prisma.adminRequest.create({
       data: {
