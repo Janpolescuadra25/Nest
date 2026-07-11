@@ -143,6 +143,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       let fetchPage = 1;
       let fetchMore = true;
       while (fetchMore) {
+        if (fetchPage > 100) break;
         const { scans: pageScans, hasMore: more } = await api.getScans(jwt, locationId, fetchPage, 100);
         allPending.push(...(pageScans ?? []).filter((s) => s.status === 'PENDING' || s.status === 'MAPPED'));
         fetchMore = more;

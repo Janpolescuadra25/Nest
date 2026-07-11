@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 import { AppError, asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
@@ -155,7 +155,11 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
 
     // Generate JWT — same pattern as auth.ts
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
-    const token = jwt.sign({ sub: result.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
+    const token = jwt.sign(
+      { sub: result.id },
+      JWT_SECRET,
+      { expiresIn: jwtExpiresIn as SignOptions['expiresIn'] },
+    );
 
     // Return response matching login response shape exactly
     return res.status(201).json({

@@ -31,6 +31,7 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
     throw new ApiError(payload.error ?? 'Request failed', payload.statusCode ?? 500, payload);
   }
 
+  if (payload == null) throw new ApiError('Invalid response', 500);
   return payload as T;
 }
 
