@@ -1,6 +1,12 @@
 export function mergePermissions(
   existing: Record<string, boolean> | null,
-  updates: Record<string, boolean>
+  updates: Record<string, unknown>
 ): Record<string, boolean> {
-  return { ...(existing ?? {}), ...updates };
+  const result: Record<string, boolean> = { ...(existing ?? {}) };
+  for (const [key, value] of Object.entries(updates)) {
+    if (key in result && typeof value === 'boolean') {
+      result[key] = value;
+    }
+  }
+  return result;
 }

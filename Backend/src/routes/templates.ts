@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
+import path from 'path';
 import xlsx from 'xlsx';
 import { Prisma, ScanMode } from '@prisma/client';
 import { AppError, asyncHandler } from '../lib/errors';
@@ -7,7 +8,22 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedMimes.includes(file.mimetype) || ['.xlsx', '.xls'].includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new AppError('Only Excel files (.xlsx, .xls) are accepted', 400));
+    }
+  },
+});
 const VALID_TRANSACTION_TYPES = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'BILL_PAYMENT', 'CHEQUE'] as const;
 
 export function validateTransactionType(transactionType?: string): void {
@@ -386,7 +402,6 @@ export function createLocationTemplateRouter() {
     await getLocationOrFail(locationId, req.user);
     const body = req.body as {
       name?: string;
-      transactionType?: string;
       memoTemplate?: string | null;
       docNumberTemplate?: string | null;
       isActive?: boolean;
@@ -394,7 +409,6 @@ export function createLocationTemplateRouter() {
       columnMappings?: Record<string, unknown> | null;
     };
 
-    validateTransactionType(body.transactionType);
     const template = await prisma.template.findFirst({
       where: { id: templateId, locationId },
     });
@@ -406,7 +420,6 @@ export function createLocationTemplateRouter() {
       where: { id: template.id },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.transactionType && { transactionType: body.transactionType as string }),
         ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
         ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),

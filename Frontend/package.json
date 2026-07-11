@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/generate-icons.js && node scripts/build.js",
     "build:watch": "node scripts/build.js --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
   },
   "dependencies": {
     "react": "^18.3.1",

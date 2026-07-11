@@ -146,16 +146,16 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
         },
       });
 
-      return createdUser;
-    });
+      await tx.auditLog.create({
+        data: {
+          actorId: req.user!.userId,
+          action: 'ADMIN_APPROVED',
+          targetUserId: createdUser.id,
+          details: { requestId: request.id, requestEmail: request.email },
+        },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: req.user!.userId,
-        action: 'ADMIN_APPROVED',
-        targetUserId: newUser.id,
-        details: { requestId: request.id, requestEmail: request.email },
-      },
+      return createdUser;
     });
 
     const emailResult = await sendWelcomeEmail({ to: request.email, name: request.name, tempPassword });

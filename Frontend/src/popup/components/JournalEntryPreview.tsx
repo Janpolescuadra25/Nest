@@ -537,7 +537,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         txnDate,
         jeLines,
         scanRecordId ?? undefined,
-        privateNote || `Nest sync — ${txnDate} — ${locations[0]?.name ?? ''}`,
+        privateNote || `Nest sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
         docNumber || undefined,
         skipDedupCheck,
       ) as { journalEntryId?: string; qbJournalEntryId?: string; txnDate?: string; skipped?: boolean; docNumber?: string };

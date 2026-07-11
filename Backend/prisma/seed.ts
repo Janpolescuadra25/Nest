@@ -8,12 +8,18 @@ async function main(): Promise<void> {
   console.log('[Seed] Starting seed...');
 
   // ── 0. Create / update Owner user ──────────────────────────────────────────
-  const ownerEmail    = process.env.OWNER_EMAIL    ?? 'paulescuadra25@gmail.com';
+  const ownerEmail    = process.env.OWNER_EMAIL;
+  if (!ownerEmail) {
+    throw new Error('[Seed] OWNER_EMAIL environment variable is required');
+  }
   const ownerPassword = process.env.OWNER_PASSWORD;
   if (!ownerPassword) {
     throw new Error('[Seed] OWNER_PASSWORD environment variable is required');
   }
-  const ownerName     = process.env.OWNER_NAME     ?? 'John Paul O. Escuadra';
+  const ownerName     = process.env.OWNER_NAME;
+  if (!ownerName) {
+    throw new Error('[Seed] OWNER_NAME environment variable is required');
+  }
   const hashedPassword = await bcrypt.hash(ownerPassword, 12);
 
   const ownerUser = await prisma.user.upsert({

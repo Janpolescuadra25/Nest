@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import { AppError, asyncHandler } from '../lib/errors';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { authLimiter } from '../middleware/rate-limit';
@@ -27,7 +27,7 @@ function mergeTeamBilling(user: any) {
 }
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET as string;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
@@ -64,7 +64,11 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new AppError('Invalid email or password.', 401);
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
+    const token = jwt.sign(
+      { sub: user.id },
+      JWT_SECRET,
+      { expiresIn: jwtExpiresIn as SignOptions['expiresIn'] },
+    );
     const billing = mergeTeamBilling(user);
     return res.json({
       token,
@@ -137,7 +141,11 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
     }
 
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: jwtExpiresIn as any });
+    const token = jwt.sign(
+      { sub: user.id },
+      JWT_SECRET,
+      { expiresIn: jwtExpiresIn as SignOptions['expiresIn'] },
+    );
     return res.status(201).json({
       token,
       user: {
