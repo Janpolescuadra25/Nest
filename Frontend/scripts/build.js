@@ -19,6 +19,27 @@ for (const dir of ['popup', 'content', 'background', 'public/icons']) {
 // ── Copy static files ──────────────────────────────────────────────────────
 fs.copyFileSync(path.join(ROOT, 'manifest.json'), path.join(DIST, 'manifest.json'));
 fs.copyFileSync(path.join(ROOT, 'src', 'popup', 'index.html'), path.join(DIST, 'popup', 'index.html'));
+if (!isWatch) {
+  const manifestPath = path.join(DIST, 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+
+  manifest.host_permissions = manifest.host_permissions.filter(
+    (p) => !p.includes('localhost')
+  );
+
+  const csp = manifest.content_security_policy.extension_pages;
+  const directives = csp.split(';').map((d) => d.trim());
+  const connectIdx = directives.findIndex((d) => d.startsWith('connect-src'));
+  if (connectIdx !== -1) {
+    const sources = directives[connectIdx].split(/\s+/).slice(1);
+    const filtered = sources.filter((s) => !s.includes('localhost'));
+    filtered.push('https://quickbooks.api.intuit.com');
+    directives[connectIdx] = 'connect-src ' + filtered.join(' ');
+  }
+  manifest.content_security_policy.extension_pages = directives.join('; ');
+
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+}
 console.log('[Build] Copied manifest.json and popup/index.html');
 
 // ── Copy icons ─────────────────────────────────────────────────────────────

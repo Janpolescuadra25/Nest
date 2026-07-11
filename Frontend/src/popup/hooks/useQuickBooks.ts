@@ -6,21 +6,23 @@ export function useQuickBooks(jwt: string | null) {
   const [status, setStatus] = useState<QBStatus>({ connected: false });
   const [loading, setLoading] = useState(false);
 
-  const checkStatus = useCallback(async () => {
+  const checkStatus = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!jwt) return;
     setLoading(true);
     try {
       const s = await api.getQBStatus(jwt);
-      setStatus(s);
+      if (!signal?.cancelled) setStatus(s);
     } catch {
-      setStatus({ connected: false });
+      if (!signal?.cancelled) setStatus({ connected: false });
     } finally {
-      setLoading(false);
+      if (!signal?.cancelled) setLoading(false);
     }
   }, [jwt]);
 
   useEffect(() => {
-    void checkStatus();
+    const signal = { cancelled: false };
+    void checkStatus(signal);
+    return () => { signal.cancelled = true; };
   }, [checkStatus]);
 
   const connect = useCallback(async () => {
