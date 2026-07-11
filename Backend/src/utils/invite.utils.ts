@@ -1,6 +1,7 @@
 
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
+import { hashToken } from '../lib/encryption';
 import { UserRole } from '@prisma/client';
 
 export interface InviteLinkWithCreator {
@@ -47,7 +48,7 @@ export async function createInviteLink(params: {
   const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
   return prisma.inviteLink.create({
     data: {
-      token,
+      token: hashToken(token),
       createdBy: params.createdBy,
       roleHint: params.roleHint ?? 'VIEWER',
       expiresAt,
@@ -63,7 +64,7 @@ export async function createInviteLink(params: {
  */
 export async function validateInviteLink(token: string): Promise<InviteLinkWithCreator> {
   const invite = await prisma.inviteLink.findUnique({
-    where: { token },
+    where: { token: hashToken(token) },
     include: {
       creator: {
         select: { id: true, role: true, status: true, adminId: true },

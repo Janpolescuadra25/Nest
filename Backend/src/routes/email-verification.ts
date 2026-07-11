@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
+import { hashToken } from '../lib/encryption';
 import { sendVerificationEmail } from '../lib/email';
 import { emailVerificationLimiter } from '../middleware/rate-limit';
 
@@ -20,7 +21,7 @@ router.post('/request', authenticate, emailVerificationLimiter, asyncHandler(asy
 
     await prisma.$transaction([
       prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } }),
-      prisma.emailVerificationToken.create({ data: { userId: user.id, token, expiresAt } }),
+      prisma.emailVerificationToken.create({ data: { userId: user.id, token: hashToken(token), expiresAt } }),
     ]);
 
     const result = await sendVerificationEmail({
@@ -48,7 +49,7 @@ router.get('/verify/:token', asyncHandler(async (req: Request, res: Response) =>
       return res.redirect(`${process.env.APP_URL}/verify-email?status=invalid`);
     }
 
-    const token = await prisma.emailVerificationToken.findUnique({ where: { token: tokenParam } });
+    const token = await prisma.emailVerificationToken.findUnique({ where: { token: hashToken(tokenParam) } });
     if (!token) {
       return res.redirect(`${process.env.APP_URL}/verify-email?status=invalid`);
     }

@@ -45,3 +45,7 @@ export function decryptSafe(ciphertext: string): string {
   if (!isEncrypted(ciphertext)) return ciphertext;
   return decrypt(ciphertext);
 }
+
+export function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}

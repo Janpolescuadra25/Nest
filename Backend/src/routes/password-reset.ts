@@ -2,6 +2,7 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { Router } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import { hashToken } from '../lib/encryption';
 import { prisma } from '../lib/prisma';
 import { sendPasswordResetEmail } from '../lib/email';
 import { passwordResetLimiter } from '../middleware/rate-limit';
@@ -35,7 +36,7 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
     // Delete old tokens + create new one atomically (prevents race condition on double-click)
     await prisma.$transaction([
       prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
-      prisma.passwordResetToken.create({ data: { userId: user.id, token, expiresAt } }),
+      prisma.passwordResetToken.create({ data: { userId: user.id, token: hashToken(token), expiresAt } }),
     ]);
 
     const emailResult = await sendPasswordResetEmail({
@@ -70,7 +71,7 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
 
   try {
     const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
       include: { user: true },
     });
 

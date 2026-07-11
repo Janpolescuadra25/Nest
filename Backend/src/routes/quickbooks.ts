@@ -9,7 +9,7 @@ import { Prisma, SyncType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { billSchema, chequeSchema, vendorCreditSchema, billPaymentSchema, journalEntrySchema } from '../lib/validators';
-import { encrypt, decryptSafe } from '../lib/encryption';
+import { encrypt, decryptSafe, hashToken } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
 import { createSyncLogEntry, countSyncAttempts, findDuplicateSync, hashSyncRequest } from '../lib/dedup';
 
@@ -48,9 +48,9 @@ router.get('/auth-url', authenticate, asyncHandler(async(req: AuthRequest, res: 
 
     // Persist state → userId in DB (survives server restarts)
     await prisma.oAuthState.upsert({
-      where: { state },
+      where: { state: hashToken(state) },
       update: { userId: req.user!.userId, expiresAt },
-      create: { state, userId: req.user!.userId, expiresAt },
+      create: { state: hashToken(state), userId: req.user!.userId, expiresAt },
     });
 
     const params = new URLSearchParams({
@@ -95,7 +95,7 @@ router.get('/callback', asyncHandler(async(req: Request, res: Response) => {
   // ── Look up user from persisted state ─────────────────────────────────────
   let userId: string;
   try {
-    const stateRecord = await prisma.oAuthState.findUnique({ where: { state } });
+    const stateRecord = await prisma.oAuthState.findUnique({ where: { state: hashToken(state) } });
 
     if (!stateRecord) {
       console.error('[QB] State not found in DB — may have been used already or expired. state:', state);
@@ -104,12 +104,12 @@ router.get('/callback', asyncHandler(async(req: Request, res: Response) => {
 
     if (stateRecord.expiresAt < new Date()) {
       console.error('[QB] State expired at', stateRecord.expiresAt);
-      await prisma.oAuthState.delete({ where: { state } }).catch(() => {});
+      await prisma.oAuthState.delete({ where: { state: hashToken(state) } }).catch(() => {});
       return res.send(errorPage('Authorization session expired. Please start the connection flow again from the extension.'));
     }
 
     userId = stateRecord.userId;
-    await prisma.oAuthState.delete({ where: { state } }); // one-time use
+    await prisma.oAuthState.delete({ where: { state: hashToken(state) } }); // one-time use
   } catch (err) {
     console.error('[QB] DB error during state lookup:', err);
     return res.send(errorPage('Internal error verifying authorization state.'));

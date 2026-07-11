@@ -2,7 +2,7 @@ import { PrismaClient, Prisma, UserRole, UserStatus } from '@prisma/client';
 import { sendTrialExpired, sendTrialWarning } from './email';
 import { UserForAccess } from '../middleware/effective-role';
 
-const TRIAL_WARNING_THRESHOLDS = [7, 3, 1] as const;
+const TRIAL_WARNING_THRESHOLDS = [1, 3, 7] as const;
 const MS_PER_DAY = 86_400_000;
 
 export function getGracePeriodEnd(timeBombAt: Date, gracePeriodHours: number): Date {
@@ -152,6 +152,7 @@ export async function processTrialWarnings(prisma: PrismaClient): Promise<number
           if (!emailResult?.success) {
             console.error('[TeamStatus] Trial warning email failed:', emailResult?.error ?? 'No result returned');
           }
+          break;
         }
       }
     }

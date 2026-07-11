@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { hashToken } from '../lib/encryption';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 import { AppError, asyncHandler } from '../lib/errors';
@@ -125,7 +126,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await prisma.$transaction([
         prisma.emailVerificationToken.deleteMany({ where: { userId: result.id } }),
-        prisma.emailVerificationToken.create({ data: { userId: result.id, token: verificationToken, expiresAt } }),
+        prisma.emailVerificationToken.create({ data: { userId: result.id, token: hashToken(verificationToken), expiresAt } }),
       ]);
       emailResult = await sendVerificationEmail({
         to: result.email,

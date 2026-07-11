@@ -95,6 +95,7 @@ export function applyRules(
         case 'FORMULA': {
           const { formula, targetField } = rule.config;
           if (!formula || !targetField) break;
+          if (formula.length > 500) break;
           // Safe formula evaluation: replace field references with values
           const evaluatable = formula.replace(/\[([^\]]+)\]/g, (_: string, field: string) => {
             return String(result[field] ?? 0);
