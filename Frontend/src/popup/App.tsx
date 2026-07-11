@@ -154,6 +154,8 @@ export default function App() {
     hasSynced: deferredSynced || hasSyncedBefore,
   });
 
+  const handleHasSynced = useCallback(() => setDeferredSynced(true), []);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center bg-gray-900" style={{ width: '100vw', height: '100vh' }}>
@@ -471,7 +473,7 @@ export default function App() {
               onTabChange={(tab) => setCurrentTab(tab as TabId)}
               onScanRecordId={setScanRecordId}
               onboardingStep={onboardingState.step}
-              onHasSynced={() => setDeferredSynced(true)}
+              onHasSynced={handleHasSynced}
             />
           )}
           {effectiveTab === 'settings' && (
@@ -499,7 +501,7 @@ export default function App() {
               jwt={jwt!}
               onboardingState={onboardingState}
               onNavigate={setCurrentTab}
-              onHasSynced={() => setDeferredSynced(true)}
+              onHasSynced={handleHasSynced}
             />
           )}
           {effectiveTab === 'dashboard' && role === 'ADMIN' && <AdminDashboard jwt={jwt!} />}

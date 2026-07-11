@@ -1,5 +1,6 @@
 import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
+import path from 'path';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import type { Prisma } from '@prisma/client';
@@ -16,11 +17,19 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowed.includes(file.mimetype)) {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
       cb(null, true);
+      return;
+    }
+
+    if (!allowedMimes.includes(file.mimetype)) {
+      cb(new AppError(`Unsupported file type: ${file.mimetype}`, 400));
     } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+      cb(new AppError(`Unsupported file extension: ${ext}`, 400));
     }
   },
 });

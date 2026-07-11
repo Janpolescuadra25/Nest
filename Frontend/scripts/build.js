@@ -36,7 +36,7 @@ const sharedConfig = {
   target: 'chrome120',
   sourcemap: false,
   define: {
-    'process.env.NODE_ENV': '"production"',
+    'process.env.NODE_ENV': isWatch ? '"development"' : '"production"',
     'process.env.BACKEND_URL': '"https://nest-backend-mddn.onrender.com"',
   },
 };
