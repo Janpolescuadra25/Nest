@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma';
 const router = Router();
 
 type WebhookEvent = {
+  id: string;
   type: string;
   data: { object: Record<string, unknown> };
 };
@@ -47,6 +48,14 @@ router.post(
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret) as unknown as WebhookEvent;
     } catch (err) {
       throw new AppError('Invalid webhook signature', 400);
+    }
+
+    // Idempotency: skip already-processed events
+    const existing = await prisma.stripeEvent.findUnique({
+      where: { eventId: event.id },
+    });
+    if (existing) {
+      return res.json({ received: true });
     }
 
     switch (event.type) {
@@ -166,6 +175,11 @@ router.post(
           console.log(`Unhandled Stripe event type: ${event.type}`);
         }
     }
+
+    // Record processed event (don't fail webhook if recording fails)
+    await prisma.stripeEvent.create({
+      data: { eventId: event.id, eventType: event.type },
+    }).catch(() => {});
 
     res.json({ received: true });
   })

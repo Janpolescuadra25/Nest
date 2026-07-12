@@ -448,3 +448,13 @@ model Product {
   @@index([userId])
   @@map("products")
 }
+
+model StripeEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  eventType String
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@map("stripe_events")
+}
