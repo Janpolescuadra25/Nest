@@ -60,9 +60,11 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Reject all chrome-extension:// origins unless explicitly configured.
+    // Allow any chrome-extension:// origin when ALLOWED_EXTENSION_ID is not set.
+    // Extension IDs vary per computer when loaded unpacked. Set ALLOWED_EXTENSION_ID
+    // to lock to a specific ID after publishing to the Chrome Web Store.
     if (origin.startsWith('chrome-extension://')) {
-      return callback(new Error('Not allowed by CORS'));
+      return callback(null, true);
     }
 
     // Reject non-whitelisted origins — server-side rejection, route handler never executes
