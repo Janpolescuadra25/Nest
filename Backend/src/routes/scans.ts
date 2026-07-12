@@ -79,7 +79,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (
         locationId,
         scanDate: parsedDate,
         rawData: (rawData ?? {}) as unknown as Prisma.InputJsonValue,
-        rawScanEntry: rawScanEntry ? rawScanEntry as unknown as Prisma.InputJsonValue : null,
+        rawScanEntry: rawScanEntry ? rawScanEntry as unknown as Prisma.InputJsonValue : undefined,
         source: source || 'pos',
         status: 'PENDING',
         ...(transactionType ? { transactionType } : {}),

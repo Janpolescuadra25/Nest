@@ -7,7 +7,7 @@ import { AuthPayload } from '../types';
 import { getEffectiveAccess, hasPermission, UserForAccess, EffectiveAccess } from './effective-role';
 import { Feature, Action } from './permissions';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET!;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }

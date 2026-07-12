@@ -294,9 +294,8 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
     if (result.status === 'FAILED') {
       console.error('[QB] journal-entry error:', result.errorMessage);
       throw new AppError(process.env.NODE_ENV !== 'production'
-          ? result.errorMessage
-          : 'An unexpected error occurred. Please try again.', 500);
-      return;
+            ? result.errorMessage ?? 'Unknown error'
+            : 'An unexpected error occurred. Please try again.', 500);
     }
 
     res.json({
@@ -398,7 +397,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       if (result.status === 'FAILED') {
         console.error('[QB] bill error:', result.errorMessage);
         throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage
+            ? result.errorMessage ?? 'Unknown error'
             : 'An unexpected error occurred. Please try again.', 500);
         return;
       }
@@ -440,7 +439,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
     if (result.status === 'FAILED') {
       console.error('[QB] bill error:', result.errorMessage);
       throw new AppError(process.env.NODE_ENV !== 'production'
-          ? result.errorMessage
+          ? result.errorMessage ?? 'Unknown error'
           : 'An unexpected error occurred. Please try again.', 500);
     }
 
@@ -536,7 +535,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       if (result.status === 'FAILED') {
         console.error('[QB] vendorcredit error:', result.errorMessage);
         throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage
+            ? result.errorMessage ?? 'Unknown error'
             : 'An unexpected error occurred. Please try again.', 500);
         return;
       }
@@ -576,7 +575,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
     if (result.status === 'FAILED') {
       console.error('[QB] vendorcredit error:', result.errorMessage);
       throw new AppError(process.env.NODE_ENV !== 'production'
-          ? result.errorMessage
+          ? result.errorMessage ?? 'Unknown error'
           : 'An unexpected error occurred. Please try again.', 500);
     }
 
@@ -676,7 +675,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
       if (result.status === 'FAILED') {
         console.error('[QB] cheque error:', result.errorMessage);
         throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage
+            ? result.errorMessage ?? 'Unknown error'
             : 'An unexpected error occurred. Please try again.', 500);
         return;
       }
@@ -717,7 +716,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
     if (result.status === 'FAILED') {
       console.error('[QB] cheque error:', result.errorMessage);
       throw new AppError(process.env.NODE_ENV !== 'production'
-          ? result.errorMessage
+          ? result.errorMessage ?? 'Unknown error'
           : 'An unexpected error occurred. Please try again.', 500);
     }
 

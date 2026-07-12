@@ -58,7 +58,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
     if (!conditionsValidation.valid) {
       throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
     }
-    const conditionsInput = conditions as Prisma.JsonValue | null;
+    const conditionsInput = conditions as Prisma.InputJsonValue;
 
     if (templateId !== undefined) {
       if (templateId !== null && templateId !== '') {

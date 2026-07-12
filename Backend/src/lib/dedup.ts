@@ -101,7 +101,7 @@ export async function createSyncLogEntry(params: {
       docNumber,
       requestHash,
       status,
-      requestPayload,
+      requestPayload: requestPayload as Prisma.InputJsonValue,
       attemptCount,
       errorMessage,
       errorType,

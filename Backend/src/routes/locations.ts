@@ -224,7 +224,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), as
           if (!conditionsValidation.valid) {
             throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
           }
-          const conditionsInput = (m['conditions'] ?? null) as Prisma.JsonValue | null;
+          const conditionsInput = (m['conditions'] ?? null) as Prisma.InputJsonValue;
           await tx.mapping.create({
             data: {
               locationId: id,
@@ -348,7 +348,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHand
     if (!conditionsValidation.valid) {
       throw new AppError(conditionsValidation.error ?? 'Invalid conditions', 400);
     }
-    const conditionsInput = conditions as Prisma.JsonValue | null;
+    const conditionsInput = conditions as Prisma.InputJsonValue;
 
     if (!sourceField || !targetAccount) {
       throw new AppError('sourceField and targetAccount are required', 400);

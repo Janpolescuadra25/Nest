@@ -5,7 +5,7 @@
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -14,7 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "types": ["node", "jest"],
-    "noEmitOnError": false
+    "noEmitOnError": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

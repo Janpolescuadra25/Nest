@@ -45,7 +45,7 @@ export async function logAction(params: {
         actorId: params.actorId,
         action: params.action,
         targetUserId: params.targetUserId ?? null,
-        details: params.details ?? null,
+        details: params.details ?? undefined,
       },
     });
   } catch (err: unknown) {
