@@ -1,12 +1,28 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import xlsx from 'xlsx';
+import Excel from 'exceljs';
 import { Prisma, ScanMode } from '@prisma/client';
 import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
+
+function sheetToArrays(worksheet: Excel.Worksheet, defval: string = ''): string[][] {
+  const rows: string[][] = [];
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    const arrayValues = Array.isArray(row.values) ? row.values.slice(1) : [];
+    const values = arrayValues.map((value) => {
+      if (value === null || value === undefined) return defval;
+      if (typeof value === 'object' && value !== null && 'text' in value && typeof (value as any).text === 'string') {
+        return (value as any).text;
+      }
+      return String(value);
+    });
+    rows.push(values);
+  });
+  return rows;
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -139,10 +155,10 @@ router.post('/parse-excel', requireFeaturePermission('templates', 'read'), uploa
     return;
   }
 
-  const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-  const sheets = workbook.SheetNames.map((sheetName) => {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = xlsx.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' });
+  const workbook = new Excel.Workbook();
+  await workbook.xlsx.load(req.file.buffer as any);
+  const sheets = workbook.worksheets.map((worksheet) => {
+    const rows = sheetToArrays(worksheet);
     const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
     const headers = rawHeaders.map((header, index) => header || `Column ${index + 1}`);
     const previewRows = rows.slice(1, 4).map((row) => {
@@ -154,7 +170,7 @@ router.post('/parse-excel', requireFeaturePermission('templates', 'read'), uploa
     });
 
     return {
-      name: sheetName,
+      name: worksheet.name,
       headers,
       rows: previewRows,
     };
@@ -200,9 +216,10 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     return;
   }
 
-  let workbook;
+  let workbook: Excel.Workbook;
   try {
-    workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    workbook = new Excel.Workbook();
+    await workbook.xlsx.load(req.file.buffer as any);
   } catch (err) {
     throw new AppError(
       'Failed to read Excel file. It may be corrupted, password-protected, or not a valid Excel file.',
@@ -211,11 +228,12 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   }
 
   const requestedSheet = req.query.sheet ? String(req.query.sheet).trim() : '';
-  const sheetName = requestedSheet && workbook.SheetNames.includes(requestedSheet)
+  const sheetNames = workbook.worksheets.map(ws => ws.name);
+  const sheetName = requestedSheet && sheetNames.includes(requestedSheet)
     ? requestedSheet
-    : workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const rows = xlsx.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+    : sheetNames[0];
+  const worksheet = workbook.getWorksheet(sheetName)!;
+  const rows = sheetToArrays(worksheet);
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new AppError('Excel sheet contains no data rows', 400);
   }
