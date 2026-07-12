@@ -1,4 +1,6 @@
-export function parsePagination(params: any) {
+import type { ParsedQs } from 'qs';
+
+export function parsePagination(params: ParsedQs) {
   const page = Math.max(1, parseInt(params.page as string) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(params.limit as string) || 20));
   return {

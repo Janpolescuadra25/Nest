@@ -1,3 +1,5 @@
+import { UserRole, UserStatus } from '@prisma/client';
+
 // Central type definitions for the Nest backend
 
 export interface AuthPayload {
@@ -7,8 +9,8 @@ export interface AuthPayload {
   userId: string;
   email: string;
   name?: string | null;
-  role: string;       // UserRole: OWNER | ADMIN | ACCOUNTANT | STAFF | VIEWER
-  status: string;     // UserStatus: ACTIVE | EXPIRED | DISABLED | PENDING_APPROVAL | GRACE_PERIOD | TIME_BOMBED | BLOCKED
+  role: UserRole;
+  status: UserStatus;
   adminId: string | null;
   mustChangePassword: boolean;
   trialExpiresAt: Date | null;
