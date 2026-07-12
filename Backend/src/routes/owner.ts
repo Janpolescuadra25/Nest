@@ -5,12 +5,11 @@ import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { getEffectiveAccess, hasPermission, UserForAccess } from '../middleware/effective-role';
-import { ALL_FEATURES, ALL_ACTIONS, Feature, Action } from '../middleware/permissions';
+import { ALL_FEATURES, ALL_ACTIONS, Feature, Action, getPermissionDefaults } from '../middleware/permissions';
 import { logAction } from '../middleware/audit';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validate } from '../middleware/validate';
-import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
 
@@ -731,10 +730,7 @@ router.patch('/users/:id/permissions-reset', asyncHandler(async(req: AuthRequest
       throw new AppError('Cannot modify owner permissions.', 400);
     }
 
-    const defaults = permissionDefaultsMap[target.role];
-    if (!defaults) {
-      throw new AppError(`No permission defaults for role ${target.role}.`, 400);
-    }
+    const defaults = getPermissionDefaults(target.role);
 
     const updated = await prisma.user.update({
       where: { id },

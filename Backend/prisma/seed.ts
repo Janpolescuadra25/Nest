@@ -9,38 +9,41 @@ async function main(): Promise<void> {
 
   // ── 0. Create / update Owner user ──────────────────────────────────────────
   const ownerEmail    = process.env.OWNER_EMAIL;
-  if (!ownerEmail) {
-    throw new Error('[Seed] OWNER_EMAIL environment variable is required');
-  }
   const ownerPassword = process.env.OWNER_PASSWORD;
-  if (!ownerPassword) {
-    throw new Error('[Seed] OWNER_PASSWORD environment variable is required');
-  }
   const ownerName     = process.env.OWNER_NAME;
-  if (!ownerName) {
-    throw new Error('[Seed] OWNER_NAME environment variable is required');
-  }
-  const hashedPassword = await bcrypt.hash(ownerPassword, 12);
 
-  const ownerUser = await prisma.user.upsert({
-    where: { email: ownerEmail },
-    update: {
-      role: 'OWNER',
-      status: 'ACTIVE',
-      name: ownerName,
-      subscriptionSource: 'owner',
-      // password intentionally omitted — only set on create, then managed via app UI
-    },
-    create: {
-      email: ownerEmail,
-      name: ownerName,
-      password: hashedPassword,
-      role: 'OWNER',
-      status: 'ACTIVE',
-      subscriptionSource: 'owner',
-    },
-  });
-  console.log(`[Seed] Owner: ${ownerUser.email}`);
+  let ownerUser: { id: string } | null = null;
+
+  if (!ownerEmail || !ownerPassword || !ownerName) {
+    console.log('[Seed] OWNER_EMAIL/OWNER_PASSWORD/OWNER_NAME not fully set — checking if owner already exists...');
+    ownerUser = await prisma.user.findFirst({ where: { role: 'OWNER' } });
+    if (!ownerUser) {
+      throw new Error(
+        '[Seed] OWNER_EMAIL, OWNER_PASSWORD, and OWNER_NAME are all required for initial seed (no owner found in database)'
+      );
+    }
+    console.log('[Seed] Owner already exists — skipping owner creation.');
+  } else {
+    const hashedPassword = await bcrypt.hash(ownerPassword, 12);
+    ownerUser = await prisma.user.upsert({
+      where: { email: ownerEmail },
+      update: {
+        role: 'OWNER',
+        status: 'ACTIVE',
+        name: ownerName,
+        subscriptionSource: 'owner',
+      },
+      create: {
+        email: ownerEmail,
+        name: ownerName,
+        password: hashedPassword,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        subscriptionSource: 'owner',
+      },
+    });
+    console.log(`[Seed] Owner: ${ownerUser.email}`);
+  }
 
   // ── 1. Assign all orphan locations (adminId IS NULL) to the Owner ──────────
   const { count: assigned } = await prisma.location.updateMany({

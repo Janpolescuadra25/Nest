@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { UserRole } from '@prisma/client';
 import { hashToken } from '../lib/encryption';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
@@ -11,7 +12,7 @@ import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
-import { permissionDefaultsMap } from '../lib/permissions';
+import { getPermissionDefaults } from '../middleware/permissions';
 import { sendVerificationEmail } from '../lib/email';
 import { isSoloPlan } from '../lib/stripe';
 
@@ -75,7 +76,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
 
     // Create user + increment invite in a transaction (atomic)
     const role = invite.roleHint ?? 'VIEWER';
-    const perms = permissionDefaultsMap[role] || permissionDefaultsMap.VIEWER;
+    const perms = getPermissionDefaults(role as UserRole);
     let emailResult: { success: boolean; error?: string } | undefined;
     const result = await prisma.$transaction(async (tx) => {
       // Re-check capacity at consumption time

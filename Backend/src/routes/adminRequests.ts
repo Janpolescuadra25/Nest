@@ -7,6 +7,7 @@ import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail } from '../lib/email';
 import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rate-limit';
+import { getPermissionDefaults } from '../middleware/permissions';
 import { adminRequestSchema } from '../lib/validators';
 
 const router = Router();
@@ -121,18 +122,7 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
           role: 'ADMIN',
           status: 'ACTIVE',
           maxUsers: 5,
-          permissions: {
-            'scan:read': true,
-            'scan:write': true,
-            'scan:execute': true,
-            'map:read': true,
-            'map:write': true,
-            'map:execute': true,
-            'sync:read': true,
-            'sync:execute': true,
-            'locations:read': true,
-            'locations:write': true,
-          },
+          permissions: getPermissionDefaults('ADMIN'),
           mustChangePassword: true,
           emailVerified: true,
         },

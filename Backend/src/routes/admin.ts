@@ -13,9 +13,8 @@ import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { logAction } from '../middleware/audit';
 import { createInviteLink } from '../utils/invite.utils';
 import { enforceEffectiveRole, UserForAccess, EffectiveAccess, getEffectiveAccess } from '../middleware/effective-role';
-import { ALL_FEATURES, ALL_ACTIONS } from '../middleware/permissions';
+import { ALL_FEATURES, ALL_ACTIONS, getPermissionDefaults } from '../middleware/permissions';
 import { mergePermissions } from '../lib/permission-utils';
-import { permissionDefaultsMap } from '../lib/permissions';
 
 const router = Router();
 
@@ -189,7 +188,7 @@ router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), valid
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) throw new AppError('A user with this email already exists.', 409);
 
-    const perms = permissionDefaultsMap[role] ?? permissionDefaultsMap.VIEWER;
+    const perms = getPermissionDefaults(role as UserRole);
 
     const tempPassword = randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(tempPassword, 12);

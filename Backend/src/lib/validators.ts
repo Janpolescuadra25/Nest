@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { ALL_ACTIONS, ALL_FEATURES } from '../middleware/permissions';
+
+const validPermissionKeys = new Set<string>(ALL_FEATURES.flatMap(feature => ALL_ACTIONS.map(action => `${feature}:${action}`)));
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -48,7 +51,7 @@ export const inviteLinkSchema = z.object({
 
 export const patchTeamMemberSchema = z.object({
   role: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER']).optional(),
-  permissions: z.record(z.string(), z.boolean()).optional(),
+  permissions: z.record(z.string().refine(key => validPermissionKeys.has(key), 'Invalid permission key'), z.boolean()).optional(),
   trialExpiresAt: z.string().min(1).optional().nullable(),
   customExpiryMessage: z.string().max(500).optional().nullable(),
   status: z.enum(['ACTIVE', 'DISABLED']).optional(),

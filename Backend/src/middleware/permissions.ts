@@ -19,7 +19,8 @@ export type Feature =
   | 'setTimeBomb'
   | 'setUserLimits'
   | 'transferOwnership'
-  | 'viewAuditLog';
+  | 'viewAuditLog'
+  | 'products';
 
 export type Action = 'read' | 'write' | 'execute';
 export type PermissionKey = `${Feature}:${Action}`;
@@ -29,6 +30,7 @@ export const ALL_FEATURES: Feature[] = [
   'locations', 'settings', 'templates', 'sopUpload', 'sopView',
   'manageUsers', 'approveUsers', 'setPermissions', 'blockUsers',
   'setTimeBomb', 'setUserLimits', 'transferOwnership', 'viewAuditLog',
+  'products',
 ];
 
 export const ALL_ACTIONS: Action[] = ['read', 'write', 'execute'];
@@ -59,7 +61,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
   ADMIN: permissionsFrom(
     ['dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
      'locations', 'settings', 'templates', 'sopUpload', 'sopView',
-     'manageUsers', 'setPermissions'],
+     'manageUsers', 'setPermissions', 'products'],
     ['read', 'write', 'execute'],
   ),
 
@@ -74,6 +76,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
     'templates:read', 'templates:write',
     'sopUpload:write',
     'sopView:read',
+    'products:read', 'products:write', 'products:execute',
   ]),
 
   STAFF: new Set<PermissionKey>([
@@ -88,3 +91,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
     'sopView:read',
   ]),
 };
+
+export function getPermissionDefaults(role: UserRole): Record<string, boolean> {
+  const perms = ROLE_PERMISSIONS[role];
+  const result: Record<string, boolean> = {};
+  for (const f of ALL_FEATURES) {
+    for (const a of ALL_ACTIONS) {
+      const key = `${f}:${a}` as PermissionKey;
+      result[key] = perms.has(key);
+    }
+  }
+  return result;
+}
