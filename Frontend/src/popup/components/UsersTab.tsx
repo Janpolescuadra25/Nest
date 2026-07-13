@@ -93,7 +93,7 @@ export default function UsersTab({ jwt }: Props) {
     return true;
   });
 
-  const teamPlan = users.find((u) => u.admin?.subscriptionSource === 'stripe' && u.admin.currentPlan)?.admin?.currentPlan;
+  const teamPlan = users.find((u) => u.admin?.subscriptionSource === 'stripe' && u.admin.currentPlan)?.admin?.currentPlan ?? 'free';
 
   // Group by adminEmail (or "Unassigned")
   const groups: Record<string, { label: string; users: OwnerUser[] }> = {};
@@ -202,9 +202,9 @@ export default function UsersTab({ jwt }: Props) {
       {error && (
         <ErrorCard message={error} onDismiss={() => setError('')} />
       )}
-      {teamPlan === 'solo' && (
+      {teamPlan === 'free' && (
         <div className="rounded-lg border border-yellow-700 bg-yellow-900/20 p-3 text-xs text-yellow-100">
-          Solo plan allows only 1 user. Upgrade to Starter for team features and additional users.
+          Free plan users are limited to a single admin and basic features. Upgrade to a paid plan for team access and higher scan capacity.
         </div>
       )}
       {loading ? (

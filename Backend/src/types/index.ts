@@ -19,6 +19,8 @@ export interface AuthPayload {
   permissions: Record<string, boolean> | null;
   timeBombAt: Date | string | null;
   gracePeriodHours: number;
+  maxScans?: number | null;
+  scanHistoryDays?: number | null;
   blocked: boolean;
   blockedById: string | null;
   approvedById: string | null;

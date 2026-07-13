@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import { stripe, isStripeConfigured, type PlanKey, getPlanLimits } from '../lib/stripe';
+import { stripe, isStripeConfigured, type PlanKey, getPlanLimits, PLANS } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 
@@ -20,7 +20,14 @@ type CheckoutSessionPayload = {
 
 type SubscriptionPayload = {
   id: string;
-  items?: { data?: Array<{ price?: { id?: string } }> };
+  items?: {
+    data?: Array<{
+      price?: {
+        id?: string;
+        recurring?: { interval?: string };
+      };
+    }>;
+  };
   current_period_end?: number;
   status?: string;
   cancel_at_period_end?: boolean;
@@ -80,13 +87,16 @@ router.post(
             stripeCustomerId: customerId ?? undefined,
             stripeSubscriptionId: subscriptionId,
             currentPlan: planKey,
-            planInterval: 'month',
+            planInterval: (session.metadata?.planInterval as 'month' | 'year') ?? 'month',
             currentPeriodEnd: periodEnd,
             cancelAtPeriodEnd: false,
             paymentIssue: false,
             status: 'ACTIVE',
             maxUsers: limits.maxUsers,
             maxLocations: limits.maxLocations,
+            maxScans: limits.maxScans,
+            scanHistoryDays: limits.scanHistoryDays,
+            prioritySupport: PLANS[planKey].prioritySupport,
             trialExpiresAt: null,
           },
         });
@@ -97,6 +107,9 @@ router.post(
         const subscription = event.data.object as SubscriptionPayload;
         const priceId = subscription.items?.data?.[0]?.price?.id;
         const planKey = identifyPlan(priceId);
+        const subItems = subscription.items?.data;
+        const priceInterval = subItems?.[0]?.price?.recurring?.interval;
+        const planInterval: 'month' | 'year' = priceInterval === 'year' ? 'year' : 'month';
         const periodEnd = new Date((subscription.current_period_end ?? 0) * 1000);
 
         const updateData: Record<string, unknown> = {
@@ -104,6 +117,7 @@ router.post(
           cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
           paymentIssue: false,
           status: ['active', 'trialing', 'past_due'].includes(subscription.status ?? '') ? 'ACTIVE' : 'EXPIRED',
+          planInterval,
         };
 
         if (planKey) {
@@ -111,6 +125,9 @@ router.post(
           updateData.currentPlan = planKey;
           updateData.maxUsers = limits.maxUsers;
           updateData.maxLocations = limits.maxLocations;
+          updateData.maxScans = limits.maxScans;
+          updateData.scanHistoryDays = limits.scanHistoryDays;
+          updateData.prioritySupport = PLANS[planKey].prioritySupport;
         }
 
         await prisma.user.updateMany({
@@ -133,6 +150,9 @@ router.post(
             paymentIssue: false,
             maxUsers: null,
             maxLocations: null,
+            maxScans: null,
+            scanHistoryDays: null,
+            prioritySupport: false,
             status: 'EXPIRED',
           },
         });
@@ -187,10 +207,22 @@ router.post(
 
 function identifyPlan(priceId: string | undefined): PlanKey | null {
   if (!priceId) return null;
-  if (priceId === process.env.STRIPE_SOLO_PRICE_ID) return 'solo';
-  if (priceId === process.env.STRIPE_STARTER_PRICE_ID) return 'starter';
-  if (priceId === process.env.STRIPE_GROWTH_PRICE_ID) return 'growth';
-  if (priceId === process.env.STRIPE_ENTERPRISE_PRICE_ID) return 'enterprise';
+
+  const monthlyMap: Record<string, PlanKey> = {
+    [process.env.STRIPE_STARTER_MONTHLY_PRICE_ID ?? '']: 'starter',
+    [process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID ?? '']: 'professional',
+    [process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID ?? '']: 'premium',
+    [process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID ?? '']: 'enterprise',
+  };
+  const annualMap: Record<string, PlanKey> = {
+    [process.env.STRIPE_STARTER_ANNUAL_PRICE_ID ?? '']: 'starter',
+    [process.env.STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID ?? '']: 'professional',
+    [process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID ?? '']: 'premium',
+    [process.env.STRIPE_ENTERPRISE_ANNUAL_PRICE_ID ?? '']: 'enterprise',
+  };
+
+  if (monthlyMap[priceId]) return monthlyMap[priceId];
+  if (annualMap[priceId]) return annualMap[priceId];
   return null;
 }
 

@@ -1,23 +1,31 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { stripe, PLANS, isStripeConfigured, type PlanKey } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { authenticate, type AuthRequest } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validate';
+
+const createSessionSchema = z.object({
+  plan: z.enum(['free', 'starter', 'professional', 'premium', 'enterprise']),
+  interval: z.enum(['month', 'year']).default('month'),
+});
 
 const router = Router();
 
 router.post(
   '/create-session',
   authenticate,
+  validate(createSessionSchema),
   asyncHandler(async (req: AuthRequest, res) => {
     if (!isStripeConfigured || !stripe) {
       throw new AppError('Stripe is not configured. Contact support.', 503);
     }
-    const { plan } = req.body as { plan?: string };
-    const planKey = plan as PlanKey;
 
-    if (!planKey || !PLANS[planKey]) {
-      throw new AppError('Invalid plan selected', 400);
+    const { plan: planKey, interval } = req.body as z.infer<typeof createSessionSchema>;
+
+    if (planKey === 'free') {
+      throw new AppError('The Free plan does not require checkout.', 400);
     }
 
     const teamId = req.user!.adminId ?? req.user!.userId;
@@ -41,9 +49,11 @@ router.post(
       await prisma.user.update({ where: { id: teamId }, data: { stripeCustomerId: customerId } });
     }
 
-    const priceId = PLANS[planKey].priceId;
+    const priceId = interval === 'year'
+      ? PLANS[planKey].annualPriceId
+      : PLANS[planKey].monthlyPriceId;
     if (!priceId) {
-      throw new AppError('Stripe price configuration is missing', 500);
+      throw new AppError(`Price ID for ${planKey} (${interval}) is not configured.`, 500);
     }
     if (!process.env.FRONTEND_URL) {
       throw new AppError('Frontend URL is not configured', 500);
@@ -55,7 +65,11 @@ router.post(
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${process.env.FRONTEND_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/billing/cancel`,
-      metadata: { teamId, planKey },
+      metadata: {
+        teamId,
+        planKey,
+        planInterval: interval,
+      },
     });
 
     res.json({ url: session.url ?? '' });
@@ -97,12 +111,13 @@ router.get(
     const plans = Object.entries(PLANS).map(([key, plan]) => ({
       id: key,
       name: plan.name,
-      pricePhp: plan.pricePhp,
-      priceUsd: plan.priceUsd,
-      interval: plan.interval,
-      users: plan.users,
-      locations: plan.locations,
-      features: plan.features,
+      monthlyPrice: plan.monthlyPrice,
+      annualPrice: plan.annualPrice,
+      maxUsers: plan.maxUsers,
+      maxLocations: plan.maxLocations,
+      maxScans: plan.maxScans,
+      scanHistoryDays: plan.scanHistoryDays,
+      prioritySupport: plan.prioritySupport,
     }));
     res.json({ plans });
   })

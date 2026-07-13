@@ -51,7 +51,9 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       ? `Paid plan ${user.currentPlan ?? 'Stripe'}${user.planInterval ? ` (${user.planInterval})` : ''}`
       : user.subscriptionSource === 'partner'
         ? 'Partner Plan (Owner-managed)'
-        : 'Free Trial';
+        : user.trialExpiresAt
+          ? `Free trial until ${new Date(user.trialExpiresAt).toLocaleDateString()}`
+          : 'Free plan';
 
   const billingNotes = [] as string[];
   if (user.subscriptionSource === 'stripe' && user.cancelAtPeriodEnd) {

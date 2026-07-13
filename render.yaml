@@ -38,13 +38,21 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: STRIPE_SOLO_PRICE_ID
+      - key: STRIPE_STARTER_MONTHLY_PRICE_ID
         sync: false
-      - key: STRIPE_STARTER_PRICE_ID
+      - key: STRIPE_STARTER_ANNUAL_PRICE_ID
         sync: false
-      - key: STRIPE_GROWTH_PRICE_ID
+      - key: STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID
         sync: false
-      - key: STRIPE_ENTERPRISE_PRICE_ID
+      - key: STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID
+        sync: false
+      - key: STRIPE_PREMIUM_MONTHLY_PRICE_ID
+        sync: false
+      - key: STRIPE_PREMIUM_ANNUAL_PRICE_ID
+        sync: false
+      - key: STRIPE_ENTERPRISE_MONTHLY_PRICE_ID
+        sync: false
+      - key: STRIPE_ENTERPRISE_ANNUAL_PRICE_ID
         sync: false
       - key: GEMINI_API_KEY
         sync: false

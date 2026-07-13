@@ -87,12 +87,13 @@ async function del(path: string, jwt?: string | null): Promise<void> {
 export interface Plan {
   id: string;
   name: string;
-  pricePhp: number;
-  priceUsd: number;
-  interval: string;
-  users: number;
-  locations: number;
-  features: string[];
+  monthlyPrice: number;
+  annualPrice: number;
+  maxUsers: number;
+  maxLocations: number;
+  maxScans: number;
+  scanHistoryDays: number;
+  prioritySupport: boolean;
 }
 
 export interface UserInfo {
@@ -116,6 +117,9 @@ export interface UserInfo {
   paymentIssue?: boolean;
   maxUsers?: number | null;
   maxLocations?: number | null;
+  maxScans?: number | null;
+  scanHistoryDays?: number | null;
+  prioritySupport?: boolean;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -126,8 +130,8 @@ export const api = {
   login: (email: string, password: string) =>
     post<{ token: string; user: UserInfo }>('/api/auth/login', { email, password }),
 
-  createCheckoutSession: (jwt: string, plan: string) =>
-    post<{ url: string }>('/api/checkout/create-session', { plan }, jwt),
+  createCheckoutSession: (jwt: string, plan: string, interval: 'month' | 'year' = 'month') =>
+    post<{ url: string }>('/api/checkout/create-session', { plan, interval }, jwt),
 
   createPortalSession: (jwt: string) =>
     post<{ url: string }>('/api/checkout/create-portal-session', {}, jwt),

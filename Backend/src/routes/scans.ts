@@ -2,6 +2,7 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import path from 'path';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
+import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
@@ -178,6 +179,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
 router.post(
   '/parse-invoice',
   requireFeaturePermission('scan', 'write'),
+  requireCapacity('scan'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
@@ -201,6 +203,7 @@ router.post(
 router.post(
   '/parse-document',
   requireFeaturePermission('scan', 'write'),
+  requireCapacity('scan'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {

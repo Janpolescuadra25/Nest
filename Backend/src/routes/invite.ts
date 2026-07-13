@@ -14,7 +14,6 @@ import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { getPermissionDefaults } from '../middleware/permissions';
 import { sendVerificationEmail } from '../lib/email';
-import { isSoloPlan } from '../lib/stripe';
 
 const router = Router();
 
@@ -84,7 +83,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       const teamLeadId = creator.adminId ?? creator.id;
       const teamLead = await tx.user.findUnique({ where: { id: teamLeadId } });
       if (teamLead) {
-        if (teamLead.subscriptionSource === 'stripe' && teamLead.currentPlan && !isSoloPlan(teamLead.currentPlan)) {
+        if (teamLead.subscriptionSource === 'stripe' && teamLead.currentPlan) {
           const currentCount = await tx.user.count({ where: { adminId: teamLeadId } });
           const maxUsers = teamLead.maxUsers ?? 1;
           if (currentCount >= maxUsers) {
