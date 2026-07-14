@@ -112,6 +112,8 @@ export default function ScanView({
   const [selectedTab, setSelectedTab] = useState<chrome.tabs.Tab | null>(null);
   const [aiScanning, setAiScanning] = useState(false);
   const [aiScanError, setAiScanError] = useState<string | null>(null);
+  const [aiConfidence, setAiConfidence] = useState<{ confidence: number; reasoning: string; posType: string | null } | null>(null);
+  const [capturedScreenshot, setCapturedScreenshot] = useState<File | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
   const previousScanModeRef = useRef<ScanSource>(scanMode);
@@ -331,6 +333,7 @@ export default function ScanView({
       return;
     }
 
+    setCapturedScreenshot(null);
     setAiScanning(true);
     setAiScanError(null);
     setScanning(true);
@@ -344,6 +347,7 @@ export default function ScanView({
       const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
       const blob = await (await fetch(screenshot)).blob();
       const file = new File([blob], 'pos-tab.png', { type: blob.type || 'image/png' });
+      setCapturedScreenshot(file);
       const response = await api.parsePOSTab(jwt, file, tab.url ?? undefined);
 
       if (!response.detection.isPOS || !response.data) {
@@ -362,6 +366,11 @@ export default function ScanView({
       setActiveScanEntryId(entry.id);
       onScanData(response.data.rawData);
       setDetectedPOS({ type: response.detection.posType ?? 'unknown', name: response.detection.posType ?? 'Unknown POS' });
+      setAiConfidence({
+        confidence: response.detection.confidence,
+        reasoning: response.detection.reasoning,
+        posType: response.detection.posType,
+      });
       if (locationId) {
         try {
           const scanRecord = await api.saveScan(
@@ -384,6 +393,56 @@ export default function ScanView({
     } finally {
       setAiScanning(false);
       setScanning(false);
+    }
+  };
+
+  const handleFallbackDocumentScan = async (file: File) => {
+    setAiScanError(null);
+    setScanMode('image');
+    setCapturedScreenshot(null);
+    setAiScanning(true);
+
+    try {
+      const parsed = await api.parseDocumentAI(jwt, file);
+      setDocumentClassification(parsed.classification);
+      setOcrConfidence(null);
+      setInvoiceFile(file);
+      if (parsed.invoiceData) {
+        setParsedInvoiceHeader(parsed.invoiceData.header);
+        setParsedInvoiceLineItems(parsed.invoiceData.lineItems);
+        setShowInvoiceReview(true);
+        setShowCheckReview(false);
+        setParsedCheckData(null);
+      } else if (parsed.chequeData) {
+        setParsedCheckData({
+          checkNumber: parsed.chequeData.chequeNumber,
+          payeeName: parsed.chequeData.payeeName,
+          amount: parsed.chequeData.amount,
+          date: parsed.chequeData.date,
+          memo: parsed.chequeData.memo,
+          bankName: parsed.chequeData.bankName,
+          lineItems: parsed.chequeData.lineItems,
+        });
+        setShowCheckReview(true);
+        setShowInvoiceReview(false);
+        setParsedInvoiceHeader({});
+        setParsedInvoiceLineItems([]);
+      } else {
+        setParsedInvoiceHeader({});
+        setParsedInvoiceLineItems([]);
+        setParsedCheckData(null);
+        setShowInvoiceReview(false);
+        setShowCheckReview(false);
+      }
+    } catch (err: any) {
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      if (rawMessage.includes('503') || rawMessage.includes('temporarily busy') || rawMessage.includes('high demand')) {
+        setInvoiceUploadError('⚠️ AI service is temporarily busy. Please wait about 30 seconds and try again.');
+      } else {
+        setInvoiceUploadError(rawMessage || 'AI parsing failed. Please try again or upload a clearer image.');
+      }
+    } finally {
+      setAiScanning(false);
     }
   };
 
@@ -1256,8 +1315,34 @@ export default function ScanView({
               ) : (
                 <div className="text-xs text-gray-500">Pick a tab above to scan it with Nest.</div>
               )}
+              {aiConfidence && scanMode === 'pos' && !scanning && !aiScanning && (
+                <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+                  <span className="text-gray-400">AI Confidence:</span>
+                  <span className={aiConfidence.confidence >= 0.8
+                    ? 'text-green-400'
+                    : aiConfidence.confidence >= 0.6
+                      ? 'text-yellow-400'
+                      : 'text-red-400'}>
+                    {Math.round(aiConfidence.confidence * 100)}%
+                  </span>
+                  {aiConfidence.posType && (
+                    <span className="text-gray-500">• {aiConfidence.posType}</span>
+                  )}
+                </div>
+              )}
               {aiScanError && (
-                <div className="text-xs text-red-400">{aiScanError}</div>
+                <div className="mt-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-xs text-yellow-300">
+                  <p className="text-xs text-yellow-300">{aiScanError}</p>
+                  {capturedScreenshot && (
+                    <button
+                      type="button"
+                      onClick={() => handleFallbackDocumentScan(capturedScreenshot)}
+                      className="mt-1.5 block text-xs text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Try scanning as document instead
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
