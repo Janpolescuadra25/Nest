@@ -384,6 +384,19 @@ export const api = {
     ).then(res => res.data);
   },
 
+  parsePOSTab: async (jwt: string, file: File, tabUrl?: string): Promise<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null }> => {
+    const form = new FormData();
+    form.append('file', file);
+    if (tabUrl) {
+      form.append('tabUrl', tabUrl);
+    }
+    return postForm<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null }>(
+      '/api/scans/parse-pos-tab',
+      form,
+      jwt
+    );
+  },
+
   // ── Products ─────────────────────────────────────────────────────────────────
   getProducts: (jwt: string) =>
     get<Product[]>('/api/products', jwt),

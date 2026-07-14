@@ -107,6 +107,11 @@ export default function ScanView({
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
+  const [showTabPicker, setShowTabPicker] = useState(false);
+  const [allTabs, setAllTabs] = useState<chrome.tabs.Tab[]>([]);
+  const [selectedTab, setSelectedTab] = useState<chrome.tabs.Tab | null>(null);
+  const [aiScanning, setAiScanning] = useState(false);
+  const [aiScanError, setAiScanError] = useState<string | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
   const previousScanModeRef = useRef<ScanSource>(scanMode);
@@ -125,7 +130,10 @@ export default function ScanView({
       }
     });
     findPOSTab().then((result) => {
-      if (result) setDetectedPOS({ type: result.posType, name: result.posName });
+      if (result) {
+        setDetectedPOS({ type: result.posType, name: result.posName });
+        setSelectedTab(result.tab);
+      }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -224,6 +232,173 @@ export default function ScanView({
         }
       });
     });
+  };
+
+  const getPOSTabInfo = (tab?: chrome.tabs.Tab | null): { posType: string; posName: string } | null => {
+    const url = tab?.url ?? '';
+    for (const [posType, { pattern, name }] of Object.entries(POS_URLS)) {
+      if (pattern.test(url)) return { posType, posName: name };
+    }
+    return null;
+  };
+
+  const isKnownPOSTab = (tab?: chrome.tabs.Tab | null) => Boolean(getPOSTabInfo(tab));
+
+  const loadAllTabs = async () => {
+    try {
+      const tabs = await chrome.tabs.query({});
+      setAllTabs(tabs);
+      return tabs;
+    } catch (err) {
+      console.error('[Nest Popup] Failed to load tabs:', err);
+      setAiScanError('Unable to load browser tabs. Please refresh the extension and try again.');
+      return [] as chrome.tabs.Tab[];
+    }
+  };
+
+  const handleTabSelect = (tab: chrome.tabs.Tab) => {
+    setSelectedTab(tab);
+    setAiScanError(null);
+  };
+
+  const scanKnownPOSTab = async (tab: chrome.tabs.Tab, posType: string, posName: string) => {
+    setScanning(true);
+    setError(null);
+    try {
+      let response = await sendScanMessage(tab.id!);
+
+      if (!response) {
+        const scriptFile = posType === 'salido'
+          ? 'content/salido-scanner.js'
+          : posType === 'oracle'
+            ? 'content/oracle-scanner.js'
+            : 'content/scanner.js';
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id! },
+            files: [scriptFile],
+          });
+          await new Promise((r) => setTimeout(r, 1500));
+          response = await sendScanMessage(tab.id!);
+        } catch (injectErr) {
+          console.error('[Nest Popup] Failed to inject content script:', injectErr);
+          throw new Error('Could not inject scanner into tab — try refreshing the page');
+        }
+      }
+
+      if (response?.data) {
+        const entry: ScanEntry = {
+          id: generateId(),
+          source: 'pos',
+          header: {},
+          lineItems: [Object.fromEntries(Object.entries(response.data).map(([key, value]) => [key, String(value)]))],
+        };
+        setScanEntries([entry]);
+        setActiveScanEntryId(entry.id);
+        onScanData(response.data);
+        chrome.storage.local.set({ lastScanData: response.data });
+        if (locationId) {
+          try {
+            const scanRecord = await api.saveScan(
+              jwt,
+              locationId,
+              new Date().toISOString().split('T')[0],
+              response.data,
+              selectedTemplate?.transactionType,
+            );
+            if (scanRecord?.id && onScanRecordId) {
+              onScanRecordId(scanRecord.id);
+            }
+          } catch (saveErr) {
+            console.error('[Nest] Failed to save scan to backend:', saveErr);
+          }
+        }
+      } else {
+        throw new Error('No data returned from scanner — try refreshing the page');
+      }
+    } catch (err) {
+      console.error('[Nest Popup] Scan error:', err);
+      setError(err instanceof Error ? err.message : 'Scan failed');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleAIScan = async (tab: chrome.tabs.Tab) => {
+    if (!jwt) return;
+    if (!tab.windowId) {
+      setAiScanError('Selected tab is missing a window reference. Please choose a different tab.');
+      return;
+    }
+
+    setAiScanning(true);
+    setAiScanError(null);
+    setScanning(true);
+    try {
+      await chrome.windows.update(tab.windowId, { focused: true });
+      if (tab.id) {
+        await chrome.tabs.update(tab.id, { active: true });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const screenshot = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+      const blob = await (await fetch(screenshot)).blob();
+      const file = new File([blob], 'pos-tab.png', { type: blob.type || 'image/png' });
+      const response = await api.parsePOSTab(jwt, file, tab.url ?? undefined);
+
+      if (!response.detection.isPOS || !response.data) {
+        const message = response.detection.reasoning || 'This tab does not appear to contain a POS report.';
+        setAiScanError(`AI scan did not detect a POS report. ${message}`);
+        return;
+      }
+
+      const entry: ScanEntry = {
+        id: generateId(),
+        source: 'pos',
+        header: {},
+        lineItems: [Object.fromEntries(Object.entries(response.data.rawData).map(([key, value]) => [key, String(value)]))],
+      };
+      setScanEntries([entry]);
+      setActiveScanEntryId(entry.id);
+      onScanData(response.data.rawData);
+      setDetectedPOS({ type: response.detection.posType ?? 'unknown', name: response.detection.posType ?? 'Unknown POS' });
+      if (locationId) {
+        try {
+          const scanRecord = await api.saveScan(
+            jwt,
+            locationId,
+            new Date().toISOString().split('T')[0],
+            response.data.rawData,
+            selectedTemplate?.transactionType,
+          );
+          if (scanRecord?.id && onScanRecordId) {
+            onScanRecordId(scanRecord.id);
+          }
+        } catch (saveErr) {
+          console.error('[Nest] Failed to save AI scan to backend:', saveErr);
+        }
+      }
+    } catch (err) {
+      console.error('[Nest Popup] AI scan error:', err);
+      setAiScanError(err instanceof Error ? err.message : 'AI tab scan failed');
+    } finally {
+      setAiScanning(false);
+      setScanning(false);
+    }
+  };
+
+  const handleTabScan = async () => {
+    if (!selectedTab) {
+      setAiScanError('Choose a tab first, then scan it.');
+      return;
+    }
+
+    const posInfo = getPOSTabInfo(selectedTab);
+    if (posInfo) {
+      await scanKnownPOSTab(selectedTab, posInfo.posType, posInfo.posName);
+    } else {
+      await handleAIScan(selectedTab);
+    }
   };
 
   const handleClear = () => {
@@ -1040,20 +1215,75 @@ export default function ScanView({
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`text-xs px-2 py-1 rounded-full ${
-              detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
-            }`}>
-              {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
+          <div className="flex flex-col gap-3 mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className={`text-xs px-2 py-1 rounded-full ${
+                detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
+              }`}>
+                {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTabPicker((prev) => {
+                      const next = !prev;
+                      if (next) loadAllTabs();
+                      return next;
+                    });
+                  }}
+                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1 rounded-lg transition-colors"
+                >
+                  {showTabPicker ? 'Hide tab picker' : 'Choose tab to scan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTabScan}
+                  disabled={!selectedTab || scanning || aiScanning}
+                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
+                >
+                  {aiScanning || scanning ? 'Scanning…' : 'Scan selected tab'}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleRescan}
-              disabled={scanning}
-              className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
-            >
-              {scanning ? 'Scanning…' : '↻ Re-scan Page'}
-            </button>
+
+            <div className="space-y-2">
+              {selectedTab ? (
+                <div className="text-xs text-gray-300">
+                  Selected tab: <strong>{selectedTab.title || selectedTab.url || `Tab #${selectedTab.id}`}</strong>
+                  {isKnownPOSTab(selectedTab) ? ' — Known POS tab' : ' — Unknown tab (AI scan will be used)'}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500">Pick a tab above to scan it with Nest.</div>
+              )}
+              {aiScanError && (
+                <div className="text-xs text-red-400">{aiScanError}</div>
+              )}
+            </div>
           </div>
+
+          {showTabPicker && (
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 mb-3 max-h-56 overflow-y-auto text-xs text-gray-200">
+              {allTabs.length === 0 ? (
+                <div className="text-gray-500">Loading tabs…</div>
+              ) : (
+                allTabs.map((tab) => {
+                  const selected = tab.id === selectedTab?.id;
+                  return (
+                    <button
+                      key={tab.id ?? `${tab.windowId}-${tab.index}-${tab.title}`}
+                      type="button"
+                      onClick={() => handleTabSelect(tab)}
+                      className={`w-full text-left rounded-lg px-3 py-2 mb-2 transition ${selected ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
+                    >
+                      <div className="font-medium truncate">{tab.title || tab.url || 'Untitled tab'}</div>
+                      <div className="text-gray-400 truncate">{tab.url}</div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
 
           {error && (
             <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />

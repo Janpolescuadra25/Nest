@@ -5,6 +5,7 @@
   "description": "Nest — Restaurant financial automation for QuickBooks Online. Scan POS sales reports, vendor invoices, cheques, and Excel data. Map fields to journal entries, bills, vendor credits, and cheques. Sync to QuickBooks with team role-based access control.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "windows"],
   "host_permissions": [
+    "<all_urls>",
     "http://localhost:3000/*",
     "https://*.onrender.com/*",
     "*://*.toasttab.com/*",
