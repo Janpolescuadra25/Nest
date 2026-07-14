@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, ArraySchema, ObjectSchema, SchemaType } from '@google/generative-ai';
 import { AppError } from './errors';
+import type { POSDetectionResult, POSReportData } from '../types';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -213,6 +214,200 @@ RULES:
       description: item.description || '',
       amount: item.amount || '',
     })),
+  };
+}
+
+const posDetectionSchema: ObjectSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    isPOS: { type: SchemaType.BOOLEAN, description: 'Whether the image shows a POS system' },
+    posType: { type: SchemaType.STRING, description: 'Identified POS brand or null', nullable: true },
+    confidence: { type: SchemaType.NUMBER, description: 'Detection confidence 0.0-1.0' },
+    reasoning: { type: SchemaType.STRING, description: 'Brief explanation of the detection' },
+  },
+  required: ['isPOS', 'posType', 'confidence', 'reasoning'],
+};
+
+const posReportSchema: ObjectSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    rawData: {
+      type: SchemaType.OBJECT,
+      properties: {},
+      description: 'Map of section.field to numeric value, e.g. {"Revenue.Food Sales": 1234.56}',
+    },
+    scanDate: { type: SchemaType.STRING, description: 'YYYY-MM-DD date' },
+    totalSales: { type: SchemaType.NUMBER, description: 'Grand total amount' },
+    paymentBreakdown: {
+      type: SchemaType.OBJECT,
+      properties: {},
+      description: 'Map of payment method to amount, e.g. {"Cash": 500, "Credit Card": 734.56}',
+    },
+  },
+  required: ['rawData', 'scanDate', 'totalSales'],
+};
+
+export async function detectPOS(imageBuffer: Buffer, mimeType: string): Promise<POSDetectionResult> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: posDetectionSchema,
+    },
+    systemInstruction: `You are an expert at identifying Point-of-Sale (POS) systems from screenshots of web pages.
+
+A POS system typically displays:
+- Sales reports with revenue categories (Food, Beverage, Tax, Discounts)
+- Payment method breakdowns (Cash, Credit Card, Gift Card)
+- Order summaries or transaction lists
+- Daily/weekly/monthly sales totals
+- Tip amounts, gratuity lines
+- Check or order numbers
+- Employee or server names associated with orders
+- Time-based sales data (hourly breakdowns, daily periods)
+- Net sales, gross sales, or total revenue prominently displayed
+
+This is NOT a POS system:
+- E-commerce product pages or shopping carts
+- Bank or financial dashboards
+- Email clients or inboxes
+- Social media pages
+- General business websites (About pages, online menus without sales data)
+- Accounting software dashboards (QuickBooks, Xero)
+- Inventory management screens without sales data
+- Booking or reservation systems without transaction data
+
+Identify the specific POS brand if possible from the visual layout and any visible branding. Known brands to look for: Toast, Square, Clover, Lightspeed, SALIDO, Oracle Simphony, Revel Systems, NCR Aloha, TouchBistro, ShopKeep, Brink POS, Harbortouch, Heartland, Lavu, Bindo. If it is clearly a POS but you cannot identify the brand, use "unknown_pos".
+
+Return confidence as a number between 0.0 and 1.0:
+- 0.8 to 1.0: Very confident this is a POS system
+- 0.6 to 0.8: Likely a POS system but some uncertainty
+- Below 0.6: Probably not a POS system
+
+Return only valid JSON matching the response schema. No extra commentary.
+`,
+  });
+
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType,
+        data: imageBuffer.toString('base64'),
+      },
+    },
+  ]);
+
+  const text = result.response.text();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
+
+  const detection: POSDetectionResult = {
+    isPOS: Boolean(parsed.isPOS),
+    posType: parsed.posType == null ? null : String(parsed.posType),
+    confidence: Number(parsed.confidence) || 0,
+    reasoning: String(parsed.reasoning || ''),
+  };
+
+  if (detection.confidence < 0.6) {
+    detection.isPOS = false;
+    detection.reasoning = `${detection.reasoning || 'Low confidence detection'} (low confidence)`;
+  }
+
+  return detection;
+}
+
+export async function parsePOSReport(
+  imageBuffer: Buffer,
+  mimeType: string,
+  detectedPOS: string,
+): Promise<POSReportData> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: posReportSchema,
+    },
+    systemInstruction: `You are an expert at extracting structured sales data from POS system screenshots.
+
+The user has identified this as a ${detectedPOS} POS system. Extract ALL visible sales and revenue data into the structured format specified.
+
+Rules:
+- Extract every revenue or sales category visible on screen (e.g., "Food Sales", "Beverage Sales", "Alcohol Sales", "Merchandise", "Catering", etc.)
+- Use the EXACT category names as displayed on screen — do not rename or normalize them
+- Extract payment method breakdowns if visible (Cash, Credit Card, Debit, Gift Card, Apple Pay, etc.)
+- Extract tax amounts if visible (Sales Tax, VAT, GST, etc.)
+- Extract tip or gratuity totals if visible
+- Extract discount or comp amounts if visible
+- The "totalSales" must be the GRAND TOTAL — the final settlement amount or net total after all adjustments
+- For "scanDate", look for a date displayed on the report (e.g., "Sales Report for July 14, 2026"). If no date is visible, return today's date in YYYY-MM-DD format
+- All monetary values must be positive numbers. No negatives, no currency symbols, no commas
+- For the "rawData" map, use dot-prefixed keys by section:
+  - Revenue categories: "Revenue.Food Sales", "Revenue.Beverage Sales", etc.
+  - Taxes: "Tax.Sales Tax", "Tax.VAT", etc.
+  - Discounts: "Discounts.Comps", "Discounts.Promotions", etc.
+  - Payments: "Payments.Cash", "Payments.Credit Card", etc.
+  - Tips: "Tips.Credit Card Tips", "Tips.Cash Tips", etc.
+- If a value cannot be determined from the screenshot, omit it from the map — do not guess or fabricate values
+
+Return only valid JSON matching the response schema. No extra commentary.
+`,
+  });
+
+  const result = await model.generateContent([
+    {
+      inlineData: {
+        mimeType,
+        data: imageBuffer.toString('base64'),
+      },
+    },
+  ]);
+
+  const text = result.response.text();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
+
+  const rawData: Record<string, number> = {};
+  for (const [key, value] of Object.entries(parsed.rawData || {})) {
+    rawData[key] = Number(value) || 0;
+  }
+
+  const paymentBreakdown: Record<string, number> = {};
+  if (parsed.paymentBreakdown) {
+    for (const [key, value] of Object.entries(parsed.paymentBreakdown)) {
+      paymentBreakdown[key] = Number(value) || 0;
+    }
+  }
+
+  const scanDateString = String(parsed.scanDate || '').trim();
+  const scanDate = scanDateString || new Date().toISOString().slice(0, 10);
+
+  return {
+    rawData,
+    scanDate,
+    totalSales: Number(parsed.totalSales) || 0,
+    paymentBreakdown: Object.keys(paymentBreakdown).length ? paymentBreakdown : undefined,
   };
 }
 

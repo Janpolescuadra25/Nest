@@ -8,7 +8,8 @@ import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
-import { parseDocumentWithGemini, parseInvoiceWithGemini } from '../lib/gemini';
+import { detectPOS, parseDocumentWithGemini, parseInvoiceWithGemini, parsePOSReport } from '../lib/gemini';
+import type { ParsePOSTabResponse } from '../types';
 import { validateTransactionType } from './templates';
 
 const router = Router();
@@ -237,6 +238,33 @@ router.post(
       const detail = process.env.NODE_ENV !== 'production' ? `: ${err.message}` : '. Please try again.';
       throw new AppError(`AI parsing failed${detail}`, 500);
     }
+  })
+);
+
+router.post(
+  '/parse-pos-tab',
+  authenticate,
+  enforceEffectiveRole,
+  requireFeaturePermission('scan', 'write'),
+  requireCapacity('scan'),
+  upload.single('file'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    if (!req.file) {
+      throw new AppError('Image file is required', 400);
+    }
+
+    const tabUrl = typeof req.body.tabUrl === 'string' ? req.body.tabUrl : undefined;
+
+    const detection = await detectPOS(req.file.buffer, req.file.mimetype);
+
+    if (!detection.isPOS) {
+      return res.json({ detection, data: null } as ParsePOSTabResponse);
+    }
+
+    const posType = detection.posType || 'unknown_pos';
+    const data = await parsePOSReport(req.file.buffer, req.file.mimetype, posType);
+
+    return res.json({ detection, data } as ParsePOSTabResponse);
   })
 );
 

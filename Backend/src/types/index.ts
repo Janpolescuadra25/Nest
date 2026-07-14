@@ -191,3 +191,22 @@ export interface RuleConfig {
   formula?: string;
   [key: string]: unknown;
 }
+
+export interface POSDetectionResult {
+  isPOS: boolean;
+  posType: string | null;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface POSReportData {
+  rawData: Record<string, number>;
+  scanDate: string;
+  totalSales: number;
+  paymentBreakdown?: Record<string, number>;
+}
+
+export interface ParsePOSTabResponse {
+  detection: POSDetectionResult;
+  data: POSReportData | null;
+}

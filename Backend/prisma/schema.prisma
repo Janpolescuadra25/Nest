@@ -1,5 +1,3 @@
-// Prisma schema for Nest — POS to QuickBooks sync
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,106 +7,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Enums ─────────────────────────────────────────────────────────────────────
-
-enum UserRole {
-  OWNER
-  ADMIN
-  ACCOUNTANT
-  STAFF
-  VIEWER
-}
-
-enum UserStatus {
-  ACTIVE
-  EXPIRED
-  DISABLED
-  PENDING_APPROVAL
-  GRACE_PERIOD
-  TIME_BOMBED
-  BLOCKED
-}
-
-enum AdminRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-enum ScanMode {
-  IMAGE
-  EXCEL
-  POS
-}
-// ── Core Models ───────────────────────────────────────────────────────────────
-
 model User {
-  id                  String      @id @default(cuid())
-  email               String      @unique
-  name                String?
-  password            String?
-  emailVerified       Boolean     @default(false)
-  role                UserRole    @default(VIEWER)
-  status              UserStatus  @default(ACTIVE)
-  adminId             String?
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  name                    String?
+  password                String?
+  role                    UserRole                 @default(VIEWER)
+  status                  UserStatus               @default(ACTIVE)
+  adminId                 String?
   /// @deprecated Migrated to permissions JSON
-  canScan             Boolean     @default(false)
+  canScan                 Boolean                  @default(false)
   /// @deprecated Migrated to permissions JSON
-  canMap              Boolean     @default(false)
+  canMap                  Boolean                  @default(false)
   /// @deprecated Migrated to permissions JSON
-  canSync             Boolean     @default(false)
+  canSync                 Boolean                  @default(false)
   /// @deprecated Migrated to permissions JSON
-  canManageLocs       Boolean     @default(false)
-  mustChangePassword  Boolean     @default(false)
-  trialExpiresAt      DateTime?
-  subscriptionSource  String?
-  stripeCustomerId    String?     @unique
-  stripeSubscriptionId String?
-  currentPlan         String?
-  planInterval        String?
-  currentPeriodEnd    DateTime?
-  cancelAtPeriodEnd   Boolean     @default(false)
-  paymentIssue        Boolean     @default(false)
-  customExpiryMessage String?
-  maxUsers            Int?
-  maxLocations        Int?
-  maxScans            Int?
-  scanHistoryDays     Int?
-  prioritySupport     Boolean     @default(false)
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-
-  permissions         Json?
-  timeBombAt          DateTime?
-  gracePeriodHours    Int         @default(48)
-  blocked             Boolean     @default(false)
-  blockedById         String?
-  approvedById        String?
-  approvedAt          DateTime?
-  invitedById         String?
-  transferredFromId   String?
-
-  admin               User?          @relation("AdminUsers", fields: [adminId], references: [id])
-  teamMembers         User[]         @relation("AdminUsers")
-  locations           Location[]     @relation("UserLocations")
-  managedLocations    Location[]     @relation("AdminLocations")
-  qbTokens            QBToken[]
-  syncLogs            SyncLog[]
-  oauthStates         OAuthState[]
-  products            Product[]
-  approvedRequests     AdminRequest[]       @relation("ApprovedAdminRequests")
-  auditLogs            AuditLog[]           @relation("AuditActor")
-  auditTargets         AuditLog[]           @relation("AuditTarget")
-  passwordResetTokens   PasswordResetToken[]
-  emailVerificationTokens  EmailVerificationToken[]
-  blockedBy             User?          @relation("BlockedBy", fields: [blockedById], references: [id])
-  blockedUsers          User[]         @relation("BlockedBy")
-  approvedBy            User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
-  approvedUsers         User[]         @relation("ApprovedBy")
-  invitedBy             User?          @relation("InvitedBy", fields: [invitedById], references: [id])
-  invitedUsers          User[]         @relation("InvitedBy")
-  transferredFrom       User?          @relation("TransferredFrom", fields: [transferredFromId], references: [id])
-  transferredTo         User[]         @relation("TransferredFrom")
-  inviteLinks           InviteLink[]   @relation("InviteCreator")
+  canManageLocs           Boolean                  @default(false)
+  trialExpiresAt          DateTime?
+  customExpiryMessage     String?
+  maxUsers                Int?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  mustChangePassword      Boolean                  @default(false)
+  approvedAt              DateTime?
+  approvedById            String?
+  blocked                 Boolean                  @default(false)
+  blockedById             String?
+  gracePeriodHours        Int                      @default(48)
+  invitedById             String?
+  permissions             Json?
+  timeBombAt              DateTime?
+  transferredFromId       String?
+  emailVerified           Boolean                  @default(false)
+  currentPeriodEnd        DateTime?
+  currentPlan             String?
+  planInterval            String?
+  stripeCustomerId        String?                  @unique
+  stripeSubscriptionId    String?
+  subscriptionSource      String?
+  cancelAtPeriodEnd       Boolean                  @default(false)
+  maxLocations            Int?
+  paymentIssue            Boolean                  @default(false)
+  maxScans                Int?
+  prioritySupport         Boolean                  @default(false)
+  scanHistoryDays         Int?
+  approvedRequests        AdminRequest[]           @relation("ApprovedAdminRequests")
+  auditLogs               AuditLog[]               @relation("AuditActor")
+  auditTargets            AuditLog[]               @relation("AuditTarget")
+  emailVerificationTokens EmailVerificationToken[]
+  inviteLinks             InviteLink[]             @relation("InviteCreator")
+  managedLocations        Location[]               @relation("AdminLocations")
+  locations               Location[]               @relation("UserLocations")
+  oauthStates             OAuthState[]
+  passwordResetTokens     PasswordResetToken[]
+  products                Product[]
+  qbTokens                QBToken?
+  syncLogs                SyncLog[]
+  admin                   User?                    @relation("AdminUsers", fields: [adminId], references: [id])
+  teamMembers             User[]                   @relation("AdminUsers")
+  approvedBy              User?                    @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvedUsers           User[]                   @relation("ApprovedBy")
+  blockedBy               User?                    @relation("BlockedBy", fields: [blockedById], references: [id])
+  blockedUsers            User[]                   @relation("BlockedBy")
+  invitedBy               User?                    @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedUsers            User[]                   @relation("InvitedBy")
+  transferredFrom         User?                    @relation("TransferredFrom", fields: [transferredFromId], references: [id])
+  transferredTo           User[]                   @relation("TransferredFrom")
 
   @@index([blockedById])
   @@index([approvedById])
@@ -119,18 +83,17 @@ model User {
 }
 
 model AdminRequest {
-  id            String             @id @default(cuid())
-  email         String
-  name          String?
-  requestedBy   String?
-  approvedById  String?
-  status        AdminRequestStatus @default(PENDING)
-  description   String?
-  company        String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  approvedBy    User?              @relation("ApprovedAdminRequests", fields: [approvedById], references: [id])
+  id           String             @id @default(cuid())
+  email        String
+  name         String?
+  requestedBy  String?
+  approvedById String?
+  status       AdminRequestStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  company      String?
+  description  String?
+  approvedBy   User?              @relation("ApprovedAdminRequests", fields: [approvedById], references: [id])
 
   @@index([email])
   @@map("admin_requests")
@@ -139,13 +102,12 @@ model AdminRequest {
 model AuditLog {
   id           String   @id @default(cuid())
   actorId      String
-  action       String
   targetUserId String?
+  action       String
   details      Json?
   createdAt    DateTime @default(now())
-
-  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
-  targetUser User?    @relation("AuditTarget", fields: [targetUserId], references: [id])
+  actor        User     @relation("AuditActor", fields: [actorId], references: [id])
+  targetUser   User?    @relation("AuditTarget", fields: [targetUserId], references: [id])
 
   @@index([actorId])
   @@index([action])
@@ -164,7 +126,6 @@ model InviteLink {
   maxUses   Int       @default(1)
   useCount  Int       @default(0)
   createdAt DateTime  @default(now())
-
   creator   User      @relation("InviteCreator", fields: [createdBy], references: [id])
 
   @@index([createdBy])
@@ -172,28 +133,24 @@ model InviteLink {
   @@map("invite_links")
 }
 
-// Kept for backward compatibility — old access-request flow data may still exist
-// AccessRequest model removed — use AdminRequest instead
-
 model Location {
-  id          String       @id @default(cuid())
-  userId      String
-  adminId     String?
-  name        String
-  posUrl      String       @default("")
-  isActive    Boolean      @default(true)
-  memoTemplate      String?
-  docNumberTemplate String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  user        User         @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
-  admin       User?        @relation("AdminLocations", fields: [adminId], references: [id])
-  mappings    Mapping[]
+  id                 String              @id @default(cuid())
+  userId             String
+  adminId            String?
+  name               String
+  posUrl             String              @default("")
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  docNumberTemplate  String?
+  memoTemplate       String?
+  admin              User?               @relation("AdminLocations", fields: [adminId], references: [id])
+  user               User                @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
   mappingPreferences MappingPreference[]
-  rules       Rule[]
-  scanRecords ScanRecord[]
-  templates   Template[]
+  mappings           Mapping[]
+  rules              Rule[]
+  scanRecords        ScanRecord[]
+  templates          Template[]
 
   @@index([userId])
   @@index([adminId])
@@ -201,48 +158,47 @@ model Location {
 }
 
 model Template {
-  id                String          @id @default(cuid())
+  id                String           @id @default(cuid())
   locationId        String
   name              String
-  transactionType   String          @default("JOURNAL_ENTRY")
-  scanMode          ScanMode        @default(IMAGE)
-  posSystem         String?
-  lineType          String          @default("journal_entry")
-  version           Int             @default(1)
+  transactionType   String           @default("JOURNAL_ENTRY")
+  lineType          String           @default("journal_entry")
+  version           Int              @default(1)
   defaults          Json?
   columnMappings    Json?
   memoTemplate      String?
   docNumberTemplate String?
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  location          Location        @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  posSystem         String?
+  scanMode          ScanMode         @default(IMAGE)
   mappings          Mapping[]
-  rules             Rule[]
   productMappings   ProductMapping[]
+  rules             Rule[]
+  location          Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@index([locationId])
   @@map("templates")
 }
 
 model Mapping {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   locationId        String
-  templateId        String?
-  sourceField       String   // e.g. "Food Sales", "Credit Card Tips"
-  targetAccount     String   // QB Account name or ID
-  postingType       String   @default("Credit")
-  keepSeparate      Boolean  @default(false)
-  targetClass       String?  // QB Class (optional)
-  targetName        String?  // QB Name/Entity (optional)
+  sourceField       String
+  targetAccount     String
+  targetClass       String?
+  targetName        String?
   targetDescription String?
   targetMemo        String?
+  priority          Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  keepSeparate      Boolean   @default(false)
+  postingType       String    @default("Credit")
+  templateId        String?
   conditions        Json?
-  priority          Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  location          Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  location          Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
   template          Template? @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([locationId])
@@ -251,17 +207,16 @@ model Mapping {
 }
 
 model MappingPreference {
-  id             String   @id @default(cuid())
-  locationId     String
-  sourceField    String
-  accountId      String
-  accountName    String
-  timesAccepted  Int      @default(1)
-  lastUsedAt     DateTime @default(now())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  location       Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  locationId    String
+  sourceField   String
+  accountId     String
+  accountName   String
+  timesAccepted Int      @default(1)
+  lastUsedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([locationId, sourceField, accountId])
   @@index([locationId])
@@ -270,18 +225,17 @@ model MappingPreference {
 }
 
 model ProductMapping {
-  id          String   @id @default(cuid())
-  templateId  String
-  productId   String
-  accountId   String
-  postingType String   @default("Credit")
-  classId     String?
+  id           String   @id @default(cuid())
+  templateId   String
+  productId    String
+  accountId    String
+  postingType  String   @default("Credit")
+  classId      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   matchingRule Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, productId])
   @@index([templateId])
@@ -290,43 +244,36 @@ model ProductMapping {
 }
 
 model Rule {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   locationId String
-  templateId String?
   name       String
   ruleType   RuleType
-  config     Json     // stores source fields, operator, target, etc.
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  config     Json
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  templateId String?
+  location   Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  template   Template? @relation(fields: [templateId], references: [id])
 
   @@index([locationId])
   @@index([templateId])
   @@map("rules")
 }
 
-enum RuleType {
-  COMBINE
-  DEDUCT
-  THRESHOLD
-  FORMULA
-}
-
 model ScanRecord {
-  id            String       @id @default(cuid())
-  locationId    String
-  scanDate      DateTime
-  rawData          Json         // all extracted Toast fields
-  rawScanEntry     Json?        // full ScanEntry for Excel/image/pdf sources
-  source           String       @default("pos")   // pos | excel | image | pdf
-  transactionType  String       @default("JOURNAL_ENTRY")
-  status           ScanStatus   @default(PENDING)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  location      Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  syncLogs      SyncLog[]
+  id              String     @id @default(cuid())
+  locationId      String
+  scanDate        DateTime
+  rawData         Json
+  status          ScanStatus @default(PENDING)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  rawScanEntry    Json?
+  source          String     @default("pos")
+  transactionType String     @default("JOURNAL_ENTRY")
+  location        Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  syncLogs        SyncLog[]
 
   @@index([locationId])
   @@index([status])
@@ -335,29 +282,22 @@ model ScanRecord {
   @@map("scan_records")
 }
 
-enum ScanStatus {
-  PENDING
-  MAPPED
-  SYNCED
-  FAILED
-}
-
 model SyncLog {
-  id               String     @id @default(cuid())
-  userId           String?
-  syncType         SyncType
+  id               String      @id @default(cuid())
   scanRecordId     String?
   qbJournalEntryId String?
-  docNumber        String?    // for traceability back to QB JE
-  requestHash      String?
   status           SyncStatus
   errorMessage     String?
-  errorType        String?    // 'TRANSIENT' | 'AUTH' | 'VALIDATION' | 'FATAL'
-  attemptCount     Int        @default(1)
+  syncedAt         DateTime    @default(now())
+  docNumber        String?
+  errorType        String?
+  attemptCount     Int         @default(1)
   requestPayload   Json?
-  syncedAt         DateTime   @default(now())
+  requestHash      String?
+  syncType         SyncType
+  userId           String?
   scanRecord       ScanRecord? @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
-  user             User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([scanRecordId])
@@ -366,37 +306,22 @@ model SyncLog {
   @@map("sync_logs")
 }
 
-enum SyncStatus {
-  SUCCESS
-  FAILED
-}
-
-enum SyncType {
-  JOURNAL_ENTRY
-  BILL
-  VENDOR_CREDIT
-  CHEQUE
-  BILL_PAYMENT
-}
-
-// QB OAuth token storage (one row per user/realm)
 model QBToken {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  realmId       String
-  accessToken   String
-  refreshToken  String
-  expiresAt     DateTime
-  stale         Boolean  @default(false)  // true when refresh token is expired
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  realmId      String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  stale        Boolean  @default(false)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("qb_tokens")
 }
 
-// Persisted OAuth state — survives server restarts (one-time use, TTL enforced in code)
 model OAuthState {
   id        String   @id @default(cuid())
   state     String   @unique
@@ -413,11 +338,11 @@ model OAuthState {
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([userId])
@@ -443,9 +368,8 @@ model Product {
   userId          String
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   productMappings ProductMapping[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, name])
   @@index([userId])
@@ -460,4 +384,61 @@ model StripeEvent {
 
   @@index([eventId])
   @@map("stripe_events")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  STAFF
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  EXPIRED
+  DISABLED
+  PENDING_APPROVAL
+  GRACE_PERIOD
+  TIME_BOMBED
+  BLOCKED
+}
+
+enum AdminRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ScanMode {
+  IMAGE
+  EXCEL
+  POS
+}
+
+enum RuleType {
+  COMBINE
+  DEDUCT
+  THRESHOLD
+  FORMULA
+}
+
+enum ScanStatus {
+  PENDING
+  MAPPED
+  SYNCED
+  FAILED
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+}
+
+enum SyncType {
+  JOURNAL_ENTRY
+  BILL
+  VENDOR_CREDIT
+  CHEQUE
+  BILL_PAYMENT
 }
