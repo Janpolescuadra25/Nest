@@ -23,6 +23,7 @@ import emailVerificationRoutes from './routes/email-verification';
 import checkoutRoutes from './routes/checkout';
 import webhookRoutes from './routes/webhooks';
 import { prisma } from './lib/prisma';
+import { resetOwnerIfRequested } from './lib/owner-reset';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
 import { startSyncFailureAlertCron } from './cron/sync-failure-alerts';
@@ -158,6 +159,7 @@ app.use(createErrorHandler());
 startTimeBombCron(prisma);
 startTrialWarningCron(prisma);
 startSyncFailureAlertCron(prisma);
+resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
 const server = app.listen(PORT, () => {
   console.log(`[Nest] Server running on http://localhost:${PORT}`);
   console.log(`[Nest] Environment: ${process.env.NODE_ENV ?? 'development'}`);
