@@ -27,6 +27,7 @@ import { resetOwnerIfRequested } from './lib/owner-reset';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
 import { startSyncFailureAlertCron } from './cron/sync-failure-alerts';
+import { startScanCleanupCron } from './cron/scan-cleanup';
 import { createErrorHandler } from './lib/errors';
 
 const app = express();
@@ -159,6 +160,7 @@ app.use(createErrorHandler());
 startTimeBombCron(prisma);
 startTrialWarningCron(prisma);
 startSyncFailureAlertCron(prisma);
+startScanCleanupCron(prisma);
 resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
 const server = app.listen(PORT, () => {
   console.log(`[Nest] Server running on http://localhost:${PORT}`);

@@ -104,7 +104,8 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
       ) : (
         <div className="space-y-4">
           {plans.map((plan) => {
-            const isCurrent = user.subscriptionSource === 'stripe' && user.currentPlan === plan.id;
+            const isCurrent = (user.subscriptionSource === 'stripe' && user.currentPlan === plan.id)
+              || (plan.id === 'free' && (!user.subscriptionSource || user.currentPlan === 'free'));
             const price = billingInterval === 'year' ? plan.annualPrice : plan.monthlyPrice;
             const priceLabel = plan.monthlyPrice === 0 ? '$0/mo' : `$${price}/mo`;
             const savings = billingInterval === 'year' ? Math.round(100 - (plan.annualPrice / plan.monthlyPrice) * 100) : 0;
