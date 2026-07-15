@@ -51,7 +51,7 @@ app.use(cors({
     }
 
     // In production, only allow whitelisted origins
-    const allowedOrigins = [process.env.APP_URL].filter(Boolean);
+    const allowedOrigins = [process.env.APP_URL, process.env.LANDING_PAGE_URL].filter(Boolean);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
