@@ -24,25 +24,46 @@ async function main(): Promise<void> {
     }
     console.log('[Seed] Owner already exists — skipping owner creation.');
   } else {
-    const hashedPassword = await bcrypt.hash(ownerPassword, 12);
-    ownerUser = await prisma.user.upsert({
-      where: { email: ownerEmail },
-      update: {
-        role: 'OWNER',
-        status: 'ACTIVE',
-        name: ownerName,
-        subscriptionSource: 'owner',
-      },
-      create: {
-        email: ownerEmail,
-        name: ownerName,
-        password: hashedPassword,
-        role: 'OWNER',
-        status: 'ACTIVE',
-        subscriptionSource: 'owner',
-      },
-    });
-    console.log(`[Seed] Owner: ${ownerUser.email}`);
+    // One-time owner password/email reset — set RESET_OWNER_PASSWORD=true in env to trigger
+    if (process.env.RESET_OWNER_PASSWORD === 'true') {
+      const existingOwner = await prisma.user.findFirst({ where: { role: 'OWNER' } });
+      if (existingOwner) {
+        const hashedPassword = await bcrypt.hash(ownerPassword, 12);
+        await prisma.user.update({
+          where: { id: existingOwner.id },
+          data: {
+            email: ownerEmail,
+            password: hashedPassword,
+            name: ownerName,
+          },
+        });
+        console.log('[Seed] Owner password and email updated via RESET_OWNER_PASSWORD flag.');
+        ownerUser = await prisma.user.findFirst({ where: { role: 'OWNER' } });
+      }
+    }
+
+    // Normal upsert — only runs if the reset didn't already set ownerUser
+    if (!ownerUser) {
+      const hashedPassword = await bcrypt.hash(ownerPassword, 12);
+      ownerUser = await prisma.user.upsert({
+        where: { email: ownerEmail },
+        update: {
+          role: 'OWNER',
+          status: 'ACTIVE',
+          name: ownerName,
+          subscriptionSource: 'owner',
+        },
+        create: {
+          email: ownerEmail,
+          name: ownerName,
+          password: hashedPassword,
+          role: 'OWNER',
+          status: 'ACTIVE',
+          subscriptionSource: 'owner',
+        },
+      });
+      console.log(`[Seed] Owner: ${ownerUser.email}`);
+    }
   }
 
   // ── 1. Assign all orphan locations (adminId IS NULL) to the Owner ──────────
