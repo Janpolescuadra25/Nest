@@ -29,15 +29,28 @@ async function main(): Promise<void> {
       const existingOwner = await prisma.user.findFirst({ where: { role: 'OWNER' } });
       if (existingOwner) {
         const hashedPassword = await bcrypt.hash(ownerPassword, 12);
-        await prisma.user.update({
-          where: { id: existingOwner.id },
-          data: {
-            email: ownerEmail,
-            password: hashedPassword,
-            name: ownerName,
-          },
-        });
-        console.log('[Seed] Owner password and email updated via RESET_OWNER_PASSWORD flag.');
+        try {
+          await prisma.user.update({
+            where: { id: existingOwner.id },
+            data: {
+              email: ownerEmail,
+              password: hashedPassword,
+              name: ownerName,
+            },
+          });
+          console.log(`[Seed] Owner credentials updated via RESET_OWNER_PASSWORD flag. Email: ${ownerEmail}`);
+        } catch (err: any) {
+          if (err.code === 'P2002') {
+            console.log(`[Seed] Email ${ownerEmail} already exists — updating password only.`);
+            await prisma.user.update({
+              where: { id: existingOwner.id },
+              data: { password: hashedPassword, name: ownerName },
+            });
+            console.log(`[Seed] Owner password updated. Email remains: ${existingOwner.email}`);
+          } else {
+            throw err;
+          }
+        }
         ownerUser = await prisma.user.findFirst({ where: { role: 'OWNER' } });
       }
     }

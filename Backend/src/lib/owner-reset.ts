@@ -21,15 +21,28 @@ export async function resetOwnerIfRequested(): Promise<void> {
     }
 
     const hashedPassword = await bcrypt.hash(ownerPassword, 12);
-    await prisma.user.update({
-      where: { id: existingOwner.id },
-      data: {
-        email: ownerEmail,
-        password: hashedPassword,
-        name: ownerName,
-      },
-    });
-    console.log(`[Owner Reset] Updated owner credentials for ${ownerEmail}.`);
+    try {
+      await prisma.user.update({
+        where: { id: existingOwner.id },
+        data: {
+          email: ownerEmail,
+          password: hashedPassword,
+          name: ownerName,
+        },
+      });
+      console.log(`[Owner Reset] Updated owner credentials for ${ownerEmail}.`);
+    } catch (err: any) {
+      if (err.code === 'P2002') {
+        console.log(`[Owner Reset] Email ${ownerEmail} already exists — updating password only.`);
+        await prisma.user.update({
+          where: { id: existingOwner.id },
+          data: { password: hashedPassword, name: ownerName },
+        });
+        console.log(`[Owner Reset] Owner password updated. Email remains: ${existingOwner.email}`);
+      } else {
+        throw err;
+      }
+    }
   } catch (err) {
     console.error('[Owner Reset] Failed:', err);
   }
