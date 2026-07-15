@@ -28,6 +28,7 @@ export async function resetOwnerIfRequested(): Promise<void> {
           email: ownerEmail,
           password: hashedPassword,
           name: ownerName,
+          emailVerified: true,
         },
       });
       console.log(`[Owner Reset] Updated owner credentials for ${ownerEmail}.`);
@@ -36,7 +37,7 @@ export async function resetOwnerIfRequested(): Promise<void> {
         console.log(`[Owner Reset] Email ${ownerEmail} already exists — updating password only.`);
         await prisma.user.update({
           where: { id: existingOwner.id },
-          data: { password: hashedPassword, name: ownerName },
+          data: { password: hashedPassword, name: ownerName, emailVerified: true },
         });
         console.log(`[Owner Reset] Owner password updated. Email remains: ${existingOwner.email}`);
       } else {

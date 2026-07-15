@@ -36,6 +36,7 @@ async function main(): Promise<void> {
               email: ownerEmail,
               password: hashedPassword,
               name: ownerName,
+              emailVerified: true,
             },
           });
           console.log(`[Seed] Owner credentials updated via RESET_OWNER_PASSWORD flag. Email: ${ownerEmail}`);
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
             console.log(`[Seed] Email ${ownerEmail} already exists — updating password only.`);
             await prisma.user.update({
               where: { id: existingOwner.id },
-              data: { password: hashedPassword, name: ownerName },
+              data: { password: hashedPassword, name: ownerName, emailVerified: true },
             });
             console.log(`[Seed] Owner password updated. Email remains: ${existingOwner.email}`);
           } else {
