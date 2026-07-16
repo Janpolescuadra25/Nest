@@ -9,6 +9,7 @@ import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
 import { sendVerificationEmail } from '../lib/email';
+import { hashToken } from '../lib/encryption';
 
 function mergeTeamBilling(user: any) {
   const teamOwner = user.admin ?? {};
@@ -126,7 +127,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await prisma.$transaction([
         prisma.emailVerificationToken.deleteMany({ where: { userId: user.id } }),
-        prisma.emailVerificationToken.create({ data: { userId: user.id, token: verificationToken, expiresAt } }),
+        prisma.emailVerificationToken.create({ data: { userId: user.id, token: hashToken(verificationToken), expiresAt } }),
       ]);
       emailResult = await sendVerificationEmail({
         to: user.email,
