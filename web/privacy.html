@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Nest</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-white text-slate-900">
+  <div class="min-h-screen">
+    <header class="border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <a href="/" class="text-xl font-bold text-indigo-600">Nest</a>
+        <a href="/" class="text-sm font-medium text-slate-600 hover:text-slate-900">Back to Home</a>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-bold text-slate-900">Privacy Policy</h1>
+      <p class="mt-2 text-sm text-slate-500">Last updated: July 2026</p>
+
+      <section class="mt-10 space-y-6 text-sm leading-7 text-slate-700">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">1. Information We Collect</h2>
+          <p class="mt-3">Nest collects the following information to provide its POS-to-QuickBooks reconciliation service:</p>
+          <ul class="mt-3 list-disc space-y-2 pl-6">
+            <li><strong>Account Information:</strong> Name and email address provided during sign-up.</li>
+            <li><strong>Authentication Data:</strong> Passwords are hashed using bcrypt (12 rounds) and never stored in plain text. JWT tokens are used for session management.</li>
+            <li><strong>Financial Data:</strong> POS sales report data and transaction details extracted from scanned reports. This data is synced to QuickBooks Online at the user's direction.</li>
+            <li><strong>QuickBooks Connection:</strong> OAuth tokens for QuickBooks Online integration are encrypted at rest using AES-256 and stored securely on our servers.</li>
+            <li><strong>Website Content:</strong> When a user initiates a scan, Nest reads the DOM content of the active browser tab to extract POS report data. This content is processed locally in the browser and sent to our servers only when the user explicitly triggers a scan or sync action.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">2. How We Use Your Information</h2>
+          <p class="mt-3">All data collected is used solely for the purpose of providing the Nest service — scanning POS reports, extracting transaction data, and syncing to QuickBooks Online. We do not use your data for advertising, analytics, or any purpose unrelated to Nest's core functionality.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">3. Data Storage and Security</h2>
+          <p class="mt-3">Data is stored on secure cloud infrastructure (Render and Neon PostgreSQL). All data in transit is encrypted using TLS/HTTPS. Sensitive data at rest (QuickBooks tokens, encryption keys) is protected using AES-256 encryption. Access to production systems is restricted and role-based.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">4. Data Sharing</h2>
+          <p class="mt-3">We do not sell, rent, or transfer user data to third parties. Data is shared only with QuickBooks (Intuit) as required for the sync functionality, and with our email service provider (Resend) for sending account verification emails. No other third parties receive user data.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">5. Data Retention and Deletion</h2>
+          <p class="mt-3">Users can request deletion of their account and all associated data by contacting the owner through the Nest extension or by emailing support@nestsync.fyi. Scan history is automatically purged based on the retention period configured for each user's plan. Upon account deletion, all personal data, scan records, and QuickBooks connection tokens are permanently removed.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">6. Browser Extension Data</h2>
+          <p class="mt-3">The Nest Chrome extension stores authentication tokens and user preferences locally in the browser using chrome.storage.local. This data never leaves the user's browser except for authenticated API calls to the Nest backend. The extension requests permissions (activeTab, storage, tabs, scripting, host permissions) solely to enable POS report scanning and QuickBooks synchronization. The extension does not track browsing history, log keystrokes, or monitor user activity outside of explicit scan actions.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">7. Contact</h2>
+          <p class="mt-3">For privacy-related questions or data deletion requests, contact us at:</p>
+          <p class="mt-2"><strong>Email:</strong> support@nestsync.fyi</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-slate-900 py-8 text-white">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+        <p>&copy; 2026 Nest. All rights reserved.</p>
+        <a href="/" class="text-slate-300 hover:text-white">Back to Home</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
