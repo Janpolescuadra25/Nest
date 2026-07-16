@@ -161,6 +161,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       }
 
       const skippedReasons: { type: string; reason: string; count: number }[] = [];
+      const skippedWarnings: string[] = [];
       const items: BatchSyncItem[] = [];
 
       for (const scan of syncableScans) {
@@ -178,7 +179,13 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           });
 
           if (payload.lines.length > 0) {
-            items.push({ ...payload, transactionType: 'JOURNAL_ENTRY' });
+            if (!payload.balanced) {
+              skippedWarnings.push(
+                `Skipped unbalanced entry (Debits: $${payload.totalDebits.toFixed(2)}, Credits: $${payload.totalCredits.toFixed(2)}, Diff: $${payload.imbalanceAmount.toFixed(2)})`,
+              );
+            } else {
+              items.push({ ...payload, transactionType: 'JOURNAL_ENTRY' });
+            }
           } else {
             const reason = 'no mapped line items';
             const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
@@ -245,6 +252,13 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           }
           continue;
         }
+      }
+
+      if (skippedWarnings.length > 0) {
+        showToast(
+          `[Batch Sync] Skipped ${skippedWarnings.length} unbalanced entries. Review them individually.`,
+          'error',
+        );
       }
 
       for (const skip of skippedReasons) {

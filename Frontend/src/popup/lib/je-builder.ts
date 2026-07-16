@@ -24,6 +24,10 @@ export interface JEPayload {
   lines: QBJournalLineItem[];
   privateNote?: string;
   docNumber?: string;
+  balanced: boolean;
+  totalDebits: number;
+  totalCredits: number;
+  imbalanceAmount: number;
 }
 
 // ── guessPostingType ──────────────────────────────────────────────────────────
@@ -59,6 +63,11 @@ export function guessPostingType(field: string): 'debit' | 'credit' {
 
   // Unpaid Orders: Debit (Accounts Receivable)
   if (/^(unpaid orders)$/.test(section)) return 'debit';
+
+  // Specific patterns MUST come before generic/fallback patterns to prevent incorrect matches
+  // (e.g., "Credit Card Tips" must match credit, not the generic "credit card" debit pattern)
+  if (/(credit\s*card\s*tips|cc\s*tips)/i.test(lower)) return 'credit';
+  if (/(gift\s*card[^s]|gift\s*cards?\s*(sold|redeemed|revenue))/i.test(lower)) return 'credit';
 
   // Fallback: keyword matching on the full field name
   if (/cash|credit card|debit card|gift card|discount|refund|void|comp\b|net sales|total/.test(lower)) return 'debit';
@@ -150,5 +159,24 @@ export function buildJEPayload(params: {
       };
     });
 
-  return { scanRecordId, txnDate, lines: jeLines, privateNote, docNumber };
+  const totalDebits = jeLines
+    .filter((line) => line.postingType === 'Debit')
+    .reduce((sum, line) => sum + line.amount, 0);
+  const totalCredits = jeLines
+    .filter((line) => line.postingType === 'Credit')
+    .reduce((sum, line) => sum + line.amount, 0);
+  const imbalanceAmount = totalDebits - totalCredits;
+  const balanced = Math.abs(imbalanceAmount) <= 0.01;
+
+  return {
+    scanRecordId,
+    txnDate,
+    lines: jeLines,
+    privateNote,
+    docNumber,
+    balanced,
+    totalDebits,
+    totalCredits,
+    imbalanceAmount,
+  };
 }

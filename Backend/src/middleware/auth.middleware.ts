@@ -67,6 +67,11 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       return next(new AppError('Account is disabled', 403));
     }
 
+    if (user.mustChangePassword && req.method !== 'GET' && req.path !== '/api/auth/change-password') {
+      res.status(403).json({ error: 'You must change your password before continuing.', code: 'MUST_CHANGE_PASSWORD' });
+      return;
+    }
+
     req.user = {
       id: user.id,
       userId: user.id,   // backward-compat alias — existing routes use this

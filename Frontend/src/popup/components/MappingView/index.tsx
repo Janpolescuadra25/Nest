@@ -1533,6 +1533,7 @@ export default function MappingView({
         onImport={() => fileInputRef.current?.click()}
         onAutoDetect={autoDetect}
         onAISuggest={suggestMappings}
+        suggesting={suggesting}
         onApplyTemplate={applyTemplate}
         onSyncLists={() => void syncAllLists()}
         listsLoading={listsLoading}

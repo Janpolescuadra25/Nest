@@ -14,6 +14,7 @@ interface Props {
   onImport: () => void;
   onAutoDetect: () => void;
   onAISuggest: () => void;
+  suggesting?: boolean;
   onApplyTemplate: (template: string) => void;
   onSyncLists: () => void;
   listsLoading: boolean;
@@ -72,10 +73,11 @@ export default function MappingFilters({
         </button>
         <button
           onClick={disableAutoDetect ? undefined : onAISuggest}
+          disabled={disableAutoDetect || suggesting}
           title={disableAutoDetect ? 'AI Suggest is designed for POS scans' : undefined}
-          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect || suggesting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
         >
-          🤖 AI Suggest
+          {suggesting ? 'Suggesting…' : '🤖 AI Suggest'}
         </button>
         {TEMPLATE_NAMES.map((template) => (
           <button

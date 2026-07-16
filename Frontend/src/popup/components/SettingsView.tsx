@@ -174,7 +174,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             ) : user.subscriptionSource === 'partner' ? (
               <button
                 type="button"
-                onClick={() => window.open('mailto:paulescuadra25@gmail.com?subject=Nest Billing Inquiry', '_blank')}
+                onClick={() => window.open('mailto:support@nestsync.fyi?subject=Nest Billing Inquiry', '_blank')}
                 className="w-full rounded-lg border border-gray-700 bg-gray-900 text-gray-300 py-2 text-xs font-semibold hover:bg-gray-800"
               >
                 Contact owner for billing
@@ -190,7 +190,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             )}
             <button
               type="button"
-              onClick={() => window.open('mailto:paulescuadra25@gmail.com?subject=Nest Billing Help', '_blank')}
+              onClick={() => window.open('mailto:support@nestsync.fyi?subject=Nest Billing Help', '_blank')}
               className="w-full rounded-lg border border-gray-700 bg-gray-900 text-gray-300 py-2 text-xs font-semibold hover:bg-gray-800"
             >
               Billing help
@@ -248,21 +248,21 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Need Help?</div>
           <a
-            href="mailto:paulescuadra25@gmail.com"
+            href="mailto:support@nestsync.fyi"
             className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 text-xs transition-colors mb-2"
           >
             <span>✉️</span>
-            <span>paulescuadra25@gmail.com</span>
+            <span>support@nestsync.fyi</span>
           </a>
           <div className="flex gap-2">
             <a
-              href="mailto:paulescuadra25@gmail.com?subject=Nest%20Bug%20Report"
+              href="mailto:support@nestsync.fyi?subject=Nest%20Bug%20Report"
               className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
             >
               🐛 Report a Bug
             </a>
             <a
-              href="mailto:paulescuadra25@gmail.com?subject=Nest%20Feature%20Request"
+              href="mailto:support@nestsync.fyi?subject=Nest%20Feature%20Request"
               className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
             >
               💡 Feature Request
