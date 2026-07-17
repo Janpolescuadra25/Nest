@@ -178,9 +178,31 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
           account.FullyQualifiedName.toLowerCase().includes(suggestion.accountName.toLowerCase()) ||
           account.FullyQualifiedName.toLowerCase().includes(suggestion.accountHint.toLowerCase()),
         );
+
+        const warnings: string[] = [];
+        if (suggestion.postingType !== 'Debit' && suggestion.postingType !== 'Credit') {
+          warnings.push(`AI suggested invalid posting type "${suggestion.postingType}"`);
+        }
+
+        if (matched) {
+          const CREDIT_NATURED = new Set([
+            'Revenue', 'Income', 'Other Income',
+            'Liability', 'Other Current Liability', 'Long Term Liability', 'Deferred Revenue',
+            'Equity', 'Non-Posting',
+          ]);
+          const isCreditNatured = CREDIT_NATURED.has(matched.AccountType);
+          const expectedPosting = isCreditNatured ? 'Credit' : 'Debit';
+
+          if (suggestion.postingType !== expectedPosting) {
+            warnings.push(`Account "${matched.FullyQualifiedName}" is ${matched.AccountType} (normally ${expectedPosting}), but AI suggested ${suggestion.postingType}`);
+          }
+        }
+
         return {
           ...suggestion,
           accountId: matched?.Id,
+          accountType: matched?.AccountType,
+          validationWarning: warnings.length > 0 ? warnings.join('; ') : undefined,
         };
       });
     });
