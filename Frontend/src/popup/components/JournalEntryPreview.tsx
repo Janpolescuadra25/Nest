@@ -440,28 +440,22 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   let autoBalancedThisRender: { amount: number; lineId: string } | null = null;
 
   if (Math.abs(rawDiff) > 0.001 && Math.abs(rawDiff) <= 0.02) {
+    const adjustment = Math.abs(rawDiff);
     const shortSide = rawDiff > 0 ? 'credit' : 'debit';
-    const candidates = rawDisplayLines.filter((l) => {
-      const val = parseFloat(shortSide === 'debit' ? l.debit : l.credit) || 0;
-      return val > 0;
-    });
-    if (candidates.length > 0) {
-      const largest = candidates.reduce((best, l) => {
-        const val = parseFloat(shortSide === 'debit' ? l.debit : l.credit) || 0;
-        const bestVal = parseFloat(shortSide === 'debit' ? best.debit : best.credit) || 0;
-        return val > bestVal ? l : best;
-      });
-      const adjustment = Math.abs(rawDiff);
-      autoBalancedDisplayLines = rawDisplayLines.map((l) => {
-        if (l.localId !== largest.localId) return l;
-        if (shortSide === 'debit') {
-          return { ...l, debit: ((parseFloat(l.debit) || 0) + adjustment).toFixed(2) };
-        } else {
-          return { ...l, credit: ((parseFloat(l.credit) || 0) + adjustment).toFixed(2) };
-        }
-      });
-      autoBalancedThisRender = { amount: adjustment, lineId: largest.localId };
-    }
+    const roundingLine: LineItem = {
+      localId: `rounding-${Date.now()}`,
+      accountId: '',
+      accountName: '',
+      entityVal: '',
+      description: 'Rounding adjustment',
+      classId: '',
+      taxCodeId: '',
+      debit: shortSide === 'debit' ? adjustment.toFixed(2) : '0.00',
+      credit: shortSide === 'credit' ? adjustment.toFixed(2) : '0.00',
+      keepSeparate: true,
+    };
+    autoBalancedDisplayLines = [...rawDisplayLines, roundingLine];
+    autoBalancedThisRender = { amount: adjustment, lineId: roundingLine.localId };
   }
 
   const autoBalanced = autoBalancedThisRender;
@@ -471,6 +465,9 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const totalCredits = effectiveDisplayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
   const diff = totalDebits - totalCredits;
   const isBalanced = Math.abs(diff) < 0.01;
+  const imbalanceWarning = !isBalanced && Math.abs(diff) >= 0.02
+    ? `Unbalanced — Debits: $${totalDebits.toFixed(2)}, Credits: $${totalCredits.toFixed(2)}, Difference: $${Math.abs(diff).toFixed(2)}`
+    : null;
 
   const unmappedCount = effectiveDisplayLines.filter((l) => !l.accountId).length;
   const allMapped = unmappedCount === 0;
@@ -744,8 +741,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
 
       {autoBalanced && (
         <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-700 text-yellow-300">
-          <span>⚖️ Auto-balanced ${autoBalanced.amount.toFixed(2)} rounding difference</span>
-          <span className="text-yellow-500">— adjusted largest line to make debits = credits</span>
+          <span>⚖️ Rounding difference of ${autoBalanced.amount.toFixed(2)} — assign an account to the Rounding adjustment line before syncing</span>
         </div>
       )}
 
@@ -918,6 +914,11 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
                 : '⚡ Sync to QuickBooks'}
         </button>
       </div>
+      {imbalanceWarning && (
+        <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+          ⚠️ {imbalanceWarning}
+        </div>
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ export default function MappingFilters({
   onImport,
   onAutoDetect,
   onAISuggest,
+  suggesting,
   onApplyTemplate,
   onSyncLists,
   listsLoading,
