@@ -420,3 +420,52 @@ export async function sendPasswordResetEmail({
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+// ── sendRejectionEmail ───────────────────────────────────────────────────────
+
+export async function sendRejectionEmail({
+  to,
+  name,
+}: {
+  to: string;
+  name: string | null | undefined;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const resend = getResendClient();
+    const displayName = name?.trim() || to;
+
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        Thank you for your interest in becoming a Nest partner.
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        After careful review, we are unable to approve your application at this time. This decision does not reflect on your qualifications — we are currently managing capacity to ensure the best experience for our existing partners.
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        You are welcome to submit a new application in the future.
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        If you have questions, reach out to us at <a href="mailto:support@nestsync.fyi" style="color:#22d3ee;text-decoration:none;">support@nestsync.fyi</a>.
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
+        Reapply anytime by visiting the Nest website: <a href="https://nestsync.fyi" style="color:#22d3ee;text-decoration:none;">https://nestsync.fyi</a>
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">Best regards,<br/>The Nest Team</p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
+      to,
+      subject: 'Update on Your Nest Partner Application',
+      html,
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Rejection email sent to ${to}`);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('[Email] sendRejectionEmail failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}

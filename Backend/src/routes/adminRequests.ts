@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { prisma } from '../lib/prisma';
-import { sendWelcomeEmail } from '../lib/email';
+import { sendWelcomeEmail, sendRejectionEmail } from '../lib/email';
 import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rate-limit';
 import { getPermissionDefaults } from '../middleware/permissions';
@@ -191,6 +191,12 @@ router.post('/:id/reject', authenticate, requireRole('OWNER'), asyncHandler(asyn
         details: { requestId: request.id, requestEmail: request.email },
       },
     });
+
+    // Send rejection email (non-blocking)
+    const emailResult = await sendRejectionEmail({ to: request.email, name: request.name });
+    if (!emailResult.success) {
+      console.error('[AdminRequests] rejection email failed:', emailResult.error);
+    }
 
     return res.json({ message: 'Request rejected.' });
   } catch (err) {
