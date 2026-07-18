@@ -88,7 +88,7 @@ export async function sendWelcomeEmail({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: 'Welcome to Nest',
       html,
@@ -138,7 +138,7 @@ export async function sendVerificationEmail({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: 'Verify your Nest email',
       html,
@@ -187,7 +187,7 @@ export async function sendTrialWarning({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: `Your Nest trial expires in ${daysRemaining} ${dayLabel}`,
       html,
@@ -253,7 +253,7 @@ export async function sendSyncFailureAlert({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: `Action needed: ${total} scan${total !== 1 ? 's' : ''} need${total === 1 ? 's' : ''} attention`,
       html,
@@ -299,7 +299,7 @@ export async function sendTrialExpired({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: 'Your Nest trial has expired',
       html,
@@ -345,7 +345,7 @@ export async function sendTrialRenewed({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: 'Your Nest trial has been renewed',
       html,
@@ -395,7 +395,7 @@ export async function sendPasswordResetEmail({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestapp.io',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@nestsync.fyi',
       to,
       subject: 'Reset your Nest password',
       html,

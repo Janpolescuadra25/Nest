@@ -161,7 +161,7 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
 
     return res.json({
       user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
-      emailWarning: !emailResult.success ? 'Account created but welcome email failed to send. Please share the temporary password manually.' : undefined,
+      emailWarning: !emailResult.success ? 'Account created but welcome email failed to send.' : undefined,
     });
   } catch (err) {
     if (err instanceof AppError) throw err;

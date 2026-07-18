@@ -63,7 +63,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_ADDRESS
-        value: "noreply@nestapp.io"
+        value: "noreply@nestsync.fyi"
       - key: FRONTEND_URL
         sync: false
       - key: ALLOWED_EXTENSION_ID

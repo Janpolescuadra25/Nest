@@ -143,7 +143,7 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
 
       const dashboardLink = process.env.APP_URL
         ? `${process.env.APP_URL}/dashboard`
-        : 'https://nestapp.io/dashboard';
+        : 'https://nestsync.fyi/dashboard';
 
       const emailResult = await sendSyncFailureAlert({
         to: data.email,

@@ -95,7 +95,13 @@ router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) 
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json({ admins });
+    const mapped = admins.map(a => ({
+      ...a,
+      managedMembers: a._count.managedMembers,
+      _count: undefined,
+    }));
+
+    res.json({ admins: mapped });
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error('[Owner] getAdminPools error:', err);

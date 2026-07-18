@@ -5,7 +5,7 @@ import type { AdminRequest } from '../../types';
 
 interface ApproveResult {
   user: { id: string; email: string; name: string | null; role: string };
-  tempPassword: string;
+  emailWarning?: string;
 }
 
 interface Props {
@@ -86,8 +86,11 @@ export default function RequestsTab({ jwt }: Props) {
         <div className="bg-green-900/40 border border-green-700 rounded-lg p-3 text-sm">
           <p className="text-green-400 font-medium">Partner approved!</p>
           <p className="text-gray-300 text-xs mt-1">Email: <span className="font-mono">{approveResult.user.email}</span></p>
-          <p className="text-gray-300 text-xs">Temp password: <span className="font-mono text-yellow-400">{approveResult.tempPassword}</span></p>
-          <p className="text-gray-500 text-xs mt-1">Share this password securely — they'll be prompted to change it on first login.</p>
+          {approveResult.emailWarning ? (
+            <p className="text-yellow-300 text-xs mt-1">{approveResult.emailWarning}</p>
+          ) : (
+            <p className="text-gray-500 text-xs mt-1">A welcome email was sent to the partner with login instructions.</p>
+          )}
           <button onClick={() => setApproveResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
         </div>
       )}
