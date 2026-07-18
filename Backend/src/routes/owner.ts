@@ -70,6 +70,188 @@ router.get('/admins', asyncHandler(async(req: AuthRequest, res: Response) => {
   }
 }))
 
+// ── GET /api/owner/admins/pools ─────────────────────────────────────────────────────
+router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+        status: { not: 'BLOCKED' },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        status: true,
+        role: true,
+        subscriptionSource: true,
+        currentPlan: true,
+        poolScans: true,
+        poolLocations: true,
+        maxMembers: true,
+        createdAt: true,
+        _count: { select: { managedMembers: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ admins });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] getAdminPools error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}))
+
+// ── PUT /api/owner/admins/:id/pool ────────────────────────────────────────────
+router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const id = String(req.params['id']);
+    const { poolScans, poolLocations, maxMembers } = req.body as {
+      poolScans?: number;
+      poolLocations?: number;
+      maxMembers?: number;
+    };
+
+    const admin = await prisma.user.findFirst({ where: { id, role: 'ADMIN' } });
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(poolScans !== undefined && { poolScans }),
+        ...(poolLocations !== undefined && { poolLocations }),
+        ...(maxMembers !== undefined && { maxMembers }),
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'PERMISSION_OVERRIDE',
+      targetUserId: id,
+      details: { type: 'pool_update', poolScans, poolLocations, maxMembers, previousPoolScans: admin.poolScans, previousPoolLocations: admin.poolLocations, previousMaxMembers: admin.maxMembers },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] updateAdminPool error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}))
+
+// ── GET /api/owner/admins/:id/members ─────────────────────────────────────────
+router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const adminId = String(req.params['id']);
+
+    const admin = await prisma.user.findFirst({
+      where: { id: adminId, role: 'ADMIN' },
+    });
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    const members = await prisma.user.findMany({
+      where: { managedById: adminId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        status: true,
+        role: true,
+        allocatedScans: true,
+        allocatedLocations: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const totalAllocatedScans = members.reduce((sum, m) => sum + (m.allocatedScans ?? 0), 0);
+    const totalAllocatedLocations = members.reduce((sum, m) => sum + (m.allocatedLocations ?? 0), 0);
+
+    res.json({
+      members,
+      admin: {
+        poolScans: admin.poolScans,
+        poolLocations: admin.poolLocations,
+        maxMembers: admin.maxMembers,
+        memberCount: members.length,
+        remainingScans: (admin.poolScans ?? 0) - totalAllocatedScans,
+        remainingLocations: (admin.poolLocations ?? 0) - totalAllocatedLocations,
+      },
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] getAdminMembers error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}))
+
+// ── PUT /api/owner/admins/:id/members/:userId/allocation ──────────────────────
+router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const adminId = String(req.params['id']);
+    const userId = String(req.params['userId']);
+    const { allocatedScans, allocatedLocations } = req.body as {
+      allocatedScans?: number;
+      allocatedLocations?: number;
+    };
+
+    const member = await prisma.user.findFirst({
+      where: { id: userId, managedById: adminId },
+    });
+    if (!member) {
+      throw new AppError('Member not found under this admin', 404);
+    }
+
+    if (allocatedScans !== undefined || allocatedLocations !== undefined) {
+      const admin = await prisma.user.findFirst({ where: { id: adminId } });
+      const siblings = await prisma.user.findMany({
+        where: { managedById: adminId, id: { not: userId } },
+        select: { allocatedScans: true, allocatedLocations: true },
+      });
+
+      const totalScansAllocated = siblings.reduce((sum, s) => sum + (s.allocatedScans ?? 0), 0) + (allocatedScans ?? member.allocatedScans ?? 0);
+      const totalLocationsAllocated = siblings.reduce((sum, s) => sum + (s.allocatedLocations ?? 0), 0) + (allocatedLocations ?? member.allocatedLocations ?? 0);
+
+      if (admin?.poolScans != null && totalScansAllocated > admin.poolScans) {
+        throw new AppError(`Total allocated scans (${totalScansAllocated}) would exceed admin pool (${admin.poolScans})`, 400);
+      }
+      if (admin?.poolLocations != null && totalLocationsAllocated > admin.poolLocations) {
+        throw new AppError(`Total allocated locations (${totalLocationsAllocated}) would exceed admin pool (${admin.poolLocations})`, 400);
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(allocatedScans !== undefined && { allocatedScans }),
+        ...(allocatedLocations !== undefined && { allocatedLocations }),
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'PERMISSION_OVERRIDE',
+      targetUserId: userId,
+      details: { type: 'allocation_update', allocatedScans, allocatedLocations, adminId },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] updateMemberAllocation error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}))
+
 // ── GET /api/owner/stats ─────────────────────────────────────────────────────
 router.get('/stats', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {

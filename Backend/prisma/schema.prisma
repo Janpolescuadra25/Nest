@@ -49,6 +49,12 @@ model User {
   maxLocations            Int?
   paymentIssue            Boolean                  @default(false)
   maxScans                Int?
+  managedById             String?
+  poolScans               Int?
+  poolLocations           Int?
+  maxMembers              Int?
+  allocatedScans          Int?
+  allocatedLocations      Int?
   prioritySupport         Boolean                  @default(false)
   scanHistoryDays         Int?
   approvedRequests        AdminRequest[]           @relation("ApprovedAdminRequests")
@@ -65,6 +71,8 @@ model User {
   syncLogs                SyncLog[]
   admin                   User?                    @relation("AdminUsers", fields: [adminId], references: [id])
   teamMembers             User[]                   @relation("AdminUsers")
+  manager                 User?                    @relation("TeamManager", fields: [managedById], references: [id])
+  managedMembers          User[]                   @relation("TeamManager")
   approvedBy              User?                    @relation("ApprovedBy", fields: [approvedById], references: [id])
   approvedUsers           User[]                   @relation("ApprovedBy")
   blockedBy               User?                    @relation("BlockedBy", fields: [blockedById], references: [id])
@@ -79,6 +87,7 @@ model User {
   @@index([invitedById])
   @@index([transferredFromId])
   @@index([adminId])
+  @@index([managedById])
   @@map("users")
 }
 

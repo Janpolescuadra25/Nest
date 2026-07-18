@@ -118,6 +118,8 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         role: 'VIEWER',
         status: 'ACTIVE',
         mustChangePassword: false,
+        subscriptionSource: 'stripe',
+        currentPlan: 'free',
       },
     });
 

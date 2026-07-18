@@ -98,6 +98,11 @@ router.get('/', authenticate, requireRole('OWNER'), asyncHandler(async(req: Auth
 router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
+    const { poolScans, poolLocations, maxMembers } = req.body as {
+      poolScans?: number;
+      poolLocations?: number;
+      maxMembers?: number;
+    };
     const request = await prisma.adminRequest.findUnique({ where: { id } });
     if (!request) throw new AppError('Request not found.', 404);
     if (request.status !== 'PENDING') throw new AppError('This request has already been processed.', 400);
@@ -121,6 +126,10 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
           password: hashedPassword,
           role: 'ADMIN',
           status: 'ACTIVE',
+          subscriptionSource: 'owner',
+          poolScans: poolScans ?? 200,
+          poolLocations: poolLocations ?? 50,
+          maxMembers: maxMembers ?? 5,
           maxUsers: 5,
           permissions: getPermissionDefaults('ADMIN'),
           mustChangePassword: true,

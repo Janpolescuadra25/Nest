@@ -100,6 +100,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
           role,
           status,
           adminId,
+          managedById: invite.createdBy,
           invitedById: invite.createdBy,
           approvedAt: isOwnerInvite ? new Date() : null,
           approvedById: isOwnerInvite ? invite.createdBy : null,

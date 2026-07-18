@@ -95,6 +95,10 @@ router.post(
             maxUsers: limits.maxUsers,
             maxLocations: limits.maxLocations,
             maxScans: limits.maxScans,
+            poolScans: limits.maxScans,
+            poolLocations: limits.maxLocations,
+            maxMembers: limits.maxUsers > 1 ? limits.maxUsers - 1 : 0,
+            role: limits.maxUsers > 1 ? 'ADMIN' : 'VIEWER',
             scanHistoryDays: limits.scanHistoryDays,
             prioritySupport: PLANS[planKey].prioritySupport,
             trialExpiresAt: null,
@@ -126,6 +130,10 @@ router.post(
           updateData.maxUsers = limits.maxUsers;
           updateData.maxLocations = limits.maxLocations;
           updateData.maxScans = limits.maxScans;
+          updateData.poolScans = limits.maxScans;
+          updateData.poolLocations = limits.maxLocations;
+          updateData.maxMembers = limits.maxUsers > 1 ? limits.maxUsers - 1 : 0;
+          updateData.role = limits.maxUsers > 1 ? 'ADMIN' : 'VIEWER';
           updateData.scanHistoryDays = limits.scanHistoryDays;
           updateData.prioritySupport = PLANS[planKey].prioritySupport;
         }
@@ -151,9 +159,13 @@ router.post(
             maxUsers: null,
             maxLocations: null,
             maxScans: null,
+            poolScans: null,
+            poolLocations: null,
+            maxMembers: null,
             scanHistoryDays: null,
             prioritySupport: false,
             status: 'EXPIRED',
+            role: 'VIEWER',
           },
         });
         break;

@@ -13,6 +13,12 @@ function getEffectiveLimits(team: {
   maxUsers: number | null;
   maxLocations: number | null;
   maxScans: number | null;
+  poolScans: number | null;
+  poolLocations: number | null;
+  allocatedScans: number | null;
+  allocatedLocations: number | null;
+  maxMembers: number | null;
+  managedById: string | null;
   scanHistoryDays: number | null;
   trialExpiresAt: Date | null;
   prioritySupport: boolean | null;
@@ -66,6 +72,12 @@ export function requireCapacity(action: CapacityAction) {
           maxUsers: true,
           maxLocations: true,
           maxScans: true,
+          poolScans: true,
+          poolLocations: true,
+          allocatedScans: true,
+          allocatedLocations: true,
+          maxMembers: true,
+          managedById: true,
           scanHistoryDays: true,
           trialExpiresAt: true,
           prioritySupport: true,
@@ -76,7 +88,90 @@ export function requireCapacity(action: CapacityAction) {
       return next(new AppError('Team not found', 404));
     }
 
-    if (team.subscriptionSource === 'owner') {
+    if (team.subscriptionSource === 'owner' && team.managedById === null && team.poolScans == null) {
+      return next();
+    }
+
+    // Team member — use individual allocation if present
+    if (team.managedById) {
+      const allocatedScans = team.allocatedScans ?? 0;
+      const allocatedLocations = team.allocatedLocations ?? 0;
+
+      if (action === 'scan' && allocatedScans > 0) {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const scanCount = await prisma.scanRecord.count({
+          where: {
+            location: { userId: team.id },
+            source: { in: ['image', 'pdf'] },
+            createdAt: { gte: thirtyDaysAgo },
+          },
+        });
+        if (scanCount >= allocatedScans) {
+          res.status(403).json({
+            error: 'SCAN_LIMIT_REACHED',
+            message: `Scan limit reached (${allocatedScans}). Contact your admin.`,
+          });
+          return;
+        }
+      }
+
+      if (action === 'location' && allocatedLocations > 0) {
+        const locationCount = await prisma.location.count({
+          where: { userId: team.id },
+        });
+        if (locationCount >= allocatedLocations) {
+          return next(new AppError(`Location limit reached (${allocatedLocations}). Contact your admin.`, 403));
+        }
+      }
+
+      return next();
+    }
+
+    // Admin with pool — enforce pool totals across admin + managed members
+    if (team.poolScans != null || team.poolLocations != null) {
+      const managedMembers = await prisma.user.findMany({
+        where: { managedById: team.id },
+        select: { id: true },
+      });
+      const memberIds = managedMembers.map((member) => member.id);
+
+      if (action === 'scan' && team.poolScans != null) {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const scanCount = await prisma.scanRecord.count({
+          where: {
+            location: {
+              OR: [
+                { adminId: team.id },
+                ...(memberIds.length > 0 ? [{ userId: { in: memberIds } }] : []),
+              ],
+            },
+            source: { in: ['image', 'pdf'] },
+            createdAt: { gte: thirtyDaysAgo },
+          },
+        });
+        if (scanCount >= team.poolScans) {
+          res.status(403).json({
+            error: 'SCAN_LIMIT_REACHED',
+            message: `Team scan limit reached (${team.poolScans}). Contact the owner to increase your pool.`,
+          });
+          return;
+        }
+      }
+
+      if (action === 'location' && team.poolLocations != null) {
+        const locationCount = await prisma.location.count({
+          where: {
+            OR: [
+              { adminId: team.id },
+              ...(memberIds.length > 0 ? [{ userId: { in: memberIds } }] : []),
+            ],
+          },
+        });
+        if (locationCount >= team.poolLocations) {
+          return next(new AppError(`Team location limit reached (${team.poolLocations}). Contact the owner to increase your pool.`, 403));
+        }
+      }
+
       return next();
     }
 
@@ -84,41 +179,6 @@ export function requireCapacity(action: CapacityAction) {
 
     switch (action) {
       case 'user': {
-        if (limits.maxUsers != null) {
-          const currentCount = await prisma.user.count({ where: { adminId: team.id } });
-          if (currentCount >= limits.maxUsers) {
-            return next(
-              new AppError(
-                `Your plan (${team.currentPlan}) allows up to ${limits.maxUsers} users. Upgrade to add more.`,
-                403
-              )
-            );
-          }
-        }
-
-        break;
-      }
-
-      case 'location': {
-        if (limits.maxLocations != null) {
-          const currentCount = await prisma.location.count({
-            where: {
-              OR: [{ adminId: team.id }, { userId: team.id }],
-            },
-          });
-          if (currentCount >= limits.maxLocations) {
-            return next(
-              new AppError(
-                `Location limit reached (${limits.maxLocations}). Upgrade your plan for more locations.`,
-                403
-              )
-            );
-          }
-        }
-        break;
-      }
-
-      case 'scan': {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
         const scanCount = await prisma.scanRecord.count({
