@@ -645,6 +645,8 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
       action: 'TIME_BOMB_CLEARED',
       targetUserId: id,
       details: { previousStatus: target.status },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
