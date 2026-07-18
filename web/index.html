@@ -362,7 +362,11 @@
 
         if (response.ok) {
           signupForm.reset();
-          setMessage(signupMessage, 'Account created! Check your email to verify your account, then install Nest from the Chrome Web Store to get started.', 'success');
+          signupMessage.className = 'mt-4 text-sm text-emerald-600';
+          signupMessage.innerHTML = `
+            <p class="text-green-700 text-sm mt-2">Account created! Check your email to verify your account.</p>
+            <a href="https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc" target="_blank" class="text-cyan-600 hover:text-cyan-700 text-sm underline mt-1 inline-block">Install Nest from Chrome Web Store →</a>
+          `;
         } else {
           setMessage(signupMessage, data.error || 'Something went wrong. Please try again.', 'error');
         }

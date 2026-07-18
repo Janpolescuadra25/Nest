@@ -323,13 +323,13 @@ const SECTIONS: Section[] = [
           <div className="flex items-center gap-2">
             <span>✉️</span>
             <a
-              href="mailto:paulescuadra25@gmail.com"
+              href="mailto:support@nestsync.fyi"
               className="text-cyan-400 hover:text-cyan-300 text-xs transition-colors"
             >
-              paulescuadra25@gmail.com
+              support@nestsync.fyi
             </a>
           </div>
-          <p className="text-[11px] text-gray-400">Include your browser version, Nest version (0.1.0), and steps to reproduce the issue.</p>
+          <p className="text-[11px] text-gray-400">Include your browser version, Nest version (1.0.0), and steps to reproduce the issue.</p>
         </div>
         <div className="text-center pt-2 border-t border-gray-700/50">
           <p className="text-xs text-gray-500">Created by <span className="text-gray-400">John Paul O. Escuadra</span></p>

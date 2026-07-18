@@ -141,9 +141,7 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
         continue;
       }
 
-      const dashboardLink = process.env.APP_URL
-        ? `${process.env.APP_URL}/dashboard`
-        : 'https://nestsync.fyi/dashboard';
+      const dashboardLink = 'https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc';
 
       const emailResult = await sendSyncFailureAlert({
         to: data.email,

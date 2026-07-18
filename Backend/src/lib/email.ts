@@ -82,9 +82,20 @@ export async function sendWelcomeEmail({
         <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;font-weight:600;">Temporary Password</p>
         <p style="font-family:'Courier New',Courier,monospace;font-size:22px;color:#0f172a;font-weight:700;letter-spacing:0.12em;margin:0;">${tempPassword}</p>
       </div>
-      <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0;">
+      <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 24px;">
         You'll be asked to change this password after your first login.
       </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        Your partner application has been approved. You now have admin access to manage your team and sync financial data to QuickBooks.
+      </p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 12px;">To get started:</p>
+      <ol style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;padding-left:20px;">
+        <li>Install the Nest extension from the Chrome Web Store</li>
+        <li>Log in with your email and the password above</li>
+        <li>Connect your QuickBooks Online account</li>
+        <li>Invite your team members</li>
+      </ol>
+      <p style="margin:0 0 24px;"><a href="https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc" style="color:#22d3ee;text-decoration:none;">Install Nest from the Chrome Web Store</a></p>
     `);
 
     await resend.emails.send({
