@@ -21,6 +21,7 @@ export default function RequestsTab({ jwt }: Props) {
   const [approveResult, setApproveResult] = useState<ApproveResult | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [poolInputs, setPoolInputs] = useState<Record<string, { poolScans: string; poolLocations: string; maxMembers: string }>>({});
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -40,7 +41,12 @@ export default function RequestsTab({ jwt }: Props) {
   const handleApprove = async (id: string) => {
     setActionLoading(p => ({ ...p, [id]: true }));
     try {
-      const result = await api.approveAdminRequest(jwt, id);
+      const pool = poolInputs[id] ?? { poolScans: '200', poolLocations: '50', maxMembers: '5' };
+      const result = await api.approveAdminRequest(jwt, id, {
+        poolScans: parseInt(pool.poolScans, 10) || 200,
+        poolLocations: parseInt(pool.poolLocations, 10) || 50,
+        maxMembers: parseInt(pool.maxMembers, 10) || 5,
+      });
       setApproveResult(result);
       await fetchRequests();
       showToast('Partner approved', 'success');
@@ -127,22 +133,56 @@ export default function RequestsTab({ jwt }: Props) {
                   <p className="text-xs text-gray-400 italic">"{req.description}"</p>
                 )}
                 {req.status === 'PENDING' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApprove(req.id)}
-                      disabled={actionLoading[req.id]}
-                      className="flex-1 py-1.5 bg-green-800 text-green-200 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {actionLoading[req.id] ? 'Approving...' : 'Approve'}
-                    </button>
-                    <button
-                      onClick={() => handleReject(req.id)}
-                      disabled={actionLoading[`r_${req.id}`]}
-                      className="flex-1 py-1.5 bg-red-900 text-red-300 rounded text-xs font-medium hover:bg-red-800 disabled:opacity-50"
-                    >
-                      {actionLoading[`r_${req.id}`] ? 'Rejecting...' : 'Reject'}
-                    </button>
-                  </div>
+                  <>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-400 mb-1">Scans</p>
+                        <input
+                          type="number"
+                          min={0}
+                          value={poolInputs[req.id]?.poolScans ?? '200'}
+                          onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolLocations: '50', maxMembers: '5' }), poolScans: e.target.value } }))}
+                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-400 mb-1">Locations</p>
+                        <input
+                          type="number"
+                          min={0}
+                          value={poolInputs[req.id]?.poolLocations ?? '50'}
+                          onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', maxMembers: '5' }), poolLocations: e.target.value } }))}
+                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-400 mb-1">Members</p>
+                        <input
+                          type="number"
+                          min={0}
+                          value={poolInputs[req.id]?.maxMembers ?? '5'}
+                          onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolLocations: '50' }), maxMembers: e.target.value } }))}
+                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleApprove(req.id)}
+                        disabled={actionLoading[req.id]}
+                        className="flex-1 py-1.5 bg-green-800 text-green-200 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {actionLoading[req.id] ? 'Approving...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(req.id)}
+                        disabled={actionLoading[`r_${req.id}`]}
+                        className="flex-1 py-1.5 bg-red-900 text-red-300 rounded text-xs font-medium hover:bg-red-800 disabled:opacity-50"
+                      >
+                        {actionLoading[`r_${req.id}`] ? 'Rejecting...' : 'Reject'}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}
