@@ -138,15 +138,50 @@ router.post(
           updateData.prioritySupport = PLANS[planKey].prioritySupport;
         }
 
+        const currentTeams = await prisma.user.findMany({
+          where: { stripeSubscriptionId: subscription.id },
+          select: { id: true, poolScans: true, poolLocations: true },
+        });
+
         await prisma.user.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: updateData,
         });
+
+        // Cap member allocations if pool shrunk
+        for (const team of currentTeams) {
+          if (updateData.poolScans != null) {
+            const newScans = updateData.poolScans as number;
+            const currentScans = team.poolScans ?? 0;
+            if (newScans < currentScans) {
+              await prisma.user.updateMany({
+                where: { managedById: team.id, allocatedScans: { gt: newScans } },
+                data: { allocatedScans: newScans },
+              });
+            }
+          }
+          if (updateData.poolLocations != null) {
+            const newLocs = updateData.poolLocations as number;
+            const currentLocs = team.poolLocations ?? 0;
+            if (newLocs < currentLocs) {
+              await prisma.user.updateMany({
+                where: { managedById: team.id, allocatedLocations: { gt: newLocs } },
+                data: { allocatedLocations: newLocs },
+              });
+            }
+          }
+        }
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as SubscriptionPayload;
+        const affectedUsers = await prisma.user.findMany({
+          where: { stripeSubscriptionId: subscription.id },
+          select: { id: true },
+        });
+        const affectedIds = affectedUsers.map(u => u.id);
+
         await prisma.user.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: {
@@ -168,6 +203,18 @@ router.post(
             role: 'VIEWER',
           },
         });
+
+        // Clear all managed members' allocations and link
+        if (affectedIds.length > 0) {
+          await prisma.user.updateMany({
+            where: { managedById: { in: affectedIds } },
+            data: {
+              managedById: null,
+              allocatedScans: null,
+              allocatedLocations: null,
+            },
+          });
+        }
         break;
       }
 

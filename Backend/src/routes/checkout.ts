@@ -34,6 +34,9 @@ router.post(
     if (team.subscriptionSource === 'owner') {
       throw new AppError('Platform owner does not use Stripe billing', 400);
     }
+    if (team.managedById) {
+      throw new AppError('Contact your admin to upgrade your plan.', 403);
+    }
 
     if (team.subscriptionSource === 'stripe' && team.stripeSubscriptionId) {
       throw new AppError('Team already has an active subscription. Use the billing portal to manage or change plans.', 400);
