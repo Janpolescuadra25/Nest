@@ -172,6 +172,8 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
       actorId: req.user!.userId,
       action: 'INVITE_REVOKED',
       details: { inviteId: invite.id, revokedBy: 'owner', useCountAtRevocation: invite.useCount },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ message: 'Invite revoked' });
@@ -450,6 +452,8 @@ router.patch('/users/:id/block', asyncHandler(async(req: AuthRequest, res: Respo
       action: actionDetails.action,
       targetUserId: id,
       details: actionDetails.details,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -561,6 +565,8 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
         action: 'TIME_BOMB_SET',
         targetUserId: id,
         details: { timeBombAt: bombDate, gracePeriodHours: updated.gracePeriodHours, targetRole: updated.role },
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
       });
     }
     if (isTrial) {
@@ -569,6 +575,8 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
         action: 'OWNER_RESET_TRIAL',
         targetUserId: id,
         details: { trialExpiresAt: updated.trialExpiresAt, previousStatus: target.status },
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
       });
     }
 
@@ -706,6 +714,8 @@ router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Respon
       action: 'ROLE_CHANGE',
       targetUserId: id,
       details: { previousRole: target.role, newRole: role },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -745,6 +755,8 @@ router.patch('/users/:id/permissions-reset', asyncHandler(async(req: AuthRequest
       action: 'PERMISSIONS_RESET',
       targetUserId: id,
       details: { role: target.role, defaults },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: updated });
@@ -817,6 +829,8 @@ router.patch('/users/:id/permissions', asyncHandler(async(req: AuthRequest, res:
       action: 'PERMISSION_OVERRIDE',
       targetUserId: id,
       details: { overrideCount: Object.keys(permissions).length, permissions },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -862,6 +876,8 @@ router.post('/users/:id/approve', asyncHandler(async(req: AuthRequest, res: Resp
       action: 'APPROVAL_GRANTED',
       targetUserId: id,
       details: { targetEmail: target.email, targetRole: target.role },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -907,6 +923,8 @@ router.post('/users/:id/reject', asyncHandler(async(req: AuthRequest, res: Respo
       action: 'APPROVAL_REJECTED',
       targetUserId: id,
       details: { targetEmail: target.email, targetRole: target.role },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: updated, message: 'User rejected and disabled' });
@@ -966,6 +984,8 @@ router.post('/transfer', asyncHandler(async(req: AuthRequest, res: Response) => 
         previousOwnerEmail: owner.email,
         newOwnerEmail: targetUser.email,
       },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ previousOwner, newOwner });

@@ -38,6 +38,8 @@ export async function logAction(params: {
   action: AuditAction;
   targetUserId?: string;
   details?: Prisma.InputJsonValue | null;
+  ip?: string;
+  userAgent?: string;
 }): Promise<void> {
   try {
     await prisma.auditLog.create({
@@ -46,6 +48,8 @@ export async function logAction(params: {
         action: params.action,
         targetUserId: params.targetUserId ?? null,
         details: params.details ?? undefined,
+        ip: params.ip ?? null,
+        userAgent: params.userAgent ?? null,
       },
     });
   } catch (err: unknown) {

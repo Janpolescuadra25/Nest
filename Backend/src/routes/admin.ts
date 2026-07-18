@@ -293,6 +293,8 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
       actorId: req.user!.userId,
       action: 'INVITE_CREATED',
       details: { roleHint: resolvedRoleHint, maxUses: uses, expiresInHours: hours },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.status(201).json({
@@ -367,6 +369,8 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
       actorId: req.user!.userId,
       action: 'INVITE_REVOKED',
       details: { inviteId: invite.id, useCountAtRevocation: invite.useCount },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ message: 'Invite revoked' });
@@ -663,6 +667,8 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
       action: 'TIME_BOMB_SET',
       targetUserId: id,
       details: { timeBombAt: bombDate, gracePeriodHours: updated.gracePeriodHours, targetRole: updated.role },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -728,6 +734,8 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
       action: 'TIME_BOMB_CLEARED',
       targetUserId: id,
       details: { previousStatus: target.status },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
@@ -806,6 +814,8 @@ router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Respon
       action: 'ROLE_CHANGE',
       targetUserId: id,
       details: { previousRole: target.role, newRole: role },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });

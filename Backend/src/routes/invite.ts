@@ -146,12 +146,16 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       action: 'USER_CREATED',
       targetUserId: result.id,
       details: { method: 'invite', roleHint: invite.roleHint, inviteId: invite.id, status },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
     await logAction({
       actorId: invite.createdBy,
       action: 'INVITE_USED',
       targetUserId: result.id,
       details: { inviteId: invite.id },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
     });
 
     // Generate JWT — same pattern as auth.ts
