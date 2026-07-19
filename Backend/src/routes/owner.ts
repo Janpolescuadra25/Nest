@@ -496,7 +496,7 @@ router.get('/users', asyncHandler(async(req: AuthRequest, res: Response) => {
         status: user.status,
         adminId: user.adminId,
         adminName: user.admin?.name ?? null,
-        adminEmail: (user.admin as any)?.email ?? null,
+        adminEmail: user.admin?.email ?? null,
         blocked: user.blocked,
         timeBombAt: user.timeBombAt,
         gracePeriodHours: user.gracePeriodHours,
