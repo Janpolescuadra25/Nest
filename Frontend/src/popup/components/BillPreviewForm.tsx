@@ -515,7 +515,7 @@ export default function BillPreviewForm({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">🔗</div>
-        <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
+        <p className="text-gray-600 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync bills</p>
         <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
@@ -526,13 +526,13 @@ export default function BillPreviewForm({
 
   return (
     <div className="p-3 flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg">
-        <span className="text-green-400">✅ QB Connected</span>
+      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-emerald-50/20 border border-emerald-200 rounded-lg">
+        <span className="text-emerald-600">✅ QB Connected</span>
         <span className="text-gray-600 truncate">{status.realmId}</span>
         <button
           onClick={() => void syncAllLists()}
           disabled={listsLoading}
-          className="ml-auto text-gray-500 hover:text-gray-300 transition-colors"
+          className="ml-auto text-gray-600 hover:text-gray-600 transition-colors"
           title="Refresh QB lists"
         >
           {listsLoading ? '…' : '↻'}
@@ -542,7 +542,7 @@ export default function BillPreviewForm({
         <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
       )}
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-4">
+      <div className="bg-white border border-gray-200 rounded-lg p-3 grid grid-cols-2 gap-4">
         <div>
           <div className="text-sm font-medium text-gray-700 mb-1">Transaction Date</div>
           <SmartDatePicker value={txnDate} onChange={setTxnDate} />
@@ -620,8 +620,8 @@ export default function BillPreviewForm({
         </div>
       </div>
 
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div className="flex flex-col gap-2 px-3 py-3 border-b border-gray-700/60 sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="flex flex-col gap-2 px-3 py-3 border-b border-gray-200 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={() => void handleAutoFill()}
@@ -631,7 +631,7 @@ export default function BillPreviewForm({
             Auto-fill from Scan
           </button>
           {autoFillSummary ? (
-            <div className="text-xs text-gray-300">
+            <div className="text-xs text-gray-600">
               {autoFillSummary.total} items: {autoFillSummary.mapped} mapped, {autoFillSummary.unmapped} unmapped
             </div>
           ) : null}
@@ -643,14 +643,14 @@ export default function BillPreviewForm({
             </summary>
             <div className="mt-2 space-y-1">
               {unmatchedItems.map((item, idx) => (
-                <div key={idx} className="text-xs text-gray-300">• {item.productName}</div>
+                <div key={idx} className="text-xs text-gray-600">• {item.productName}</div>
               ))}
             </div>
           </details>
         )}
         <div className="overflow-x-auto overflow-y-auto max-h-[320px]">
           <table className="w-full text-sm border-collapse min-w-[680px]">
-            <thead className="bg-slate-900/80 text-slate-300">
+            <thead className="bg-gray-50 text-gray-600">
               <tr>
                 <th className="text-left px-3 py-3 w-8">#</th>
                 <th className="text-left px-3 py-3 min-w-[180px]">Account</th>
@@ -663,8 +663,8 @@ export default function BillPreviewForm({
             </thead>
             <tbody>
               {effectiveLines.map((line, idx) => (
-                <tr key={line.localId} className={`border-b border-gray-700/60 ${idx % 2 === 1 ? 'bg-gray-800/40' : ''}`}>
-                  <td className="px-3 py-2 text-gray-400 text-center text-xs">{idx + 1}</td>
+                <tr key={line.localId} className={`border-b border-gray-200 ${idx % 2 === 1 ? 'bg-gray-50' : ''}`}>
+                  <td className="px-3 py-2 text-gray-600 text-center text-xs">{idx + 1}</td>
                   <td className="px-3 py-2 min-w-[180px] max-w-[240px]">
                     <SearchableSelect
                       options={accountOptions}
@@ -678,7 +678,7 @@ export default function BillPreviewForm({
                   </td>
                   <td className="px-3 py-2 min-w-[160px]">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-emerald-500 focus:outline-none"
+                      className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-600 text-sm rounded-md px-3 py-2 focus:border-emerald-500 focus:outline-none"
                       value={line.description}
                       onChange={(e) => updateLine(line.localId, { description: e.target.value })}
                       placeholder="Description…"
@@ -703,7 +703,7 @@ export default function BillPreviewForm({
                   </td>
                   <td className="px-3 py-2 text-right w-24">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-emerald-500 focus:outline-none"
+                      className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-600 text-sm rounded-md px-3 py-2 text-right focus:border-emerald-500 focus:outline-none"
                       value={line.amount}
                       onChange={(e) => updateLine(line.localId, { amount: e.target.value })}
                       placeholder="0.00"
@@ -714,7 +714,7 @@ export default function BillPreviewForm({
                     <button
                       type="button"
                       onClick={() => removeLine(line.localId)}
-                      className="text-gray-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="text-gray-600 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={effectiveLines.length <= 1}
                     >
                       ✕
@@ -724,9 +724,9 @@ export default function BillPreviewForm({
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
-                <td className="px-3 py-3 text-gray-400">{effectiveLines.length}</td>
-                <td colSpan={4} className="px-3 py-3 text-gray-400">Total</td>
+              <tr className="border-t border-gray-300 bg-gray-100 font-semibold">
+                <td className="px-3 py-3 text-gray-600">{effectiveLines.length}</td>
+                <td colSpan={4} className="px-3 py-3 text-gray-600">Total</td>
                 <td className="px-3 py-3 text-right font-mono text-emerald-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>
@@ -738,7 +738,7 @@ export default function BillPreviewForm({
       <button
         type="button"
         onClick={addLine}
-        className="w-full text-xs text-gray-500 hover:text-gray-300 border border-dashed border-gray-700 hover:border-gray-500 py-1.5 rounded-lg transition-colors"
+        className="w-full text-xs text-gray-600 hover:text-gray-600 border border-dashed border-gray-200 hover:border-gray-300 py-1.5 rounded-lg transition-colors"
       >
         + Add Line
       </button>
@@ -752,12 +752,12 @@ export default function BillPreviewForm({
         />
       )}
       {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
+        <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       {syncResult && (
-        <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs rounded-lg px-3 py-2 space-y-1.5">
           <div>{syncResult.skipped ? '✅ Bill already synced' : '✅ Bill created'} — <span className="font-mono">{syncResult.id}</span></div>
           {syncResult.docNumber && <div>Bill # {syncResult.docNumber}</div>}
           <div className="flex flex-wrap items-center gap-2">
@@ -792,7 +792,7 @@ export default function BillPreviewForm({
         <button
           type="button"
           onClick={handleClearAll}
-          className="px-3 py-2 text-xs text-red-400 border border-red-800 hover:bg-red-900/20 rounded-lg transition-colors"
+          className="px-3 py-2 text-xs text-red-600 border border-red-300 hover:bg-red-50/20 rounded-lg transition-colors"
         >
           Clear All
         </button>
@@ -800,7 +800,7 @@ export default function BillPreviewForm({
           type="button"
           onClick={() => void handleSync()}
           disabled={syncing || !hasHeader || !allMapped || !hasAmount}
-          className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
+          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
             ? 'Syncing Bill…'

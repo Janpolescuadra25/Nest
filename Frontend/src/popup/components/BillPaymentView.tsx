@@ -285,7 +285,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">🔗</div>
-        <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
+        <p className="text-gray-600 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to manage bill payments.</p>
         <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
@@ -296,13 +296,13 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
 
   return (
     <div className="p-3 flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg">
-        <span className="text-green-400">✅ QB Connected</span>
+      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-emerald-50/20 border border-emerald-200 rounded-lg">
+        <span className="text-emerald-600">✅ QB Connected</span>
         <span className="text-gray-600 truncate">{status.realmId}</span>
         <button
           onClick={() => void syncAllLists()}
           disabled={listsLoading}
-          className="ml-auto text-gray-500 hover:text-gray-300 transition-colors"
+          className="ml-auto text-gray-600 hover:text-gray-600 transition-colors"
           title="Refresh QB lists"
         >
           {listsLoading ? '…' : '↻'}
@@ -316,7 +316,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         <div className="lg:col-span-2 grid gap-3">
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Vendor</div>
+              <div className="text-xs text-gray-600 mb-1">Vendor</div>
               <SearchableSelect
                 options={vendorOptions}
                 value={selectedVendorId}
@@ -325,17 +325,17 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
               />
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Payment Date</div>
+              <div className="text-xs text-gray-600 mb-1">Payment Date</div>
               <SmartDatePicker value={paymentDate} onChange={setPaymentDate} />
             </div>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-3">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Payment Type</div>
+              <div className="text-xs text-gray-600 mb-1">Payment Type</div>
               <select
                 aria-label="Payment Type"
-                className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white"
+                className="w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900"
                 value={payType}
                 onChange={(event) => setPayType(event.target.value as PayType)}
               >
@@ -346,7 +346,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
             </div>
             {(payType === 'Check' || payType === 'CreditCard') && (
               <div>
-                <div className="text-xs text-gray-500 mb-1">Bank Account</div>
+                <div className="text-xs text-gray-600 mb-1">Bank Account</div>
                 <SearchableSelect
                   options={bankAccountOptions}
                   value={bankAccountId}
@@ -357,9 +357,9 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
             )}
             {payType === 'Check' && (
               <div>
-                <div className="text-xs text-gray-500 mb-1">Check No.</div>
+                <div className="text-xs text-gray-600 mb-1">Check No.</div>
                 <input
-                  className="w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white"
+                  className="w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900"
                   value={checkNum}
                   onChange={(event) => setCheckNum(event.target.value)}
                   placeholder="Check number"
@@ -369,17 +369,17 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
           </div>
         </div>
 
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-2">
-          <div className="text-xs text-gray-500 uppercase tracking-wider">Summary</div>
-          <div className="text-sm text-gray-200">Selected Bills: ${totalBills.toFixed(2)}</div>
-          <div className="text-sm text-gray-200">Credits Applied: -${totalCredits.toFixed(2)}</div>
-          <div className="text-lg font-semibold text-white">Net Payment: ${netPaymentAmount.toFixed(2)}</div>
-          <div className="text-xs text-gray-500">Location: {locations.find((l) => l.id === selectedLocationId)?.name || selectedLocationId || 'Not selected'}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+          <div className="text-xs text-gray-600 uppercase tracking-wider">Summary</div>
+          <div className="text-sm text-gray-700">Selected Bills: ${totalBills.toFixed(2)}</div>
+          <div className="text-sm text-gray-700">Credits Applied: -${totalCredits.toFixed(2)}</div>
+          <div className="text-lg font-semibold text-gray-900">Net Payment: ${netPaymentAmount.toFixed(2)}</div>
+          <div className="text-xs text-gray-600">Location: {locations.find((l) => l.id === selectedLocationId)?.name || selectedLocationId || 'Not selected'}</div>
         </div>
       </div>
 
       {loading && (
-        <div className="px-3 py-2 text-xs text-gray-400">Loading bills and credits…</div>
+        <div className="px-3 py-2 text-xs text-gray-600">Loading bills and credits…</div>
       )}
       {duplicateWarning && (
         <ErrorCard
@@ -390,14 +390,14 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         />
       )}
       {error && (
-        <div className="px-3 py-2 bg-red-900/30 border border-red-700 text-sm text-red-200 rounded-lg">{error}</div>
+        <div className="px-3 py-2 bg-red-50 border border-red-200 text-sm text-red-700 rounded-lg">{error}</div>
       )}
       {success && (
-        <div className="px-3 py-2 bg-green-900/30 border border-green-700 text-sm text-green-200 rounded-lg">
+        <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 rounded-lg">
           {success.skipped ? (
             <span>✅ Bill Payment already synced</span>
           ) : (
-            <>Bill Payment created successfully. ID: <span className="font-semibold text-white">{success.billPaymentId}</span> for <span className="font-semibold text-white">${(success.totalAmount ?? 0).toFixed(2)}</span> on {success.txnDate}.</>
+            <>Bill Payment created successfully. ID: <span className="font-semibold text-gray-900">{success.billPaymentId}</span> for <span className="font-semibold text-gray-900">${(success.totalAmount ?? 0).toFixed(2)}</span> on {success.txnDate}.</>
           )}
         </div>
       )}
@@ -405,30 +405,30 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs text-gray-400 uppercase tracking-wider">Outstanding Bills</div>
-            <p className="text-gray-500 text-xs">Select bills to pay and enter amounts.</p>
+            <div className="text-xs text-gray-600 uppercase tracking-wider">Outstanding Bills</div>
+            <p className="text-gray-600 text-xs">Select bills to pay and enter amounts.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={handleSelectAllBills}
-              className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded hover:bg-gray-700"
+              className="text-xs bg-white border border-gray-200 px-3 py-1 rounded hover:bg-gray-200"
             >
               Select All
             </button>
             <button
               type="button"
               onClick={handleDeselectAllBills}
-              className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded hover:bg-gray-700"
+              className="text-xs bg-white border border-gray-200 px-3 py-1 rounded hover:bg-gray-200"
             >
               Deselect All
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
-          <table className="min-w-full text-left text-sm text-gray-200">
-            <thead className="bg-gray-800 text-xs uppercase tracking-wider text-gray-400">
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-[#F5F5F7]">
+          <table className="min-w-full text-left text-sm text-gray-700">
+            <thead className="bg-white text-xs uppercase tracking-wider text-gray-600">
               <tr>
                 <th className="px-3 py-2">Pay</th>
                 <th className="px-3 py-2">Bill No.</th>
@@ -441,21 +441,21 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
             </thead>
             <tbody>
               {bills.map((bill) => (
-                <tr key={bill.id} className="border-t border-gray-800">
+                <tr key={bill.id} className="border-t border-gray-200">
                   <td className="px-3 py-2 align-top">
                     <input
                       type="checkbox"
                       aria-label="Select bill to pay"
                       checked={bill.selected}
                       onChange={(event) => updateBillSelection(bill.id, event.target.checked)}
-                      className="h-4 w-4 text-emerald-400 bg-gray-900 border-gray-700"
+                      className="h-4 w-4 text-emerald-400 bg-[#F5F5F7] border-gray-200"
                     />
                   </td>
-                  <td className="px-3 py-2 align-top text-xs text-gray-200">{bill.docNumber || bill.id}</td>
-                  <td className="px-3 py-2 align-top text-xs text-gray-200">{bill.txnDate}</td>
-                  <td className="px-3 py-2 align-top text-xs text-gray-200">{bill.dueDate || '—'}</td>
-                  <td className="px-3 py-2 align-top text-xs text-gray-200">${bill.totalAmt.toFixed(2)}</td>
-                  <td className="px-3 py-2 align-top text-xs text-gray-200">${bill.balance.toFixed(2)}</td>
+                  <td className="px-3 py-2 align-top text-xs text-gray-700">{bill.docNumber || bill.id}</td>
+                  <td className="px-3 py-2 align-top text-xs text-gray-700">{bill.txnDate}</td>
+                  <td className="px-3 py-2 align-top text-xs text-gray-700">{bill.dueDate || '—'}</td>
+                  <td className="px-3 py-2 align-top text-xs text-gray-700">${bill.totalAmt.toFixed(2)}</td>
+                  <td className="px-3 py-2 align-top text-xs text-gray-700">${bill.balance.toFixed(2)}</td>
                   <td className="px-3 py-2 align-top">
                     <input
                       type="number"
@@ -467,14 +467,14 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
                       step="0.01"
                       disabled={!bill.selected}
                       onChange={(event) => updateBillAmount(bill.id, parseFloat(event.target.value))}
-                      className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-white"
+                      className="w-full rounded border border-gray-200 bg-[#F5F5F7] px-2 py-1 text-xs text-gray-900"
                     />
                   </td>
                 </tr>
               ))}
               {bills.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-4 text-center text-xs text-gray-500">No outstanding bills found for this vendor.</td>
+                  <td colSpan={7} className="px-3 py-4 text-center text-xs text-gray-600">No outstanding bills found for this vendor.</td>
                 </tr>
               )}
             </tbody>
@@ -486,30 +486,30 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs text-gray-400 uppercase tracking-wider">Vendor Credits</div>
-              <p className="text-gray-500 text-xs">Apply credits to reduce the payment amount.</p>
+              <div className="text-xs text-gray-600 uppercase tracking-wider">Vendor Credits</div>
+              <p className="text-gray-600 text-xs">Apply credits to reduce the payment amount.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleApplyAllCredits}
-                className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded hover:bg-gray-700"
+                className="text-xs bg-white border border-gray-200 px-3 py-1 rounded hover:bg-gray-200"
               >
                 Apply All
               </button>
               <button
                 type="button"
                 onClick={handleClearAllCredits}
-                className="text-xs bg-gray-800 border border-gray-700 px-3 py-1 rounded hover:bg-gray-700"
+                className="text-xs bg-white border border-gray-200 px-3 py-1 rounded hover:bg-gray-200"
               >
                 Clear All
               </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
-            <table className="min-w-full text-left text-sm text-gray-200">
-              <thead className="bg-gray-800 text-xs uppercase tracking-wider text-gray-400">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-[#F5F5F7]">
+            <table className="min-w-full text-left text-sm text-gray-700">
+              <thead className="bg-white text-xs uppercase tracking-wider text-gray-600">
                 <tr>
                   <th className="px-3 py-2">Apply</th>
                   <th className="px-3 py-2">Credit No.</th>
@@ -521,20 +521,20 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
               </thead>
               <tbody>
                 {credits.map((credit) => (
-                  <tr key={credit.id} className="border-t border-gray-800">
+                  <tr key={credit.id} className="border-t border-gray-200">
                     <td className="px-3 py-2 align-top">
                       <input
                         type="checkbox"
                         aria-label="Select credit to apply"
                         checked={credit.selected}
                         onChange={(event) => updateCreditSelection(credit.id, event.target.checked)}
-                        className="h-4 w-4 text-emerald-400 bg-gray-900 border-gray-700"
+                        className="h-4 w-4 text-emerald-400 bg-[#F5F5F7] border-gray-200"
                       />
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-gray-200">{credit.docNumber || credit.id}</td>
-                    <td className="px-3 py-2 align-top text-xs text-gray-200">{credit.txnDate}</td>
-                    <td className="px-3 py-2 align-top text-xs text-gray-200">${credit.totalAmt.toFixed(2)}</td>
-                    <td className="px-3 py-2 align-top text-xs text-gray-200">${credit.balance.toFixed(2)}</td>
+                    <td className="px-3 py-2 align-top text-xs text-gray-700">{credit.docNumber || credit.id}</td>
+                    <td className="px-3 py-2 align-top text-xs text-gray-700">{credit.txnDate}</td>
+                    <td className="px-3 py-2 align-top text-xs text-gray-700">${credit.totalAmt.toFixed(2)}</td>
+                    <td className="px-3 py-2 align-top text-xs text-gray-700">${credit.balance.toFixed(2)}</td>
                     <td className="px-3 py-2 align-top">
                       <input
                         type="number"
@@ -546,7 +546,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
                         step="0.01"
                         disabled={!credit.selected}
                         onChange={(event) => updateCreditAmount(credit.id, parseFloat(event.target.value))}
-                        className="w-full rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-white"
+                        className="w-full rounded border border-gray-200 bg-[#F5F5F7] px-2 py-1 text-xs text-gray-900"
                       />
                     </td>
                   </tr>
@@ -558,7 +558,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
       )}
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="text-sm text-gray-200">Net Payment: <span className="font-semibold text-white">${netPaymentAmount.toFixed(2)}</span></div>
+        <div className="text-sm text-gray-700">Net Payment: <span className="font-semibold text-gray-900">${netPaymentAmount.toFixed(2)}</span></div>
         <button
           type="button"
           onClick={() => void handleSubmit()}

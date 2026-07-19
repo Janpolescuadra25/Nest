@@ -53,7 +53,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-3 space-y-2">
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-semibold text-white">Scan History</div>
         <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
             type="button"
             disabled={page <= 1 || loading}
             onClick={() => loadPage(page - 1)}
-            className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded"
+            className="text-xs bg-gray-200 hover:bg-gray-100 disabled:opacity-40 text-gray-600 px-2 py-1 rounded"
           >
             ← Prev
           </button>
@@ -69,7 +69,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
             type="button"
             disabled={!hasMore || loading}
             onClick={() => loadPage(page + 1)}
-            className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded"
+            className="text-xs bg-gray-200 hover:bg-gray-100 disabled:opacity-40 text-gray-600 px-2 py-1 rounded"
           >
             Next →
           </button>
@@ -77,30 +77,30 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
       </div>
 
       {loading ? (
-        <div className="text-xs text-gray-400">Loading...</div>
+        <div className="text-xs text-gray-600">Loading...</div>
       ) : scans.length === 0 ? (
-        <div className="text-xs text-gray-400">No scan history yet.</div>
+        <div className="text-xs text-gray-600">No scan history yet.</div>
       ) : (
         <div className="space-y-2">
           {scans.map((scan) => (
-            <div key={scan.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex items-center justify-between gap-3">
+            <div key={scan.id} className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
-                  <div className="text-xs text-gray-300 font-semibold">{new Date(scan.scanDate).toLocaleDateString()}</div>
-                  <div className="text-[10px] uppercase px-2 py-0.5 rounded bg-gray-700 text-gray-300">{scan.source?.toUpperCase() ?? 'POS'}</div>
+                  <div className="text-xs text-gray-600 font-semibold">{new Date(scan.scanDate).toLocaleDateString()}</div>
+                  <div className="text-[10px] uppercase px-2 py-0.5 rounded bg-gray-200 text-gray-600">{scan.source?.toUpperCase() ?? 'POS'}</div>
                 </div>
                 <div className="text-[10px] inline-flex items-center rounded px-2 py-0.5 font-medium">
                   {scan.status === 'PENDING' && (
-                    <span className="bg-yellow-600/30 text-yellow-400">PENDING</span>
+                    <span className="bg-amber-100 text-amber-600">PENDING</span>
                   )}
                   {scan.status === 'MAPPED' && (
                     <span className="bg-emerald-600/30 text-emerald-400">MAPPED</span>
                   )}
                   {scan.status === 'SYNCED' && (
-                    <span className="bg-green-600/30 text-green-400">SYNCED</span>
+                    <span className="bg-emerald-100 text-emerald-600">SYNCED</span>
                   )}
                   {scan.status === 'FAILED' && (
-                    <span className="bg-red-600/30 text-red-400">FAILED</span>
+                    <span className="bg-red-600/30 text-red-600">FAILED</span>
                   )}
                 </div>
               </div>

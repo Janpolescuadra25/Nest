@@ -909,21 +909,21 @@ export default function ScanView({
         <button
           type="button"
           onClick={() => setScanMode('pos')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
         >
           POS Scan
         </button>
         <button
           type="button"
           onClick={() => setScanMode('excel')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
         >
           Excel Scan
         </button>
         <button
           type="button"
           onClick={() => setScanMode('image')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
         >
           📷 Image
         </button>
@@ -933,7 +933,7 @@ export default function ScanView({
           className={`text-xs px-3 py-1.5 rounded font-medium transition-colors ${
             showHistory
               ? 'bg-emerald-700 text-white'
-              : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              : 'bg-gray-200 hover:bg-gray-100 text-gray-600'
           }`}
         >
           {showHistory ? '✕ History' : '📋 History'}
@@ -950,11 +950,11 @@ export default function ScanView({
 
       {scanMode === 'excel' ? (
         <div className="space-y-4">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">Excel Scan</div>
-                <div className="text-xs text-gray-400">Upload an Excel file and parse it into the scan pipeline.</div>
+                <div className="text-sm font-semibold text-gray-900">Excel Scan</div>
+                <div className="text-xs text-gray-600">Upload an Excel file and parse it into the scan pipeline.</div>
               </div>
               <button
                 type="button"
@@ -973,30 +973,30 @@ export default function ScanView({
               onChange={handleExcelFileSelect}
             />
             {uploadedExcelFile ? (
-              <div className="text-xs text-gray-300">Selected file: {uploadedExcelFile.name}</div>
+              <div className="text-xs text-gray-600">Selected file: {uploadedExcelFile.name}</div>
             ) : (
-              <div className="text-xs text-gray-500">No Excel file selected yet.</div>
+              <div className="text-xs text-gray-600">No Excel file selected yet.</div>
             )}
             {excelParseError && (
-              <div className="text-xs text-red-400">{excelParseError}</div>
+              <div className="text-xs text-red-600">{excelParseError}</div>
             )}
             {!selectedTemplate ? (
-              <div className="rounded-lg border border-orange-700 bg-orange-950/20 p-3 text-xs text-orange-200">
+              <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700">
                 Select a template in the Mappings tab before parsing Excel data.
               </div>
             ) : !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 ? (
-              <div className="rounded-lg border border-orange-700 bg-orange-950/20 p-3 text-xs text-orange-200 space-y-2">
+              <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700 space-y-2">
                 <div>⚠️ This template has no column mapping configured. Configure it first.</div>
                 <button
                   type="button"
                   onClick={handleOpenExcelModal}
-                  className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 rounded px-3 py-1.5"
+                  className="text-xs bg-white hover:bg-gray-200 border border-gray-200 text-gray-700 rounded px-3 py-1.5"
                 >
                   Open Excel import modal
                 </button>
               </div>
             ) : (
-              <div className="rounded-lg border border-green-700 bg-green-950/20 p-3 text-xs text-green-200">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
                 ✅ Column mapping is configured for {selectedTemplate.name}.
               </div>
             )}
@@ -1012,7 +1012,7 @@ export default function ScanView({
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5"
+                className="text-xs bg-white hover:bg-gray-200 text-gray-700 rounded px-3 py-1.5"
               >
                 Clear scan
               </button>
@@ -1020,15 +1020,15 @@ export default function ScanView({
           </div>
 
           {excelPreviewSheets.length > 0 && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-gray-400">Preview from {excelPreviewSheetName || 'sheet'}</div>
+                <div className="text-xs text-gray-600">Preview from {excelPreviewSheetName || 'sheet'}</div>
                 {excelPreviewSheets.length > 1 && (
                   <select
                     value={excelPreviewSheetName}
                     onChange={(e) => setExcelPreviewSheetName(e.target.value)}
                     title="Choose worksheet"
-                    className="text-xs bg-gray-900 border border-gray-700 text-white rounded px-2 py-1"
+                    className="text-xs bg-[#F5F5F7] border border-gray-200 text-gray-900 rounded px-2 py-1"
                   >
                     {excelPreviewSheets.map((sheet) => (
                       <option key={sheet.name} value={sheet.name}>{sheet.name}</option>
@@ -1036,17 +1036,17 @@ export default function ScanView({
                   </select>
                 )}
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-gray-600">
                 {excelPreviewLoading ? 'Loading preview…' : 'This preview shows the first parsed transaction row from Excel.'}
               </div>
               {(() => {
                 const previewSheet = excelPreviewSheets.find((sheet) => sheet.name === excelPreviewSheetName) ?? excelPreviewSheets[0];
                 if (!previewSheet) return null;
                 return (
-                  <div className="overflow-x-auto border border-gray-700 rounded-lg bg-gray-950">
-                    <table className="min-w-full text-left text-xs text-gray-200">
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg bg-gray-50">
+                    <table className="min-w-full text-left text-xs text-gray-700">
                       <thead>
-                        <tr className="border-b border-gray-700 bg-gray-900 text-gray-300">
+                        <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
                           {previewSheet.headers.map((header) => (
                             <th key={header} className="px-2 py-2">{header}</th>
                           ))}
@@ -1054,9 +1054,9 @@ export default function ScanView({
                       </thead>
                       <tbody>
                         {previewSheet.rows.map((row, rowIndex) => (
-                          <tr key={rowIndex} className="odd:bg-gray-950 even:bg-gray-900">
+                          <tr key={rowIndex} className="odd:bg-gray-50 even:bg-[#F5F5F7]">
                             {previewSheet.headers.map((header) => (
-                              <td key={header} className="px-2 py-2 text-gray-300 truncate max-w-[10rem]">{row[header]}</td>
+                              <td key={header} className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{row[header]}</td>
                             ))}
                           </tr>
                         ))}
@@ -1069,15 +1069,15 @@ export default function ScanView({
           )}
 
           {excelDataResult && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-xs text-gray-200 space-y-2">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-700 space-y-2">
               <div>Parsed {excelDataResult.totalRows} row(s), skipped {excelDataResult.skippedRows} empty row(s).</div>
               <div>{excelDataResult.transactions.length} transaction(s) loaded into the scan pipeline.</div>
               <div>Active scan entry: {activeScanEntryLabel}</div>
             </div>
           )}
           {scanEntries.length > 1 && scanMode === 'excel' && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-3">
-              <div className="text-sm font-semibold text-white">Excel entries</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="text-sm font-semibold text-gray-900">Excel entries</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {scanEntries.map((entry, index) => {
                   const label = entry.fileName
@@ -1089,10 +1089,10 @@ export default function ScanView({
                       key={entry.id}
                       type="button"
                       onClick={() => setActiveScanEntryId(entry.id)}
-                      className={`text-left text-xs rounded-lg px-3 py-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-gray-900 text-gray-300 hover:bg-gray-800'}`}
+                      className={`text-left text-xs rounded-lg px-3 py-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-[#F5F5F7] text-gray-600 hover:bg-white'}`}
                     >
                       <div className="font-medium">{label}</div>
-                      <div className="text-gray-400">{selected ? 'Active' : 'Select this entry'}</div>
+                      <div className="text-gray-600">{selected ? 'Active' : 'Select this entry'}</div>
                     </button>
                   );
                 })}
@@ -1103,7 +1103,7 @@ export default function ScanView({
       ) : scanMode === 'image' ? (
         <div className="space-y-4">
           <div
-            className={`bg-gray-800 border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-emerald-400 bg-emerald-950/50' : 'border-gray-700'}`}
+            className={`bg-white border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200'}`}
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -1111,10 +1111,10 @@ export default function ScanView({
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-sm font-semibold text-gray-900">
                   Image Invoice Scan
                 </div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-600">
                   Upload a receipt image to continue.
                 </div>
               </div>
@@ -1134,8 +1134,8 @@ export default function ScanView({
               onChange={handleInvoiceFileSelect}
             />
             {invoiceFile ? (
-              <div className="space-y-2 text-xs text-gray-300">
-                <div className="flex items-center justify-between gap-2 text-gray-100">
+              <div className="space-y-2 text-xs text-gray-600">
+                <div className="flex items-center justify-between gap-2 text-gray-800">
                   <span>Selected: {invoiceFile.name}</span>
                   <button
                     type="button"
@@ -1143,7 +1143,7 @@ export default function ScanView({
                       setInvoiceFile(null);
                       setInvoicePreviewUrl(null);
                     }}
-                    className="text-gray-400 hover:text-gray-200 text-[10px] font-medium"
+                    className="text-gray-600 hover:text-gray-700 text-[10px] font-medium"
                   >
                     ✕ Remove
                   </button>
@@ -1152,18 +1152,18 @@ export default function ScanView({
                   <img
                     src={invoicePreviewUrl}
                     alt="Selected invoice preview"
-                    className="max-h-32 rounded border border-gray-700 object-contain"
+                    className="max-h-32 rounded border border-gray-200 object-contain"
                   />
                 )}
               </div>
             ) : (
               <div>
-                <div className="text-xs text-gray-500">No file selected yet.</div>
+                <div className="text-xs text-gray-600">No file selected yet.</div>
                 {!invoiceFile && !showInvoiceReview && (
                   <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     isDragOver
                       ? 'border-emerald-400 text-emerald-300'
-                      : 'border-gray-600 text-gray-500'
+                      : 'border-gray-300 text-gray-600'
                   }`}>
                     <div className="text-2xl mb-1">📄</div>
                     <div className="text-xs">
@@ -1175,12 +1175,12 @@ export default function ScanView({
               </div>
             )}
             {invoiceUploadError && (
-              <div className="rounded-md border border-red-700 bg-red-950/20 px-3 py-2 text-xs text-red-300 flex items-center justify-between gap-3">
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 flex items-center justify-between gap-3">
                 <span>{invoiceUploadError}</span>
                 <button
                   type="button"
                   onClick={() => setInvoiceUploadError(null)}
-                  className="text-xs text-red-200 hover:text-red-100"
+                  className="text-xs text-red-700 hover:text-red-700"
                 >
                   Dismiss
                 </button>
@@ -1203,9 +1203,9 @@ export default function ScanView({
                   </span>
                   <span>({Math.round(documentClassification.confidence * 100)}% confidence)</span>
                 </div>
-                <div className="text-gray-400 text-xs italic mt-1">{documentClassification.reasoning}</div>
+                <div className="text-gray-600 text-xs italic mt-1">{documentClassification.reasoning}</div>
                 {documentClassification.documentType !== 'INVOICE' && documentClassification.documentType !== 'CHEQUE' && documentClassification.documentType !== 'RECEIPT' && (
-                  <div className="text-gray-500 text-sm mt-2">
+                  <div className="text-gray-600 text-sm mt-2">
                     This document type is not supported for image upload. Try POS scan or Excel import instead.
                   </div>
                 )}
@@ -1223,7 +1223,7 @@ export default function ScanView({
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-1.5"
+                className="text-xs bg-white hover:bg-gray-200 text-gray-700 rounded px-3 py-1.5"
               >
                 Clear scan
               </button>
@@ -1231,14 +1231,14 @@ export default function ScanView({
             {(blurWarning || ocrConfidence !== null) && (
               <div className="space-y-2">
                 {blurWarning && (
-                  <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3 mb-3">
-                    <p className="text-yellow-100 text-sm">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                    <p className="text-amber-700 text-sm">
                       ⚠ This image appears blurry. For better results, try retaking the photo with better focus and lighting.
                     </p>
                   </div>
                 )}
                 {ocrConfidence !== null && (
-                  <div className={`text-xs mb-2 ${ocrConfidence < 50 ? 'text-red-400' : ocrConfidence < 75 ? 'text-yellow-300' : 'text-green-300'}`}>
+                  <div className={`text-xs mb-2 ${ocrConfidence < 50 ? 'text-red-600' : ocrConfidence < 75 ? 'text-amber-600' : 'text-emerald-600'}`}>
                     OCR Confidence: {Math.round(ocrConfidence)}%
                     {ocrConfidence < 50 && ' — Results may be inaccurate. Please review carefully.'}
                   </div>
@@ -1265,7 +1265,7 @@ export default function ScanView({
               />
             )}
             {invoiceConfirmSuccess && (
-              <div className="bg-green-900/30 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 flex items-center gap-2">
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs rounded-lg px-3 py-2 flex items-center gap-2">
                 <span>✅</span>
                 <span>Invoice data accepted — go to <strong>Map</strong> → <strong>Preview</strong> to create your bill.</span>
               </div>
@@ -1277,7 +1277,7 @@ export default function ScanView({
           <div className="flex flex-col gap-3 mb-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className={`text-xs px-2 py-1 rounded-full ${
-                detectedPOS ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'
+                detectedPOS ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-200 text-gray-600'
               }`}>
                 {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}
               </div>
@@ -1291,7 +1291,7 @@ export default function ScanView({
                       return next;
                     });
                   }}
-                  className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1 rounded-lg transition-colors"
+                  className="text-xs bg-white hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg transition-colors"
                 >
                   {showTabPicker ? 'Hide tab picker' : 'Choose tab to scan'}
                 </button>
@@ -1308,31 +1308,31 @@ export default function ScanView({
 
             <div className="space-y-2">
               {selectedTab ? (
-                <div className="text-xs text-gray-300">
+                <div className="text-xs text-gray-600">
                   Selected tab: <strong>{selectedTab.title || selectedTab.url || `Tab #${selectedTab.id}`}</strong>
                   {isKnownPOSTab(selectedTab) ? ' — Known POS tab' : ' — Unknown tab (AI scan will be used)'}
                 </div>
               ) : (
-                <div className="text-xs text-gray-500">Pick a tab above to scan it with Nest.</div>
+                <div className="text-xs text-gray-600">Pick a tab above to scan it with Nest.</div>
               )}
               {aiConfidence && scanMode === 'pos' && !scanning && !aiScanning && (
                 <div className="mt-1 flex items-center gap-1.5 text-[10px]">
-                  <span className="text-gray-400">AI Confidence:</span>
+                  <span className="text-gray-600">AI Confidence:</span>
                   <span className={aiConfidence.confidence >= 0.8
-                    ? 'text-green-400'
+                    ? 'text-emerald-600'
                     : aiConfidence.confidence >= 0.6
-                      ? 'text-yellow-400'
-                      : 'text-red-400'}>
+                      ? 'text-amber-600'
+                      : 'text-red-600'}>
                     {Math.round(aiConfidence.confidence * 100)}%
                   </span>
                   {aiConfidence.posType && (
-                    <span className="text-gray-500">• {aiConfidence.posType}</span>
+                    <span className="text-gray-600">• {aiConfidence.posType}</span>
                   )}
                 </div>
               )}
               {aiScanError && (
-                <div className="mt-2 p-2 bg-yellow-900/30 border border-yellow-700 rounded text-xs text-yellow-300">
-                  <p className="text-xs text-yellow-300">{aiScanError}</p>
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-600">
+                  <p className="text-xs text-amber-600">{aiScanError}</p>
                   {capturedScreenshot && (
                     <button
                       type="button"
@@ -1348,9 +1348,9 @@ export default function ScanView({
           </div>
 
           {showTabPicker && (
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 mb-3 max-h-56 overflow-y-auto text-xs text-gray-200">
+            <div className="bg-[#F5F5F7] border border-gray-200 rounded-lg p-3 mb-3 max-h-56 overflow-y-auto text-xs text-gray-700">
               {allTabs.length === 0 ? (
-                <div className="text-gray-500">Loading tabs…</div>
+                <div className="text-gray-600">Loading tabs…</div>
               ) : (
                 allTabs.map((tab) => {
                   const selected = tab.id === selectedTab?.id;
@@ -1359,10 +1359,10 @@ export default function ScanView({
                       key={tab.id ?? `${tab.windowId}-${tab.index}-${tab.title}`}
                       type="button"
                       onClick={() => handleTabSelect(tab)}
-                      className={`w-full text-left rounded-lg px-3 py-2 mb-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
+                      className={`w-full text-left rounded-lg px-3 py-2 mb-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
                     >
                       <div className="font-medium truncate">{tab.title || tab.url || 'Untitled tab'}</div>
-                      <div className="text-gray-400 truncate">{tab.url}</div>
+                      <div className="text-gray-600 truncate">{tab.url}</div>
                     </button>
                   );
                 })
@@ -1377,27 +1377,27 @@ export default function ScanView({
           {scanData ? (
             <>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">{activeScanEntry?.source === 'pos' ? `Extracted ${detectedPOS?.name ?? 'POS'} fields` : 'Extracted invoice data'} ({Object.keys(scanData).length})</span>
+                <span className="text-xs text-gray-600">{activeScanEntry?.source === 'pos' ? `Extracted ${detectedPOS?.name ?? 'POS'} fields` : 'Extracted invoice data'} ({Object.keys(scanData).length})</span>
                 <button
                   onClick={handleClear}
-                  className="text-xs text-gray-400 hover:text-red-400 border border-gray-600 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
+                  className="text-xs text-gray-600 hover:text-red-600 border border-gray-300 hover:border-red-200 px-2 py-0.5 rounded transition-colors"
                 >
                   ✕ Clear
                 </button>
               </div>
-              <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left text-xs text-gray-500 px-3 py-2">Field</th>
-                      <th className="text-right text-xs text-gray-500 px-3 py-2">Amount</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left text-xs text-gray-600 px-3 py-2">Field</th>
+                      <th className="text-right text-xs text-gray-600 px-3 py-2">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(scanData).map(([field, value]) => (
-                      <tr key={field} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                        <td className="px-3 py-2 text-gray-300 text-xs">{field}</td>
-                        <td className="px-3 py-2 text-white text-xs text-right font-mono">
+                      <tr key={field} className="border-b border-gray-200 hover:bg-gray-100">
+                        <td className="px-3 py-2 text-gray-600 text-xs">{field}</td>
+                        <td className="px-3 py-2 text-gray-900 text-xs text-right font-mono">
                           {field.includes('Count')
                             ? String(value)
                             : `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
@@ -1406,8 +1406,8 @@ export default function ScanView({
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-700/40">
-                      <td className="px-3 py-2 text-xs text-gray-400 font-medium">Total</td>
+                    <tr className="bg-gray-100">
+                      <td className="px-3 py-2 text-xs text-gray-600 font-medium">Total</td>
                       <td className="px-3 py-2 text-xs text-emerald-400 text-right font-mono font-bold">
                         ${Object.entries(scanData)
                           .filter(([key]) => !key.includes('Count'))

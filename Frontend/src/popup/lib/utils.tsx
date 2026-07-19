@@ -55,12 +55,12 @@ export function formatAction(action: string): string {
 
 export function trialCountdown(expiresAt: string | null | undefined): ReactNode {
   if (!expiresAt) {
-    return <span className="text-xs text-gray-400 font-medium">No trial set</span>;
+    return <span className="text-xs text-gray-600 font-medium">No trial set</span>;
   }
 
   const expiry = new Date(expiresAt).getTime();
   if (Number.isNaN(expiry)) {
-    return <span className="text-xs text-gray-400 font-medium">Invalid date</span>;
+    return <span className="text-xs text-gray-600 font-medium">Invalid date</span>;
   }
 
   const now = Date.now();
