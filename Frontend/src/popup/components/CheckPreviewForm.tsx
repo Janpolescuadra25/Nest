@@ -485,7 +485,7 @@ export default function CheckPreviewForm({
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync checks</p>
-        <button onClick={connect} className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">
+        <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
         </button>
       </div>
@@ -542,7 +542,7 @@ export default function CheckPreviewForm({
         <div className="col-span-2">
           <div className="text-sm font-medium text-gray-700 mb-1">Check # / Doc Number</div>
           <input
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
             placeholder="Optional check number"
@@ -551,7 +551,7 @@ export default function CheckPreviewForm({
         <div className="col-span-2">
           <div className="text-sm font-medium text-gray-700 mb-1">Memo</div>
           <input
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="Optional memo"
@@ -565,7 +565,7 @@ export default function CheckPreviewForm({
             type="button"
             onClick={() => void handleAutoFill()}
             disabled={!activeScanEntry?.lineItems?.length || !selectedTemplate?.columnMappings}
-            className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+            className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
           >
             Auto-fill from Scan
           </button>
@@ -616,7 +616,7 @@ export default function CheckPreviewForm({
                   </td>
                   <td className="px-3 py-2 min-w-[160px]">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-emerald-500 focus:outline-none"
                       value={line.description}
                       onChange={(e) => updateLine(line.localId, { description: e.target.value })}
                       placeholder="Description…"
@@ -633,7 +633,7 @@ export default function CheckPreviewForm({
                   </td>
                   <td className="px-3 py-2 text-right w-24">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-emerald-500 focus:outline-none"
                       value={line.amount}
                       onChange={(e) => updateLine(line.localId, { amount: e.target.value })}
                       placeholder="0.00"
@@ -657,7 +657,7 @@ export default function CheckPreviewForm({
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
                 <td className="px-3 py-3 text-gray-400">{effectiveLines.length}</td>
                 <td colSpan={3} className="px-3 py-3 text-gray-400">Total</td>
-                <td className="px-3 py-3 text-right font-mono text-cyan-300">${fmt(totalAmount)}</td>
+                <td className="px-3 py-3 text-right font-mono text-emerald-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>
             </tfoot>
@@ -693,7 +693,7 @@ export default function CheckPreviewForm({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
-              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
+              className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
             >
               Copy ID
             </button>
@@ -701,7 +701,7 @@ export default function CheckPreviewForm({
               href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/expense?txnId=${syncResult.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-cyan-400 hover:underline"
+              className="text-xs text-emerald-400 hover:underline"
             >
               View in QuickBooks ↗
             </a>

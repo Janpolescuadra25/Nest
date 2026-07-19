@@ -92,14 +92,14 @@ export default function LoginView({ onLogin }: LoginViewProps) {
   if (view === 'forgot-password') {
     return (
       <div className="p-4">
-        <button onClick={goToLogin} className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 block">&larr; Back to Login</button>
+        <button onClick={goToLogin} className="text-sm text-emerald-400 hover:text-emerald-300 mb-4 block">&larr; Back to Login</button>
         <h2 className="text-lg font-semibold text-white mb-1">Forgot Password</h2>
         <p className="text-sm text-gray-400 mb-4">Enter your email and we'll send you a reset link.</p>
         {resetError && <p className="text-red-400 text-sm mb-3">{resetError}</p>}
         {resetSent ? (
           <div>
             <p className="text-green-400 text-sm mb-4">If an account exists, a reset link has been sent to your email.</p>
-            <button onClick={goToLogin} className="text-sm text-cyan-400 hover:text-cyan-300">Back to Login</button>
+            <button onClick={goToLogin} className="text-sm text-emerald-400 hover:text-emerald-300">Back to Login</button>
           </div>
         ) : (
           <form onSubmit={handleForgotPassword} className="space-y-3">
@@ -109,9 +109,9 @@ export default function LoginView({ onLogin }: LoginViewProps) {
               value={resetEmail}
               onChange={e => setResetEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
             />
-            <button type="submit" disabled={resetLoading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+            <button type="submit" disabled={resetLoading} className="w-full py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50">
               {resetLoading ? 'Sending...' : 'Send Reset Link'}
             </button>
           </form>
@@ -123,25 +123,25 @@ export default function LoginView({ onLogin }: LoginViewProps) {
   if (view === 'become-partner') {
     return (
       <div className="p-4">
-        <button onClick={() => { setView('login'); setError(''); setSuccess(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 block">&larr; Back to Login</button>
+        <button onClick={() => { setView('login'); setError(''); setSuccess(''); }} className="text-sm text-emerald-400 hover:text-emerald-300 mb-4 block">&larr; Back to Login</button>
         <h2 className="text-lg font-semibold text-white mb-1">Become a Nest Partner</h2>
         <p className="text-sm text-gray-400 mb-4">Tell us about yourself and we'll get back to you.</p>
         {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
         {success && <p className="text-green-400 text-sm mb-3">{success}</p>}
         {!success && (
           <form onSubmit={handleBecomePartner} className="space-y-3">
-            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
-            <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
-            <input type="text" placeholder="Company (optional)" value={company} onChange={e => setCompany(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
+            <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500" />
+            <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500" />
+            <input type="text" placeholder="Company (optional)" value={company} onChange={e => setCompany(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500" />
             <textarea
               placeholder="Tell us how you plan to use Nest (min. 10 characters)"
               value={description}
               onChange={e => setDescription(e.target.value)}
               required
               rows={3}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
             />
-            <button type="submit" disabled={loading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+            <button type="submit" disabled={loading} className="w-full py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50">
               {loading ? 'Submitting...' : 'Submit Application'}
             </button>
           </form>
@@ -156,15 +156,15 @@ export default function LoginView({ onLogin }: LoginViewProps) {
       <p className="text-sm text-gray-400 mb-4">Welcome back to Nest.</p>
       {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
       <form onSubmit={handleLogin} className="space-y-3">
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500" />
-        <button type="submit" disabled={loading} className="w-full py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:bg-cyan-600 disabled:opacity-50">
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500" />
+        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500" />
+        <button type="submit" disabled={loading} className="w-full py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50">
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
       <div className="mt-4 space-y-2">
-        <button onClick={() => { setView('forgot-password'); setError(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 block">Forgot password?</button>
-        <button onClick={() => { setView('become-partner'); setError(''); setSuccess(''); }} className="text-sm text-cyan-400 hover:text-cyan-300 block">Become a Nest Partner</button>
+        <button onClick={() => { setView('forgot-password'); setError(''); }} className="text-sm text-emerald-400 hover:text-emerald-300 block">Forgot password?</button>
+        <button onClick={() => { setView('become-partner'); setError(''); setSuccess(''); }} className="text-sm text-emerald-400 hover:text-emerald-300 block">Become a Nest Partner</button>
       </div>
     </div>
   );

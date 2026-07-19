@@ -33,7 +33,7 @@ interface Props {
 }
 
 function roleBadge(role: string) {
-  if (role === 'ACCOUNTANT') return <span className="text-xs px-1 py-0.5 rounded bg-cyan-900 text-cyan-400">Accountant</span>;
+  if (role === 'ACCOUNTANT') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-900 text-emerald-400">Accountant</span>;
   if (role === 'STAFF') return <span className="text-xs px-1 py-0.5 rounded bg-green-900 text-green-400">Staff</span>;
   return <span className="text-xs px-1 py-0.5 rounded bg-slate-700 text-gray-400">{role}</span>;
 }
@@ -52,7 +52,7 @@ function trialBadge(trialExpiresAt: string | null) {
 
 function permPill(label: string, enabled: boolean) {
   return (
-    <span key={label} className={`text-xs px-1.5 py-0.5 rounded ${enabled ? 'bg-cyan-900 text-cyan-400' : 'bg-slate-700 text-gray-500'}`}>
+    <span key={label} className={`text-xs px-1.5 py-0.5 rounded ${enabled ? 'bg-emerald-900 text-emerald-400' : 'bg-slate-700 text-gray-500'}`}>
       {label}
     </span>
   );
@@ -177,7 +177,7 @@ export default function UsersTab({ jwt }: Props) {
           aria-label="Filter by role"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
-          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
         >
           <option value="">All roles</option>
           <option value="ACCOUNTANT">Accountant</option>
@@ -188,7 +188,7 @@ export default function UsersTab({ jwt }: Props) {
           aria-label="Filter by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
         >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -268,7 +268,7 @@ export default function UsersTab({ jwt }: Props) {
                       <button
                         onClick={() => handleResetCanX(user)}
                         disabled={actionLoading[`reset_${user.id}`]}
-                        className="w-full py-1.5 bg-cyan-900/50 border border-cyan-800 text-cyan-300 rounded text-xs font-medium hover:bg-cyan-800 disabled:opacity-50"
+                        className="w-full py-1.5 bg-emerald-900/50 border border-emerald-800 text-emerald-300 rounded text-xs font-medium hover:bg-emerald-800 disabled:opacity-50"
                       >
                         {actionLoading[`reset_${user.id}`] ? 'Resetting…' : 'Reset CanX'}
                       </button>
@@ -293,7 +293,7 @@ export default function UsersTab({ jwt }: Props) {
                             aria-label="Trial expiry date"
                             value={trialDate[user.id] ?? (user.trialExpiresAt ? user.trialExpiresAt.split('T')[0] : '')}
                             onChange={e => setTrialDate(p => ({ ...p, [user.id]: e.target.value }))}
-                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                       )}

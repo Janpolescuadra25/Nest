@@ -14,7 +14,7 @@ export function QBConnectionCard({ qbStatus, onReconnect, onDisconnect }: QBConn
 
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1">
-      <h3 className="text-sm font-medium text-cyan-300">QuickBooks Connection</h3>
+      <h3 className="text-sm font-medium text-emerald-300">QuickBooks Connection</h3>
       {qbStatus.connected ? (
         <>
           <p className="text-sm text-green-400">✅ Connected · Company ID: {qbStatus.realmId ?? '-'}</p>
@@ -65,7 +65,7 @@ export function QBConnectionCard({ qbStatus, onReconnect, onDisconnect }: QBConn
             <button
               type="button"
               onClick={onReconnect}
-              className="mt-1 text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-3 py-1 rounded"
+              className="mt-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded"
             >
               Connect QuickBooks
             </button>

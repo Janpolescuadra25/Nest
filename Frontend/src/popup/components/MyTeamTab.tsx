@@ -277,7 +277,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
           </button>
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600"
+            className="text-xs px-2 py-1 bg-emerald-700 text-emerald-200 rounded hover:bg-emerald-600"
           >
             + Invite
           </button>
@@ -301,7 +301,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
             <code className="flex-1 text-xs text-gray-300 bg-slate-800 px-2 py-1 rounded break-all">{BACKEND_URL}/api/invite/{createdLink.token}</code>
             <button
               onClick={() => copyToClipboard(`${BACKEND_URL}/api/invite/${createdLink.token}`)}
-              className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600 flex-shrink-0"
+              className="text-xs px-2 py-1 bg-emerald-700 text-emerald-200 rounded hover:bg-emerald-600 flex-shrink-0"
             >
               Copy
             </button>
@@ -319,14 +319,14 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
             value={inviteEmail}
             onChange={e => setInviteEmail(e.target.value)}
             required
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
           <input
             type="text"
             placeholder="Name (optional)"
             value={inviteName}
             onChange={e => setInviteName(e.target.value)}
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
           <select
             value={inviteRole}
@@ -346,7 +346,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                   placeholder="e.g. 30"
                   value={inviteTrialDays}
                   onChange={e => setInviteTrialDays(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
@@ -357,7 +357,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                   onChange={e => setInviteExpiryMsg(e.target.value)}
                   maxLength={200}
                   rows={2}
-                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
                 />
               </div>
             </>
@@ -365,7 +365,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
             <div className="text-xs text-gray-400">Team access is managed through your Stripe subscription.</div>
           )}
           <div className="flex gap-2">
-            <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50">
+            <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['invite'] ? 'Inviting...' : 'Send Invite'}
             </button>
             <button type="button" onClick={() => setShowInvite(false)} className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600">
@@ -394,7 +394,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                 max={720}
                 value={linkExpiry}
                 onChange={e => setLinkExpiry(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div className="flex-1">
@@ -405,12 +405,12 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                 max={100}
                 value={linkMaxUses}
                 onChange={e => setLinkMaxUses(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={actionLoading['linkCreate']} className="flex-1 py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50">
+            <button type="submit" disabled={actionLoading['linkCreate']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['linkCreate'] ? 'Creating...' : 'Create Link'}
             </button>
             <button type="button" onClick={() => setShowLinkForm(false)} className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600">
@@ -490,7 +490,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                         key={r}
                         onClick={() => handleRoleChange(member.id, r)}
                         disabled={actionLoading[`role_${member.id}`] || member.role === r}
-                        className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${member.role === r ? 'bg-cyan-700 text-cyan-200' : 'bg-slate-700 text-gray-400 hover:bg-slate-600'}`}
+                        className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${member.role === r ? 'bg-emerald-700 text-emerald-200' : 'bg-slate-700 text-gray-400 hover:bg-slate-600'}`}
                       >
                         {r}
                       </button>
@@ -585,7 +585,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                                   type="datetime-local"
                                   value={bombDate[member.id] ?? ''}
                                   onChange={e => setBombDate(p => ({ ...p, [member.id]: e.target.value }))}
-                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
                               <div>
@@ -595,7 +595,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                                   min={1}
                                   value={bombGrace[member.id] ?? '24'}
                                   onChange={e => setBombGrace(p => ({ ...p, [member.id]: e.target.value }))}
-                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
                               <div className="flex gap-2">
@@ -638,7 +638,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                               type="date"
                               value={trialDate[member.id] ?? ''}
                               onChange={e => setTrialDate(p => ({ ...p, [member.id]: e.target.value }))}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                             />
                           </div>
                           <div>
@@ -648,7 +648,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                               onChange={e => setTrialMsg(p => ({ ...p, [member.id]: e.target.value }))}
                               placeholder="Your trial has expired. Contact your admin to extend access."
                               rows={2}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 resize-none"
+                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
                             />
                           </div>
                         </div>

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 function Step({ num, title, children }: { num: number; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-2">
-      <div className="shrink-0 w-5 h-5 rounded-full bg-cyan-900/50 border border-cyan-700 flex items-center justify-center text-[10px] text-cyan-400 font-bold">
+      <div className="shrink-0 w-5 h-5 rounded-full bg-emerald-900/50 border border-emerald-700 flex items-center justify-center text-[10px] text-emerald-400 font-bold">
         {num}
       </div>
       <div>
@@ -23,7 +23,7 @@ function SubHeading({ children }: { children: React.ReactNode }) {
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2 text-[11px] text-gray-400">
-      <span className="text-cyan-500 shrink-0 mt-0.5">•</span>
+      <span className="text-emerald-500 shrink-0 mt-0.5">•</span>
       <span>{children}</span>
     </li>
   );
@@ -34,7 +34,7 @@ function TabInfo({ icon, name, children }: { icon: string; name: string; childre
     <div className="flex gap-2 bg-gray-900/50 rounded-lg p-2">
       <span className="text-sm shrink-0">{icon}</span>
       <div>
-        <p className="text-xs text-cyan-400 font-semibold">{name}</p>
+        <p className="text-xs text-emerald-400 font-semibold">{name}</p>
         <p className="text-[11px] text-gray-400 leading-relaxed">{children}</p>
       </div>
     </div>
@@ -47,7 +47,7 @@ function MappingRow({ field, account, side }: { field: string; account: string; 
     <div className="flex items-center gap-2">
       <span className="text-gray-400 flex-1 truncate">{field}</span>
       <span className="text-gray-600">→</span>
-      <span className="text-cyan-400 flex-1 truncate text-right">{account}</span>
+      <span className="text-emerald-400 flex-1 truncate text-right">{account}</span>
       <span className={`${sideColor} w-12 text-right`}>{side}</span>
     </div>
   );
@@ -70,22 +70,22 @@ const SECTIONS: Section[] = [
         <p className="text-gray-300 text-xs font-medium">Welcome to Nest! Here's how to go from zero to your first sync:</p>
         <div className="space-y-2.5">
           <Step num={1} title="Log In">
-            Open the Nest extension and sign in with your email and password. If you don't have an account yet, click <span className="text-cyan-400">"Request Access"</span> and an admin will approve you.
+            Open the Nest extension and sign in with your email and password. If you don't have an account yet, click <span className="text-emerald-400">"Request Access"</span> and an admin will approve you.
           </Step>
           <Step num={2} title="Connect QuickBooks">
-            Go to the <span className="text-cyan-400">Settings</span> tab and click <span className="text-cyan-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize Nest to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
+            Go to the <span className="text-emerald-400">Settings</span> tab and click <span className="text-emerald-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize Nest to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
           </Step>
           <Step num={3} title="Set Up a Location">
-            In Settings, add a <span className="text-cyan-400">Location</span> (e.g., "Downtown Store"). This links your scan data to a specific restaurant location. You can have multiple locations.
+            In Settings, add a <span className="text-emerald-400">Location</span> (e.g., "Downtown Store"). This links your scan data to a specific restaurant location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
-            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/check image or Excel file. Then click the <span className="text-cyan-400">Scan</span> tab and scan. Nest extracts the data automatically.
+            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/check image or Excel file. Then click the <span className="text-emerald-400">Scan</span> tab and scan. Nest extracts the data automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
-            Go to the <span className="text-cyan-400">Mapping</span> tab. Each field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-cyan-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
+            Go to the <span className="text-emerald-400">Mapping</span> tab. Each field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-emerald-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
           </Step>
           <Step num={6} title="Preview & Sync">
-            Go to the <span className="text-cyan-400">Preview</span> tab. You'll see your journal entry with all mapped amounts. Verify the totals balance (Debits = Credits), then click <span className="text-cyan-400">"Sync to QuickBooks"</span>. Your journal entry is now in QuickBooks! 🎉
+            Go to the <span className="text-emerald-400">Preview</span> tab. You'll see your journal entry with all mapped amounts. Verify the totals balance (Debits = Credits), then click <span className="text-emerald-400">"Sync to QuickBooks"</span>. Your journal entry is now in QuickBooks! 🎉
           </Step>
         </div>
       </div>
@@ -126,16 +126,16 @@ const SECTIONS: Section[] = [
 
         <SubHeading>How Mapping Works</SubHeading>
         <p className="text-[11px] text-gray-400">
-          Each mapping connects a <span className="text-cyan-400">source field</span> (left side) to a <span className="text-cyan-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-cyan-400">Debit</span> or <span className="text-cyan-400">Credit</span>.
+          Each mapping connects a <span className="text-emerald-400">source field</span> (left side) to a <span className="text-emerald-400">target account</span> in QuickBooks (right side). You also choose whether the amount is a <span className="text-emerald-400">Debit</span> or <span className="text-emerald-400">Credit</span>.
         </p>
 
         <SubHeading>Quick Tips</SubHeading>
         <ul className="space-y-1.5">
-          <Bullet>Click <span className="text-cyan-400">"Auto-Detect"</span> to let Nest suggest mappings based on field names and your QB account list</Bullet>
-          <Bullet>Use <span className="text-cyan-400">templates</span> (Standard Daily, Full Service, Quick Service) as a starting point — you can customize after applying</Bullet>
-          <Bullet>Each mapping can optionally include a <span className="text-cyan-400">Class</span> (for QB class tracking) and a <span className="text-cyan-400">Description</span> (shown on the journal entry line)</Bullet>
-          <Bullet>Check <span className="text-cyan-400">"Keep Separate"</span> if a line should not be consolidated with others on the same account (e.g., you want to see each payment method individually)</Bullet>
-          <Bullet>Mappings are saved <span className="text-cyan-400">per location</span> — set them up once and reuse every day</Bullet>
+          <Bullet>Click <span className="text-emerald-400">"Auto-Detect"</span> to let Nest suggest mappings based on field names and your QB account list</Bullet>
+          <Bullet>Use <span className="text-emerald-400">templates</span> (Standard Daily, Full Service, Quick Service) as a starting point — you can customize after applying</Bullet>
+          <Bullet>Each mapping can optionally include a <span className="text-emerald-400">Class</span> (for QB class tracking) and a <span className="text-emerald-400">Description</span> (shown on the journal entry line)</Bullet>
+          <Bullet>Check <span className="text-emerald-400">"Keep Separate"</span> if a line should not be consolidated with others on the same account (e.g., you want to see each payment method individually)</Bullet>
+          <Bullet>Mappings are saved <span className="text-emerald-400">per location</span> — set them up once and reuse every day</Bullet>
         </ul>
 
         <SubHeading>Common Mapping Examples</SubHeading>
@@ -210,28 +210,28 @@ const SECTIONS: Section[] = [
 
         <SubHeading>Header Fields</SubHeading>
         <ul className="space-y-1.5">
-          <Bullet><span className="text-cyan-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the report date.</Bullet>
-          <Bullet><span className="text-cyan-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
-          <Bullet><span className="text-cyan-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
+          <Bullet><span className="text-emerald-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the report date.</Bullet>
+          <Bullet><span className="text-emerald-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
+          <Bullet><span className="text-emerald-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
         </ul>
 
         <SubHeading>Line Items</SubHeading>
         <p className="text-[11px] text-gray-400">Each line has: Account, Name (entity), Description, Class, Tax Code, Debit, Credit.</p>
         <ul className="space-y-1.5">
-          <Bullet><span className="text-cyan-400">Account:</span> Required. The QB account for this line. Search by name or number.</Bullet>
-          <Bullet><span className="text-cyan-400">Name:</span> Optional. Assign a Customer, Vendor, or Employee to this line.</Bullet>
-          <Bullet><span className="text-cyan-400">Class:</span> Optional. QB class tracking for this line.</Bullet>
-          <Bullet><span className="text-cyan-400">Description:</span> Shown on the journal entry line in QB.</Bullet>
+          <Bullet><span className="text-emerald-400">Account:</span> Required. The QB account for this line. Search by name or number.</Bullet>
+          <Bullet><span className="text-emerald-400">Name:</span> Optional. Assign a Customer, Vendor, or Employee to this line.</Bullet>
+          <Bullet><span className="text-emerald-400">Class:</span> Optional. QB class tracking for this line.</Bullet>
+          <Bullet><span className="text-emerald-400">Description:</span> Shown on the journal entry line in QB.</Bullet>
         </ul>
 
         <SubHeading>Consolidation</SubHeading>
         <p className="text-[11px] text-gray-400">
-          Toggle <span className="text-cyan-400">"Consolidate"</span> to merge lines that share the same account + side + class. For example, three separate credit card payments all going to "Undeposited Funds" become one line. Lines marked "Keep Separate" in mappings won't be merged.
+          Toggle <span className="text-emerald-400">"Consolidate"</span> to merge lines that share the same account + side + class. For example, three separate credit card payments all going to "Undeposited Funds" become one line. Lines marked "Keep Separate" in mappings won't be merged.
         </p>
 
         <SubHeading>Syncing</SubHeading>
         <p className="text-[11px] text-gray-400">
-          Click <span className="text-cyan-400">"Sync to QuickBooks"</span> when the entry is balanced and all accounts are assigned. You'll see a confirmation with the Journal Entry ID. The entry is immediately visible in QuickBooks.
+          Click <span className="text-emerald-400">"Sync to QuickBooks"</span> when the entry is balanced and all accounts are assigned. You'll see a confirmation with the Journal Entry ID. The entry is immediately visible in QuickBooks.
         </p>
         <div className="bg-yellow-900/20 border border-yellow-800 rounded-lg p-2">
           <p className="text-yellow-400 text-[10px] font-semibold">⚠️ Important</p>
@@ -249,19 +249,19 @@ const SECTIONS: Section[] = [
 
         <div className="space-y-2">
           <div className="bg-gray-900/50 rounded-lg p-2">
-            <p className="text-cyan-400 text-xs font-semibold">COMBINE</p>
+            <p className="text-emerald-400 text-xs font-semibold">COMBINE</p>
             <p className="text-[11px] text-gray-400">Adds two or more fields together before mapping. Example: Combine "Food Sales" + "Beverage Sales" into a single "Total Sales" line.</p>
           </div>
           <div className="bg-gray-900/50 rounded-lg p-2">
-            <p className="text-cyan-400 text-xs font-semibold">DEDUCT</p>
+            <p className="text-emerald-400 text-xs font-semibold">DEDUCT</p>
             <p className="text-[11px] text-gray-400">Subtracts one field from another. Example: Deduct "Refunds" from "Gross Sales" to get "Net Sales".</p>
           </div>
           <div className="bg-gray-900/50 rounded-lg p-2">
-            <p className="text-cyan-400 text-xs font-semibold">THRESHOLD</p>
+            <p className="text-emerald-400 text-xs font-semibold">THRESHOLD</p>
             <p className="text-[11px] text-gray-400">Only applies the mapping if the amount exceeds a threshold you set. Example: Only map "Cash Over/Short" if it's more than $5.00.</p>
           </div>
           <div className="bg-gray-900/50 rounded-lg p-2">
-            <p className="text-cyan-400 text-xs font-semibold">FORMULA</p>
+            <p className="text-emerald-400 text-xs font-semibold">FORMULA</p>
             <p className="text-[11px] text-gray-400">Custom math expression using field values. For advanced users who need specific calculations.</p>
           </div>
         </div>
@@ -324,7 +324,7 @@ const SECTIONS: Section[] = [
             <span>✉️</span>
             <a
               href="mailto:support@nestsync.fyi"
-              className="text-cyan-400 hover:text-cyan-300 text-xs transition-colors"
+              className="text-emerald-400 hover:text-emerald-300 text-xs transition-colors"
             >
               support@nestsync.fyi
             </a>
@@ -396,8 +396,8 @@ export default function HelpPanel({ onClose }: Props) {
       </div>
 
       {/* Quick-start banner */}
-      <div className="px-3 py-2 bg-cyan-900/20 border-b border-cyan-800/40 flex-shrink-0">
-        <p className="text-[10px] text-cyan-400 text-center">
+      <div className="px-3 py-2 bg-emerald-900/20 border-b border-emerald-800/40 flex-shrink-0">
+        <p className="text-[10px] text-emerald-400 text-center">
           <span className="font-semibold">Quick start:</span> Settings → Connect QB → Scan → Map → Preview → Sync
         </p>
       </div>

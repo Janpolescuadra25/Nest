@@ -38,7 +38,7 @@ import { ToastProvider, ToastContainer } from './components/Toast';
 
 const ROLE_META: Record<string, { icon: string; color: string }> = {
   OWNER: { icon: '👑', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-600' },
-  ADMIN: { icon: '🛡️', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-600' },
+  ADMIN: { icon: '🛡️', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-600' },
   ACCOUNTANT: { icon: '📊', color: 'bg-blue-500/20 text-blue-300 border-blue-600' },
   STAFF: { icon: '🧑‍💻', color: 'bg-green-500/20 text-green-300 border-green-600' },
   VIEWER: { icon: '👁️', color: 'bg-gray-500/20 text-gray-300 border-gray-600' },
@@ -276,7 +276,7 @@ export default function App() {
             <span className="text-[9px] text-gray-500 truncate max-w-[90px]">{user.email}</span>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-cyan-400 font-bold text-base tracking-tight">🪹 Nest</span>
+            <span className="text-emerald-400 font-bold text-base tracking-tight">🪹 Nest</span>
             <span className="text-gray-500 text-xs">Restaurant Financial Automation</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
           </div>
@@ -347,7 +347,7 @@ export default function App() {
                 return (
                   <React.Fragment key={step.id}>
                     <span className={`text-[10px] font-medium px-1 rounded ${
-                      isCurrent ? 'text-cyan-400' : isCompleted ? 'text-green-400' : 'text-gray-600'
+                      isCurrent ? 'text-emerald-400' : isCompleted ? 'text-green-400' : 'text-gray-600'
                     }`}>
                       {step.label}
                     </span>

@@ -79,7 +79,7 @@ export default function CheckReviewPanel({ checkData, confidence, onConfirm, onR
               type="text"
               value={String(editData[field.key as keyof CheckData] ?? '')}
               onChange={(e) => updateField(field.key as keyof CheckData, e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
           </div>
         ))}
@@ -97,13 +97,13 @@ export default function CheckReviewPanel({ checkData, confidence, onConfirm, onR
               type="text"
               value={item.description ?? ''}
               onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-              className="flex-1 min-w-0 bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="flex-1 min-w-0 bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
             <input
               type="text"
               value={item.amount ?? ''}
               onChange={(e) => updateLineItem(index, 'amount', e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
           </div>
         ))}
@@ -111,7 +111,7 @@ export default function CheckReviewPanel({ checkData, confidence, onConfirm, onR
           <button
             type="button"
             onClick={addLineItem}
-            className="text-xs text-cyan-400 hover:underline"
+            className="text-xs text-emerald-400 hover:underline"
           >
             + Add Row
           </button>
@@ -131,7 +131,7 @@ export default function CheckReviewPanel({ checkData, confidence, onConfirm, onR
         <button
           type="button"
           onClick={() => onConfirm(editData)}
-          className="flex-1 bg-cyan-700 text-white rounded px-3 py-2 text-sm font-medium hover:bg-cyan-600"
+          className="flex-1 bg-emerald-700 text-white rounded px-3 py-2 text-sm font-medium hover:bg-emerald-600"
         >
           Use Results
         </button>

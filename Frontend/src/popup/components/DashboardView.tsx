@@ -238,14 +238,14 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       </div>
 
       {onboardingState?.step === 1 ? (
-        <div className="bg-indigo-700/20 border border-indigo-600 rounded-lg p-3 text-sm text-white">
+        <div className="bg-emerald-700/20 border border-emerald-600 rounded-lg p-3 text-sm text-white">
           <div className="font-semibold">Connect QuickBooks to get started.</div>
-          <div className="mt-1 text-xs text-indigo-100">QuickBooks connection is required before you can sync your first report.</div>
+          <div className="mt-1 text-xs text-emerald-100">QuickBooks connection is required before you can sync your first report.</div>
           {onNavigate && (
             <button
               type="button"
               onClick={() => onNavigate('settings')}
-              className="mt-3 rounded bg-white px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-gray-100"
+              className="mt-3 rounded bg-white px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-gray-100"
             >
               Connect QuickBooks
             </button>
@@ -259,7 +259,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
             <button
               type="button"
               onClick={() => onNavigate(onboardingState.step === 2 ? 'locations' : onboardingState.step === 3 ? 'mappings' : 'scan')}
-              className="mt-3 rounded bg-cyan-700 px-3 py-1 text-xs font-medium text-white hover:bg-cyan-600"
+              className="mt-3 rounded bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-600"
             >
               Continue setup
             </button>
@@ -291,7 +291,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       )}
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Pending Requests</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Pending Requests</h3>
         {pendingRequests.length === 0 ? (
           <p className="text-sm text-gray-500">No pending requests</p>
         ) : (
@@ -322,7 +322,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Recent Activity</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Recent Activity</h3>
         {recentActivity.length === 0 ? (
           <p className="text-sm text-gray-500">No recent activity</p>
         ) : (
@@ -339,7 +339,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <h3 className="text-sm font-medium text-cyan-300 mb-2">Partners</h3>
+        <h3 className="text-sm font-medium text-emerald-300 mb-2">Partners</h3>
         {partners.length === 0 ? (
           <p className="text-sm text-gray-500">No partners yet</p>
         ) : (

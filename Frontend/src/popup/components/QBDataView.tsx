@@ -111,7 +111,7 @@ export default function QBDataView() {
         <p className="text-gray-600 text-xs mb-4">Make sure QuickBooks is connected in Settings</p>
         <button
           onClick={() => void syncAllLists()}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg"
         >
           Retry
         </button>
@@ -164,14 +164,14 @@ export default function QBDataView() {
                 {/* Search + filter row */}
                 <div className="px-3 py-2 flex gap-2">
                   <input
-                    className="flex-1 bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+                    className="flex-1 bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                     placeholder={`Search ${section.label.toLowerCase()}…`}
                     value={getSearch(section.key)}
                     onChange={(e) => setSearch(section.key, e.target.value)}
                   />
                   {section.key === 'accounts' && (
                     <select
-                      className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+                      className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                       value={classFilter}
                       onChange={(e) => setClassFilter(e.target.value)}
                     >

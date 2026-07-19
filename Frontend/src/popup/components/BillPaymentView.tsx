@@ -287,7 +287,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to manage bill payments.</p>
-        <button onClick={connect} className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">
+        <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
         </button>
       </div>
@@ -448,7 +448,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
                       aria-label="Select bill to pay"
                       checked={bill.selected}
                       onChange={(event) => updateBillSelection(bill.id, event.target.checked)}
-                      className="h-4 w-4 text-cyan-400 bg-gray-900 border-gray-700"
+                      className="h-4 w-4 text-emerald-400 bg-gray-900 border-gray-700"
                     />
                   </td>
                   <td className="px-3 py-2 align-top text-xs text-gray-200">{bill.docNumber || bill.id}</td>
@@ -528,7 +528,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
                         aria-label="Select credit to apply"
                         checked={credit.selected}
                         onChange={(event) => updateCreditSelection(credit.id, event.target.checked)}
-                        className="h-4 w-4 text-cyan-400 bg-gray-900 border-gray-700"
+                        className="h-4 w-4 text-emerald-400 bg-gray-900 border-gray-700"
                       />
                     </td>
                     <td className="px-3 py-2 align-top text-xs text-gray-200">{credit.docNumber || credit.id}</td>
@@ -563,7 +563,7 @@ export default function BillPaymentView({ jwt, selectedLocationId }: Props) {
           type="button"
           onClick={() => void handleSubmit()}
           disabled={loading || !selectedVendorId || netPaymentAmount <= 0 || ((payType === 'Check' || payType === 'CreditCard') && !bankAccountId)}
-          className="rounded bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Processing…' : 'Create Bill Payment'}
         </button>

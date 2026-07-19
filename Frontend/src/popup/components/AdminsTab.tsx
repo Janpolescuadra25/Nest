@@ -282,7 +282,7 @@ export default function AdminsTab({ jwt }: Props) {
                           <button
                             onClick={() => handleSavePool(admin)}
                             disabled={actionLoading[`pool_${admin.id}`]}
-                            className="flex-1 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs rounded disabled:opacity-50"
+                            className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50"
                           >
                             Save pool
                           </button>
@@ -309,13 +309,13 @@ export default function AdminsTab({ jwt }: Props) {
                         max={1000}
                         value={editMaxUsers[admin.id] ?? String(admin.maxUsers ?? '')}
                         onChange={e => setEditMaxUsers(p => ({ ...p, [admin.id]: e.target.value }))}
-                        className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                        className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                         placeholder="e.g. 10"
                       />
                       <button
                         onClick={() => handleSaveMaxUsers(admin)}
                         disabled={actionLoading[`maxu_${admin.id}`]}
-                        className="px-3 py-1 bg-cyan-700 text-cyan-200 rounded text-xs hover:bg-cyan-600 disabled:opacity-50"
+                        className="px-3 py-1 bg-emerald-700 text-emerald-200 rounded text-xs hover:bg-emerald-600 disabled:opacity-50"
                       >
                         {actionLoading[`maxu_${admin.id}`] ? '…' : 'Save'}
                       </button>
@@ -422,7 +422,7 @@ export default function AdminsTab({ jwt }: Props) {
                               <button
                                 onClick={() => handleSaveAllocation(admin, member)}
                                 disabled={actionLoading[`alloc_${member.id}`]}
-                                className="w-full py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs rounded disabled:opacity-50"
+                                className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50"
                               >
                                 {actionLoading[`alloc_${member.id}`] ? 'Saving…' : 'Save allocation'}
                               </button>

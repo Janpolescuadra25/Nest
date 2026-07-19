@@ -152,7 +152,7 @@ export default function PartnersTab({ jwt }: Props) {
   };
 
   const ROLE_BADGE: Record<string, string> = {
-    ADMIN: 'bg-cyan-900 text-cyan-300',
+    ADMIN: 'bg-emerald-900 text-emerald-300',
     ACCOUNTANT: 'bg-blue-900 text-blue-300',
     STAFF: 'bg-green-900 text-green-300',
     VIEWER: 'bg-gray-700 text-gray-300',
@@ -203,12 +203,12 @@ export default function PartnersTab({ jwt }: Props) {
                   min={1}
                   value={editMaxUsers[admin.id] ?? (admin.maxUsers ?? 5)}
                   onChange={e => setEditMaxUsers(p => ({ ...p, [admin.id]: e.target.value }))}
-                  className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
                 <button
                   onClick={() => handleUpdateMaxUsers(admin)}
                   disabled={actionLoading[`mu_${admin.id}`]}
-                  className="px-2 py-1 bg-cyan-700 text-cyan-200 rounded text-xs hover:bg-cyan-600 disabled:opacity-50"
+                  className="px-2 py-1 bg-emerald-700 text-emerald-200 rounded text-xs hover:bg-emerald-600 disabled:opacity-50"
                 >
                   {actionLoading[`mu_${admin.id}`] ? 'Saving...' : 'Update'}
                 </button>
@@ -260,7 +260,7 @@ export default function PartnersTab({ jwt }: Props) {
 
       {/* Invite Links */}
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Invite Links</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Invite Links</h3>
 
         {/* Creation form */}
         <div className="space-y-2">
@@ -288,7 +288,7 @@ export default function PartnersTab({ jwt }: Props) {
                 min={1}
                 max={720}
                 onChange={e => setCreateExpiry(Math.min(720, Math.max(1, Number(e.target.value))))}
-                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-cyan-600"
+                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-emerald-600"
               />
             </div>
             <div className="flex-1">
@@ -299,24 +299,24 @@ export default function PartnersTab({ jwt }: Props) {
                 min={1}
                 max={100}
                 onChange={e => setCreateMaxUses(Math.min(100, Math.max(1, Number(e.target.value))))}
-                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-cyan-600"
+                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-emerald-600"
               />
             </div>
           </div>
           <button
             onClick={handleCreateInviteLink}
             disabled={creating}
-            className="w-full text-xs bg-cyan-800 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-1 rounded transition-colors"
+            className="w-full text-xs bg-emerald-800 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-1 rounded transition-colors"
           >
             {creating ? 'Creating…' : 'Create Invite Link'}
           </button>
           {lastCreatedUrl && (
-            <div className="bg-slate-900 border border-cyan-800 rounded p-2 space-y-1">
-              <div className="text-xs text-cyan-300 font-medium">Your new invite link</div>
+            <div className="bg-slate-900 border border-emerald-800 rounded p-2 space-y-1">
+              <div className="text-xs text-emerald-300 font-medium">Your new invite link</div>
               <div className="text-xs text-gray-400 break-all">{lastCreatedUrl}</div>
               <button
                 onClick={() => navigator.clipboard.writeText(lastCreatedUrl).catch(() => {}).then(() => showToast('Copied', 'success'))}
-                className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
+                className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
               >
                 Copy
               </button>
@@ -351,7 +351,7 @@ export default function PartnersTab({ jwt }: Props) {
                     {link.token && (
                       <button
                         onClick={() => navigator.clipboard.writeText(inviteUrl).catch(() => {}).then(() => showToast('Invite URL copied', 'success'))}
-                        className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
+                        className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
                       >
                         Copy URL
                       </button>

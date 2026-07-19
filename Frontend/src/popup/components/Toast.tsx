@@ -65,7 +65,7 @@ export function useToast(): ToastContextValue {
 const BORDER_COLOR: Record<ToastType, string> = {
   success: 'border-l-4 border-green-500',
   error:   'border-l-4 border-red-500',
-  info:    'border-l-4 border-cyan-500',
+  info:    'border-l-4 border-emerald-500',
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {

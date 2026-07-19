@@ -33,7 +33,7 @@ export default function MappingEditModal({
       <div>
         <div className="text-xs text-gray-500 mb-0.5">Description</div>
         <input
-          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
           value={mapping.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
           placeholder="Line description…"
@@ -91,7 +91,7 @@ export default function MappingEditModal({
         <select
           value={mapping.amountRule}
           onChange={(e) => onUpdate({ amountRule: e.target.value })}
-          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
         >
           {AMOUNT_RULES.map((rule) => (
             <option key={rule} value={rule}>{rule}</option>
@@ -221,7 +221,7 @@ export default function MappingEditModal({
         type="button"
         onClick={onSave}
         disabled={isSaving || !mapping.isDirty}
-        className="w-full text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white py-1.5 rounded transition-colors"
+        className="w-full text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white py-1.5 rounded transition-colors"
       >
         {isSaving ? 'Saving…' : mapping.isDirty ? '💾 Save' : '✓ Saved'}
       </button>

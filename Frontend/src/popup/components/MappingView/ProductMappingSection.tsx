@@ -274,7 +274,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
               <button
                 type="button"
                 onClick={openAdd}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
               >
                 + Add Product Mapping
               </button>
@@ -299,7 +299,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                           value={formData.productId}
                           onChange={(e) => setFormData((prev) => ({ ...prev, productId: e.target.value }))}
                           disabled={Boolean(editingMapping)}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">Select product</option>
                           {productOptions.map((option) => (
@@ -312,7 +312,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         <select
                           value={formData.accountId}
                           onChange={(e) => setFormData((prev) => ({ ...prev, accountId: e.target.value }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">Select account</option>
                           {accountGroups.map((group) => (
@@ -329,7 +329,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         <select
                           value={formData.postingType}
                           onChange={(e) => setFormData((prev) => ({ ...prev, postingType: e.target.value as ProductMappingFormData['postingType'] }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                         >
                           {POSTING_TYPES.map((option) => (
                             <option key={option} value={option}>{option}</option>
@@ -341,7 +341,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         <select
                           value={formData.classId ?? ''}
                           onChange={(e) => setFormData((prev) => ({ ...prev, classId: e.target.value || undefined }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">None</option>
                           {classGroups.map((group) => (
@@ -369,7 +369,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                           <select
                             value={ruleType}
                             onChange={(e) => setRuleType(e.target.value as MatchingRuleType)}
-                            className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                            className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                           >
                             <option value="EXACT">Exact Match</option>
                             <option value="CONTAINS">Contains</option>
@@ -385,7 +385,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                             <select
                               value={ruleDirection}
                               onChange={(e) => setRuleDirection(e.target.value as any)}
-                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                             >
                               <option value="either">Either direction</option>
                               <option value="input_contains_catalog">Input contains catalog</option>
@@ -417,7 +417,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                               value={rulePattern}
                               onChange={(e) => setRulePattern(e.target.value)}
                               placeholder="e.g. ^COCA-\\d+"
-                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                             />
                           </div>
                         )}
@@ -436,7 +436,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded px-3 py-2"
+                        className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded px-3 py-2"
                       >
                         {saving ? 'Saving…' : editingMapping ? 'Save Changes' : 'Create Mapping'}
                       </button>
@@ -477,7 +477,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                                   mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-900/50 text-amber-300' :
                                   mapping.matchingRule.type === 'REGEX' ? 'bg-purple-900/50 text-purple-300' :
                                   mapping.matchingRule.type === 'CONTAINS' ? 'bg-blue-900/50 text-blue-300' :
-                                  mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-cyan-900/50 text-cyan-300' :
+                                  mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-emerald-900/50 text-emerald-300' :
                                   'bg-gray-700 text-gray-300'
                                 }`}>
                                   {mapping.matchingRule.type}
@@ -490,7 +490,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                               <button
                                 type="button"
                                 onClick={() => openEdit(mapping)}
-                                className="text-xs text-cyan-400 hover:text-cyan-300"
+                                className="text-xs text-emerald-400 hover:text-emerald-300"
                               >
                                 ✏️
                               </button>
@@ -521,12 +521,12 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                     onChange={(e) => setTestInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleTestMatch(); }}
                     placeholder="e.g. Coca Cola 2L"
-                    className="flex-1 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                    className="flex-1 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                   />
                   <button
                     onClick={handleTestMatch}
                     disabled={!testInput.trim()}
-                    className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Test
                   </button>

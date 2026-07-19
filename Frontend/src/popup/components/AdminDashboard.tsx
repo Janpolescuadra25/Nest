@@ -187,7 +187,7 @@ export default function AdminDashboard({ jwt }: Props) {
       )}
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Expiring Soon</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Expiring Soon</h3>
         {expiringMembers.length === 0 ? (
           <p className="text-sm text-gray-500">No team members expiring in the next 3 days</p>
         ) : (
@@ -204,7 +204,7 @@ export default function AdminDashboard({ jwt }: Props) {
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <h3 className="text-sm font-medium text-cyan-300 mb-2">Team Members</h3>
+        <h3 className="text-sm font-medium text-emerald-300 mb-2">Team Members</h3>
         {teamMembers.length === 0 ? (
           <p className="text-sm text-gray-500">No team members yet</p>
         ) : (
@@ -226,7 +226,7 @@ export default function AdminDashboard({ jwt }: Props) {
                       {member.name && <div className="text-gray-500 truncate max-w-[180px]">{member.email}</div>}
                     </td>
                     <td className="py-2 pr-2">
-                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-cyan-900 text-cyan-300">{member.role}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-900 text-emerald-300">{member.role}</span>
                     </td>
                     <td className="py-2 pr-2">
                       <span className={`px-1.5 py-0.5 rounded text-[11px] ${
@@ -249,7 +249,7 @@ export default function AdminDashboard({ jwt }: Props) {
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Recent Activity</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Recent Activity</h3>
         {recentActivity.length === 0 ? (
           <p className="text-sm text-gray-500">No recent activity</p>
         ) : (

@@ -104,7 +104,7 @@ export default function ProductCatalogView({ jwt }: Props) {
         <button
           type="button"
           onClick={openAdd}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-2"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
         >
           + Add Product
         </button>
@@ -141,7 +141,7 @@ export default function ProductCatalogView({ jwt }: Props) {
                     <button
                       type="button"
                       onClick={() => openEdit(product)}
-                      className="text-xs text-cyan-400 hover:text-cyan-300"
+                      className="text-xs text-emerald-400 hover:text-emerald-300"
                       title="Edit product"
                     >
                       ✏️
@@ -185,7 +185,7 @@ export default function ProductCatalogView({ jwt }: Props) {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="mt-1 w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function ProductCatalogView({ jwt }: Props) {
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white rounded px-3 py-2"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded px-3 py-2"
               >
                 {saving ? 'Saving…' : 'Save'}
               </button>

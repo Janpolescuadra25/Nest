@@ -86,7 +86,7 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
       )}
 
       <div className="bg-gray-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">My Permissions</h3>
+        <h3 className="text-sm font-medium text-emerald-300">My Permissions</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className={hasPerm(user, 'scan', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'scan', 'write') ? '✅ Scan' : '❌ Scan'}</div>
           <div className={hasPerm(user, 'map', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'map', 'write') ? '✅ Map & Rules' : '❌ Map & Rules'}</div>
@@ -96,7 +96,7 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
       </div>
 
       <div className="bg-gray-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-cyan-300">Trial Status</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Trial Status</h3>
         {user.trialExpiresAt ? (
           <>
             {daysLeft !== null && daysLeft < 0 ? (

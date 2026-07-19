@@ -136,7 +136,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
           <button onClick={fetchLocations} className="text-xs text-gray-500 hover:text-gray-300">↻</button>
           <button
             onClick={() => { setShowAdd(p => !p); setAddForm(EMPTY_FORM); }}
-            className="text-xs px-2 py-1 bg-cyan-700 text-cyan-200 rounded hover:bg-cyan-600"
+            className="text-xs px-2 py-1 bg-emerald-700 text-emerald-200 rounded hover:bg-emerald-600"
           >
             {showAdd ? 'Cancel' : '+ Add'}
           </button>
@@ -154,7 +154,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
               value={addForm.name}
               onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
               placeholder="e.g. Main Store"
-              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
           <div>
@@ -164,13 +164,13 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
               value={addForm.posUrl}
               onChange={e => setAddForm(p => ({ ...p, posUrl: e.target.value }))}
               placeholder="https://pos.example.com"
-              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+              className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
           <button
             type="submit"
             disabled={addLoading}
-            className="w-full py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50"
+            className="w-full py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50"
           >
             {addLoading ? 'Creating…' : 'Create Location'}
           </button>
@@ -224,7 +224,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
                       aria-label="Location name"
                       value={String(form.name ?? '')}
                       onChange={e => handleEditChange(loc.id, 'name', e.target.value)}
-                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -234,7 +234,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
                       aria-label="POS URL"
                       value={String(form.posUrl ?? '')}
                       onChange={e => handleEditChange(loc.id, 'posUrl', e.target.value)}
-                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -244,7 +244,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
                       value={String(form.memoTemplate ?? '')}
                       onChange={e => handleEditChange(loc.id, 'memoTemplate', e.target.value)}
                       placeholder="e.g. {date} {location}"
-                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
@@ -254,7 +254,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
                       value={String(form.docNumberTemplate ?? '')}
                       onChange={e => handleEditChange(loc.id, 'docNumberTemplate', e.target.value)}
                       placeholder="e.g. JE-{date}"
-                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -270,7 +270,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
                   <button
                     onClick={() => handleSave(loc)}
                     disabled={editLoading[loc.id]}
-                    className="w-full py-1.5 bg-cyan-600 text-white rounded text-xs font-medium hover:bg-cyan-500 disabled:opacity-50"
+                    className="w-full py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50"
                   >
                     {editLoading[loc.id] ? 'Saving…' : 'Save Changes'}
                   </button>

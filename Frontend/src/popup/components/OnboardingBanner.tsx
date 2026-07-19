@@ -27,11 +27,11 @@ export function OnboardingBanner({ state, onNavigate }: Props) {
   const targetTab = STEP_TAB_MAP[state.step];
 
   return (
-    <div className="mx-4 mb-3 rounded-lg bg-indigo-600 p-3 text-white shadow-sm">
+    <div className="mx-4 mb-3 rounded-lg bg-emerald-600 p-3 text-white shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold">Step {state.step}/{state.totalSteps}: {ctaLabel}</div>
-          <div className="mt-1 text-[11px] text-indigo-100">Complete the quick start flow to sync your first report.</div>
+          <div className="mt-1 text-[11px] text-emerald-100">Complete the quick start flow to sync your first report.</div>
         </div>
         <button
           type="button"
@@ -49,7 +49,7 @@ export function OnboardingBanner({ state, onNavigate }: Props) {
         <button
           type="button"
           onClick={() => onNavigate(targetTab)}
-          className="rounded bg-white px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-gray-100"
+          className="rounded bg-white px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-gray-100"
         >
           {ctaLabel}
         </button>

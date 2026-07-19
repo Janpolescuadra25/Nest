@@ -657,7 +657,7 @@ export default function MappingView({
             type="date"
             value={billDefaults.dueDate?.value ?? ''}
             onChange={(e) => updateBillDefault('dueDate', e.target.value)}
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -672,7 +672,7 @@ export default function MappingView({
               }));
               setBillDefaultsDirty(true);
             }}
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           >
             <option value="" disabled>Select terms…</option>
             {termOptions.map((term) => (
@@ -687,7 +687,7 @@ export default function MappingView({
             value={billDefaults.memo?.value ?? ''}
             onChange={(e) => updateBillDefault('memo', e.target.value)}
             placeholder="Memo"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -697,7 +697,7 @@ export default function MappingView({
             value={billDefaults.docNumber?.value ?? ''}
             onChange={(e) => updateBillDefault('docNumber', e.target.value)}
             placeholder="Bill No."
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
       </div>
@@ -706,7 +706,7 @@ export default function MappingView({
           type="button"
           disabled={!billDefaultsDirty || templatesLoading}
           onClick={saveBillDefaults}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
         >
           Save Defaults
         </button>
@@ -757,7 +757,7 @@ export default function MappingView({
             value={vendorCreditDefaults.memo?.value ?? ''}
             onChange={(e) => updateVendorCreditDefault('memo', e.target.value)}
             placeholder="Memo"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -767,7 +767,7 @@ export default function MappingView({
             value={vendorCreditDefaults.docNumber?.value ?? ''}
             onChange={(e) => updateVendorCreditDefault('docNumber', e.target.value)}
             placeholder="e.g. VC-001"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
       </div>
@@ -776,7 +776,7 @@ export default function MappingView({
           type="button"
           disabled={!vendorCreditDefaultsDirty || templatesLoading}
           onClick={saveVendorCreditDefaults}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
         >
           Save Defaults
         </button>
@@ -827,7 +827,7 @@ export default function MappingView({
             value={chequeDefaults.memo?.value ?? ''}
             onChange={(e) => updateChequeDefault('memo', e.target.value)}
             placeholder="Memo"
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
         <div>
@@ -837,7 +837,7 @@ export default function MappingView({
             value={chequeDefaults.docNumber?.value ?? ''}
             onChange={(e) => updateChequeDefault('docNumber', e.target.value)}
             placeholder="Check No."
-            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
           />
         </div>
       </div>
@@ -846,7 +846,7 @@ export default function MappingView({
           type="button"
           disabled={!chequeDefaultsDirty || templatesLoading}
           onClick={saveChequeDefaults}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
         >
           Save Defaults
         </button>
@@ -1551,7 +1551,7 @@ export default function MappingView({
               value={selectedTemplateId}
               onChange={(e) => handleTemplateChange(e.target.value)}
               disabled={templatesLoading}
-              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
             >
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -1565,7 +1565,7 @@ export default function MappingView({
               <button
                 type="button"
                 onClick={openNewTemplateForm}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
               >
                 + New
               </button>
@@ -1616,7 +1616,7 @@ export default function MappingView({
           <button
             type="button"
             onClick={openNewTemplateForm}
-            className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+            className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
           >
             Create Default Template
           </button>
@@ -1662,7 +1662,7 @@ export default function MappingView({
                 <select
                   value={selectedExcelSheetName}
                   onChange={(e) => setSelectedExcelSheetName(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                  className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                 >
                   {excelSheets.map((sheet) => (
                     <option key={sheet.name} value={sheet.name}>{sheet.name}</option>
@@ -1678,7 +1678,7 @@ export default function MappingView({
                   <select
                     value={excelColumnMappings[field] ?? ''}
                     onChange={(e) => setExcelColumnMappings((prev) => ({ ...prev, [field]: e.target.value }))}
-                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="">Select column</option>
                     {(excelSheets.find((sheet) => sheet.name === selectedExcelSheetName)?.headers ?? []).map((header) => (
@@ -1725,7 +1725,7 @@ export default function MappingView({
                 type="button"
                 onClick={() => void saveExcelColumnMappings()}
                 disabled={excelLoading}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
               >
                 {excelLoading ? 'Saving…' : 'Save Mappings'}
               </button>
@@ -1759,7 +1759,7 @@ export default function MappingView({
                     name="importMode"
                     checked={importMode === 'merge'}
                     onChange={() => setImportMode('merge')}
-                    className="accent-cyan-500"
+                    className="accent-emerald-500"
                   />
                   Merge (add to existing)
                 </label>
@@ -1790,7 +1790,7 @@ export default function MappingView({
               <button
                 type="button"
                 onClick={() => void handleImportConfirm()}
-                className="flex-1 text-xs bg-cyan-700 hover:bg-cyan-600 text-white py-2 rounded-lg transition-colors"
+                className="flex-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded-lg transition-colors"
               >
                 Import
               </button>
@@ -1824,7 +1824,7 @@ export default function MappingView({
               type="button"
               onClick={applySuggestions}
               disabled={suggesting}
-              className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-1.5"
+              className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded px-3 py-1.5"
             >
               Apply Suggestions
             </button>
@@ -1858,14 +1858,14 @@ export default function MappingView({
         {memoOpen && (
           <div className="px-3 pb-3 space-y-3 border-t border-gray-700/60 pt-3">
             <p className="text-xs text-gray-500">
-              Use <code className="text-cyan-400 bg-gray-900 px-1 rounded">{'{field_name}'}</code> placeholders to insert scan values. Click a chip to insert at cursor.
+              Use <code className="text-emerald-400 bg-gray-900 px-1 rounded">{'{field_name}'}</code> placeholders to insert scan values. Click a chip to insert at cursor.
             </p>
 
             <div>
               <div className="text-xs text-gray-500 mb-1">Private Note / Memo</div>
               <textarea
                 ref={memoTextareaRef}
-                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none resize-none"
+                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none resize-none"
                 rows={2}
                 value={memoTemplate}
                 onChange={(e) => setMemoTemplate(e.target.value)}
@@ -1882,7 +1882,7 @@ export default function MappingView({
               </div>
               <input
                 ref={docInputRef}
-                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                 value={docNumberTemplate}
                 onChange={(e) => setDocNumberTemplate(e.target.value)}
                 placeholder="e.g. JE-{location}-{report_date}"
@@ -1913,7 +1913,7 @@ export default function MappingView({
                           <button
                             type="button"
                             onClick={() => insertAtCursor(memoTextareaRef.current, `{${chip.normalized}}`, memoTemplate, setMemoTemplate)}
-                            className="px-2 py-0.5 bg-gray-700 hover:bg-cyan-800 text-gray-300 hover:text-white transition-colors"
+                            className="px-2 py-0.5 bg-gray-700 hover:bg-emerald-800 text-gray-300 hover:text-white transition-colors"
                             title={`Insert {${chip.normalized}} into Memo`}
                           >
                             {chip.original}
@@ -1965,7 +1965,7 @@ export default function MappingView({
                     <select
                       value={localColMap[role.key] ?? ''}
                       onChange={(e) => setLocalColMap((prev) => ({ ...prev, [role.key]: e.target.value }))}
-                      className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                      className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                     >
                       <option value="">Select column</option>
                       {lineItemHeaders.map((header) => (
@@ -1979,7 +1979,7 @@ export default function MappingView({
                 <button
                   type="button"
                   onClick={() => void saveLineItemColumnMappings()}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+                  className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
                 >
                   Save Column Roles
                 </button>
@@ -2138,7 +2138,7 @@ export default function MappingView({
                 localMappings.filter((mapping) => mapping.isDirty).forEach((mapping) => void saveMapping(mapping));
               }}
               disabled={!localMappings.some((mapping) => mapping.isDirty)}
-              className="flex-1 text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 text-white py-2 rounded-lg transition-colors"
+              className="flex-1 text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white py-2 rounded-lg transition-colors"
             >
               💾 Save All Changes
             </button>

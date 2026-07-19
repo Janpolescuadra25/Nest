@@ -178,7 +178,7 @@ export default function TemplateWizard({
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
-              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -214,7 +214,7 @@ export default function TemplateWizard({
                   <select
                     value={posSystem}
                     onChange={(e) => setPosSystem(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="" disabled>Select POS System</option>
                     {POS_SYSTEM_OPTIONS.map((option) => (
@@ -238,7 +238,7 @@ export default function TemplateWizard({
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!canContinue}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+                  className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
                 >
                   Continue
                 </button>
@@ -286,7 +286,7 @@ export default function TemplateWizard({
                   type="button"
                   onClick={handleCreateTemplate}
                   disabled={!canCreate || isCreating}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+                  className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
                 >
                   {isCreating ? 'Creating…' : 'Create Template'}
                 </button>

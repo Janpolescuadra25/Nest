@@ -41,7 +41,7 @@ export function ScannerHealthCard({ scanHealth, days, onDaysChange }: ScannerHea
   return (
     <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-cyan-300">Scanner Health</h3>
+        <h3 className="text-sm font-medium text-emerald-300">Scanner Health</h3>
         <div className="flex items-center gap-1">
           {DAY_OPTIONS.map((opt) => (
             <button
@@ -50,7 +50,7 @@ export function ScannerHealthCard({ scanHealth, days, onDaysChange }: ScannerHea
               onClick={() => onDaysChange(opt.value)}
               className={`text-[11px] px-1.5 py-0.5 rounded ${
                 opt.value === days
-                  ? 'bg-cyan-700 text-white'
+                  ? 'bg-emerald-700 text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >

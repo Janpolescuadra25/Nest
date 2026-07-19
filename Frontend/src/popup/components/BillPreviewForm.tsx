@@ -517,7 +517,7 @@ export default function BillPreviewForm({
         <div className="text-4xl mb-3">🔗</div>
         <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync bills</p>
-        <button onClick={connect} className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">
+        <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
         </button>
       </div>
@@ -579,7 +579,7 @@ export default function BillPreviewForm({
           <div className="text-sm font-medium text-gray-700 mb-1">Terms</div>
           {terms.length > 0 ? (
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
               value={termsRef.value}
               onChange={(e) => {
                 const selected = terms.find((term) => term.Id === e.target.value);
@@ -593,7 +593,7 @@ export default function BillPreviewForm({
             </select>
           ) : (
             <input
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
               value={termsRef.value}
               onChange={(e) => setTermsRef({ value: e.target.value })}
               placeholder="Terms reference…"
@@ -603,7 +603,7 @@ export default function BillPreviewForm({
         <div className="col-span-2">
           <div className="text-sm font-medium text-gray-700 mb-1">Memo / Private Note</div>
           <input
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder={`Nest sync — ${txnDate}`}
@@ -612,7 +612,7 @@ export default function BillPreviewForm({
         <div className="col-span-2">
           <div className="text-sm font-medium text-gray-700 mb-1">Bill No.</div>
           <input
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-cyan-500 focus:outline-none"
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
             placeholder="Optional bill number"
@@ -626,7 +626,7 @@ export default function BillPreviewForm({
             type="button"
             onClick={() => void handleAutoFill()}
             disabled={!activeScanEntry?.lineItems?.length || !selectedTemplate?.columnMappings}
-            className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
+            className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
           >
             Auto-fill from Scan
           </button>
@@ -678,7 +678,7 @@ export default function BillPreviewForm({
                   </td>
                   <td className="px-3 py-2 min-w-[160px]">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 focus:border-emerald-500 focus:outline-none"
                       value={line.description}
                       onChange={(e) => updateLine(line.localId, { description: e.target.value })}
                       placeholder="Description…"
@@ -703,7 +703,7 @@ export default function BillPreviewForm({
                   </td>
                   <td className="px-3 py-2 text-right w-24">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-cyan-500 focus:outline-none"
+                      className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-md px-3 py-2 text-right focus:border-emerald-500 focus:outline-none"
                       value={line.amount}
                       onChange={(e) => updateLine(line.localId, { amount: e.target.value })}
                       placeholder="0.00"
@@ -727,7 +727,7 @@ export default function BillPreviewForm({
               <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
                 <td className="px-3 py-3 text-gray-400">{effectiveLines.length}</td>
                 <td colSpan={4} className="px-3 py-3 text-gray-400">Total</td>
-                <td className="px-3 py-3 text-right font-mono text-cyan-300">${fmt(totalAmount)}</td>
+                <td className="px-3 py-3 text-right font-mono text-emerald-300">${fmt(totalAmount)}</td>
                 <td />
               </tr>
             </tfoot>
@@ -763,7 +763,7 @@ export default function BillPreviewForm({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
-              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors"
+              className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
             >
               Copy ID
             </button>
@@ -771,7 +771,7 @@ export default function BillPreviewForm({
               href={`${status.environment === 'sandbox' ? 'https://app.sandbox.qbo.intuit.com' : 'https://app.qbo.intuit.com'}/app/bill?txnId=${syncResult.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-cyan-400 hover:underline"
+              className="text-xs text-emerald-400 hover:underline"
             >
               View in QuickBooks ↗
             </a>
@@ -779,7 +779,7 @@ export default function BillPreviewForm({
               <button
                 type="button"
                 onClick={onNavigateToPayments}
-                className="text-xs text-white bg-cyan-700 hover:bg-cyan-600 px-2 py-0.5 rounded transition-colors"
+                className="text-xs text-white bg-emerald-700 hover:bg-emerald-600 px-2 py-0.5 rounded transition-colors"
               >
                 Pay this bill → Payments
               </button>

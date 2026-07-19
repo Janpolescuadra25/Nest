@@ -108,7 +108,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
                 type="button"
                 disabled={loading || activeLoadId === scan.id}
                 onClick={() => handleLoad(scan)}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-3 py-1 rounded disabled:opacity-40"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded disabled:opacity-40"
               >
                 {activeLoadId === scan.id ? 'Loading…' : 'Load'}
               </button>

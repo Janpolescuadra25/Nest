@@ -408,7 +408,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   // ------------------------------------------------------------------
   // Render helpers
   // ------------------------------------------------------------------
-  const inputClass = 'w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none';
+  const inputClass = 'w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none';
   const labelClass = 'block text-xs text-gray-400 mb-1';
   const fieldGroupClass = 'space-y-1';
 
@@ -444,7 +444,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
             <button
               type="button"
               onClick={() => setSourceFields([...sourceFields, ''])}
-              className="text-xs text-cyan-400 hover:text-cyan-300 mt-1"
+              className="text-xs text-emerald-400 hover:text-emerald-300 mt-1"
             >+ Add another field</button>
             {validationErrors['sourceFields'] && (
               <p className="text-red-400 text-xs">{validationErrors['sourceFields']}</p>
@@ -562,17 +562,17 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   return (
     <div className="p-3">
       {rulesTipVisible && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-300">
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
           <span className="mt-0.5 shrink-0">ℹ️</span>
           <p className="flex-1">Rules transform scanned values before syncing — combine fields, apply formulas, set thresholds. Not required for simple 1:1 mappings.</p>
-          <button onClick={() => { chrome.storage.local.set({ [rulesTipKey]: true }); setRulesTipVisible(false); }} className="shrink-0 text-cyan-400 hover:text-cyan-200">✕</button>
+          <button onClick={() => { chrome.storage.local.set({ [rulesTipKey]: true }); setRulesTipVisible(false); }} className="shrink-0 text-emerald-400 hover:text-emerald-200">✕</button>
         </div>
       )}
       {/* New Rule button */}
       <div className="mb-3">
         <button
           onClick={openCreateForm}
-          className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1.5 rounded-lg whitespace-nowrap"
+          className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-2 py-1.5 rounded-lg whitespace-nowrap"
         >
           + New Rule
         </button>
@@ -620,7 +620,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               <select
                 value={formRuleType}
                 onChange={(e) => handleRuleTypeChange(e.target.value as Rule['ruleType'])}
-                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none"
               >
                 {(['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'] as const).map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -633,7 +633,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               <select
                 value={formTemplateId}
                 onChange={(e) => setFormTemplateId(e.target.value)}
-                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none"
               >
                 <option value="">None (Location-scoped)</option>
                 {templates.map((template) => (
@@ -669,7 +669,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               <button
                 type="submit"
                 disabled={!isFormValid()}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1 rounded"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1 rounded"
               >
                 {editingRule ? 'Update Rule' : 'Save Rule'}
               </button>
@@ -705,7 +705,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 <button
                   type="button"
                   onClick={() => openEditForm(r)}
-                  className="text-gray-500 hover:text-cyan-400 text-xs ml-1"
+                  className="text-gray-500 hover:text-emerald-400 text-xs ml-1"
                   title="Edit"
                 >✏️</button>
                 <button

@@ -391,7 +391,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2">
           <span className="text-xs text-gray-500 flex-shrink-0">Filter:</span>
           <select
-            className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+            className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
           >
@@ -486,7 +486,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                         </td>
                         <td className="px-3 py-2 font-mono text-gray-400">
                           {txnId
-                            ? <a href={`${qbBaseUrl}/app/${qbPath}?txnId=${txnId}`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline" title="View in QuickBooks">{txnId} ↗</a>
+                            ? <a href={`${qbBaseUrl}/app/${qbPath}?txnId=${txnId}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline" title="View in QuickBooks">{txnId} ↗</a>
                             : '—'
                           }
                         </td>
@@ -531,7 +531,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               PDF{expandedScanId === scan.id ? ' ▾' : ' ▸'}
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded border text-xs bg-cyan-900/30 border-cyan-800 text-cyan-400" title="POS scan">
+                            <span className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400" title="POS scan">
                               POS
                             </span>
                           )}
@@ -554,7 +554,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               onClick={() => void handleRetryScan(scan.id)}
                               disabled={isRetryingId === scan.id || retryDisabled}
                               title={retryDisabled ? 'Maximum retries reached (3 attempts)' : 'Retry sync'}
-                              className="text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-800 hover:border-cyan-600 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                              className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
                             >
                               {isRetryingId === scan.id ? '⏳ Retrying...' : '↻ Retry'}
                             </button>

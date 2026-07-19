@@ -909,21 +909,21 @@ export default function ScanView({
         <button
           type="button"
           onClick={() => setScanMode('pos')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           POS Scan
         </button>
         <button
           type="button"
           onClick={() => setScanMode('excel')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           Excel Scan
         </button>
         <button
           type="button"
           onClick={() => setScanMode('image')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           📷 Image
         </button>
@@ -932,7 +932,7 @@ export default function ScanView({
           onClick={() => setShowHistory((prev) => !prev)}
           className={`text-xs px-3 py-1.5 rounded font-medium transition-colors ${
             showHistory
-              ? 'bg-cyan-700 text-white'
+              ? 'bg-emerald-700 text-white'
               : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
           }`}
         >
@@ -959,7 +959,7 @@ export default function ScanView({
               <button
                 type="button"
                 onClick={() => excelInputRef.current?.click()}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
               >
                 Choose file
               </button>
@@ -1005,7 +1005,7 @@ export default function ScanView({
                 type="button"
                 disabled={!uploadedExcelFile || !selectedTemplate || !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 || excelParseLoading}
                 onClick={handleParseExcelData}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
                 {excelParseLoading ? 'Parsing…' : 'Parse Excel Data'}
               </button>
@@ -1089,7 +1089,7 @@ export default function ScanView({
                       key={entry.id}
                       type="button"
                       onClick={() => setActiveScanEntryId(entry.id)}
-                      className={`text-left text-xs rounded-lg px-3 py-2 transition ${selected ? 'bg-cyan-700 text-white' : 'bg-gray-900 text-gray-300 hover:bg-gray-800'}`}
+                      className={`text-left text-xs rounded-lg px-3 py-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-gray-900 text-gray-300 hover:bg-gray-800'}`}
                     >
                       <div className="font-medium">{label}</div>
                       <div className="text-gray-400">{selected ? 'Active' : 'Select this entry'}</div>
@@ -1103,7 +1103,7 @@ export default function ScanView({
       ) : scanMode === 'image' ? (
         <div className="space-y-4">
           <div
-            className={`bg-gray-800 border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-cyan-400 bg-cyan-950/50' : 'border-gray-700'}`}
+            className={`bg-gray-800 border rounded-lg p-4 space-y-3 transition ${isDragOver ? 'border-emerald-400 bg-emerald-950/50' : 'border-gray-700'}`}
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -1121,7 +1121,7 @@ export default function ScanView({
               <button
                 type="button"
                 onClick={() => invoiceFileInputRef.current?.click()}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
               >
                 Choose file
               </button>
@@ -1162,7 +1162,7 @@ export default function ScanView({
                 {!invoiceFile && !showInvoiceReview && (
                   <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     isDragOver
-                      ? 'border-cyan-400 text-cyan-300'
+                      ? 'border-emerald-400 text-emerald-300'
                       : 'border-gray-600 text-gray-500'
                   }`}>
                     <div className="text-2xl mb-1">📄</div>
@@ -1188,7 +1188,7 @@ export default function ScanView({
             )}
             {documentClassification && (
               <div className="space-y-2">
-                <div className="bg-cyan-700 text-white px-3 py-1.5 rounded-full text-xs inline-flex items-center gap-1.5">
+                <div className="bg-emerald-700 text-white px-3 py-1.5 rounded-full text-xs inline-flex items-center gap-1.5">
                   <span>AI detected:</span>
                   <span>
                     {documentClassification.documentType === 'INVOICE'
@@ -1216,7 +1216,7 @@ export default function ScanView({
                 type="button"
                 disabled={!invoiceFile || !jwt || invoiceUploading}
                 onClick={handleParseInvoice}
-                className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
                 {invoiceUploading ? 'Uploading…' : 'Parse Invoice'}
               </button>
@@ -1299,7 +1299,7 @@ export default function ScanView({
                   type="button"
                   onClick={handleTabScan}
                   disabled={!selectedTab || scanning || aiScanning}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
+                  className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg transition-colors"
                 >
                   {aiScanning || scanning ? 'Scanning…' : 'Scan selected tab'}
                 </button>
@@ -1359,7 +1359,7 @@ export default function ScanView({
                       key={tab.id ?? `${tab.windowId}-${tab.index}-${tab.title}`}
                       type="button"
                       onClick={() => handleTabSelect(tab)}
-                      className={`w-full text-left rounded-lg px-3 py-2 mb-2 transition ${selected ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
+                      className={`w-full text-left rounded-lg px-3 py-2 mb-2 transition ${selected ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
                     >
                       <div className="font-medium truncate">{tab.title || tab.url || 'Untitled tab'}</div>
                       <div className="text-gray-400 truncate">{tab.url}</div>
@@ -1408,7 +1408,7 @@ export default function ScanView({
                   <tfoot>
                     <tr className="bg-gray-700/40">
                       <td className="px-3 py-2 text-xs text-gray-400 font-medium">Total</td>
-                      <td className="px-3 py-2 text-xs text-cyan-400 text-right font-mono font-bold">
+                      <td className="px-3 py-2 text-xs text-emerald-400 text-right font-mono font-bold">
                         ${Object.entries(scanData)
                           .filter(([key]) => !key.includes('Count'))
                           .reduce((sum, [, v]) => sum + v, 0)

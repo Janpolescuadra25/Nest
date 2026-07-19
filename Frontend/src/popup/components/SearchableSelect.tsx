@@ -145,7 +145,7 @@ export default function SearchableSelect({
       <div
         ref={triggerRef}
         className={`flex items-center gap-1 bg-gray-900 border rounded px-2 py-1.5 text-xs cursor-pointer transition-colors ${
-          open ? 'border-cyan-500' : 'border-gray-600'
+          open ? 'border-emerald-500' : 'border-gray-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
         onClick={openDropdown}
         onKeyDown={handleKeyDown}
@@ -204,7 +204,7 @@ export default function SearchableSelect({
                       key={opt.value}
                       className={`px-3 py-1.5 cursor-pointer text-xs transition-colors ${
                         flatIdx === highlighted
-                          ? 'bg-cyan-800 text-white'
+                          ? 'bg-emerald-800 text-white'
                           : 'text-gray-300 hover:bg-gray-700'
                       }`}
                       onMouseDown={(e) => {

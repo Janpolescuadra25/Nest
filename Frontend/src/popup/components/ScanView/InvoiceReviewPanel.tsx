@@ -53,7 +53,7 @@ export default function InvoiceReviewPanel({ header, lineItems, confidence, onCo
               type="text"
               value={editHeader[field.key] ?? ''}
               onChange={(e) => updateHeader(field.key, e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
           </div>
         ))}
@@ -73,26 +73,26 @@ export default function InvoiceReviewPanel({ header, lineItems, confidence, onCo
               type="text"
               value={item.description ?? ''}
               onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-              className="flex-1 min-w-0 bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="flex-1 min-w-0 bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
             <input
               type="number"
               min="0"
               value={item.quantity ?? ''}
               onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
             <input
               type="text"
               value={item.unitPrice ?? ''}
               onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
             <input
               type="text"
               value={item.total ?? ''}
               onChange={(e) => updateLineItem(index, 'total', e.target.value)}
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             />
           </div>
         ))}
@@ -100,7 +100,7 @@ export default function InvoiceReviewPanel({ header, lineItems, confidence, onCo
           <button
             type="button"
             onClick={() => setEditLineItems((prev) => [...prev, { description: '', quantity: '', unitPrice: '', total: '' }])}
-            className="text-xs text-cyan-400 hover:underline"
+            className="text-xs text-emerald-400 hover:underline"
           >
             + Add Row
           </button>
@@ -120,7 +120,7 @@ export default function InvoiceReviewPanel({ header, lineItems, confidence, onCo
         <button
           type="button"
           onClick={() => onConfirm(editHeader, editLineItems)}
-          className="flex-1 bg-cyan-700 text-white rounded px-3 py-2 text-sm font-medium hover:bg-cyan-600"
+          className="flex-1 bg-emerald-700 text-white rounded px-3 py-2 text-sm font-medium hover:bg-emerald-600"
         >
           Use Results
         </button>

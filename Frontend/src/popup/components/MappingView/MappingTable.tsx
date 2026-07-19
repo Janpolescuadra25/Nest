@@ -122,7 +122,7 @@ function MappingCard({
 
   return (
     <div className={`bg-gray-800 border rounded-lg overflow-hidden transition-all ${
-      mapping.isDirty ? 'border-cyan-700' : 'border-gray-700'
+      mapping.isDirty ? 'border-emerald-700' : 'border-gray-700'
     }`}>
       <div className="flex items-center gap-2 px-3 py-2">
         <button
@@ -142,7 +142,7 @@ function MappingCard({
             />
           ) : (
             <input
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-cyan-500 focus:outline-none"
+              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
               value={mapping.sourceField}
               onChange={(e) => onUpdate({ sourceField: e.target.value })}
               placeholder="Source field name…"

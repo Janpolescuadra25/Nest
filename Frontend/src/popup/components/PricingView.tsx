@@ -53,7 +53,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
   if (user.subscriptionSource === 'owner') {
     return (
       <div className="p-4 text-center">
-        <div className="text-sm text-cyan-300 font-semibold">Platform Owner — Unlimited Access</div>
+        <div className="text-sm text-emerald-300 font-semibold">Platform Owner — Unlimited Access</div>
         <div className="mt-2 text-xs text-gray-400">You have full access to all Nest features.</div>
         <button
           type="button"
@@ -80,14 +80,14 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
         <button
           type="button"
           onClick={() => setBillingInterval('month')}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'month' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'month' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           Monthly
         </button>
         <button
           type="button"
           onClick={() => setBillingInterval('year')}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'year' ? 'bg-cyan-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'year' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
         >
           Annual — Save 20%
         </button>
@@ -113,7 +113,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
             return (
               <div
                 key={plan.id}
-                className={`rounded-3xl border p-4 ${plan.id === 'professional' ? 'border-cyan-500 bg-cyan-900/20' : 'border-gray-700 bg-gray-900'}`}
+                className={`rounded-3xl border p-4 ${plan.id === 'professional' ? 'border-emerald-500 bg-emerald-900/20' : 'border-gray-700 bg-gray-900'}`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -124,7 +124,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {plan.id === 'professional' && <span className="rounded-full bg-cyan-600 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">Most Popular</span>}
+                    {plan.id === 'professional' && <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">Most Popular</span>}
                     {isCurrent && <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-white">Current Plan</span>}
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
                       type="button"
                       onClick={() => handleSelectPlan(plan.id)}
                       disabled={submittingPlan !== null}
-                      className="w-full rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {submittingPlan === plan.id ? 'Processing...' : 'Choose Free Plan'}
                     </button>
@@ -158,7 +158,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
                       type="button"
                       onClick={() => handleSelectPlan(plan.id)}
                       disabled={submittingPlan !== null}
-                      className="w-full rounded-lg bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70"
+                      className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {submittingPlan === plan.id ? 'Processing...' : 'Upgrade'}
                     </button>

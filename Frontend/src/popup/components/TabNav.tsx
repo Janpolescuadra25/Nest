@@ -40,7 +40,7 @@ export default function TabNav({ currentTab, onTabChange, visibleTabs }: Props) 
           onClick={() => onTabChange(tab.id)}
           className={`flex-shrink-0 px-2 py-2 text-xs font-medium transition-colors flex flex-col items-center gap-0.5 min-w-[52px] ${
             currentTab === tab.id
-              ? 'text-cyan-400 border-b-2 border-cyan-400 bg-gray-900'
+              ? 'text-emerald-400 border-b-2 border-emerald-400 bg-gray-900'
               : 'text-gray-500 hover:text-gray-300'
           }`}
         >
