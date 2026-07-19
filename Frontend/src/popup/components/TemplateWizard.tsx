@@ -197,7 +197,7 @@ export default function TemplateWizard({
                     }}
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
                       scanMode === card.value
-                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        ? 'border-emerald-500 ring-2 ring-emerald-200'
                         : 'border-gray-700 hover:border-gray-500'
                     }`}
                   >
@@ -254,7 +254,7 @@ export default function TemplateWizard({
                     onClick={() => setTransactionType(type)}
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
                       transactionType === type
-                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        ? 'border-emerald-500 ring-2 ring-emerald-200'
                         : 'border-gray-700 hover:border-gray-500'
                     }`}
                   >

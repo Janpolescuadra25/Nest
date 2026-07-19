@@ -807,7 +807,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
                 {colVis.class && <td></td>}
                 {colVis.taxCode && <td></td>}
                 {colVis.debit && (
-                  <td className="px-2 py-2 text-right font-mono text-blue-300 font-bold">
+                  <td className="px-2 py-2 text-right font-mono text-emerald-300 font-bold">
                     ${fmt(totalDebits)}
                   </td>
                 )}
@@ -1022,7 +1022,7 @@ function TableRow({
             type="number"
             min="0"
             step="0.01"
-            className="w-full bg-gray-900 border border-gray-700 text-blue-300 text-xs rounded px-2 py-1 text-right focus:border-blue-500 focus:outline-none font-mono"
+            className="w-full bg-gray-900 border border-gray-700 text-emerald-300 text-xs rounded px-2 py-1 text-right focus:border-emerald-500 focus:outline-none font-mono"
             value={line.debit}
             placeholder="0.00"
             onChange={(e) => onChange({ debit: e.target.value, credit: e.target.value ? '' : line.credit })}

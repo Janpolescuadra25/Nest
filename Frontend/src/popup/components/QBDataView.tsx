@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQBContext } from '../contexts/QBContext';
 
 const CLASS_COLORS: Record<string, string> = {
-  Asset: 'text-blue-400',
+  Asset: 'text-emerald-400',
   Liability: 'text-red-400',
-  Equity: 'text-purple-400',
+  Equity: 'text-slate-400',
   Revenue: 'text-green-400',
   Expense: 'text-orange-400',
 };

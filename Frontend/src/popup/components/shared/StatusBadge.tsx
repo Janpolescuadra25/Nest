@@ -15,7 +15,7 @@ const STATUS_STYLES: Record<string, { label: string; classes: string }> = {
   grace_period: { label: 'Grace', classes: 'bg-yellow-900 text-yellow-300' },
   time_bombed: { label: 'Restricted', classes: 'bg-red-900 text-red-300' },
   blocked: { label: 'Blocked', classes: 'bg-red-900 text-red-300' },
-  syncing: { label: 'Syncing', classes: 'bg-blue-900 text-blue-300' },
+  syncing: { label: 'Syncing', classes: 'bg-emerald-900 text-emerald-300' },
   connected: { label: 'Connected', classes: 'bg-green-900 text-green-300' },
   disconnected: { label: 'Disconnected', classes: 'bg-gray-700 text-gray-400' },
 };

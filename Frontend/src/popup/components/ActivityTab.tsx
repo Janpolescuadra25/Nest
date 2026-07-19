@@ -23,8 +23,8 @@ const ACTION_COLORS: Record<string, string> = {
   ADMIN_APPROVED: 'bg-green-900 text-green-400',
   ADMIN_REJECTED: 'bg-red-900 text-red-400',
   ADMIN_UPDATED: 'bg-yellow-900 text-yellow-400',
-  USER_INVITED: 'bg-blue-900 text-blue-400',
-  ROLE_CHANGED: 'bg-purple-900 text-purple-400',
+  USER_INVITED: 'bg-emerald-900 text-emerald-400',
+  ROLE_CHANGED: 'bg-slate-700 text-slate-300',
   PERMISSION_UPDATED: 'bg-emerald-900 text-emerald-400',
   TIMEBOMB_SET: 'bg-orange-900 text-orange-400',
   USER_STATUS_CHANGED: 'bg-yellow-900 text-yellow-400',
@@ -156,7 +156,7 @@ export default function ActivityTab({ jwt }: Props) {
                     {/* Target */}
                     {log.target ? (
                       <div className="text-xs text-gray-500">
-                        → <span className="text-blue-400">{log.target.name ?? log.target.email}</span>
+                        → <span className="text-emerald-400">{log.target.name ?? log.target.email}</span>
                         {log.target.name && <span className="text-gray-600 ml-1">({log.target.email})</span>}
                       </div>
                     ) : (

@@ -39,7 +39,7 @@ import { ToastProvider, ToastContainer } from './components/Toast';
 const ROLE_META: Record<string, { icon: string; color: string }> = {
   OWNER: { icon: '👑', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-600' },
   ADMIN: { icon: '🛡️', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-600' },
-  ACCOUNTANT: { icon: '📊', color: 'bg-blue-500/20 text-blue-300 border-blue-600' },
+  ACCOUNTANT: { icon: '📊', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-600' },
   STAFF: { icon: '🧑‍💻', color: 'bg-green-500/20 text-green-300 border-green-600' },
   VIEWER: { icon: '👁️', color: 'bg-gray-500/20 text-gray-300 border-gray-600' },
 };

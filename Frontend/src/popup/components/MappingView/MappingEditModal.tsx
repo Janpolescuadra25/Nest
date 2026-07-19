@@ -205,7 +205,7 @@ export default function MappingEditModal({
                 const newCond: MappingCondition = { field: '', operator: 'equals', value: '' };
                 onUpdate({ conditions: [...(mapping.conditions || []), newCond] });
               }}
-              className="text-[10px] text-purple-400 hover:text-purple-300"
+              className="text-[10px] text-slate-400 hover:text-slate-300"
             >
               + Add condition
             </button>

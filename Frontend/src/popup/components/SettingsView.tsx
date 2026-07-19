@@ -248,7 +248,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-3">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Need Help?</div>
           <a
-            href="#"
+            href="javascript:void(0)"
             onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi' }); }}
             className="flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-xs transition-colors mb-2"
           >
@@ -257,14 +257,14 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           </a>
           <div className="flex gap-2">
             <a
-              href="#"
+              href="javascript:void(0)"
               onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest%20Bug%20Report' }); }}
               className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
             >
               🐛 Report a Bug
             </a>
             <a
-              href="#"
+              href="javascript:void(0)"
               onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest%20Feature%20Request' }); }}
               className="flex-1 text-center text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1.5 rounded transition-colors"
             >

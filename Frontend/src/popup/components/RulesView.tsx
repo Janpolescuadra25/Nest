@@ -44,9 +44,9 @@ const RULE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const ruleTypeColor: Record<Rule['ruleType'], string> = {
-  COMBINE: 'bg-blue-900 text-blue-300',
+  COMBINE: 'bg-emerald-900 text-emerald-300',
   DEDUCT: 'bg-orange-900 text-orange-300',
-  THRESHOLD: 'bg-purple-900 text-purple-300',
+  THRESHOLD: 'bg-slate-900 text-slate-300',
   FORMULA: 'bg-green-900 text-green-300',
 };
 

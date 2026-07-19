@@ -1517,11 +1517,11 @@ export default function MappingView({
         </div>
       )}
       {activeScanEntry && (
-        <div className="flex items-center gap-2 px-3 py-1.5 mb-3 rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-800">
+        <div className="flex items-center gap-2 px-3 py-1.5 mb-3 rounded-md bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
           <span className="font-medium">Scan Mode:</span>
           <span className="font-semibold overflow-hidden text-ellipsis whitespace-nowrap">{getScanModeDisplay(activeScanMode)}</span>
           {selectedTemplate?.posSystem && (
-            <span className="text-blue-600 inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap">({selectedTemplate.posSystem})</span>
+            <span className="text-emerald-600 inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap">({selectedTemplate.posSystem})</span>
           )}
         </div>
       )}
@@ -1905,7 +1905,7 @@ export default function MappingView({
                 {fieldsExpanded && (
                   <>
                     <div className="text-xs text-gray-500 mb-1.5">
-                      Click to insert into Memo · <span className="text-purple-400">#</span> to insert into Doc #:
+                      Click to insert into Memo · <span className="text-emerald-400">#</span> to insert into Doc #:
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {scanFieldChips.map((chip) => (
@@ -1921,7 +1921,7 @@ export default function MappingView({
                           <button
                             type="button"
                             onClick={() => insertAtCursor(docInputRef.current, `{${chip.normalized}}`, docNumberTemplate, setDocNumberTemplate)}
-                            className="px-1.5 py-0.5 bg-gray-800 hover:bg-purple-900 text-gray-500 hover:text-purple-300 transition-colors border-l border-gray-600"
+                            className="px-1.5 py-0.5 bg-gray-800 hover:bg-slate-800 text-gray-500 hover:text-slate-300 transition-colors border-l border-gray-600"
                             title={`Insert {${chip.normalized}} into Doc #`}
                           >
                             #

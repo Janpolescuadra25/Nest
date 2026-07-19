@@ -42,7 +42,7 @@ function TabInfo({ icon, name, children }: { icon: string; name: string; childre
 }
 
 function MappingRow({ field, account, side }: { field: string; account: string; side: string }) {
-  const sideColor = side === 'Credit' ? 'text-blue-400' : 'text-green-400';
+  const sideColor = side === 'Credit' ? 'text-emerald-400' : 'text-green-400';
   return (
     <div className="flex items-center gap-2">
       <span className="text-gray-400 flex-1 truncate">{field}</span>
@@ -170,8 +170,8 @@ const SECTIONS: Section[] = [
               <li>• Cash over/short</li>
             </ul>
           </div>
-          <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-2">
-            <p className="text-blue-400 text-xs font-semibold mb-1">Credit (Cr)</p>
+          <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-2">
+            <p className="text-emerald-400 text-xs font-semibold mb-1">Credit (Cr)</p>
             <p className="text-[10px] text-gray-400">Revenue or liabilities</p>
             <ul className="text-[10px] text-gray-500 mt-1 space-y-0.5">
               <li>• Sales Revenue</li>
@@ -188,10 +188,10 @@ const SECTIONS: Section[] = [
           <Bullet><span className="text-green-400">Debit:</span> Payments section (Cash, Credit Card, etc.) — money received</Bullet>
           <Bullet><span className="text-green-400">Debit:</span> Cash Activity — cash coming in</Bullet>
           <Bullet><span className="text-green-400">Debit:</span> Discounts & Voids — contra-revenue</Bullet>
-          <Bullet><span className="text-blue-400">Credit:</span> Revenue & Net Sales — income earned</Bullet>
-          <Bullet><span className="text-blue-400">Credit:</span> Tips — tips collected (liability until paid out)</Bullet>
-          <Bullet><span className="text-blue-400">Credit:</span> Tax — sales tax collected (liability)</Bullet>
-          <Bullet><span className="text-blue-400">Credit:</span> Service Charges — additional revenue</Bullet>
+          <Bullet><span className="text-emerald-400">Credit:</span> Revenue & Net Sales — income earned</Bullet>
+          <Bullet><span className="text-emerald-400">Credit:</span> Tips — tips collected (liability until paid out)</Bullet>
+          <Bullet><span className="text-emerald-400">Credit:</span> Tax — sales tax collected (liability)</Bullet>
+          <Bullet><span className="text-emerald-400">Credit:</span> Service Charges — additional revenue</Bullet>
         </ul>
 
         <SubHeading>What If It Doesn't Balance?</SubHeading>

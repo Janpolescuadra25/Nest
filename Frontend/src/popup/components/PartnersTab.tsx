@@ -153,7 +153,7 @@ export default function PartnersTab({ jwt }: Props) {
 
   const ROLE_BADGE: Record<string, string> = {
     ADMIN: 'bg-emerald-900 text-emerald-300',
-    ACCOUNTANT: 'bg-blue-900 text-blue-300',
+    ACCOUNTANT: 'bg-emerald-900 text-emerald-300',
     STAFF: 'bg-green-900 text-green-300',
     VIEWER: 'bg-gray-700 text-gray-300',
   };

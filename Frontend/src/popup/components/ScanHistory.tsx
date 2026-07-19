@@ -94,7 +94,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
                     <span className="bg-yellow-600/30 text-yellow-400">PENDING</span>
                   )}
                   {scan.status === 'MAPPED' && (
-                    <span className="bg-blue-600/30 text-blue-400">MAPPED</span>
+                    <span className="bg-emerald-600/30 text-emerald-400">MAPPED</span>
                   )}
                   {scan.status === 'SYNCED' && (
                     <span className="bg-green-600/30 text-green-400">SYNCED</span>

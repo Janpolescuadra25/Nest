@@ -475,8 +475,8 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                                   mapping.matchingRule.type === 'EXACT' ? 'bg-green-900/50 text-green-300' :
                                   mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-900/50 text-amber-300' :
-                                  mapping.matchingRule.type === 'REGEX' ? 'bg-purple-900/50 text-purple-300' :
-                                  mapping.matchingRule.type === 'CONTAINS' ? 'bg-blue-900/50 text-blue-300' :
+                                  mapping.matchingRule.type === 'REGEX' ? 'bg-slate-800/50 text-slate-300' :
+                                  mapping.matchingRule.type === 'CONTAINS' ? 'bg-emerald-900/50 text-emerald-300' :
                                   mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-emerald-900/50 text-emerald-300' :
                                   'bg-gray-700 text-gray-300'
                                 }`}>

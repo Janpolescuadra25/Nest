@@ -1337,7 +1337,7 @@ export default function ScanView({
                     <button
                       type="button"
                       onClick={() => handleFallbackDocumentScan(capturedScreenshot)}
-                      className="mt-1.5 block text-xs text-blue-400 hover:text-blue-300 underline"
+                      className="mt-1.5 block text-xs text-emerald-400 hover:text-emerald-300 underline"
                     >
                       Try scanning as document instead
                     </button>

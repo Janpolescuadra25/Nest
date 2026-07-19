@@ -69,7 +69,7 @@ export default function MappingTable({
         <button
           type="button"
           onClick={onAddMapping}
-          className="w-full py-2 text-sm text-teal-400 hover:text-teal-300 border border-dashed border-gray-600 rounded-md hover:border-teal-400 transition-colors"
+          className="w-full py-2 text-sm text-emerald-400 hover:text-emerald-300 border border-dashed border-gray-600 rounded-md hover:border-emerald-400 transition-colors"
         >
           + Add mapping
         </button>
@@ -150,7 +150,7 @@ function MappingCard({
           )}
         </div>
         {mapping.conditions && mapping.conditions.length > 0 && (
-          <span className="text-[10px] text-purple-400 bg-purple-900/30 px-1.5 py-0.5 rounded shrink-0">
+          <span className="text-[10px] text-slate-400 bg-slate-800/30 px-1.5 py-0.5 rounded shrink-0">
             🔀 {mapping.conditions.length}
           </span>
         )}
@@ -166,7 +166,7 @@ function MappingCard({
               onClick={() => onUpdate({ postingType: 'Debit' })}
               className={`text-xs px-2 py-0.5 transition-colors ${
                 mapping.postingType === 'Debit'
-                  ? 'bg-blue-700 text-blue-100'
+                  ? 'bg-emerald-700 text-emerald-100'
                   : 'bg-gray-900 text-gray-500 hover:text-gray-300'
               }`}
             >

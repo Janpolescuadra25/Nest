@@ -23,7 +23,7 @@ const STATUS_CLASSES: Record<string, string> = {
   SYNCED: 'text-green-400 bg-green-900/30 border-green-800',
   FAILED: 'text-red-400 bg-red-900/30 border-red-800',
   PENDING: 'text-yellow-400 bg-yellow-900/30 border-yellow-800',
-  MAPPED: 'text-blue-400 bg-blue-900/30 border-blue-800',
+  MAPPED: 'text-emerald-400 bg-emerald-900/30 border-emerald-800',
 };
 
 export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced }: Props) {
@@ -508,7 +508,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             </span>
                           ) : scanSource === 'image' ? (
                             <span
-                              className="px-2 py-0.5 rounded border text-xs bg-purple-900/30 border-purple-800 text-purple-400 cursor-pointer hover:bg-purple-900/50"
+                              className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400 cursor-pointer hover:bg-emerald-900/50"
                               title="Image scan — click to inspect"
                               onClick={() => {
                                 if (scan.rawScanEntry) {
