@@ -110,7 +110,9 @@ export function applyRules(
         }
       }
     } catch (err) {
-      console.error(`[RulesEngine] Error applying rule "${rule.name}":`, err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(`[RulesEngine] Error applying rule "${rule.name}":`, err);
+      }
     }
   }
 
