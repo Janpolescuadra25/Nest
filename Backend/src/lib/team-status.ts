@@ -61,23 +61,20 @@ export async function processTrialExpiry(prisma: PrismaClient): Promise<number> 
     },
   });
 
+  const auditEntries = expiredUsers.map((user) => ({
+    actorId: user.id,
+    targetUserId: user.id,
+    action: 'TRIAL_EXPIRED',
+    details: {
+      previousRole: user.role,
+      trialExpiresAt: user.trialExpiresAt,
+      permissionsRevoked: ['canScan', 'canMap', 'canSync', 'canManageLocs'],
+    },
+  }));
+
+  await prisma.auditLog.createMany({ data: auditEntries, skipDuplicates: true });
+
   await Promise.allSettled([
-    Promise.all(
-      expiredUsers.map((user) =>
-        prisma.auditLog.create({
-          data: {
-            actorId: user.id,
-            targetUserId: user.id,
-            action: 'TRIAL_EXPIRED',
-            details: {
-              previousRole: user.role,
-              trialExpiresAt: user.trialExpiresAt,
-              permissionsRevoked: ['canScan', 'canMap', 'canSync', 'canManageLocs'],
-            },
-          },
-        })
-      )
-    ).catch((err) => console.error('[TeamStatus] Failed to write audit logs:', err)),
     ...expiredUsers.map((user) =>
       sendTrialExpired({
         to: user.email,
