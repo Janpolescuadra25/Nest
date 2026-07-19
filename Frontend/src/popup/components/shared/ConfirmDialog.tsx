@@ -44,15 +44,15 @@ export default function ConfirmDialog({
       }}
     >
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-4 w-80 shadow-xl"
+        className="bg-white border border-gray-200 rounded-lg p-4 w-80 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-sm font-medium text-white mb-2">{title}</h3>
-        <p className="text-xs text-gray-300 mb-4">{message}</p>
+        <h3 className="text-sm font-medium text-gray-900 mb-2">{title}</h3>
+        <p className="text-xs text-gray-600 mb-4">{message}</p>
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="text-xs px-3 py-1.5 rounded border border-gray-600 text-gray-300 hover:bg-gray-800 transition-colors"
+            className="text-xs px-3 py-1.5 rounded border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
           >
             {cancelText}
           </button>

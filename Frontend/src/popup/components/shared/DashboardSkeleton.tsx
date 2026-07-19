@@ -10,7 +10,7 @@ export default function DashboardSkeleton({ rows = 4, type = 'list' }: Props) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {Array.from({ length: rows }, (_, index) => (
-          <div key={index} className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-20" />
+          <div key={index} className="animate-pulse bg-white border border-gray-200 rounded-lg h-20" />
         ))}
       </div>
     );
@@ -20,7 +20,7 @@ export default function DashboardSkeleton({ rows = 4, type = 'list' }: Props) {
     return (
       <div className="space-y-2">
         {Array.from({ length: rows }, (_, index) => (
-          <div key={index} className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-10" />
+          <div key={index} className="animate-pulse bg-white border border-gray-200 rounded-lg h-10" />
         ))}
       </div>
     );
@@ -29,7 +29,7 @@ export default function DashboardSkeleton({ rows = 4, type = 'list' }: Props) {
   return (
     <div className="space-y-3">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="animate-pulse bg-slate-800 border border-slate-700 rounded-lg h-16" />
+        <div key={index} className="animate-pulse bg-white border border-gray-200 rounded-lg h-16" />
       ))}
     </div>
   );

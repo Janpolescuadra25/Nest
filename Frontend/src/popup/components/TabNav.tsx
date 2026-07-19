@@ -33,15 +33,15 @@ export default function TabNav({ currentTab, onTabChange, visibleTabs }: Props) 
     : ALL_TABS.filter(t => ['scan', 'mappings', 'preview', 'data', 'sync', 'settings'].includes(t.id));
 
   return (
-    <div className="flex border-b border-gray-700 bg-gray-800 flex-shrink-0 overflow-x-auto">
+    <div className="flex border-b border-gray-200 bg-white flex-shrink-0 overflow-x-auto">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
           className={`flex-shrink-0 px-2 py-2 text-xs font-medium transition-colors flex flex-col items-center gap-0.5 min-w-[52px] ${
             currentTab === tab.id
-              ? 'text-emerald-400 border-b-2 border-emerald-400 bg-gray-900'
-              : 'text-gray-500 hover:text-gray-300'
+              ? 'text-emerald-400 border-b-2 border-emerald-400 bg-[#F5F5F7]'
+              : 'text-gray-600 hover:text-gray-900'
           }`}
         >
           <span className="text-sm leading-none">{tab.icon}</span>

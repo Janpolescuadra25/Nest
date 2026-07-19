@@ -16,7 +16,7 @@ export default function EmptyState({ icon, title, description, action }: Props) 
   return (
     <div className="text-center py-10">
       {icon && <div className="text-3xl mb-2">{icon}</div>}
-      <p className="text-sm text-gray-300 font-semibold">{title}</p>
+      <p className="text-sm text-gray-700 font-semibold">{title}</p>
       {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
       {action && (
         <button

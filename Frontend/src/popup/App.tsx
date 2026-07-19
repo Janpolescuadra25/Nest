@@ -158,7 +158,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center bg-gray-900" style={{ width: '100vw', height: '100vh' }}>
+      <div className="flex items-center justify-center bg-[#F5F5F7]" style={{ width: '100vw', height: '100vh' }}>
         <div className="text-gray-500 text-sm">Loading…</div>
       </div>
     );
@@ -167,9 +167,9 @@ export default function App() {
   if (!user) {
     return (
       <ToastProvider>
-        <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
-            <span className="text-sm font-semibold text-white">Nest</span>
+        <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
+            <span className="text-sm font-semibold text-gray-900">Nest</span>
           </div>
           <LoginView onLogin={login} />
           <ToastContainer />
@@ -181,12 +181,12 @@ export default function App() {
   // Disabled account — full-screen message
   if (user.status === 'DISABLED') {
     return (
-      <div className="flex flex-col items-center justify-center bg-gray-900 text-white" style={{ width: '100vw', height: '100vh' }}>
+      <div className="flex flex-col items-center justify-center bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh' }}>
         <div className="text-center px-6">
           <div className="text-4xl mb-3">🚫</div>
-          <h2 className="text-lg font-semibold text-white mb-2">Account Disabled</h2>
-          <p className="text-sm text-gray-400 mb-5">Your account has been disabled. Please contact your administrator.</p>
-          <button onClick={logout} className="px-4 py-2 bg-slate-700 text-gray-300 rounded-lg text-sm hover:bg-slate-600">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Account Disabled</h2>
+          <p className="text-sm text-gray-600 mb-5">Your account has been disabled. Please contact your administrator.</p>
+          <button onClick={logout} className="px-4 py-2 bg-gray-100 border border-gray-200 text-gray-900 rounded-lg text-sm hover:bg-gray-200">
             Sign Out
           </button>
         </div>
@@ -198,10 +198,10 @@ export default function App() {
   if (user.mustChangePassword) {
     return (
       <ToastProvider>
-        <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700">
-            <span className="text-sm font-semibold text-white">Nest</span>
-            <button onClick={logout} className="text-xs text-gray-500 hover:text-gray-300">Sign Out</button>
+        <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
+            <span className="text-sm font-semibold text-gray-900">Nest</span>
+            <button onClick={logout} className="text-xs text-gray-600 hover:text-gray-900">Sign Out</button>
           </div>
           <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
           <ToastContainer />
@@ -238,10 +238,10 @@ export default function App() {
   return (
     <ToastProvider>
     <QBContextProvider jwt={jwt!}>
-      <div className="flex flex-col bg-gray-900 text-white" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
         {/* Expired trial warning banner */}
         {user.status === 'EXPIRED' && (
-          <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 text-center flex-shrink-0">
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-600 text-center flex-shrink-0">
             <p className="font-medium">Your access has expired.</p>
             {user.customExpiryMessage && (
               <p className="mt-1">{user.customExpiryMessage}</p>
@@ -252,26 +252,26 @@ export default function App() {
 
         {/* Grace period warning banner */}
         {user.status === 'GRACE_PERIOD' && (
-          <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 text-center flex-shrink-0">
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-600 text-center flex-shrink-0">
             ⚠ Your write access expires soon. Contact your administrator.
           </div>
         )}
 
         {/* Time-bombed restricted banner */}
         {user.status === 'TIME_BOMBED' && (
-          <div className="px-4 py-2 bg-red-900/60 border-b border-red-700 text-xs text-red-300 text-center flex-shrink-0">
+          <div className="px-4 py-2 bg-red-50 border-b border-red-300 text-xs text-red-600 text-center flex-shrink-0">
             🚫 Your write access has been restricted. You have view-only access. Contact your administrator.
           </div>
         )}
 
         {/* Header */}
-        <div className="grid items-center px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+        <div className="grid items-center px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0" style={{ gridTemplateColumns: '1fr auto 1fr' }}>
           <div className="flex items-center gap-1.5">
             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${ROLE_META[user.role]?.color ?? 'bg-gray-500/20 text-gray-300 border-gray-600'}`}>
               {ROLE_META[user.role]?.icon} {user.role}
             </span>
             {user.status === 'EXPIRED' && (
-              <span className="inline-flex items-center px-1 py-0.5 rounded border text-[10px] font-medium bg-yellow-900/40 text-yellow-400 border-yellow-600">⚠</span>
+              <span className="inline-flex items-center px-1 py-0.5 rounded border text-[10px] font-medium bg-amber-50 text-amber-600 border-amber-200">⚠</span>
             )}
             <span className="text-[9px] text-gray-500 truncate max-w-[90px]">{user.email}</span>
           </div>
@@ -285,7 +285,7 @@ export default function App() {
               value={selectedLocationId}
               onChange={(e) => setSelectedLocationId(e.target.value)}
               disabled={locationsLoading || dropdownLocations.length === 0}
-              className="h-8 bg-gray-700 border border-gray-600 text-gray-200 text-[10px] px-2 rounded"
+              className="h-8 bg-white border border-gray-200 text-gray-900 text-[10px] px-2 rounded"
             >
               {locationsLoading || dropdownLocations.length === 0 ? (
                 <option value="">{locationsLoading ? 'Loading locations...' : 'No locations'}</option>
@@ -297,7 +297,7 @@ export default function App() {
             </select>
             <button
               onClick={() => setShowHelp(true)}
-              className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+              className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
               title="Help"
               aria-label="Open help"
             >
@@ -307,13 +307,13 @@ export default function App() {
         </div>
 
         {user && !user.emailVerified && showEmailVerificationBanner && (
-          <div className="px-4 py-2 bg-yellow-900/60 border-b border-yellow-700 text-xs text-yellow-300 flex items-center justify-between gap-3">
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-600 flex items-center justify-between gap-3">
             <div>
               <p className="font-medium">⚠️ Please verify your email. Check your inbox or resend from Settings.</p>
             </div>
             <button
               onClick={() => setShowEmailVerificationBanner(false)}
-              className="text-yellow-200 hover:text-white text-xs"
+              className="text-amber-700 hover:text-amber-900 text-xs"
             >
               Dismiss
             </button>
@@ -339,7 +339,7 @@ export default function App() {
           ];
           const currentIdx = steps.findIndex((s) => s.id === effectiveTab);
           return (
-            <div className="flex items-center justify-center gap-1 px-4 py-1 bg-gray-800/50 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-center gap-1 px-4 py-1 bg-gray-100 border-b border-gray-200 flex-shrink-0">
               {steps.map((step, i) => {
                 const stepIdx = steps.findIndex((s) => s.id === step.id);
                 const isCurrent = effectiveTab === step.id;
@@ -405,12 +405,12 @@ export default function App() {
           )}
           {effectiveTab === 'preview' && (
             noScanData || !selectedTemplateForScan ? (
-              <div className="p-6 rounded-lg border border-orange-500 bg-orange-950/50 text-orange-200 text-sm">
+              <div className="p-6 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 text-sm">
                 Select a template and scan data to preview the transaction.
               </div>
             ) : isIncompatibleTemplate ? (
-              <div className="p-6 rounded-lg border border-yellow-500 bg-yellow-950/50 text-yellow-200 text-sm">
-                <div className="font-semibold text-white">Template Not Compatible</div>
+              <div className="p-6 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-sm">
+                <div className="font-semibold text-orange-900">Template Not Compatible</div>
                 <p className="mt-2">
                   Bill and Vendor Credit templates are designed for invoice scans (image/PDF). Your current scan is from POS data. Please use a Journal Entry template for POS scans, or scan an invoice to use this template.
                 </p>

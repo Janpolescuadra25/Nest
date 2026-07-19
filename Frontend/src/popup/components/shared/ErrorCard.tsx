@@ -9,16 +9,16 @@ interface Props {
 
 const VARIANTS = {
   error: {
-    container: 'bg-red-900/40 border border-red-700 text-red-300',
-    button: 'bg-red-800 text-red-100 hover:bg-red-700',
+    container: 'bg-red-50 border border-red-300 text-red-600',
+    button: 'bg-red-600 text-white hover:bg-red-500',
   },
   warning: {
-    container: 'bg-amber-900/30 border border-amber-700 text-amber-300',
-    button: 'bg-amber-800 text-amber-100 hover:bg-amber-700',
+    container: 'bg-amber-50 border border-amber-200 text-amber-700',
+    button: 'bg-amber-600 text-white hover:bg-amber-500',
   },
   info: {
-    container: 'bg-slate-800/40 border border-slate-700 text-slate-100',
-    button: 'bg-slate-700 text-slate-100 hover:bg-slate-600',
+    container: 'bg-gray-100 border border-gray-200 text-gray-700',
+    button: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
   },
 };
 
@@ -43,7 +43,7 @@ export default function ErrorCard({ message, onRetry, onDismiss, variant = 'erro
             <button
               type="button"
               onClick={onDismiss}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-slate-700 text-slate-100 hover:bg-slate-600"
+              className="px-3 py-1.5 rounded text-xs font-medium bg-gray-200 text-gray-900 hover:bg-gray-300"
             >
               Dismiss
             </button>

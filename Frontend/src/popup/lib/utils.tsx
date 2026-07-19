@@ -66,10 +66,10 @@ export function trialCountdown(expiresAt: string | null | undefined): ReactNode 
   const now = Date.now();
   const diffMs = expiry - now;
   if (diffMs <= 0) {
-    return <span className="text-xs text-red-400 font-medium">EXPIRED</span>;
+    return <span className="text-xs text-red-600 font-medium">EXPIRED</span>;
   }
 
   const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const color = days <= 3 ? 'text-red-400' : days <= 7 ? 'text-orange-400' : 'text-emerald-400';
+  const color = days <= 3 ? 'text-red-600' : days <= 7 ? 'text-orange-400' : 'text-emerald-600';
   return <span className={`text-xs font-medium ${color}`}>{days}d left</span>;
 }
