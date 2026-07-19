@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { stripe, PLANS, isStripeConfigured, type PlanKey } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
@@ -11,12 +12,19 @@ const createSessionSchema = z.object({
   interval: z.enum(['month', 'year']).default('month'),
 });
 
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many checkout attempts. Please try again later.' },
+});
+
 const router = Router();
 
 router.post(
   '/create-session',
   authenticate,
   validate(createSessionSchema),
+  checkoutLimiter,
   asyncHandler(async (req: AuthRequest, res) => {
     if (!isStripeConfigured || !stripe) {
       throw new AppError('Stripe is not configured. Contact support.', 503);
@@ -82,6 +90,7 @@ router.post(
 router.post(
   '/create-portal-session',
   authenticate,
+  checkoutLimiter,
   asyncHandler(async (req: AuthRequest, res) => {
     if (!isStripeConfigured || !stripe) {
       throw new AppError('Stripe is not configured. Contact support.', 503);
