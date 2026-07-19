@@ -22,7 +22,7 @@ export default function EmptyState({ icon, title, description, action }: Props) 
         <button
           type="button"
           onClick={action.onClick}
-          className="mt-3 text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-3 py-2 rounded"
+          className="mt-3 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-2 rounded"
         >
           {action.label}
         </button>

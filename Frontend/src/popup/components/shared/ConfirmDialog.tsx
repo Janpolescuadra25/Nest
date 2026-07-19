@@ -34,7 +34,7 @@ export default function ConfirmDialog({
 
   const confirmColor = variant === 'danger'
     ? 'bg-red-600 hover:bg-red-500'
-    : 'bg-cyan-700 hover:bg-cyan-600';
+    : 'bg-emerald-700 hover:bg-emerald-600';
 
   return (
     <div
