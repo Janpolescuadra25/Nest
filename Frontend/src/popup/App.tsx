@@ -324,7 +324,7 @@ export default function App() {
         <TabNav currentTab={effectiveTab} onTabChange={setCurrentTab} visibleTabs={visibleTabs} />
 
         {/* Onboarding banner for owner users */}
-        {role === 'OWNER' && onboardingState.step > 0 && (
+        {onboardingState.step > 0 && (
           <OnboardingBanner state={onboardingState} onNavigate={setCurrentTab} />
         )}
 

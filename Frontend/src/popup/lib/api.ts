@@ -161,6 +161,9 @@ export const api = {
   login: (email: string, password: string) =>
     post<{ token: string; user: UserInfo }>('/api/auth/login', { email, password }),
 
+  register: (name: string, email: string, password: string) =>
+    post<{ token: string; user: UserInfo }>('/api/auth/register', { name, email, password }),
+
   createCheckoutSession: (jwt: string, plan: string, interval: 'month' | 'year' = 'month') =>
     post<{ url: string }>('/api/checkout/create-session', { plan, interval }, jwt),
 
