@@ -207,4 +207,43 @@ router.get(
   })
 );
 
+router.get(
+  '/scan-usage',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const teamId = req.user!.adminId ?? req.user!.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: teamId },
+      select: {
+        currentPlan: true,
+        maxScans: true,
+        poolScans: true,
+        bonusScans: true,
+        allocatedScans: true,
+        managedById: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const scansUsed = await prisma.scanRecord.count({
+      where: {
+        location: { adminId: teamId },
+        source: { in: ['image', 'pdf'] },
+        createdAt: { gte: thirtyDaysAgo },
+      },
+    });
+
+    const maxScans = user.maxScans ?? 10;
+    const bonusScans = user.bonusScans ?? 0;
+    const totalAvailable = maxScans + bonusScans;
+
+    res.json({ scansUsed, maxScans, bonusScans, totalAvailable, plan: user.currentPlan });
+  })
+);
+
 export default router;

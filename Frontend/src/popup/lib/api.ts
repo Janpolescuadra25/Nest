@@ -183,6 +183,15 @@ export const api = {
   createPortalSession: (jwt: string) =>
     post<{ url: string }>('/api/checkout/create-portal-session', {}, jwt),
 
+  getScanUsage: (jwt: string) =>
+    get<{
+      scansUsed: number;
+      maxScans: number;
+      bonusScans: number;
+      totalAvailable: number;
+      plan: string;
+    }>('/api/checkout/scan-usage', jwt),
+
   getPlans: (jwt?: string | null) =>
     get<{ plans: Plan[] }>('/api/checkout/plans', jwt),
 

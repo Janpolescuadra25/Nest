@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api, type UserInfo } from '../lib/api';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import PricingView from './PricingView';
@@ -17,6 +17,18 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [scanUsage, setScanUsage] = useState<{
+    scansUsed: number;
+    maxScans: number;
+    bonusScans: number;
+    totalAvailable: number;
+    plan: string;
+  } | null>(null);
+  const [scanPacks, setScanPacks] = useState<any[]>([]);
+  const [showPackOptions, setShowPackOptions] = useState(false);
+  const [packLoading, setPackLoading] = useState(false);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [packError, setPackError] = useState<string | null>(null);
 
   const handleResendVerification = async () => {
     setVerificationStatus('sending');
@@ -42,6 +54,48 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       setBillingError(err instanceof Error ? err.message : 'Failed to open billing portal.');
     } finally {
       setBillingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!jwt) return;
+    setUsageLoading(true);
+    api.getScanUsage(jwt)
+      .then(setScanUsage)
+      .catch(() => setScanUsage(null))
+      .finally(() => setUsageLoading(false));
+  }, [jwt]);
+
+  const handleBuyMoreScans = async () => {
+    if (!jwt) return;
+    setPackError(null);
+    if (scanPacks.length === 0) {
+      setPackLoading(true);
+      try {
+        const response = await api.getScanPacks(jwt);
+        setScanPacks(response.scanPacks);
+        setShowPackOptions(true);
+      } catch (err) {
+        setPackError(err instanceof Error ? err.message : 'Failed to load scan packs.');
+      } finally {
+        setPackLoading(false);
+      }
+      return;
+    }
+    setShowPackOptions((current) => !current);
+  };
+
+  const handleSelectPack = async (pack: any) => {
+    if (!jwt) return;
+    setPackLoading(true);
+    setPackError(null);
+    try {
+      const response = await api.createScanPackSession(jwt, pack.id);
+      window.open(response.url, '_blank');
+    } catch (err) {
+      setPackError(err instanceof Error ? err.message : 'Failed to create scan pack checkout session.');
+    } finally {
+      setPackLoading(false);
     }
   };
 
@@ -130,6 +184,68 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           >
             {status.connected ? '↻ Reconnect to QuickBooks' : '🔗 Connect to QuickBooks'}
           </button>
+        </div>
+      </div>
+
+      {/* Scan Usage section */}
+      <div>
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Scan Usage</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+          <div>
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Plan</div>
+            <div className="text-lg font-semibold text-gray-900 mb-3">
+              {scanUsage?.plan ? `${scanUsage.plan.charAt(0).toUpperCase()}${scanUsage.plan.slice(1).toLowerCase()}` : 'Unknown'}
+            </div>
+          </div>
+          {usageLoading ? (
+            <div className="bg-gray-100 animate-pulse h-2.5 rounded-full w-full" />
+          ) : scanUsage === null ? (
+            <div className="text-sm text-gray-400">Usage info unavailable</div>
+          ) : (
+            <>
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Scans This Month</div>
+              <div className="w-full bg-gray-100 rounded-full h-2.5">
+                <div
+                  className={`h-2.5 rounded-full ${Math.min((scanUsage.scansUsed / scanUsage.totalAvailable) * 100, 100) >= 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                  style={{ width: `${scanUsage.totalAvailable > 0 ? Math.min((scanUsage.scansUsed / scanUsage.totalAvailable) * 100, 100) : 0}%` }}
+                />
+              </div>
+              {scanUsage.totalAvailable > 0 && (scanUsage.scansUsed / scanUsage.totalAvailable) * 100 >= 90 ? (
+                <div className="text-xs text-red-500 mt-1">Running low</div>
+              ) : null}
+              <div className="text-sm text-gray-500 mt-1">{scanUsage.scansUsed} of {scanUsage.totalAvailable} scans used</div>
+              {scanUsage.bonusScans > 0 ? (
+                <div className="text-sm font-medium text-emerald-600 mt-1">+{scanUsage.bonusScans} bonus scans available</div>
+              ) : null}
+            </>
+          )}
+          {user.role !== 'VIEWER' ? (
+            <>
+              <button
+                type="button"
+                onClick={handleBuyMoreScans}
+                disabled={packLoading}
+                className="mt-3 w-full bg-emerald-500 text-white rounded-lg px-4 py-2 hover:bg-emerald-600 transition-colors text-sm font-medium"
+              >
+                {packLoading ? 'Loading…' : 'Buy More Scans'}
+              </button>
+              {showPackOptions && (
+                <div className="mt-2 space-y-2">
+                  {scanPacks.map((pack) => (
+                    <button
+                      key={pack.id}
+                      type="button"
+                      onClick={() => handleSelectPack(pack)}
+                      className="w-full border border-emerald-500 text-emerald-600 rounded-lg px-4 py-2 hover:bg-emerald-50 transition-colors text-sm"
+                    >
+                      {pack.name} — {pack.scans} scans — ${pack.price}
+                    </button>
+                  ))}
+                  {packError && <div className="text-xs text-red-500 mt-1">{packError}</div>}
+                </div>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
 

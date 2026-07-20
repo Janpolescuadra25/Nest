@@ -9,6 +9,8 @@ import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
 import { detectPOS, parseDocumentWithGemini, parseInvoiceWithGemini, parsePOSReport } from '../lib/gemini';
+import type { ParsePOSTabResponse } from '../types';
+import { validateTransactionType } from './templates';
 
 async function deductBonusScan(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
@@ -22,8 +24,6 @@ async function deductBonusScan(userId: string): Promise<boolean> {
   });
   return true;
 }
-import type { ParsePOSTabResponse } from '../types';
-import { validateTransactionType } from './templates';
 
 const router = Router();
 
@@ -201,7 +201,7 @@ router.post(
     }
 
     try {
-      await deductBonusScan(req.user!.id);
+      await deductBonusScan(req.user!.adminId ?? req.user!.userId);
       const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
       res.json({ success: true, data: result });
     } catch (err: any) {
@@ -226,7 +226,7 @@ router.post(
     }
 
     try {
-      await deductBonusScan(req.user!.id);
+      await deductBonusScan(req.user!.adminId ?? req.user!.userId);
       const result = await parseDocumentWithGemini(req.file.buffer, req.file.mimetype);
       res.json({
         success: true,
@@ -267,12 +267,10 @@ router.post(
     if (!req.file) {
       throw new AppError('Image file is required', 400);
     }
-    await deductBonusScan(req.user!.id);
-
+    await deductBonusScan(req.user!.adminId ?? req.user!.userId);
     const tabUrl = typeof req.body.tabUrl === 'string' ? req.body.tabUrl : undefined;
 
     const detection = await detectPOS(req.file.buffer, req.file.mimetype);
-
     if (!detection.isPOS) {
       return res.json({ detection, data: null } as ParsePOSTabResponse);
     }
