@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { api } from '../lib/api';
+import { api, type RecentScan } from '../lib/api';
 import { useToast } from './Toast';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
 import { ErrorCard, DashboardSkeleton } from './shared';
+import StatusBadge from './shared/StatusBadge';
 import { formatAction, relativeTime } from '../lib/utils';
 import type { QBStatus, ScanHealth, AdminRequest, OwnerAuditLogEntry, TabId } from '../../types';
 import type { OnboardingState } from '../lib/onboarding';
@@ -64,6 +65,8 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
   const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
   const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
   const [healthDays, setHealthDays] = useState(3);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
+  const [scansLoading, setScansLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
   const prevStepRef = useRef<number>(0);
 
@@ -129,6 +132,14 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
     void fetchDashboard();
     void fetchScanHealth();
   }, [fetchDashboard, fetchScanHealth]);
+
+  useEffect(() => {
+    setScansLoading(true);
+    api.getRecentScans(jwt)
+      .then((response) => setRecentScans(response.scans))
+      .catch(() => setRecentScans([]))
+      .finally(() => setScansLoading(false));
+  }, [jwt]);
 
   useEffect(() => {
     if (stats.totalSynced > 0) {
@@ -289,6 +300,30 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
           <div className="h-3 bg-gray-50 rounded animate-pulse" />
         </div>
       )}
+
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Recent Scans</h3>
+        {scansLoading ? (
+          <div className="space-y-2">
+            <div className="bg-gray-100 animate-pulse h-10 rounded-lg" />
+            <div className="bg-gray-100 animate-pulse h-10 rounded-lg" />
+          </div>
+        ) : recentScans.length === 0 ? (
+          <p className="text-sm text-gray-400">No scans yet. Start by scanning your first report.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentScans.map(scan => (
+              <div key={scan.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{scan.location.name}</p>
+                  <p className="text-xs text-gray-400">{relativeTime(scan.createdAt)} · {scan.source}</p>
+                </div>
+                <StatusBadge status={scan.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-emerald-600">Pending Requests</h3>

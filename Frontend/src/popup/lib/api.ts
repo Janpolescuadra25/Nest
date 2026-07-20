@@ -104,6 +104,16 @@ export interface ScanPack {
   description: string;
 }
 
+export interface RecentScan {
+  id: string;
+  source: string;
+  status: string;
+  createdAt: string;
+  scanDate: string;
+  transactionType: string;
+  location: { name: string };
+}
+
 export interface UserInfo {
   id: string;
   email: string;
@@ -191,6 +201,9 @@ export const api = {
       totalAvailable: number;
       plan: string;
     }>('/api/checkout/scan-usage', jwt),
+
+  getRecentScans: (jwt: string) =>
+    get<{ scans: RecentScan[] }>('/api/scans/recent', jwt),
 
   getPlans: (jwt?: string | null) =>
     get<{ plans: Plan[] }>('/api/checkout/plans', jwt),

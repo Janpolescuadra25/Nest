@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
-import type { UserInfo } from '../lib/api';
+import { relativeTime } from '../lib/utils';
+import type { RecentScan, UserInfo } from '../lib/api';
 import type { QBStatus, ScanHealth } from '../../types';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
-import { DashboardSkeleton } from './shared';
+import { DashboardSkeleton, StatusBadge } from './shared';
 
 interface UserDashboardProps {
   jwt: string;
@@ -16,6 +17,8 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
   const [qbStatus, setQbStatus] = useState<QBStatus>({ connected: false });
   const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
   const [healthDays, setHealthDays] = useState(3);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
+  const [scansLoading, setScansLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +45,14 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
     load();
     return () => { cancelled = true; };
   }, [jwt, healthDays]);
+
+  useEffect(() => {
+    setScansLoading(true);
+    api.getRecentScans(jwt)
+      .then((response) => setRecentScans(response.scans))
+      .catch(() => setRecentScans([]))
+      .finally(() => setScansLoading(false));
+  }, [jwt]);
 
   const handleReconnect = useCallback(async () => {
     try {
@@ -84,6 +95,30 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
           <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} />
         </div>
       )}
+
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Recent Scans</h3>
+        {scansLoading ? (
+          <div className="space-y-2">
+            <div className="bg-gray-100 animate-pulse h-10 rounded-lg" />
+            <div className="bg-gray-100 animate-pulse h-10 rounded-lg" />
+          </div>
+        ) : recentScans.length === 0 ? (
+          <p className="text-sm text-gray-400">No scans yet. Start by scanning your first report.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentScans.map(scan => (
+              <div key={scan.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{scan.location.name}</p>
+                  <p className="text-xs text-gray-400">{relativeTime(scan.createdAt)} · {scan.source}</p>
+                </div>
+                <StatusBadge status={scan.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-emerald-600">My Permissions</h3>

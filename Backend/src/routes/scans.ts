@@ -161,6 +161,34 @@ router.get('/health', asyncHandler(async (req: AuthRequest, res: Response): Prom
   }
 }));
 
+router.get('/recent', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const teamId = req.user!.adminId ?? req.user!.userId;
+    const recentScans = await prisma.scanRecord.findMany({
+      where: {
+        location: { adminId: teamId },
+        source: { in: ['image', 'pdf'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        source: true,
+        status: true,
+        createdAt: true,
+        scanDate: true,
+        transactionType: true,
+        location: { select: { name: true } },
+      },
+    });
+    res.json({ scans: recentScans });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Scans] recent error:', err);
+    throw new AppError('Failed to fetch recent scans', 500);
+  }
+}));
+
 // ── GET /api/scans/:id ────────────────────────────────────────────────────────
 router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {

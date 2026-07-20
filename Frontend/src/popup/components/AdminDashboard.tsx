@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from '../lib/api';
+import { api, type RecentScan } from '../lib/api';
 import { QBConnectionCard } from './QBConnectionCard';
 import { ScannerHealthCard } from './ScannerHealthCard';
 import { useToast } from './Toast';
-import { ErrorCard, DashboardSkeleton } from './shared';
+import { ErrorCard, DashboardSkeleton, StatusBadge } from './shared';
 import { formatAction, relativeTime, trialCountdown } from '../lib/utils';
 import type { QBStatus, ScanHealth, TeamMember, AuditLogEntry } from '../../types';
 
@@ -52,6 +52,8 @@ export default function AdminDashboard({ jwt }: Props) {
   const [scanHealth, setScanHealth] = useState<ScanHealth | null>(null);
   const [scanHealthLoaded, setScanHealthLoaded] = useState(false);
   const [healthDays, setHealthDays] = useState(3);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
+  const [scansLoading, setScansLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -86,6 +88,14 @@ export default function AdminDashboard({ jwt }: Props) {
       setScanHealthLoaded(true);
     }
   }, [jwt, healthDays]);
+
+  useEffect(() => {
+    setScansLoading(true);
+    api.getRecentScans(jwt)
+      .then((response) => setRecentScans(response.scans))
+      .catch(() => setRecentScans([]))
+      .finally(() => setScansLoading(false));
+  }, [jwt]);
 
   const handleReconnect = useCallback(async () => {
     try {
