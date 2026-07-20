@@ -27,6 +27,7 @@ model User {
   customExpiryMessage     String?
   maxUsers                Int?
   createdAt               DateTime                 @default(now())
+  welcomedAt              DateTime?
   updatedAt               DateTime                 @updatedAt
   mustChangePassword      Boolean                  @default(false)
   approvedAt              DateTime?

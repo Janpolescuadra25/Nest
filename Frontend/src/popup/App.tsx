@@ -9,6 +9,7 @@ import { getOnboardingState, type OnboardingState } from './lib/onboarding';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import LoginView from './components/LoginView';
 import ChangePasswordView from './components/ChangePasswordView';
+import WelcomeOverlay from './components/WelcomeOverlay';
 import TabNav from './components/TabNav';
 import ScanView from './components/ScanView';
 import MappingView from './components/MappingView';
@@ -45,7 +46,7 @@ const ROLE_META: Record<string, { icon: string; color: string }> = {
 };
 
 export default function App() {
-  const { jwt, user, loading, login, logout } = useAuth();
+  const { jwt, user, loading, login, logout, refreshUser } = useAuth();
   const [currentTab, setCurrentTab] = useState<TabId>('dashboard');
   const [scanData, setScanData] = useState<ScanData | null>(null);
   const [scanRecordId, setScanRecordId] = useState<string | null>(null);
@@ -516,6 +517,19 @@ export default function App() {
         {/* Help overlay */}
         {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
         <ToastContainer />
+        {user && !user.welcomedAt && (
+          <WelcomeOverlay
+            user={user}
+            jwt={jwt!}
+            onDismiss={async () => {
+              try {
+                await refreshUser();
+              } catch (err) {
+                console.error('Failed to refresh user after welcome dismissal:', err);
+              }
+            }}
+          />
+        )}
       </div>
     </QBContextProvider>
     </ToastProvider>

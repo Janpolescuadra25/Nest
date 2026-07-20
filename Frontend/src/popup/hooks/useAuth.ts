@@ -38,6 +38,16 @@ export function useAuth() {
     })();
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    if (!jwt) return;
+    try {
+      const session = await api.getSession(jwt);
+      setUser(session.user);
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  }, [jwt]);
+
   const login = useCallback(async (userData: UserInfo, token: string) => {
     setJwt(token);
     setUser(userData);
@@ -50,5 +60,5 @@ export function useAuth() {
     await chrome.storage.local.remove('jwt');
   }, []);
 
-  return { jwt, user, loading, login, logout };
+  return { jwt, user, loading, login, logout, refreshUser };
 }

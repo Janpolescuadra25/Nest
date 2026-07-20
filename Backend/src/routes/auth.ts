@@ -25,6 +25,7 @@ function mergeTeamBilling(user: any) {
     maxUsers: user.maxUsers ?? teamOwner.maxUsers ?? null,
     maxLocations: user.maxLocations ?? teamOwner.maxLocations ?? null,
     bonusScans: user.bonusScans ?? teamOwner.bonusScans ?? 0,
+    welcomedAt: user.welcomedAt ?? teamOwner.welcomedAt ?? null,
   };
 }
 
@@ -57,6 +58,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
             maxUsers: true,
             maxLocations: true,
             bonusScans: true,
+            welcomedAt: true,
           },
         },
       },
@@ -175,6 +177,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         maxUsers: user.maxUsers ?? null,
         maxLocations: user.maxLocations ?? null,
         bonusScans: user.bonusScans ?? 0,
+        welcomedAt: user.welcomedAt ?? null,
       },
       emailWarning: !emailResult?.success ? 'Account created but verification email failed. Please request a new verification link from Settings.' : undefined,
     });
@@ -243,6 +246,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
         maxUsers: true,
         maxLocations: true,
         bonusScans: true,
+        welcomedAt: true,
         createdAt: true,
         _count: { select: { teamMembers: true } },
         admin: {
@@ -258,6 +262,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
             maxUsers: true,
             maxLocations: true,
             bonusScans: true,
+            welcomedAt: true,
           },
         },
       },
@@ -299,6 +304,7 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
         maxUsers: true,
         maxLocations: true,
         bonusScans: true,
+        welcomedAt: true,
         admin: {
           select: {
             subscriptionSource: true,
@@ -312,6 +318,7 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
             maxUsers: true,
             maxLocations: true,
             bonusScans: true,
+            welcomedAt: true,
           },
         },
       },
@@ -327,6 +334,15 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
     throw new AppError(process.env.NODE_ENV === 'production' ? 'Session check failed' : ((err as Error).message || 'Unknown error'), 500);
   }
 }))
+
+router.post('/welcome', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
+  const teamId = req.user!.adminId ?? req.user!.userId;
+  await prisma.user.update({
+    where: { id: teamId },
+    data: { welcomedAt: new Date() },
+  });
+  return res.json({ success: true });
+}));
 
 export default router;
 

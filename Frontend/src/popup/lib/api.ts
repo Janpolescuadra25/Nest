@@ -127,6 +127,7 @@ export interface UserInfo {
   maxLocations?: number | null;
   maxScans?: number | null;
   bonusScans?: number | null;
+  welcomedAt?: string | null;
   scanHistoryDays?: number | null;
   prioritySupport?: boolean;
   poolScans?: number | null;
@@ -172,6 +173,9 @@ export const api = {
 
   register: (name: string, email: string, password: string) =>
     post<{ token: string; user: UserInfo }>('/api/auth/register', { name, email, password }),
+
+  markWelcomeSeen: (jwt: string) =>
+    post<{ success: boolean }>('/api/auth/welcome', {}, jwt),
 
   createCheckoutSession: (jwt: string, plan: string, interval: 'month' | 'year' = 'month') =>
     post<{ url: string }>('/api/checkout/create-session', { plan, interval }, jwt),
