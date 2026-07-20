@@ -154,17 +154,17 @@ export default function TemplateWizard({
       onClick={handleClose}
     >
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg p-4 w-full max-w-3xl space-y-4"
+        className="bg-white border border-gray-200 rounded-lg p-4 w-full max-w-3xl space-y-4"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-600">
             {step === 1 ? 'Step 1 of 2 — Scan Mode' : 'Step 2 of 2 — Transaction Type'}
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="text-gray-400 hover:text-white text-sm"
+            className="text-gray-600 hover:text-gray-900 text-sm"
           >
             ✕
           </button>
@@ -172,14 +172,14 @@ export default function TemplateWizard({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-white mb-2">Template Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-              className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-            />
+              <label className="block text-sm font-medium text-gray-900 mb-2">Template Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+              />
           </div>
 
           {step === 1 ? (
@@ -198,23 +198,23 @@ export default function TemplateWizard({
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
                       scanMode === card.value
                         ? 'border-emerald-500 ring-2 ring-emerald-200'
-                        : 'border-gray-700 hover:border-gray-500'
+                        : 'border-gray-200 hover:border-gray-500'
                     }`}
                   >
                     <div className="text-2xl mb-3">{card.icon}</div>
-                    <div className="font-semibold text-white mb-1">{card.title}</div>
-                    <div className="text-xs text-gray-400">{card.description}</div>
+                    <div className="font-semibold text-gray-900 mb-1">{card.title}</div>
+                    <div className="text-xs text-gray-600">{card.description}</div>
                   </button>
                 ))}
               </div>
 
               {scanMode === 'POS' && (
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Select POS System</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Select POS System</label>
                   <select
                     value={posSystem}
                     onChange={(e) => setPosSystem(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="" disabled>Select POS System</option>
                     {POS_SYSTEM_OPTIONS.map((option) => (
@@ -230,7 +230,7 @@ export default function TemplateWizard({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
+                  className="text-xs bg-gray-200 hover:bg-gray-100 text-gray-700 rounded px-3 py-1.5"
                 >
                   Cancel
                 </button>
@@ -255,21 +255,21 @@ export default function TemplateWizard({
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
                       transactionType === type
                         ? 'border-emerald-500 ring-2 ring-emerald-200'
-                        : 'border-gray-700 hover:border-gray-500'
+                        : 'border-gray-200 hover:border-gray-500'
                     }`}
                   >
-                    <div className="font-semibold text-white mb-1">{TRANSACTION_TYPE_LABELS[type]}</div>
-                    <div className="text-xs text-gray-400">{TRANSACTION_TYPE_DESCRIPTIONS[type]}</div>
+                    <div className="font-semibold text-gray-900 mb-1">{TRANSACTION_TYPE_LABELS[type]}</div>
+                    <div className="text-xs text-gray-600">{TRANSACTION_TYPE_DESCRIPTIONS[type]}</div>
                   </button>
                 ))}
               </div>
 
               {scanMode === 'POS' && (
-                <div className="text-sm text-gray-400">POS mode only supports Journal Entry.</div>
+                <div className="text-sm text-gray-600">POS mode only supports Journal Entry.</div>
               )}
 
               {error && (
-                <div className="bg-red-900/50 border border-red-700 text-red-200 text-sm rounded px-3 py-2">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2">
                   {error}
                 </div>
               )}
@@ -278,7 +278,7 @@ export default function TemplateWizard({
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-xs bg-gray-700 hover:bg-gray-600 text-white rounded px-3 py-1.5"
+                  className="text-xs bg-gray-200 hover:bg-gray-100 text-gray-900 rounded px-3 py-1.5"
                 >
                   Back
                 </button>

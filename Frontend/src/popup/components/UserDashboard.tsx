@@ -75,43 +75,43 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
 
   return (
     <div className="p-4 space-y-3">
-      <div className="bg-gray-800 border border-slate-700 rounded-lg p-3">
+      <div className="bg-white border border-gray-200 rounded-lg p-3">
         <QBConnectionCard qbStatus={qbStatus} onReconnect={handleReconnect} onDisconnect={handleDisconnect} />
       </div>
 
       {scanHealth && (
-        <div className="bg-gray-800 border border-slate-700 rounded-lg p-3">
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
           <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} />
         </div>
       )}
 
-      <div className="bg-gray-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">My Permissions</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">My Permissions</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className={hasPerm(user, 'scan', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'scan', 'write') ? '✅ Scan' : '❌ Scan'}</div>
-          <div className={hasPerm(user, 'map', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'map', 'write') ? '✅ Map & Rules' : '❌ Map & Rules'}</div>
-          <div className={hasPerm(user, 'sync', 'execute') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'sync', 'execute') ? '✅ Sync Data' : '❌ Sync Data'}</div>
-          <div className={hasPerm(user, 'locations', 'write') ? 'text-green-400' : 'text-red-400'}>{hasPerm(user, 'locations', 'write') ? '✅ Locations' : '❌ Locations'}</div>
+          <div className={hasPerm(user, 'scan', 'write') ? 'text-emerald-600' : 'text-red-600'}>{hasPerm(user, 'scan', 'write') ? '✅ Scan' : '❌ Scan'}</div>
+          <div className={hasPerm(user, 'map', 'write') ? 'text-emerald-600' : 'text-red-600'}>{hasPerm(user, 'map', 'write') ? '✅ Map & Rules' : '❌ Map & Rules'}</div>
+          <div className={hasPerm(user, 'sync', 'execute') ? 'text-emerald-600' : 'text-red-600'}>{hasPerm(user, 'sync', 'execute') ? '✅ Sync Data' : '❌ Sync Data'}</div>
+          <div className={hasPerm(user, 'locations', 'write') ? 'text-emerald-600' : 'text-red-600'}>{hasPerm(user, 'locations', 'write') ? '✅ Locations' : '❌ Locations'}</div>
         </div>
       </div>
 
-      <div className="bg-gray-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Trial Status</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Trial Status</h3>
         {user.trialExpiresAt ? (
           <>
             {daysLeft !== null && daysLeft < 0 ? (
-              <p className="text-sm text-red-400">❌ Expired</p>
+              <p className="text-sm text-red-600">❌ Expired</p>
             ) : daysLeft !== null && daysLeft <= 7 ? (
-              <p className="text-sm text-yellow-400">⚠️ {daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
+              <p className="text-sm text-amber-600">⚠️ {daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
             ) : (
-              <p className="text-sm text-green-400">✅ {daysLeft} days remaining</p>
+              <p className="text-sm text-emerald-600">✅ {daysLeft} days remaining</p>
             )}
             {user.customExpiryMessage && (
-              <p className="text-xs text-gray-400 mt-1">{user.customExpiryMessage}</p>
+              <p className="text-xs text-gray-600 mt-1">{user.customExpiryMessage}</p>
             )}
           </>
         ) : (
-          <p className="text-sm text-green-400">✅ Active — No trial limit</p>
+          <p className="text-sm text-emerald-600">✅ Active — No trial limit</p>
         )}
       </div>
     </div>

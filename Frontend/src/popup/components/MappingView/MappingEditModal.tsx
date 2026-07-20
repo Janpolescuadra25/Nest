@@ -29,11 +29,11 @@ export default function MappingEditModal({
 }: Props) {
   const [conditionsOpen, setConditionsOpen] = useState(false);
   return (
-    <div className="px-3 pb-3 space-y-2 border-t border-gray-700/60 pt-2">
+    <div className="px-3 pb-3 space-y-2 border-t border-gray-200 pt-2">
       <div>
-        <div className="text-xs text-gray-500 mb-0.5">Description</div>
+        <div className="text-xs text-gray-600 mb-0.5">Description</div>
         <input
-          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+          className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
           value={mapping.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
           placeholder="Line description…"
@@ -61,17 +61,17 @@ export default function MappingEditModal({
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-[10px] text-gray-400 mb-0.5">Priority</label>
+          <label className="block text-[10px] text-gray-600 mb-0.5">Priority</label>
           <input
             type="number"
             min={0}
             value={mapping.priority ?? 0}
             onChange={(e) => onUpdate({ priority: parseInt(e.target.value, 10) || 0 })}
-            className="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white"
+            className="w-full bg-[#F5F5F7] border border-gray-300 rounded px-2 py-1 text-xs text-gray-900"
           />
         </div>
         <div>
-          <label className="block text-[10px] text-gray-400 mb-0.5">Entity (opt)</label>
+          <label className="block text-[10px] text-gray-600 mb-0.5">Entity (opt)</label>
           <SearchableSelect
             options={entityOptions}
             value={mapping.entityType ? `${mapping.entityType}:${mapping.entityId}` : ''}
@@ -87,11 +87,11 @@ export default function MappingEditModal({
       </div>
 
       <div>
-        <div className="text-xs text-gray-500 mb-0.5">Amount Rule</div>
+        <div className="text-xs text-gray-600 mb-0.5">Amount Rule</div>
         <select
           value={mapping.amountRule}
           onChange={(e) => onUpdate({ amountRule: e.target.value })}
-          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+          className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
         >
           {AMOUNT_RULES.map((rule) => (
             <option key={rule} value={rule}>{rule}</option>
@@ -104,21 +104,21 @@ export default function MappingEditModal({
           type="checkbox"
           checked={mapping.keepSeparate}
           onChange={(e) => onUpdate({ keepSeparate: e.target.checked, isDirty: true })}
-          className="rounded border-gray-600"
+          className="rounded border-gray-300"
         />
-        <span className="text-xs text-gray-400">🔒 Keep separate</span>
+        <span className="text-xs text-gray-600">🔒 Keep separate</span>
         <span className="text-xs text-gray-600">— don't merge with other lines</span>
       </label>
 
       {/* Conditions Builder */}
-      <div className="border border-gray-700 rounded">
+      <div className="border border-gray-200 rounded">
         <button
           type="button"
           onClick={() => setConditionsOpen(!conditionsOpen)}
-          className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-300 hover:bg-gray-800/50 rounded"
+          className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 rounded"
         >
           <span>Conditions {mapping.conditions?.length ? `(${mapping.conditions.length})` : ''}</span>
-          <span className="text-gray-500">{conditionsOpen ? '▼' : '▶'}</span>
+          <span className="text-gray-600">{conditionsOpen ? '▼' : '▶'}</span>
         </button>
 
         {conditionsOpen && (
@@ -133,7 +133,7 @@ export default function MappingEditModal({
                       updated[i] = { ...updated[i], field: e.target.value };
                       onUpdate({ conditions: updated });
                     }}
-                    className="flex-1 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white"
+                    className="flex-1 bg-[#F5F5F7] border border-gray-300 rounded px-1.5 py-1 text-xs text-gray-900"
                   >
                     <option value="">Select field…</option>
                     {scanFieldOptions.map((opt) => (
@@ -150,7 +150,7 @@ export default function MappingEditModal({
                       updated[i] = { ...updated[i], operator: e.target.value as MappingCondition['operator'] };
                       onUpdate({ conditions: updated });
                     }}
-                    className="w-32 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white"
+                    className="w-32 bg-[#F5F5F7] border border-gray-300 rounded px-1.5 py-1 text-xs text-gray-900"
                   >
                     <optgroup label="Comparison">
                       <option value="equals">equals</option>
@@ -178,7 +178,7 @@ export default function MappingEditModal({
                       updated[i] = { ...updated[i], value: e.target.value };
                       onUpdate({ conditions: updated });
                     }}
-                    className="w-24 bg-gray-900 border border-gray-600 rounded px-1.5 py-1 text-xs text-white"
+                    className="w-24 bg-[#F5F5F7] border border-gray-300 rounded px-1.5 py-1 text-xs text-gray-900"
                     placeholder="Value"
                   />
 
@@ -188,7 +188,7 @@ export default function MappingEditModal({
                       const updated = (mapping.conditions || []).filter((_, idx) => idx !== i);
                       onUpdate({ conditions: updated.length > 0 ? updated : null });
                     }}
-                    className="text-gray-500 hover:text-red-400 text-xs px-1 shrink-0"
+                    className="text-gray-600 hover:text-red-600 text-xs px-1 shrink-0"
                     title="Remove condition"
                   >
                     ✕
@@ -196,7 +196,7 @@ export default function MappingEditModal({
                 </div>
               ))
             ) : (
-              <p className="text-[10px] text-gray-500 py-1">No conditions — this mapping always matches.</p>
+              <p className="text-[10px] text-gray-600 py-1">No conditions — this mapping always matches.</p>
             )}
 
             <button
@@ -205,7 +205,7 @@ export default function MappingEditModal({
                 const newCond: MappingCondition = { field: '', operator: 'equals', value: '' };
                 onUpdate({ conditions: [...(mapping.conditions || []), newCond] });
               }}
-              className="text-[10px] text-slate-400 hover:text-slate-300"
+              className="text-[10px] text-slate-400 hover:text-gray-600"
             >
               + Add condition
             </button>

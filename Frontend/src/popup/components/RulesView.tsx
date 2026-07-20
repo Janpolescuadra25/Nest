@@ -44,10 +44,10 @@ const RULE_DESCRIPTIONS: Record<string, string> = {
 };
 
 const ruleTypeColor: Record<Rule['ruleType'], string> = {
-  COMBINE: 'bg-emerald-900 text-emerald-300',
-  DEDUCT: 'bg-orange-900 text-orange-300',
-  THRESHOLD: 'bg-slate-900 text-slate-300',
-  FORMULA: 'bg-green-900 text-green-300',
+  COMBINE: 'bg-emerald-50 text-emerald-600',
+  DEDUCT: 'bg-orange-50 text-orange-600',
+  THRESHOLD: 'bg-gray-50 text-gray-600',
+  FORMULA: 'bg-emerald-50 text-emerald-600',
 };
 
 // ------------------------------------------------------------------
@@ -408,8 +408,8 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   // ------------------------------------------------------------------
   // Render helpers
   // ------------------------------------------------------------------
-  const inputClass = 'w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none';
-  const labelClass = 'block text-xs text-gray-400 mb-1';
+  const inputClass = 'w-full bg-[#F5F5F7] text-gray-900 text-xs rounded px-2 py-1.5 border border-gray-300 focus:border-emerald-500 focus:outline-none';
+  const labelClass = 'block text-xs text-gray-600 mb-1';
   const fieldGroupClass = 'space-y-1';
 
   const renderFormFields = () => {
@@ -436,7 +436,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                   <button
                     type="button"
                     onClick={() => setSourceFields(sourceFields.filter((_, i) => i !== idx))}
-                    className="text-gray-500 hover:text-red-400 text-xs px-1"
+                    className="text-gray-600 hover:text-red-600 text-xs px-1"
                   >✕</button>
                 )}
               </div>
@@ -444,10 +444,10 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
             <button
               type="button"
               onClick={() => setSourceFields([...sourceFields, ''])}
-              className="text-xs text-emerald-400 hover:text-emerald-300 mt-1"
+              className="text-xs text-emerald-400 hover:text-emerald-600 mt-1"
             >+ Add another field</button>
             {validationErrors['sourceFields'] && (
-              <p className="text-red-400 text-xs">{validationErrors['sourceFields']}</p>
+              <p className="text-red-600 text-xs">{validationErrors['sourceFields']}</p>
             )}
           </div>
         );
@@ -474,7 +474,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               />
             </div>
             {validationErrors['sourceFields'] && (
-              <p className="text-red-400 text-xs">{validationErrors['sourceFields']}</p>
+              <p className="text-red-600 text-xs">{validationErrors['sourceFields']}</p>
             )}
           </div>
         );
@@ -491,7 +491,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 placeholder="Select source field…"
               />
               {validationErrors['thresholdSource'] && (
-                <p className="text-red-400 text-xs">{validationErrors['thresholdSource']}</p>
+                <p className="text-red-600 text-xs">{validationErrors['thresholdSource']}</p>
               )}
             </div>
             <div className={fieldGroupClass}>
@@ -505,7 +505,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 min={0}
               />
               {validationErrors['thresholdValue'] && (
-                <p className="text-red-400 text-xs">{validationErrors['thresholdValue']}</p>
+                <p className="text-red-600 text-xs">{validationErrors['thresholdValue']}</p>
               )}
             </div>
           </div>
@@ -524,12 +524,12 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               placeholder='{Revenue.Net sales} + {Revenue.Tax amount}'
             />
             {validationErrors['formula'] && (
-              <p className="text-red-400 text-xs">{validationErrors['formula']}</p>
+              <p className="text-red-600 text-xs">{validationErrors['formula']}</p>
             )}
             <button
               type="button"
               onClick={() => setFormulaFieldsExpanded(!formulaFieldsExpanded)}
-              className="text-xs text-gray-400 hover:text-white cursor-pointer flex items-center gap-1 mt-1"
+              className="text-xs text-gray-600 hover:text-gray-900 cursor-pointer flex items-center gap-1 mt-1"
             >
               <span className="text-xs">{formulaFieldsExpanded ? '▾' : '▸'}</span>
               {formulaFieldsExpanded
@@ -544,7 +544,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                     key={f}
                     type="button"
                     onClick={() => appendFormulaField(f)}
-                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-1.5 py-0.5 rounded"
+                    className="text-xs bg-gray-200 hover:bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
                   >
                     {f}
                   </button>
@@ -562,7 +562,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
   return (
     <div className="p-3">
       {rulesTipVisible && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-600">
           <span className="mt-0.5 shrink-0">ℹ️</span>
           <p className="flex-1">Rules transform scanned values before syncing — combine fields, apply formulas, set thresholds. Not required for simple 1:1 mappings.</p>
           <button onClick={() => { chrome.storage.local.set({ [rulesTipKey]: true }); setRulesTipVisible(false); }} className="shrink-0 text-emerald-400 hover:text-emerald-200">✕</button>
@@ -578,11 +578,11 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
         </button>
       </div>
       <div className="flex items-center gap-2 mb-3">
-        <label className="text-xs text-gray-400">Template</label>
+        <label className="text-xs text-gray-600">Template</label>
         <select
           value={selectedTemplateId}
           onChange={(e) => setSelectedTemplateId(e.target.value)}
-          className="flex-1 bg-gray-800 border border-gray-600 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none"
+          className="flex-1 bg-white border border-gray-300 text-gray-900 text-xs rounded-lg px-2 py-1.5 focus:outline-none"
         >
           <option value="">All Rules</option>
           {templates.map((template) => (
@@ -591,12 +591,12 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
         </select>
       </div>
 
-      {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
+      {error && <p className="text-red-600 text-xs mb-2">{error}</p>}
 
       {/* Form card */}
       {showForm && (
-        <div ref={formRef} className="bg-gray-800 border border-gray-600 rounded-lg p-3 mb-3">
-          <h3 className="text-sm font-semibold text-white mb-3">
+        <div ref={formRef} className="bg-white border border-gray-300 rounded-lg p-3 mb-3">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
             {editingRule ? 'Edit Rule' : 'Create Rule'}
           </h3>
           <form onSubmit={(e) => { void handleSave(e); }} className="space-y-3">
@@ -610,7 +610,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 className={inputClass}
               />
               {validationErrors['name'] && (
-                <p className="text-red-400 text-xs">{validationErrors['name']}</p>
+                <p className="text-red-600 text-xs">{validationErrors['name']}</p>
               )}
             </div>
 
@@ -620,20 +620,20 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               <select
                 value={formRuleType}
                 onChange={(e) => handleRuleTypeChange(e.target.value as Rule['ruleType'])}
-                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none"
+                className="w-full bg-[#F5F5F7] text-gray-900 text-xs rounded px-2 py-1.5 border border-gray-300 focus:border-emerald-500 focus:outline-none"
               >
                 {(['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA'] as const).map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-              <p className="text-gray-500 text-xs mt-0.5">{RULE_DESCRIPTIONS[formRuleType]}</p>
+              <p className="text-gray-600 text-xs mt-0.5">{RULE_DESCRIPTIONS[formRuleType]}</p>
             </div>
             <div className={fieldGroupClass}>
               <label className={labelClass}>Template</label>
               <select
                 value={formTemplateId}
                 onChange={(e) => setFormTemplateId(e.target.value)}
-                className="w-full bg-gray-900 text-white text-xs rounded px-2 py-1.5 border border-gray-600 focus:border-emerald-500 focus:outline-none"
+                className="w-full bg-[#F5F5F7] text-gray-900 text-xs rounded px-2 py-1.5 border border-gray-300 focus:border-emerald-500 focus:outline-none"
               >
                 <option value="">None (Location-scoped)</option>
                 {templates.map((template) => (
@@ -655,7 +655,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 className={inputClass}
               />
               {validationErrors['targetField'] && (
-                <p className="text-red-400 text-xs">{validationErrors['targetField']}</p>
+                <p className="text-red-600 text-xs">{validationErrors['targetField']}</p>
               )}
             </div>
 
@@ -664,7 +664,7 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
               <button
                 type="button"
                 onClick={resetForm}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1"
+                className="text-xs text-gray-600 hover:text-gray-900 px-2 py-1"
               >Cancel</button>
               <button
                 type="submit"
@@ -680,24 +680,24 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
 
       {/* Rules list */}
       {loading ? (
-        <div className="text-gray-500 text-xs text-center py-8">Loading…</div>
+        <div className="text-gray-600 text-xs text-center py-8">Loading…</div>
       ) : rules.length === 0 ? (
         <div className="text-center py-8">
           <div className="text-2xl mb-2">⚙️</div>
-          <p className="text-gray-500 text-xs">No rules yet. Create your first rule above.</p>
+          <p className="text-gray-600 text-xs">No rules yet. Create your first rule above.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {rules.map((r) => (
-            <div key={r.id} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 space-y-1.5">
+            <div key={r.id} className="bg-white border border-gray-200 rounded-lg px-3 py-2.5 space-y-1.5">
               {/* Header row */}
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-1.5 py-0.5 rounded font-mono ${ruleTypeColor[r.ruleType]}`}>
                   {r.ruleType}
                 </span>
-                <span className="flex-1 text-white text-xs font-semibold truncate">{r.name}</span>
+                <span className="flex-1 text-gray-900 text-xs font-semibold truncate">{r.name}</span>
               {r.template && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-200">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-600">
                   {TRANSACTION_TYPE_LABELS[r.template.transactionType] ?? r.template.transactionType}
                 </span>
               )}
@@ -705,26 +705,26 @@ export default function RulesView({ jwt, selectedLocationId, onLocationChange, s
                 <button
                   type="button"
                   onClick={() => openEditForm(r)}
-                  className="text-gray-500 hover:text-emerald-400 text-xs ml-1"
+                  className="text-gray-600 hover:text-emerald-400 text-xs ml-1"
                   title="Edit"
                 >✏️</button>
                 <button
                   type="button"
                   onClick={() => void handleDelete(r.id)}
-                  className="text-gray-500 hover:text-red-400 text-xs"
+                  className="text-gray-600 hover:text-red-600 text-xs"
                   title="Delete"
                 >🗑️</button>
               </div>
 
               {/* Config summary */}
               {isConfigValid(r) ? (
-                <p className="text-gray-400 text-xs font-mono leading-relaxed">
+                <p className="text-gray-600 text-xs font-mono leading-relaxed">
                   {renderConfigSummary(r)}
                 </p>
               ) : (
                 <details className="text-xs">
-                  <summary className="text-yellow-500 cursor-pointer">Show raw config</summary>
-                  <pre className="text-gray-400 mt-1 bg-gray-900 rounded p-2 text-xs overflow-auto">
+                  <summary className="text-amber-600 cursor-pointer">Show raw config</summary>
+                  <pre className="text-gray-600 mt-1 bg-[#F5F5F7] rounded p-2 text-xs overflow-auto">
                     {JSON.stringify(r.config, null, 2)}
                   </pre>
                 </details>

@@ -141,11 +141,11 @@ export default function SearchableSelect({
 
   return (
     <div ref={containerRef} className="relative">
-      {label && <div className="text-xs text-gray-500 mb-0.5">{label}</div>}
+      {label && <div className="text-xs text-gray-600 mb-0.5">{label}</div>}
       <div
         ref={triggerRef}
-        className={`flex items-center gap-1 bg-gray-900 border rounded px-2 py-1.5 text-xs cursor-pointer transition-colors ${
-          open ? 'border-emerald-500' : 'border-gray-600'
+        className={`flex items-center gap-1 bg-[#F5F5F7] border rounded px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+          open ? 'border-emerald-500' : 'border-gray-300'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}`}
         onClick={openDropdown}
         onKeyDown={handleKeyDown}
@@ -156,7 +156,7 @@ export default function SearchableSelect({
         {open ? (
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-white outline-none text-xs min-w-0"
+            className="flex-1 bg-transparent text-gray-900 outline-none text-xs min-w-0"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setHighlighted(0); }}
             onKeyDown={handleKeyDown}
@@ -164,14 +164,14 @@ export default function SearchableSelect({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className={`flex-1 truncate ${selected ? 'text-white' : 'text-gray-500'}`}>
+          <span className={`flex-1 truncate ${selected ? 'text-gray-900' : 'text-gray-600'}`}>
             {selected?.label ?? placeholder}
           </span>
         )}
         {value && !disabled && (
           <button
             type="button"
-            className="text-gray-500 hover:text-red-400 shrink-0 leading-none"
+            className="text-gray-600 hover:text-red-600 shrink-0 leading-none"
             onClick={(e) => { e.stopPropagation(); onChange(''); setQuery(''); }}
             aria-label="Clear"
           >
@@ -185,15 +185,15 @@ export default function SearchableSelect({
         <div
           ref={dropdownRef}
           style={{ position: 'fixed', top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width, zIndex: 9999, maxHeight: dropdownStyle.maxHeight }}
-          className="bg-gray-800 border border-gray-600 rounded shadow-2xl overflow-y-auto"
+          className="bg-white border border-gray-300 rounded shadow-2xl overflow-y-auto"
         >
           {filtered.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-gray-500 italic">No results</div>
+            <div className="px-3 py-2 text-xs text-gray-600 italic">No results</div>
           ) : (
             grouped.map(({ group, items }) => (
               <div key={group}>
                 {group && (
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-700/60 sticky top-0">
+                  <div className="px-2 py-1 text-xs font-semibold text-gray-600 uppercase tracking-wider bg-gray-200 sticky top-0">
                     {group}
                   </div>
                 )}
@@ -205,7 +205,7 @@ export default function SearchableSelect({
                       className={`px-3 py-1.5 cursor-pointer text-xs transition-colors ${
                         flatIdx === highlighted
                           ? 'bg-emerald-800 text-white'
-                          : 'text-gray-300 hover:bg-gray-700'
+                          : 'text-gray-600 hover:bg-gray-100'
                       }`}
                       onMouseDown={(e) => {
                         e.preventDefault();
@@ -217,7 +217,7 @@ export default function SearchableSelect({
                     >
                       <div className="truncate">{opt.label}</div>
                       {opt.subtitle && (
-                        <div className="text-gray-500 text-xs truncate">{opt.subtitle}</div>
+                        <div className="text-gray-600 text-xs truncate">{opt.subtitle}</div>
                       )}
                     </div>
                   );

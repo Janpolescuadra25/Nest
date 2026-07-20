@@ -69,7 +69,7 @@ export default function MappingTable({
         <button
           type="button"
           onClick={onAddMapping}
-          className="w-full py-2 text-sm text-emerald-400 hover:text-emerald-300 border border-dashed border-gray-600 rounded-md hover:border-emerald-400 transition-colors"
+          className="w-full py-2 text-sm text-emerald-400 hover:text-emerald-600 border border-dashed border-gray-300 rounded-md hover:border-emerald-400 transition-colors"
         >
           + Add mapping
         </button>
@@ -121,14 +121,14 @@ function MappingCard({
   const hidePostingType = isBill || isVendorCredit;
 
   return (
-    <div className={`bg-gray-800 border rounded-lg overflow-hidden transition-all ${
-      mapping.isDirty ? 'border-emerald-700' : 'border-gray-700'
+    <div className={`bg-white border rounded-lg overflow-hidden transition-all ${
+      mapping.isDirty ? 'border-emerald-200' : 'border-gray-200'
     }`}>
       <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"
           onClick={onToggleExpand}
-          className="text-gray-500 hover:text-gray-300 text-xs shrink-0"
+          className="text-gray-600 hover:text-gray-600 text-xs shrink-0"
         >
           {mapping.expanded ? '▼' : '▶'}
         </button>
@@ -142,7 +142,7 @@ function MappingCard({
             />
           ) : (
             <input
-              className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+              className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
               value={mapping.sourceField}
               onChange={(e) => onUpdate({ sourceField: e.target.value })}
               placeholder="Source field name…"
@@ -150,24 +150,24 @@ function MappingCard({
           )}
         </div>
         {mapping.conditions && mapping.conditions.length > 0 && (
-          <span className="text-[10px] text-slate-400 bg-slate-800/30 px-1.5 py-0.5 rounded shrink-0">
+          <span className="text-[10px] text-slate-400 bg-gray-50 px-1.5 py-0.5 rounded shrink-0">
             🔀 {mapping.conditions.length}
           </span>
         )}
         {hidePostingType ? (
-          <div className="flex flex-col items-end text-right text-xs text-gray-400 shrink-0">
+          <div className="flex flex-col items-end text-right text-xs text-gray-600 shrink-0">
             <span>Amount</span>
-            <span className="text-white">{amountLabel}</span>
+            <span className="text-gray-900">{amountLabel}</span>
           </div>
         ) : (
-          <div className="flex rounded overflow-hidden border border-gray-600 shrink-0">
+          <div className="flex rounded overflow-hidden border border-gray-300 shrink-0">
             <button
               type="button"
               onClick={() => onUpdate({ postingType: 'Debit' })}
               className={`text-xs px-2 py-0.5 transition-colors ${
                 mapping.postingType === 'Debit'
                   ? 'bg-emerald-700 text-emerald-100'
-                  : 'bg-gray-900 text-gray-500 hover:text-gray-300'
+                  : 'bg-[#F5F5F7] text-gray-600 hover:text-gray-600'
               }`}
             >
               Dr
@@ -178,7 +178,7 @@ function MappingCard({
               className={`text-xs px-2 py-0.5 transition-colors ${
                 mapping.postingType === 'Credit'
                   ? 'bg-emerald-700 text-emerald-100'
-                  : 'bg-gray-900 text-gray-500 hover:text-gray-300'
+                  : 'bg-[#F5F5F7] text-gray-600 hover:text-gray-600'
               }`}
             >
               Cr
@@ -189,7 +189,7 @@ function MappingCard({
           type="button"
           onClick={onDelete}
           disabled={isDeleting}
-          className="text-gray-600 hover:text-red-400 text-xs transition-colors shrink-0"
+          className="text-gray-600 hover:text-red-600 text-xs transition-colors shrink-0"
           title="Delete mapping"
         >
           🗑️

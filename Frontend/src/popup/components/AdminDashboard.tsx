@@ -141,38 +141,38 @@ export default function AdminDashboard({ jwt }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-white">🏠 Team Overview</h2>
+        <h2 className="text-base font-semibold text-gray-900">🏠 Team Overview</h2>
         {stats.expiringSoon > 0 && (
-          <span className="text-xs px-2 py-1 rounded bg-yellow-900/50 border border-yellow-700 text-yellow-300">
+          <span className="text-xs px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-600">
             ⚠ {stats.expiringSoon} expiring soon
           </span>
         )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">👥 Team</div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.teamSize}/{stats.maxUsers || 0}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">👥 Team</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{stats.teamSize}/{stats.maxUsers || 0}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">🔍 Scans</div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">🔍 Scans</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{stats.totalScans}</div>
         </div>
-        <div className="bg-slate-800 border border-amber-900 rounded-lg p-3">
+        <div className="bg-white border border-amber-200 rounded-lg p-3">
           <div className="text-xs text-amber-400">⏳ Pending</div>
           <div className="text-2xl font-bold text-amber-400 mt-1">{stats.totalPending}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">✅ Synced</div>
-          <div className="text-2xl font-bold text-green-400 mt-1">{stats.totalSynced}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">✅ Synced</div>
+          <div className="text-2xl font-bold text-emerald-600 mt-1">{stats.totalSynced}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">❌ Failed</div>
-          <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">❌ Failed</div>
+          <div className="text-2xl font-bold text-red-600 mt-1">{stats.totalFailed}</div>
         </div>
-        <div className="bg-slate-800 border border-yellow-900 rounded-lg p-3">
-          <div className="text-xs text-yellow-400">⚠ Expiring Soon</div>
-          <div className="text-2xl font-bold text-yellow-400 mt-1">{stats.expiringSoon}</div>
+        <div className="bg-white border border-amber-200 rounded-lg p-3">
+          <div className="text-xs text-amber-600">⚠ Expiring Soon</div>
+          <div className="text-2xl font-bold text-amber-600 mt-1">{stats.expiringSoon}</div>
         </div>
       </div>
 
@@ -180,38 +180,38 @@ export default function AdminDashboard({ jwt }: Props) {
       {scanHealthLoaded ? (
         scanHealth ? <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} /> : null
       ) : (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-          <div className="h-4 bg-slate-900 rounded animate-pulse" />
-          <div className="h-3 bg-slate-900 rounded animate-pulse" />
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+          <div className="h-4 bg-gray-50 rounded animate-pulse" />
+          <div className="h-3 bg-gray-50 rounded animate-pulse" />
         </div>
       )}
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Expiring Soon</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Expiring Soon</h3>
         {expiringMembers.length === 0 ? (
-          <p className="text-sm text-gray-500">No team members expiring in the next 3 days</p>
+          <p className="text-sm text-gray-600">No team members expiring in the next 3 days</p>
         ) : (
           expiringMembers.map(member => (
-            <div key={member.id} className="bg-slate-900 border border-slate-700 rounded p-2 flex items-center justify-between gap-2">
+            <div key={member.id} className="bg-gray-50 border border-gray-200 rounded p-2 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-sm text-white truncate">⚠ {member.name ?? member.email}</p>
-                {member.name && <p className="text-xs text-gray-500 truncate">{member.email}</p>}
+                <p className="text-sm text-gray-900 truncate">⚠ {member.name ?? member.email}</p>
+                {member.name && <p className="text-xs text-gray-600 truncate">{member.email}</p>}
               </div>
-              <span className="text-xs text-yellow-300 flex-shrink-0">{trialCountdown(member.trialExpiresAt)}</span>
+              <span className="text-xs text-amber-600 flex-shrink-0">{trialCountdown(member.trialExpiresAt)}</span>
             </div>
           ))
         )}
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <h3 className="text-sm font-medium text-emerald-300 mb-2">Team Members</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3">
+        <h3 className="text-sm font-medium text-emerald-600 mb-2">Team Members</h3>
         {teamMembers.length === 0 ? (
-          <p className="text-sm text-gray-500">No team members yet</p>
+          <p className="text-sm text-gray-600">No team members yet</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-slate-700">
+                <tr className="text-left text-gray-600 border-b border-gray-200">
                   <th className="py-2 pr-2">Name / Email</th>
                   <th className="py-2 pr-2">Role</th>
                   <th className="py-2 pr-2">Status</th>
@@ -220,26 +220,26 @@ export default function AdminDashboard({ jwt }: Props) {
               </thead>
               <tbody>
                 {teamMembers.map(member => (
-                  <tr key={member.id} className="border-b border-slate-800/80 text-gray-200">
+                  <tr key={member.id} className="border-b border-slate-800/80 text-gray-700">
                     <td className="py-2 pr-2">
-                      <div className="truncate max-w-[180px] text-gray-100">{member.name ?? member.email}</div>
-                      {member.name && <div className="text-gray-500 truncate max-w-[180px]">{member.email}</div>}
+                      <div className="truncate max-w-[180px] text-gray-800">{member.name ?? member.email}</div>
+                      {member.name && <div className="text-gray-600 truncate max-w-[180px]">{member.email}</div>}
                     </td>
                     <td className="py-2 pr-2">
-                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-900 text-emerald-300">{member.role}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[11px] bg-emerald-50 text-emerald-600">{member.role}</span>
                     </td>
                     <td className="py-2 pr-2">
                       <span className={`px-1.5 py-0.5 rounded text-[11px] ${
                         member.status === 'ACTIVE'
-                          ? 'bg-green-900 text-green-400'
+                          ? 'bg-emerald-50 text-emerald-600'
                           : member.status === 'DISABLED'
-                            ? 'bg-red-900 text-red-400'
-                            : 'bg-yellow-900 text-yellow-400'
+                            ? 'bg-red-50 text-red-600'
+                            : 'bg-amber-50 text-amber-600'
                       }`}>
                         {member.status}
                       </span>
                     </td>
-                    <td className="py-2 text-gray-400">{trialCountdown(member.trialExpiresAt)}</td>
+                    <td className="py-2 text-gray-600">{trialCountdown(member.trialExpiresAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -248,18 +248,18 @@ export default function AdminDashboard({ jwt }: Props) {
         )}
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Recent Activity</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Recent Activity</h3>
         {recentActivity.length === 0 ? (
-          <p className="text-sm text-gray-500">No recent activity</p>
+          <p className="text-sm text-gray-600">No recent activity</p>
         ) : (
           recentActivity.map(log => (
-            <div key={log.id} className="flex items-start justify-between gap-2 bg-slate-900 border border-slate-700 rounded p-2">
+            <div key={log.id} className="flex items-start justify-between gap-2 bg-gray-50 border border-gray-200 rounded p-2">
               <div className="min-w-0">
-                <p className="text-sm text-gray-200 truncate">{formatAction(log.action)}</p>
-                <p className="text-xs text-gray-500 truncate">{log.actor.name ?? log.actor.email}</p>
+                <p className="text-sm text-gray-700 truncate">{formatAction(log.action)}</p>
+                <p className="text-xs text-gray-600 truncate">{log.actor.name ?? log.actor.email}</p>
               </div>
-              <span className="text-xs text-gray-500 flex-shrink-0">{relativeTime(log.createdAt)}</span>
+              <span className="text-xs text-gray-600 flex-shrink-0">{relativeTime(log.createdAt)}</span>
             </div>
           ))
         )}

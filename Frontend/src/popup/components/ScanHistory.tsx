@@ -55,7 +55,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-semibold text-white">Scan History</div>
+        <div className="text-sm font-semibold text-gray-900">Scan History</div>
         <div className="flex items-center gap-2">
           <button
             type="button"

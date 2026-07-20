@@ -33,9 +33,9 @@ interface Props {
 }
 
 function roleBadge(role: string) {
-  if (role === 'ACCOUNTANT') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-900 text-emerald-400">Accountant</span>;
-  if (role === 'STAFF') return <span className="text-xs px-1 py-0.5 rounded bg-green-900 text-green-400">Staff</span>;
-  return <span className="text-xs px-1 py-0.5 rounded bg-slate-700 text-gray-400">{role}</span>;
+  if (role === 'ACCOUNTANT') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-400">Accountant</span>;
+  if (role === 'STAFF') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">Staff</span>;
+  return <span className="text-xs px-1 py-0.5 rounded bg-gray-200 text-gray-600">{role}</span>;
 }
 
 function trialBadge(trialExpiresAt: string | null) {
@@ -45,14 +45,14 @@ function trialBadge(trialExpiresAt: string | null) {
   const expiry = new Date(trialExpiresAt);
   const now = new Date();
   const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysLeft < 0) return <span className="text-xs px-1 py-0.5 rounded bg-red-900 text-red-400">Trial expired</span>;
-  if (daysLeft <= 7) return <span className="text-xs px-1 py-0.5 rounded bg-yellow-900 text-yellow-400">{countdown}</span>;
-  return <span className="text-xs px-1 py-0.5 rounded bg-green-900 text-green-400">{countdown}</span>;
+  if (daysLeft < 0) return <span className="text-xs px-1 py-0.5 rounded bg-red-50 text-red-600">Trial expired</span>;
+  if (daysLeft <= 7) return <span className="text-xs px-1 py-0.5 rounded bg-amber-50 text-amber-600">{countdown}</span>;
+  return <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">{countdown}</span>;
 }
 
 function permPill(label: string, enabled: boolean) {
   return (
-    <span key={label} className={`text-xs px-1.5 py-0.5 rounded ${enabled ? 'bg-emerald-900 text-emerald-400' : 'bg-slate-700 text-gray-500'}`}>
+    <span key={label} className={`text-xs px-1.5 py-0.5 rounded ${enabled ? 'bg-emerald-50 text-emerald-400' : 'bg-gray-200 text-gray-600'}`}>
       {label}
     </span>
   );
@@ -167,8 +167,8 @@ export default function UsersTab({ jwt }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-white">Users</h2>
-        <button onClick={fetchUsers} className="text-xs text-gray-500 hover:text-gray-300">↻ Refresh</button>
+        <h2 className="text-base font-semibold text-gray-900">Users</h2>
+        <button onClick={fetchUsers} className="text-xs text-gray-600 hover:text-gray-600">↻ Refresh</button>
       </div>
 
       {/* Filters */}
@@ -177,7 +177,7 @@ export default function UsersTab({ jwt }: Props) {
           aria-label="Filter by role"
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value)}
-          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+          className="flex-1 px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
         >
           <option value="">All roles</option>
           <option value="ACCOUNTANT">Accountant</option>
@@ -188,7 +188,7 @@ export default function UsersTab({ jwt }: Props) {
           aria-label="Filter by status"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+          className="flex-1 px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
         >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -203,7 +203,7 @@ export default function UsersTab({ jwt }: Props) {
         <ErrorCard message={error} onDismiss={() => setError('')} />
       )}
       {teamPlan === 'free' && (
-        <div className="rounded-lg border border-yellow-700 bg-yellow-900/20 p-3 text-xs text-yellow-100">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
           Free plan users are limited to a single admin and basic features. Upgrade to a paid plan for team access and higher scan capacity.
         </div>
       )}
@@ -221,18 +221,18 @@ export default function UsersTab({ jwt }: Props) {
             {/* Group header */}
             <button
               onClick={() => setCollapsedAdmins(p => ({ ...p, [groupKey]: !p[groupKey] }))}
-              className="w-full flex items-center justify-between px-2 py-1 bg-slate-700 rounded text-left"
+              className="w-full flex items-center justify-between px-2 py-1 bg-gray-200 rounded text-left"
             >
-              <span className="text-xs text-gray-400 font-medium truncate">{group.label}</span>
-              <span className="text-gray-500 text-xs ml-1">{collapsedAdmins[groupKey] ? '▶' : '▾'} {group.users.length}</span>
+              <span className="text-xs text-gray-600 font-medium truncate">{group.label}</span>
+              <span className="text-gray-600 text-xs ml-1">{collapsedAdmins[groupKey] ? '▶' : '▾'} {group.users.length}</span>
             </button>
 
             {!collapsedAdmins[groupKey] && group.users.map(user => (
-              <div key={user.id} className="bg-slate-800 rounded-lg p-3 space-y-2 ml-2">
+              <div key={user.id} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2 ml-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{user.name ?? user.email}</div>
-                    {user.name && <div className="text-xs text-gray-400 truncate">{user.email}</div>}
+                    <div className="text-sm font-medium text-gray-900 truncate">{user.name ?? user.email}</div>
+                    {user.name && <div className="text-xs text-gray-600 truncate">{user.email}</div>}
                     <div className="flex items-center gap-1 mt-1 flex-wrap">
                       {roleBadge(user.role)}
                       <StatusBadge status={user.blocked ? 'BLOCKED' : user.status} />
@@ -245,21 +245,21 @@ export default function UsersTab({ jwt }: Props) {
                       {permPill('Locs', hasPerm(user, 'locations', 'write'))}
                     </div>
                   </div>
-                  <button onClick={() => setExpandedId(expandedId === user.id ? null : user.id)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">
+                  <button onClick={() => setExpandedId(expandedId === user.id ? null : user.id)} className="text-gray-600 hover:text-gray-600 text-xs flex-shrink-0">
                     {expandedId === user.id ? '▲' : '▼'}
                   </button>
                 </div>
 
                 {expandedId === user.id && (
-                  <div className="pt-2 border-t border-slate-700 space-y-2">
+                  <div className="pt-2 border-t border-gray-200 space-y-2">
                     {/* Block / Unblock */}
                     <button
                       onClick={() => handleBlock(user)}
                       disabled={actionLoading[`block_${user.id}`]}
                       className={`w-full py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
                         user.blocked
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-                          : 'bg-red-900 text-red-300 hover:bg-red-800'
+                          ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          : 'bg-red-50 text-red-600 hover:bg-red-700'
                       }`}
                     >
                       {actionLoading[`block_${user.id}`] ? '…' : user.blocked ? 'Unblock User' : 'Block User'}
@@ -268,39 +268,39 @@ export default function UsersTab({ jwt }: Props) {
                       <button
                         onClick={() => handleResetCanX(user)}
                         disabled={actionLoading[`reset_${user.id}`]}
-                        className="w-full py-1.5 bg-emerald-900/50 border border-emerald-800 text-emerald-300 rounded text-xs font-medium hover:bg-emerald-800 disabled:opacity-50"
+                        className="w-full py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded text-xs font-medium hover:bg-emerald-800 disabled:opacity-50"
                       >
                         {actionLoading[`reset_${user.id}`] ? 'Resetting…' : 'Reset CanX'}
                       </button>
                     )}
 
                     {/* Trial reset */}
-                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400 font-medium">Trial Period</p>
+                        <p className="text-xs text-gray-600 font-medium">Trial Period</p>
                         <button
                           onClick={() => setTrialEnabled(p => ({ ...p, [user.id]: !p[user.id] }))}
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[user.id] ? 'bg-yellow-800 text-yellow-300' : 'bg-slate-700 text-gray-500'}`}
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[user.id] ? 'bg-amber-600 text-amber-600' : 'bg-gray-200 text-gray-600'}`}
                         >
                           {trialEnabled[user.id] ? 'Enabled' : 'Disabled'}
                         </button>
                       </div>
                       {trialEnabled[user.id] && (
                         <div>
-                          <label className="block text-xs text-gray-500 mb-0.5">Expiry date</label>
+                          <label className="block text-xs text-gray-600 mb-0.5">Expiry date</label>
                           <input
                             type="date"
                             aria-label="Trial expiry date"
                             value={trialDate[user.id] ?? (user.trialExpiresAt ? user.trialExpiresAt.split('T')[0] : '')}
                             onChange={e => setTrialDate(p => ({ ...p, [user.id]: e.target.value }))}
-                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                       )}
                       <button
                         onClick={() => handleTrialSave(user)}
                         disabled={actionLoading[`trial_${user.id}`]}
-                        className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                        className="w-full py-1.5 bg-gray-200 text-gray-600 rounded text-xs font-medium hover:bg-gray-300 disabled:opacity-50"
                       >
                         {actionLoading[`trial_${user.id}`] ? 'Saving...' : 'Save Trial Settings'}
                       </button>

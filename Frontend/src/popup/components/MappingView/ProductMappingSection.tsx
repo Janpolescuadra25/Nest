@@ -246,30 +246,30 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   }
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 transition-colors"
       >
-        <span className="text-xs font-semibold text-gray-300">
+        <span className="text-xs font-semibold text-gray-600">
           ⚙️ Template Configuration: Product Mappings
         </span>
-        <span className="text-gray-400 text-xs">
+        <span className="text-gray-600 text-xs">
           {isOpen ? '▲' : '▼'}
         </span>
       </button>
       {isOpen && (
         <div className="px-3 pb-3">
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-600 mb-3">
             Pre-configure product → account bindings for this template. When invoices are scanned, matching products will auto-fill the correct account.
           </p>
 
-          <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-[#F5F5F7] p-4 space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-white">📦 Product Mappings</h2>
-                <p className="text-xs text-gray-400">Bind catalog products to QB accounts for this template.</p>
+                <h2 className="text-sm font-semibold text-gray-900">📦 Product Mappings</h2>
+                <p className="text-xs text-gray-600">Bind catalog products to QB accounts for this template.</p>
               </div>
               <button
                 type="button"
@@ -281,25 +281,25 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
             </div>
 
             {error && (
-              <div className="text-xs text-red-400 bg-red-950/30 border border-red-900 rounded px-3 py-2">
+              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-3 py-2">
                 {error}
               </div>
             )}
 
             {loading ? (
-              <div className="text-xs text-gray-400">Loading product mappings…</div>
+              <div className="text-xs text-gray-600">Loading product mappings…</div>
             ) : (
               <div className="space-y-4">
                 {showForm && (
-                  <div className="rounded-lg border border-gray-700 bg-gray-950 p-4 space-y-3">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="text-xs text-gray-400">Product</label>
+                        <label className="text-xs text-gray-600">Product</label>
                         <select
                           value={formData.productId}
                           onChange={(e) => setFormData((prev) => ({ ...prev, productId: e.target.value }))}
                           disabled={Boolean(editingMapping)}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">Select product</option>
                           {productOptions.map((option) => (
@@ -308,11 +308,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs text-gray-400">Account</label>
+                        <label className="text-xs text-gray-600">Account</label>
                         <select
                           value={formData.accountId}
                           onChange={(e) => setFormData((prev) => ({ ...prev, accountId: e.target.value }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">Select account</option>
                           {accountGroups.map((group) => (
@@ -325,11 +325,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs text-gray-400">Posting Type</label>
+                        <label className="text-xs text-gray-600">Posting Type</label>
                         <select
                           value={formData.postingType}
                           onChange={(e) => setFormData((prev) => ({ ...prev, postingType: e.target.value as ProductMappingFormData['postingType'] }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                         >
                           {POSTING_TYPES.map((option) => (
                             <option key={option} value={option}>{option}</option>
@@ -337,11 +337,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs text-gray-400">Class</label>
+                        <label className="text-xs text-gray-600">Class</label>
                         <select
                           value={formData.classId ?? ''}
                           onChange={(e) => setFormData((prev) => ({ ...prev, classId: e.target.value || undefined }))}
-                          className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                         >
                           <option value="">None</option>
                           {classGroups.map((group) => (
@@ -355,8 +355,8 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-700">
-                      <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
+                      <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
                         <input type="checkbox" checked={useRuleEnabled} onChange={(e) => setUseRuleEnabled(e.target.checked)} className="rounded" />
                         Custom matching rule
                       </label>
@@ -365,11 +365,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                     {useRuleEnabled && (
                       <div className="grid gap-3 sm:grid-cols-2 mt-3">
                         <div>
-                          <label className="text-xs text-gray-400">Rule Type</label>
+                          <label className="text-xs text-gray-600">Rule Type</label>
                           <select
                             value={ruleType}
                             onChange={(e) => setRuleType(e.target.value as MatchingRuleType)}
-                            className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                            className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                           >
                             <option value="EXACT">Exact Match</option>
                             <option value="CONTAINS">Contains</option>
@@ -381,11 +381,11 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
 
                         {(ruleType === 'CONTAINS' || ruleType === 'STARTS_WITH') && (
                           <div>
-                            <label className="text-xs text-gray-400">Direction</label>
+                            <label className="text-xs text-gray-600">Direction</label>
                             <select
                               value={ruleDirection}
                               onChange={(e) => setRuleDirection(e.target.value as any)}
-                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                              className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                             >
                               <option value="either">Either direction</option>
                               <option value="input_contains_catalog">Input contains catalog</option>
@@ -396,7 +396,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
 
                         {ruleType === 'FUZZY' && (
                           <div>
-                            <label className="text-xs text-gray-400">Threshold ({ruleThreshold.toFixed(2)})</label>
+                            <label className="text-xs text-gray-600">Threshold ({ruleThreshold.toFixed(2)})</label>
                             <input
                               type="range"
                               min="0.50"
@@ -411,13 +411,13 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
 
                         {ruleType === 'REGEX' && (
                           <div>
-                            <label className="text-xs text-gray-400">Pattern</label>
+                            <label className="text-xs text-gray-600">Pattern</label>
                             <input
                               type="text"
                               value={rulePattern}
                               onChange={(e) => setRulePattern(e.target.value)}
                               placeholder="e.g. ^COCA-\\d+"
-                              className="mt-1 w-full rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                              className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                             />
                           </div>
                         )}
@@ -428,7 +428,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                       <button
                         type="button"
                         onClick={handleCancel}
-                        className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-2"
+                        className="text-xs bg-white hover:bg-gray-100 text-gray-700 rounded px-3 py-2"
                       >
                         Cancel
                       </button>
@@ -445,14 +445,14 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                 )}
 
                 {mappings.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-700 bg-gray-950 p-4 text-xs text-gray-400">
+                  <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-xs text-gray-600">
                     No product mappings yet. Add a mapping to auto-assign accounts when product items are detected in scanned invoices.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
-                    <table className="min-w-full text-left text-xs text-gray-200">
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 bg-[#F5F5F7]">
+                    <table className="min-w-full text-left text-xs text-gray-700">
                       <thead>
-                        <tr className="border-b border-gray-700 bg-gray-800 text-gray-300">
+                        <tr className="border-b border-gray-200 bg-white text-gray-600">
                           <th className="px-3 py-3">Product</th>
                           <th className="px-3 py-3">Account</th>
                           <th className="px-3 py-3">Posting Type</th>
@@ -463,41 +463,41 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                       </thead>
                       <tbody>
                         {mappings.map((mapping) => (
-                          <tr key={mapping.id} className="border-b border-gray-800 hover:bg-gray-900/80">
-                            <td className="px-3 py-3 text-gray-200">{mapping.productName}</td>
-                            <td className="px-3 py-3 text-gray-300">{accountLabel(mapping.accountId)}</td>
-                            <td className={`px-3 py-3 ${mapping.postingType === 'Debit' ? 'text-red-300' : 'text-green-300'}`}>
+                          <tr key={mapping.id} className="border-b border-gray-200 hover:bg-gray-50">
+                            <td className="px-3 py-3 text-gray-700">{mapping.productName}</td>
+                            <td className="px-3 py-3 text-gray-600">{accountLabel(mapping.accountId)}</td>
+                            <td className={`px-3 py-3 ${mapping.postingType === 'Debit' ? 'text-red-600' : 'text-emerald-600'}`}>
                               {mapping.postingType}
                             </td>
-                            <td className="px-3 py-3 text-gray-300">{classLabel(mapping.classId)}</td>
+                            <td className="px-3 py-3 text-gray-600">{classLabel(mapping.classId)}</td>
                             <td className="px-3 py-2">
                               {mapping.matchingRule ? (
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                                  mapping.matchingRule.type === 'EXACT' ? 'bg-green-900/50 text-green-300' :
-                                  mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-900/50 text-amber-300' :
-                                  mapping.matchingRule.type === 'REGEX' ? 'bg-slate-800/50 text-slate-300' :
-                                  mapping.matchingRule.type === 'CONTAINS' ? 'bg-emerald-900/50 text-emerald-300' :
-                                  mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-emerald-900/50 text-emerald-300' :
-                                  'bg-gray-700 text-gray-300'
+                                  mapping.matchingRule.type === 'EXACT' ? 'bg-emerald-50 text-emerald-600' :
+                                  mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-50 text-amber-600' :
+                                  mapping.matchingRule.type === 'REGEX' ? 'bg-gray-50 text-gray-600' :
+                                  mapping.matchingRule.type === 'CONTAINS' ? 'bg-emerald-50 text-emerald-600' :
+                                  mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-emerald-50 text-emerald-600' :
+                                  'bg-gray-200 text-gray-600'
                                 }`}>
                                   {mapping.matchingRule.type}
                                 </span>
                               ) : (
-                                <span className="text-xs text-gray-500">Default</span>
+                                <span className="text-xs text-gray-600">Default</span>
                               )}
                             </td>
                             <td className="px-3 py-3 space-x-2">
                               <button
                                 type="button"
                                 onClick={() => openEdit(mapping)}
-                                className="text-xs text-emerald-400 hover:text-emerald-300"
+                                className="text-xs text-emerald-400 hover:text-emerald-600"
                               >
                                 ✏️
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDelete(mapping)}
-                                className="text-xs text-red-400 hover:text-red-300"
+                                className="text-xs text-red-600 hover:text-red-600"
                               >
                                 🗑️
                               </button>
@@ -511,9 +511,9 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
               </div>
             )}
             {mappings.length > 0 && (
-              <div className="rounded-xl border border-gray-700 bg-gray-900 p-4 space-y-3">
-                <div className="text-sm font-semibold text-white">Test Matcher</div>
-                <div className="text-xs text-gray-400">Type a product name to see which mapping it would match.</div>
+              <div className="rounded-xl border border-gray-200 bg-[#F5F5F7] p-4 space-y-3">
+                <div className="text-sm font-semibold text-gray-900">Test Matcher</div>
+                <div className="text-xs text-gray-600">Type a product name to see which mapping it would match.</div>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -521,7 +521,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                     onChange={(e) => setTestInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleTestMatch(); }}
                     placeholder="e.g. Coca Cola 2L"
-                    className="flex-1 rounded border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                    className="flex-1 rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                   />
                   <button
                     onClick={handleTestMatch}
@@ -534,14 +534,14 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                 {testResults.length > 0 && (
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {testResults.map((result) => (
-                      <div key={result.mappingId} className="flex items-center justify-between text-xs rounded px-3 py-2 bg-gray-800">
+                      <div key={result.mappingId} className="flex items-center justify-between text-xs rounded px-3 py-2 bg-white">
                         <div className="flex items-center gap-2">
                           <span className={`w-1.5 h-1.5 rounded-full ${result.matched ? 'bg-green-400' : 'bg-gray-600'}`} />
-                          <span className="text-gray-200">{result.productName}</span>
+                          <span className="text-gray-700">{result.productName}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-gray-400 font-mono">{result.matchType}</span>
-                          <span className={`font-mono ${result.matched ? 'text-green-400' : 'text-gray-500'}`}>
+                          <span className="text-gray-600 font-mono">{result.matchType}</span>
+                          <span className={`font-mono ${result.matched ? 'text-emerald-600' : 'text-gray-600'}`}>
                             {(result.confidence * 100).toFixed(0)}%
                           </span>
                         </div>

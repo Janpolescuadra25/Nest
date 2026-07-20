@@ -565,7 +565,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">🔗</div>
-        <p className="text-gray-400 text-sm mb-1">QuickBooks not connected</p>
+        <p className="text-gray-600 text-sm mb-1">QuickBooks not connected</p>
         <p className="text-gray-600 text-xs mb-4">Connect QuickBooks in Settings to sync journal entries</p>
         <button onClick={connect} className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg">
           Connect QuickBooks
@@ -577,25 +577,25 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   return (
     <div className="p-3 flex flex-col gap-3">
       {previewTipVisible && (
-        <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-600">
           <span className="mt-0.5 shrink-0">ℹ️</span>
           <p className="flex-1">After scanning a report and creating a mapping, your data appears here pre-filled. You can also enter data manually.</p>
           <button onClick={() => { chrome.storage.local.set({ [previewTipKey]: true }); setPreviewTipVisible(false); }} className="shrink-0 text-emerald-400 hover:text-emerald-200">✕</button>
         </div>
       )}
       {/* QB Status */}
-      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg">
-        <span className="text-green-400">✅ QB Connected</span>
+      <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+        <span className="text-emerald-600">✅ QB Connected</span>
         <span className="text-gray-600 truncate">{status.realmId}</span>
         {isAdjusting && (
-          <span className="ml-1 px-1.5 py-0.5 bg-yellow-900/40 border border-yellow-700 text-yellow-400 rounded text-xs">
+          <span className="ml-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-600 rounded text-xs">
             Adjusting Entry
           </span>
         )}
         <button
           onClick={() => void syncAllLists()}
           disabled={listsLoading}
-          className="ml-auto text-gray-500 hover:text-gray-300 transition-colors"
+          className="ml-auto text-gray-600 hover:text-gray-600 transition-colors"
           title="Refresh QB lists"
         >
           {listsLoading ? '…' : '↻'}
@@ -606,7 +606,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       )}
 
       {scanEntries.length > 1 && activeScanEntry && (
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg">
+        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
           <button
             type="button"
             onClick={() => {
@@ -614,11 +614,11 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
               if (idx > 0) onActiveScanEntryIdChange(scanEntries[idx - 1].id);
             }}
             disabled={scanEntries.findIndex((e) => e.id === activeScanEntryId) <= 0}
-            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             ← Prev Row
           </button>
-          <span className="text-xs text-gray-300 font-medium">
+          <span className="text-xs text-gray-600 font-medium">
             Row {activeScanEntry.rowNumber ?? '?'} of {scanEntries.length}
             {activeScanEntry.fileName && ` · ${activeScanEntry.fileName}`}
           </span>
@@ -629,7 +629,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
               if (idx < scanEntries.length - 1) onActiveScanEntryIdChange(scanEntries[idx + 1].id);
             }}
             disabled={scanEntries.findIndex((e) => e.id === activeScanEntryId) >= scanEntries.length - 1}
-            className="px-2 py-1 text-xs text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Next Row →
           </button>
@@ -637,24 +637,24 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       )}
 
       {/* Header fields */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 grid grid-cols-2 gap-3">
+      <div className="bg-white border border-gray-200 rounded-lg p-3 grid grid-cols-2 gap-3">
         <div>
-          <div className="text-xs text-gray-500 mb-1">Transaction Date</div>
+          <div className="text-xs text-gray-600 mb-1">Transaction Date</div>
           <SmartDatePicker value={txnDate} onChange={setTxnDate} />
         </div>
         <div>
-          <div className="text-xs text-gray-500 mb-1">Doc Number <span className="text-gray-600">(optional)</span></div>
+          <div className="text-xs text-gray-600 mb-1">Doc Number <span className="text-gray-600">(optional)</span></div>
           <input
-            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+            className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
             placeholder="Auto-generated by QB"
           />
         </div>
         <div className="col-span-2">
-          <div className="text-xs text-gray-500 mb-1">Memo / Private Note</div>
+          <div className="text-xs text-gray-600 mb-1">Memo / Private Note</div>
           <input
-            className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+            className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
             value={privateNote}
             onChange={(e) => setPrivateNote(e.target.value)}
             placeholder={`Nest sync — ${txnDate}`}
@@ -666,9 +666,9 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             id="je-adjusting"
             checked={isAdjusting}
             onChange={(e) => setIsAdjusting(e.target.checked)}
-            className="rounded border-gray-600"
+            className="rounded border-gray-300"
           />
-          <label htmlFor="je-adjusting" className="text-xs text-gray-400 cursor-pointer">
+          <label htmlFor="je-adjusting" className="text-xs text-gray-600 cursor-pointer">
             Adjusting Entry (period-end)
           </label>
         </div>
@@ -678,15 +678,15 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       <div className="flex items-center gap-3">
         <div className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg flex-1 ${
           isBalanced
-            ? 'bg-green-900/30 border border-green-800 text-green-400'
-            : 'bg-red-900/30 border border-red-800 text-red-400'
+            ? 'bg-emerald-50 border border-emerald-200 text-emerald-600'
+            : 'bg-red-50 border border-red-200 text-red-600'
         }`}>
           <span>{isBalanced ? '✅ Balanced' : '⚠️ Unbalanced'}</span>
-          <span className="font-mono text-gray-400">
+          <span className="font-mono text-gray-600">
             Dr ${fmt(totalDebits)} / Cr ${fmt(totalCredits)}
           </span>
           {!isBalanced && (
-            <span className="font-mono text-red-400">diff ${fmt(Math.abs(diff))}</span>
+            <span className="font-mono text-red-600">diff ${fmt(Math.abs(diff))}</span>
           )}
         </div>
         <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none shrink-0">
@@ -694,31 +694,31 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             type="checkbox"
             checked={consolidate}
             onChange={(e) => setConsolidate(e.target.checked)}
-            className="rounded border-gray-600"
+            className="rounded border-gray-300"
           />
-          <span className={consolidate ? 'text-emerald-400' : 'text-gray-500'}>
+          <span className={consolidate ? 'text-emerald-400' : 'text-gray-600'}>
             🔗 Consolidate
           </span>
         </label>
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowColMenu((x) => !x)}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 border border-gray-700 hover:border-gray-500 px-2.5 py-1.5 rounded transition-colors"
+            className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-700 border border-gray-200 hover:border-gray-500 px-2.5 py-1.5 rounded transition-colors"
           >
             <span>☰</span>
             <span>Columns</span>
           </button>
           {showColMenu && (
-            <div className="absolute right-0 top-full mt-1 z-20 bg-gray-800 border border-gray-600 rounded-lg shadow-lg p-2 min-w-36">
+            <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-300 rounded-lg shadow-lg p-2 min-w-36">
               {ALL_COLUMNS.map((col) => (
-                <label key={col.key} className="flex items-center gap-2 py-1 px-1 hover:bg-gray-700/50 rounded cursor-pointer">
+                <label key={col.key} className="flex items-center gap-2 py-1 px-1 hover:bg-gray-100 rounded cursor-pointer">
                   <input
                     type="checkbox"
                     checked={colVis[col.key]}
                     onChange={(e) => setColVis((prev) => ({ ...prev, [col.key]: e.target.checked }))}
-                    className="rounded border-gray-600"
+                    className="rounded border-gray-300"
                   />
-                  <span className="text-xs text-gray-300">{col.label}</span>
+                  <span className="text-xs text-gray-600">{col.label}</span>
                 </label>
               ))}
             </div>
@@ -726,54 +726,54 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         </div>
       </div>
       {unmappedCount > 0 && (
-        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-900/30 border border-amber-700 text-amber-300">
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-700 text-amber-600">
           <span>⚠️ {unmappedCount} unmapped line{unmappedCount !== 1 ? 's' : ''}</span>
           <span className="text-amber-500">— assign QB accounts before syncing</span>
         </div>
       )}
 
       {consolidate && rawDisplayLines.length < lines.length && (
-        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-emerald-900/20 border border-emerald-800 text-emerald-400">
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-400">
           <span>🔗 Consolidated {lines.length} lines → {rawDisplayLines.length} lines</span>
           <span className="text-emerald-600">— {lines.length - rawDisplayLines.length} merged</span>
         </div>
       )}
 
       {autoBalanced && (
-        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-700 text-yellow-300">
+        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-600">
           <span>⚖️ Rounding difference of ${autoBalanced.amount.toFixed(2)} — assign an account to the Rounding adjustment line before syncing</span>
         </div>
       )}
 
       {/* Full column table — scrollable container */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 380 }}>
           <table className="w-full text-xs border-collapse" style={{ minWidth: 580 }}>
             <thead>
-              <tr className="border-b border-gray-700 bg-gray-700/50">
-                <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ width: 32 }}>#</th>
+              <tr className="border-b border-gray-200 bg-gray-200/50">
+                <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ width: 32 }}>#</th>
                 {colVis.account && (
-                  <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ minWidth: 160 }}>Account</th>
+                  <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ minWidth: 160 }}>Account</th>
                 )}
                 {colVis.name && (
-                  <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ minWidth: 120 }}>Name</th>
+                  <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ minWidth: 120 }}>Name</th>
                 )}
                 {colVis.description && (
-                  <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ minWidth: 130 }}>Description</th>
+                  <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ minWidth: 130 }}>Description</th>
                 )}
                 {colVis.class && (
-                  <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ minWidth: 100 }}>Class</th>
+                  <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ minWidth: 100 }}>Class</th>
                 )}
                 {colVis.taxCode && (
-                  <th className="text-gray-400 font-medium text-left px-2 py-2" style={{ minWidth: 90 }}>Tax Code</th>
+                  <th className="text-gray-600 font-medium text-left px-2 py-2" style={{ minWidth: 90 }}>Tax Code</th>
                 )}
                 {colVis.debit && (
-                  <th className="text-gray-400 font-medium text-right px-2 py-2" style={{ width: 96 }}>Debit</th>
+                  <th className="text-gray-600 font-medium text-right px-2 py-2" style={{ width: 96 }}>Debit</th>
                 )}
                 {colVis.credit && (
-                  <th className="text-gray-400 font-medium text-right px-2 py-2" style={{ width: 96 }}>Credit</th>
+                  <th className="text-gray-600 font-medium text-right px-2 py-2" style={{ width: 96 }}>Credit</th>
                 )}
-                <th className="text-gray-400 font-medium text-center px-1 py-2" style={{ width: 32 }}></th>
+                <th className="text-gray-600 font-medium text-center px-1 py-2" style={{ width: 32 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -795,24 +795,24 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-gray-600 bg-gray-700/30 font-semibold">
-                <td className="px-2 py-2 text-gray-500">{effectiveDisplayLines.length}</td>
+              <tr className="border-t border-gray-300 bg-gray-200/30 font-semibold">
+                <td className="px-2 py-2 text-gray-600">{effectiveDisplayLines.length}</td>
                 {colVis.account && <td></td>}
                 {colVis.name && <td></td>}
                 {colVis.description && (
-                  <td className="px-2 py-2 text-gray-500">
+                  <td className="px-2 py-2 text-gray-600">
                     {effectiveDisplayLines.length} line{effectiveDisplayLines.length !== 1 ? 's' : ''}
                   </td>
                 )}
                 {colVis.class && <td></td>}
                 {colVis.taxCode && <td></td>}
                 {colVis.debit && (
-                  <td className="px-2 py-2 text-right font-mono text-emerald-300 font-bold">
+                  <td className="px-2 py-2 text-right font-mono text-emerald-600 font-bold">
                     ${fmt(totalDebits)}
                   </td>
                 )}
                 {colVis.credit && (
-                  <td className="px-2 py-2 text-right font-mono text-emerald-300 font-bold">
+                  <td className="px-2 py-2 text-right font-mono text-emerald-600 font-bold">
                     ${fmt(totalCredits)}
                   </td>
                 )}
@@ -827,7 +827,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       <button
         type="button"
         onClick={() => setLines((prev) => [...prev, newLine()])}
-        className="w-full text-xs text-gray-500 hover:text-gray-300 border border-dashed border-gray-700 hover:border-gray-500 py-1.5 rounded-lg transition-colors"
+        className="w-full text-xs text-gray-600 hover:text-gray-600 border border-dashed border-gray-200 hover:border-gray-500 py-1.5 rounded-lg transition-colors"
       >
         + Add Line
       </button>
@@ -853,23 +853,23 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         />
       )}
       {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 text-xs rounded-lg px-3 py-2">
+        <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       {syncResult && (
-        <div className="bg-green-900/40 border border-green-700 text-green-300 text-xs rounded-lg px-3 py-2 space-y-1.5">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs rounded-lg px-3 py-2 space-y-1.5">
           <div>
             {syncResult.skipped ? '✅ Journal Entry already synced' : '✅ Journal Entry created'} —
             <span className="font-mono">{syncResult.id}</span> ({syncResult.txnDate})
           </div>
           {syncResult.docNumber && (
-            <div className="text-green-200 text-[11px]">Doc #: {syncResult.docNumber}</div>
+            <div className="text-emerald-700 text-[11px]">Doc #: {syncResult.docNumber}</div>
           )}
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigator.clipboard.writeText(syncResult.id).catch(() => {})}
-              className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
+              className="text-xs text-emerald-400 hover:text-emerald-600 border border-emerald-200 hover:border-emerald-200 px-2 py-0.5 rounded transition-colors"
             >
               Copy ID
             </button>
@@ -890,7 +890,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         <button
           type="button"
           onClick={handleClearAll}
-          className="px-3 py-2 text-xs text-red-400 border border-red-800 hover:bg-red-900/20 rounded-lg transition-colors"
+          className="px-3 py-2 text-xs text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition-colors"
         >
           Clear All
         </button>
@@ -903,7 +903,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             void handleSync();
           }}
           disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
-          className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition-colors"
+          className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
             ? 'Syncing to QuickBooks…'
@@ -945,14 +945,14 @@ function TableRow({
   onChange, onRemove, canRemove,
 }: TableRowProps) {
   return (
-    <tr className={`border-b border-gray-700/60 ${index % 2 === 1 ? 'bg-gray-800/40' : ''}`}>
+    <tr className={`border-b border-gray-200 ${index % 2 === 1 ? 'bg-white/40' : ''}`}>
       <td className="px-2 py-1 text-gray-600 text-center text-xs">{index + 1}</td>
 
       {colVis.account && (
         <td className="px-1 py-1" style={{ minWidth: 160, maxWidth: 220 }}>
           <div className="relative">
             {!line.accountId && (
-              <span className="absolute -top-3 left-0 text-[10px] bg-amber-900 text-amber-300 px-1 rounded z-10">
+              <span className="absolute -top-3 left-0 text-[10px] bg-amber-50 text-amber-600 px-1 rounded z-10">
                 ⚠️ UNMAPPED
               </span>
             )}
@@ -983,7 +983,7 @@ function TableRow({
       {colVis.description && (
         <td className="px-1 py-1" style={{ minWidth: 130 }}>
           <input
-            className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             value={line.description}
             onChange={(e) => onChange({ description: e.target.value })}
             placeholder="Description…"
@@ -1022,7 +1022,7 @@ function TableRow({
             type="number"
             min="0"
             step="0.01"
-            className="w-full bg-gray-900 border border-gray-700 text-emerald-300 text-xs rounded px-2 py-1 text-right focus:border-emerald-500 focus:outline-none font-mono"
+            className="w-full bg-[#F5F5F7] border border-gray-200 text-emerald-600 text-xs rounded px-2 py-1 text-right focus:border-emerald-500 focus:outline-none font-mono"
             value={line.debit}
             placeholder="0.00"
             onChange={(e) => onChange({ debit: e.target.value, credit: e.target.value ? '' : line.credit })}
@@ -1036,7 +1036,7 @@ function TableRow({
             type="number"
             min="0"
             step="0.01"
-            className="w-full bg-gray-900 border border-gray-700 text-emerald-300 text-xs rounded px-2 py-1 text-right focus:border-emerald-500 focus:outline-none font-mono"
+            className="w-full bg-[#F5F5F7] border border-gray-200 text-emerald-600 text-xs rounded px-2 py-1 text-right focus:border-emerald-500 focus:outline-none font-mono"
             value={line.credit}
             placeholder="0.00"
             onChange={(e) => onChange({ credit: e.target.value, debit: e.target.value ? '' : line.debit })}
@@ -1049,7 +1049,7 @@ function TableRow({
           <button
             type="button"
             onClick={onRemove}
-            className="text-gray-600 hover:text-red-400 transition-colors"
+            className="text-gray-600 hover:text-red-600 transition-colors"
             title="Remove line"
           >
             🗑️

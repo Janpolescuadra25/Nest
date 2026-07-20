@@ -53,12 +53,12 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
   if (user.subscriptionSource === 'owner') {
     return (
       <div className="p-4 text-center">
-        <div className="text-sm text-emerald-300 font-semibold">Platform Owner — Unlimited Access</div>
-        <div className="mt-2 text-xs text-gray-400">You have full access to all Nest features.</div>
+        <div className="text-sm text-emerald-600 font-semibold">Platform Owner — Unlimited Access</div>
+        <div className="mt-2 text-xs text-gray-600">You have full access to all Nest features.</div>
         <button
           type="button"
           onClick={onClose}
-          className="mt-4 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-gray-800"
+          className="mt-4 w-full rounded-lg border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
         >
           Close
         </button>
@@ -70,35 +70,35 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Choose Your Plan</h2>
-          <p className="text-sm text-gray-400">Pick a plan that fits your team and scan needs.</p>
+          <h2 className="text-lg font-semibold text-gray-900">Choose Your Plan</h2>
+          <p className="text-sm text-gray-600">Pick a plan that fits your team and scan needs.</p>
         </div>
-        <button onClick={onClose} className="text-xs text-gray-400 hover:text-white">Back</button>
+        <button onClick={onClose} className="text-xs text-gray-600 hover:text-gray-900">Back</button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-700 bg-gray-900 p-1">
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-[#F5F5F7] p-1">
         <button
           type="button"
           onClick={() => setBillingInterval('month')}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'month' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'month' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
         >
           Monthly
         </button>
         <button
           type="button"
           onClick={() => setBillingInterval('year')}
-          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'year' ? 'bg-emerald-700 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}
+          className={`rounded-2xl px-3 py-2 text-xs font-semibold transition ${billingInterval === 'year' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
         >
           Annual — Save 20%
         </button>
       </div>
 
-      {error && <div className="rounded-2xl border border-red-700 bg-red-900/30 p-3 text-sm text-red-200">{error}</div>}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-28 rounded-3xl bg-gray-900 animate-pulse" />
+            <div key={index} className="h-28 rounded-3xl bg-[#F5F5F7] animate-pulse" />
           ))}
         </div>
       ) : (
@@ -113,14 +113,14 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
             return (
               <div
                 key={plan.id}
-                className={`rounded-3xl border p-4 ${plan.id === 'professional' ? 'border-emerald-500 bg-emerald-900/20' : 'border-gray-700 bg-gray-900'}`}
+                className={`rounded-3xl border p-4 ${plan.id === 'professional' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 bg-[#F5F5F7]'}`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-400">{plan.name}</div>
-                    <div className="mt-3 text-3xl font-bold text-white">{priceLabel}</div>
+                    <div className="text-sm font-semibold uppercase tracking-[0.2em] text-gray-600">{plan.name}</div>
+                    <div className="mt-3 text-3xl font-bold text-gray-900">{priceLabel}</div>
                     {billingInterval === 'year' && plan.monthlyPrice > 0 && (
-                      <div className="mt-1 text-xs text-gray-400">Billed annually — saves {savings}%</div>
+                      <div className="mt-1 text-xs text-gray-600">Billed annually — saves {savings}%</div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-2 text-sm text-gray-300">
+                <div className="mt-4 space-y-2 text-sm text-gray-600">
                   <div>{plan.maxUsers} user{plan.maxUsers !== 1 ? 's' : ''} • {plan.maxLocations} locations</div>
                   <div>{plan.maxScans.toLocaleString()} AI scans/mo • {formatHistory(plan.scanHistoryDays)}</div>
                   {plan.prioritySupport && <div>Priority support</div>}
@@ -140,7 +140,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
                     <button
                       type="button"
                       onClick={onManageBilling}
-                      className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
                     >
                       Manage Billing
                     </button>

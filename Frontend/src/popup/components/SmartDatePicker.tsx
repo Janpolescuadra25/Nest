@@ -58,7 +58,7 @@ export default function SmartDatePicker({ value, onChange, scanDate }: Props) {
             className={`text-xs px-2 py-0.5 rounded-full border transition-all duration-150 ${
               mode === btn.id
                 ? 'bg-emerald-700 border-emerald-500 text-white'
-                : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-200'
+                : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700'
             }`}
           >
             {btn.label}
@@ -70,10 +70,10 @@ export default function SmartDatePicker({ value, onChange, scanDate }: Props) {
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-gray-900 border border-gray-600 text-white text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+          className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
         />
       ) : (
-        <div className="text-xs text-gray-500">📅 {value}</div>
+        <div className="text-xs text-gray-600">📅 {value}</div>
       )}
     </div>
   );

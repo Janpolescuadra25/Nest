@@ -49,7 +49,7 @@ export default function MappingFilters({
         <button
           type="button"
           onClick={onExport}
-          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
+          className="text-xs bg-white hover:bg-gray-100 text-gray-600 px-2 py-1.5 rounded border border-gray-300 whitespace-nowrap transition-colors"
         >
           📤 Export
         </button>
@@ -57,7 +57,7 @@ export default function MappingFilters({
           <button
             type="button"
             onClick={onImport}
-            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1.5 rounded border border-gray-600 whitespace-nowrap transition-colors"
+            className="text-xs bg-white hover:bg-gray-100 text-gray-600 px-2 py-1.5 rounded border border-gray-300 whitespace-nowrap transition-colors"
           >
             📥 Import
           </button>
@@ -68,7 +68,7 @@ export default function MappingFilters({
         <button
           onClick={disableAutoDetect ? undefined : onAutoDetect}
           title={disableAutoDetect ? 'Auto-Detect is designed for POS scans' : undefined}
-          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+          className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
         >
           🔍 Auto-Detect
         </button>
@@ -76,7 +76,7 @@ export default function MappingFilters({
           onClick={disableAutoDetect ? undefined : onAISuggest}
           disabled={disableAutoDetect || suggesting}
           title={disableAutoDetect ? 'AI Suggest is designed for POS scans' : undefined}
-          className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disableAutoDetect || suggesting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+          className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${disableAutoDetect || suggesting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
         >
           {suggesting ? 'Suggesting…' : '🤖 AI Suggest'}
         </button>
@@ -85,7 +85,7 @@ export default function MappingFilters({
             key={template}
             onClick={disablePresets ? undefined : () => onApplyTemplate(template)}
             title={disablePresets ? 'Presets are designed for POS scans' : undefined}
-            className={`text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors ${disablePresets ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'}`}
+            className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${disablePresets ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
           >
             📋 {template}
           </button>
@@ -93,7 +93,7 @@ export default function MappingFilters({
         <button
           onClick={onSyncLists}
           disabled={listsLoading}
-          className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-gray-300 px-2 py-1 rounded transition-colors ml-auto"
+          className="text-xs bg-gray-200 hover:bg-gray-100 disabled:opacity-40 text-gray-600 px-2 py-1 rounded transition-colors ml-auto"
           title="Refresh QB lists"
         >
           {listsLoading ? '…' : '↻'}
@@ -101,7 +101,7 @@ export default function MappingFilters({
       </div>
 
       {!accountsLoaded && (
-        <div className="bg-amber-900/30 border border-amber-700 text-amber-300 text-xs rounded-lg px-3 py-2">
+        <div className="bg-amber-50 border border-amber-700 text-amber-600 text-xs rounded-lg px-3 py-2">
           ⚠️ QB accounts not loaded. Make sure QuickBooks is connected in Settings.
         </div>
       )}

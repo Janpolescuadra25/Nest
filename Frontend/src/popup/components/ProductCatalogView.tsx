@@ -98,8 +98,8 @@ export default function ProductCatalogView({ jwt }: Props) {
     <div className="p-3 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-white">Product Catalog</h1>
-          <p className="text-xs text-gray-400">Create a product name list for future smart matching.</p>
+          <h1 className="text-lg font-semibold text-gray-900">Product Catalog</h1>
+          <p className="text-xs text-gray-600">Create a product name list for future smart matching.</p>
         </div>
         <button
           type="button"
@@ -111,22 +111,22 @@ export default function ProductCatalogView({ jwt }: Props) {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-950/30 border border-red-900 rounded px-3 py-2">
+        <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-3 py-2">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="text-xs text-gray-400">Loading products…</div>
+        <div className="text-xs text-gray-600">Loading products…</div>
       ) : products.length === 0 ? (
-        <div className="rounded-lg border border-gray-700 bg-gray-900 p-6 text-center text-sm text-gray-400">
+        <div className="rounded-lg border border-gray-200 bg-[#F5F5F7] p-6 text-center text-sm text-gray-600">
           No products yet. Add your first product to start auto-matching line items from scanned invoices.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-900">
-          <table className="min-w-full text-left text-xs text-gray-200">
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-[#F5F5F7]">
+          <table className="min-w-full text-left text-xs text-gray-700">
             <thead>
-              <tr className="border-b border-gray-700 bg-gray-800 text-gray-300">
+              <tr className="border-b border-gray-200 bg-white text-gray-600">
                 <th className="px-3 py-3">Product Name</th>
                 <th className="px-3 py-3">Created</th>
                 <th className="px-3 py-3">Actions</th>
@@ -134,14 +134,14 @@ export default function ProductCatalogView({ jwt }: Props) {
             </thead>
             <tbody>
               {products.map((product) => (
-                <tr key={product.id} className="border-b border-gray-800 hover:bg-gray-900/80">
-                  <td className="px-3 py-3 text-gray-200">{product.name}</td>
-                  <td className="px-3 py-3 text-gray-400">{new Date(product.createdAt).toLocaleDateString()}</td>
+                <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-3 py-3 text-gray-700">{product.name}</td>
+                  <td className="px-3 py-3 text-gray-600">{new Date(product.createdAt).toLocaleDateString()}</td>
                   <td className="px-3 py-3 space-x-2">
                     <button
                       type="button"
                       onClick={() => openEdit(product)}
-                      className="text-xs text-emerald-400 hover:text-emerald-300"
+                      className="text-xs text-emerald-400 hover:text-emerald-600"
                       title="Edit product"
                     >
                       ✏️
@@ -149,7 +149,7 @@ export default function ProductCatalogView({ jwt }: Props) {
                     <button
                       type="button"
                       onClick={() => handleDelete(product)}
-                      className="text-xs text-red-400 hover:text-red-300"
+                      className="text-xs text-red-600 hover:text-red-600"
                       title="Delete product"
                     >
                       🗑️
@@ -164,28 +164,28 @@ export default function ProductCatalogView({ jwt }: Props) {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-lg rounded-xl border border-gray-700 bg-gray-900 p-5 shadow-xl">
+          <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-5 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-semibold text-white">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
-                <p className="text-xs text-gray-400">Create or update a product name for invoice matching.</p>
+                <h2 className="text-sm font-semibold text-gray-900">{editingProduct ? 'Edit Product' : 'Add Product'}</h2>
+                <p className="text-xs text-gray-600">Create or update a product name for invoice matching.</p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-200 text-sm"
+                className="text-gray-600 hover:text-gray-700 text-sm"
               >
                 ✕
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-gray-400">Product Name</label>
+                <label className="text-xs text-gray-600">Product Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  className="mt-1 w-full rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                  className="mt-1 w-full rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function ProductCatalogView({ jwt }: Props) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 rounded px-3 py-2"
+                className="text-xs bg-white hover:bg-gray-100 text-gray-700 rounded px-3 py-2"
               >
                 Cancel
               </button>

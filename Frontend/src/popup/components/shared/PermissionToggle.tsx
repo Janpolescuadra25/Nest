@@ -24,7 +24,7 @@ export default function PermissionToggle({ feature, action, enabled, disabled, o
       type="button"
       onClick={() => onChange(feature, action, !enabled)}
       disabled={disabled}
-      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${enabled ? 'bg-emerald-800 text-emerald-300 hover:bg-emerald-700' : 'bg-slate-700 text-gray-500 hover:bg-slate-600'}`}
+      className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${enabled ? 'bg-emerald-800 text-emerald-600 hover:bg-emerald-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
     >
       {label}
     </button>

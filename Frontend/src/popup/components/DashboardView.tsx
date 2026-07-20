@@ -197,38 +197,38 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-white">🏠 Dashboard</h2>
+        <h2 className="text-base font-semibold text-gray-900">🏠 Dashboard</h2>
         {stats.expiredMembers > 0 && (
-          <span className="text-xs px-2 py-1 rounded bg-yellow-900/50 border border-yellow-700 text-yellow-300">
+          <span className="text-xs px-2 py-1 rounded bg-amber-50 border border-amber-200 text-amber-600">
             ⚠ {stats.expiredMembers} expired members
           </span>
         )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">📍 Locations</div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.totalLocations}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">📍 Locations</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{stats.totalLocations}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">🤝 Partners</div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.totalPartners}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">🤝 Partners</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{stats.totalPartners}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">🔍 Scans</div>
-          <div className="text-2xl font-bold text-white mt-1">{stats.totalScans}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">🔍 Scans</div>
+          <div className="text-2xl font-bold text-gray-900 mt-1">{stats.totalScans}</div>
         </div>
-        <div className="bg-slate-800 border border-amber-900 rounded-lg p-3">
+        <div className="bg-white border border-amber-200 rounded-lg p-3">
           <div className="text-xs text-amber-400">⏳ Pending</div>
           <div className="text-2xl font-bold text-amber-400 mt-1">{stats.totalPending}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">✅ Synced</div>
-          <div className="text-2xl font-bold text-green-400 mt-1">{stats.totalSynced}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">✅ Synced</div>
+          <div className="text-2xl font-bold text-emerald-600 mt-1">{stats.totalSynced}</div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-          <div className="text-xs text-gray-400">❌ Failed</div>
-          <div className="text-2xl font-bold text-red-400 mt-1">{stats.totalFailed}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="text-xs text-gray-600">❌ Failed</div>
+          <div className="text-2xl font-bold text-red-600 mt-1">{stats.totalFailed}</div>
           {stats.totalFailed > 0 && (
             <p className="text-[10px] text-slate-500 mt-1">
               Check SyncView for retry details
@@ -238,7 +238,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       </div>
 
       {onboardingState?.step === 1 ? (
-        <div className="bg-emerald-700/20 border border-emerald-600 rounded-lg p-3 text-sm text-white">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700">
           <div className="font-semibold">Connect QuickBooks to get started.</div>
           <div className="mt-1 text-xs text-emerald-100">QuickBooks connection is required before you can sync your first report.</div>
           {onNavigate && (
@@ -252,9 +252,9 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
           )}
         </div>
       ) : onboardingState?.step && onboardingState.step > 1 ? (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-gray-200">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700">
           <div className="font-semibold">You're on step {onboardingState.step}: {onboardingState.step === 2 ? 'Add Your First Location' : onboardingState.step === 3 ? 'Create a Mapping' : 'Begin Your First Sync'}</div>
-          <div className="mt-1 text-xs text-gray-400">Continue setup to complete your onboarding flow.</div>
+          <div className="mt-1 text-xs text-gray-600">Continue setup to complete your onboarding flow.</div>
           {onNavigate && (
             <button
               type="button"
@@ -275,8 +275,8 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
           tabIndex={0}
         >
           <div className="text-2xl mb-1">🎉</div>
-          <p className="text-green-300 text-sm font-medium">You're all set!</p>
-          <p className="text-green-400 text-xs mt-1">Nest is now syncing your data automatically.</p>
+          <p className="text-emerald-600 text-sm font-medium">You're all set!</p>
+          <p className="text-emerald-600 text-xs mt-1">Nest is now syncing your data automatically.</p>
         </div>
       )}
 
@@ -284,34 +284,34 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       {scanHealthLoaded ? (
         scanHealth ? <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} /> : null
       ) : (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-          <div className="h-4 bg-slate-900 rounded animate-pulse" />
-          <div className="h-3 bg-slate-900 rounded animate-pulse" />
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+          <div className="h-4 bg-gray-50 rounded animate-pulse" />
+          <div className="h-3 bg-gray-50 rounded animate-pulse" />
         </div>
       )}
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Pending Requests</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Pending Requests</h3>
         {pendingRequests.length === 0 ? (
-          <p className="text-sm text-gray-500">No pending requests</p>
+          <p className="text-sm text-gray-600">No pending requests</p>
         ) : (
           pendingRequests.map(req => (
-            <div key={req.id} className="bg-slate-900 border border-slate-700 rounded p-2 space-y-1">
-              <div className="text-sm text-white truncate">📬 {req.email}</div>
-              <div className="text-xs text-gray-400">{req.company ?? 'No company provided'}</div>
-              <div className="text-xs text-gray-500">{req.description ?? 'No description provided'}</div>
+            <div key={req.id} className="bg-gray-50 border border-gray-200 rounded p-2 space-y-1">
+              <div className="text-sm text-gray-900 truncate">📬 {req.email}</div>
+              <div className="text-xs text-gray-600">{req.company ?? 'No company provided'}</div>
+              <div className="text-xs text-gray-600">{req.description ?? 'No description provided'}</div>
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => handleApprove(req.id)}
                   disabled={actionLoading[`approve_${req.id}`]}
-                  className="px-2 py-1 rounded bg-green-800 text-green-100 text-xs hover:bg-green-700 disabled:opacity-50"
+                  className="px-2 py-1 rounded bg-emerald-600 text-white text-xs hover:bg-emerald-600 disabled:opacity-50"
                 >
                   {actionLoading[`approve_${req.id}`] ? 'Approving...' : 'Approve'}
                 </button>
                 <button
                   onClick={() => handleReject(req.id)}
                   disabled={actionLoading[`reject_${req.id}`]}
-                  className="px-2 py-1 rounded bg-red-900 text-red-200 text-xs hover:bg-red-800 disabled:opacity-50"
+                  className="px-2 py-1 rounded bg-red-50 text-red-700 text-xs hover:bg-red-700 disabled:opacity-50"
                 >
                   {actionLoading[`reject_${req.id}`] ? 'Rejecting...' : 'Reject'}
                 </button>
@@ -321,32 +321,32 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
         )}
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Recent Activity</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Recent Activity</h3>
         {recentActivity.length === 0 ? (
-          <p className="text-sm text-gray-500">No recent activity</p>
+          <p className="text-sm text-gray-600">No recent activity</p>
         ) : (
           recentActivity.map(log => (
-            <div key={log.id} className="flex items-start justify-between gap-2 bg-slate-900 border border-slate-700 rounded p-2">
+            <div key={log.id} className="flex items-start justify-between gap-2 bg-gray-50 border border-gray-200 rounded p-2">
               <div className="min-w-0">
-                <p className="text-sm text-gray-200 truncate">{formatAction(log.action)}</p>
-                <p className="text-xs text-gray-500 truncate">{log.actor.name ?? log.actor.email}</p>
+                <p className="text-sm text-gray-700 truncate">{formatAction(log.action)}</p>
+                <p className="text-xs text-gray-600 truncate">{log.actor.name ?? log.actor.email}</p>
               </div>
-              <span className="text-xs text-gray-500 flex-shrink-0">{relativeTime(log.createdAt)}</span>
+              <span className="text-xs text-gray-600 flex-shrink-0">{relativeTime(log.createdAt)}</span>
             </div>
           ))
         )}
       </div>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-        <h3 className="text-sm font-medium text-emerald-300 mb-2">Partners</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3">
+        <h3 className="text-sm font-medium text-emerald-600 mb-2">Partners</h3>
         {partners.length === 0 ? (
-          <p className="text-sm text-gray-500">No partners yet</p>
+          <p className="text-sm text-gray-600">No partners yet</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-slate-700">
+                <tr className="text-left text-gray-600 border-b border-gray-200">
                   <th className="py-2 pr-2">Email</th>
                   <th className="py-2 pr-2">Team</th>
                   <th className="py-2 pr-2">Status</th>
@@ -355,21 +355,21 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
               </thead>
               <tbody>
                 {partners.map(partner => (
-                  <tr key={partner.id} className="border-b border-slate-800/80 text-gray-200">
+                  <tr key={partner.id} className="border-b border-slate-800/80 text-gray-700">
                     <td className="py-2 pr-2 truncate max-w-[150px]">{partner.email}</td>
                     <td className="py-2 pr-2">{partner.currentTeamSize}/{partner.maxUsers ?? '-'}</td>
                     <td className="py-2 pr-2">
                       <span className={`px-1.5 py-0.5 rounded text-[11px] ${
                         partner.status === 'ACTIVE'
-                          ? 'bg-green-900 text-green-400'
+                          ? 'bg-emerald-50 text-emerald-600'
                           : partner.status === 'DISABLED'
-                            ? 'bg-red-900 text-red-400'
-                            : 'bg-yellow-900 text-yellow-400'
+                            ? 'bg-red-50 text-red-600'
+                            : 'bg-amber-50 text-amber-600'
                       }`}>
                         {partner.status}
                       </span>
                     </td>
-                    <td className="py-2 text-gray-400">{relativeTime(partner.updatedAt)}</td>
+                    <td className="py-2 text-gray-600">{relativeTime(partner.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -267,11 +267,11 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-white">My Team</h2>
+        <h2 className="text-base font-semibold text-gray-900">My Team</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setShowLinkForm(!showLinkForm)}
-            className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+            className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
           >
             🔗 Link
           </button>
@@ -285,20 +285,20 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
       </div>
 
       {inviteResult && (
-        <div className="bg-green-900/40 border border-green-700 rounded-lg p-3 text-sm">
-          <p className="text-green-400 font-medium">Member invited!</p>
-          <p className="text-gray-300 text-xs mt-1">Email: <span className="font-mono">{inviteResult.user.email}</span></p>
-          <p className="text-gray-300 text-xs">Temp password: <span className="font-mono text-yellow-400">{inviteResult.tempPassword}</span></p>
-          <p className="text-gray-500 text-xs mt-1">Share this password securely — they'll be prompted to change it on first login.</p>
-          <button onClick={() => setInviteResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">
+          <p className="text-emerald-600 font-medium">Member invited!</p>
+          <p className="text-gray-600 text-xs mt-1">Email: <span className="font-mono">{inviteResult.user.email}</span></p>
+          <p className="text-gray-600 text-xs">Temp password: <span className="font-mono text-amber-600">{inviteResult.tempPassword}</span></p>
+          <p className="text-gray-600 text-xs mt-1">Share this password securely — they'll be prompted to change it on first login.</p>
+          <button onClick={() => setInviteResult(null)} className="mt-2 text-xs text-gray-600 hover:text-gray-600">Dismiss</button>
         </div>
       )}
 
       {createdLink && (
-        <div className="bg-green-900/40 border border-green-700 rounded-lg p-3 text-sm">
-          <p className="text-green-400 font-medium">Invite link created!</p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">
+          <p className="text-emerald-600 font-medium">Invite link created!</p>
           <div className="flex items-center gap-2 mt-1">
-            <code className="flex-1 text-xs text-gray-300 bg-slate-800 px-2 py-1 rounded break-all">{BACKEND_URL}/api/invite/{createdLink.token}</code>
+            <code className="flex-1 text-xs text-gray-600 bg-white px-2 py-1 rounded break-all">{BACKEND_URL}/api/invite/{createdLink.token}</code>
             <button
               onClick={() => copyToClipboard(`${BACKEND_URL}/api/invite/${createdLink.token}`)}
               className="text-xs px-2 py-1 bg-emerald-700 text-emerald-200 rounded hover:bg-emerald-600 flex-shrink-0"
@@ -306,39 +306,39 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
               Copy
             </button>
           </div>
-          <p className="text-gray-500 text-xs mt-1">Share this link — it expires {new Date(createdLink.expiresAt).toLocaleString()}</p>
-          <button onClick={() => setCreatedLink(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
+          <p className="text-gray-600 text-xs mt-1">Share this link — it expires {new Date(createdLink.expiresAt).toLocaleString()}</p>
+          <button onClick={() => setCreatedLink(null)} className="mt-2 text-xs text-gray-600 hover:text-gray-600">Dismiss</button>
         </div>
       )}
 
       {showInvite && (
-        <form onSubmit={handleInvite} className="bg-slate-800 rounded-lg p-3 space-y-2">
+        <form onSubmit={handleInvite} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
           <input
             type="email"
             placeholder="Email"
             value={inviteEmail}
             onChange={e => setInviteEmail(e.target.value)}
             required
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+            className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
           />
           <input
             type="text"
             placeholder="Name (optional)"
             value={inviteName}
             onChange={e => setInviteName(e.target.value)}
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+            className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
           />
           <select
             value={inviteRole}
             onChange={e => setInviteRole(e.target.value)}
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-gray-300 focus:outline-none"
+            className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-600 focus:outline-none"
           >
             {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           {subscriptionSource !== 'stripe' ? (
             <>
               <div>
-                <label className="block text-xs text-gray-500 mb-0.5">Trial period (days)</label>
+                <label className="block text-xs text-gray-600 mb-0.5">Trial period (days)</label>
                 <input
                   type="number"
                   min={1}
@@ -346,29 +346,29 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                   placeholder="e.g. 30"
                   value={inviteTrialDays}
                   onChange={e => setInviteTrialDays(e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-0.5">Expiry message (shown to user when trial ends)</label>
+                <label className="block text-xs text-gray-600 mb-0.5">Expiry message (shown to user when trial ends)</label>
                 <textarea
                   placeholder="e.g. Contact me to renew your access"
                   value={inviteExpiryMsg}
                   onChange={e => setInviteExpiryMsg(e.target.value)}
                   maxLength={200}
                   rows={2}
-                  className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
+                  className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
                 />
               </div>
             </>
           ) : (
-            <div className="text-xs text-gray-400">Team access is managed through your Stripe subscription.</div>
+            <div className="text-xs text-gray-600">Team access is managed through your Stripe subscription.</div>
           )}
           <div className="flex gap-2">
             <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['invite'] ? 'Inviting...' : 'Send Invite'}
             </button>
-            <button type="button" onClick={() => setShowInvite(false)} className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600">
+            <button type="button" onClick={() => setShowInvite(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
               Cancel
             </button>
           </div>
@@ -376,36 +376,36 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
       )}
 
       {showLinkForm && (
-        <form onSubmit={handleCreateLink} className="bg-slate-800 rounded-lg p-3 space-y-2">
-          <p className="text-xs text-gray-400 font-medium">Create Invite Link</p>
+        <form onSubmit={handleCreateLink} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+          <p className="text-xs text-gray-600 font-medium">Create Invite Link</p>
           <select
             value={linkRoleHint}
             onChange={e => setLinkRoleHint(e.target.value)}
-            className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-gray-300 focus:outline-none"
+            className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-600 focus:outline-none"
           >
             {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-0.5">Expires (hours)</label>
+              <label className="block text-xs text-gray-600 mb-0.5">Expires (hours)</label>
               <input
                 type="number"
                 min={1}
                 max={720}
                 value={linkExpiry}
                 onChange={e => setLinkExpiry(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-0.5">Max uses</label>
+              <label className="block text-xs text-gray-600 mb-0.5">Max uses</label>
               <input
                 type="number"
                 min={1}
                 max={100}
                 value={linkMaxUses}
                 onChange={e => setLinkMaxUses(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -413,7 +413,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
             <button type="submit" disabled={actionLoading['linkCreate']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['linkCreate'] ? 'Creating...' : 'Create Link'}
             </button>
-            <button type="button" onClick={() => setShowLinkForm(false)} className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600">
+            <button type="button" onClick={() => setShowLinkForm(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
               Cancel
             </button>
           </div>
@@ -423,24 +423,24 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
       {/* Invite Links List */}
       {inviteLinks.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-400 font-medium">Invite Links</p>
+          <p className="text-xs text-gray-600 font-medium">Invite Links</p>
           {inviteLinks.map(link => (
-            <div key={link.id} className="bg-slate-800 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+            <div key={link.id} className="bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-300">{link.roleHint}</span>
-                  <span className={`text-xs px-1 py-0.5 rounded ${link.isActive ? 'bg-green-900 text-green-400' : 'bg-gray-700 text-gray-500'}`}>
+                  <span className="text-xs text-gray-600">{link.roleHint}</span>
+                  <span className={`text-xs px-1 py-0.5 rounded ${link.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-200 text-gray-600'}`}>
                     {link.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-600">
                   Uses: {link.useCount}/{link.maxUses} · Expires: {new Date(link.expiresAt).toLocaleDateString()}
                 </div>
               </div>
               <button
                 onClick={() => handleRevokeLink(link.id)}
                 disabled={actionLoading[`revoke_${link.id}`]}
-                className="text-xs px-2 py-1 bg-red-900 text-red-300 rounded hover:bg-red-800 disabled:opacity-50 flex-shrink-0"
+                className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-700 disabled:opacity-50 flex-shrink-0"
               >
                 Revoke
               </button>
@@ -463,34 +463,34 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
         />
       ) : (
         members.map(member => (
-          <div key={member.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
+          <div key={member.id} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-white truncate">{member.name ?? member.email}</div>
-                {member.name && <div className="text-xs text-gray-400 truncate">{member.email}</div>}
+                <div className="text-sm font-medium text-gray-900 truncate">{member.name ?? member.email}</div>
+                {member.name && <div className="text-xs text-gray-600 truncate">{member.email}</div>}
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className="text-xs text-gray-500">{member.role}</span>
+                  <span className="text-xs text-gray-600">{member.role}</span>
                   <StatusBadge status={member.blocked ? 'BLOCKED' : member.status} />
                   {effectiveBadge(member)}
-                  {member.mustChangePassword && <span className="text-xs text-yellow-500">⚠ needs pw change</span>}
+                  {member.mustChangePassword && <span className="text-xs text-amber-600">⚠ needs pw change</span>}
                   {trialCountdown(member.trialExpiresAt)}
                 </div>
               </div>
-              <button onClick={() => handleExpandMember(member)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">
+              <button onClick={() => handleExpandMember(member)} className="text-gray-600 hover:text-gray-600 text-xs flex-shrink-0">
                 {expandedId === member.id ? '▲' : '▼'}
               </button>
             </div>
             {expandedId === member.id && (
-              <div className="pt-2 border-t border-slate-700 space-y-3">
+              <div className="pt-2 border-t border-gray-200 space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Role</p>
+                  <p className="text-xs text-gray-600 mb-1">Role</p>
                   <div className="flex gap-1 flex-wrap">
                     {ROLE_OPTIONS.map(r => (
                       <button
                         key={r}
                         onClick={() => handleRoleChange(member.id, r)}
                         disabled={actionLoading[`role_${member.id}`] || member.role === r}
-                        className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${member.role === r ? 'bg-emerald-700 text-emerald-200' : 'bg-slate-700 text-gray-400 hover:bg-slate-600'}`}
+                        className={`px-2 py-0.5 rounded text-xs disabled:opacity-50 ${member.role === r ? 'bg-emerald-700 text-emerald-200' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
                       >
                         {r}
                       </button>
@@ -498,7 +498,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Permissions</p>
+                  <p className="text-xs text-gray-600 mb-1">Permissions</p>
                   <div className="flex gap-1 flex-wrap">
                     <PermissionToggle
                       feature="scan"
@@ -534,7 +534,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                   <button
                     onClick={() => handleDisable(member.id)}
                     disabled={actionLoading[member.id]}
-                    className="w-full py-1.5 bg-red-900 text-red-300 rounded text-xs font-medium hover:bg-red-800 disabled:opacity-50"
+                    className="w-full py-1.5 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50"
                   >
                     {actionLoading[member.id] ? 'Disabling...' : 'Disable Member'}
                   </button>
@@ -543,20 +543,20 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                 {subscriptionSource !== 'stripe' ? (
                   <>
                     {/* Time Bomb */}
-                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400 font-medium">Time Bomb</p>
+                        <p className="text-xs text-gray-600 font-medium">Time Bomb</p>
                         {member.timeBombAt && (
-                          <span className="text-xs text-yellow-400">💣 {new Date(member.timeBombAt).toLocaleDateString()}</span>
+                          <span className="text-xs text-amber-600">💣 {new Date(member.timeBombAt).toLocaleDateString()}</span>
                         )}
                       </div>
                       {member.status === 'GRACE_PERIOD' && (
-                        <div className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-800 rounded px-2 py-1">
+                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                           ⏳ Grace period — access restricted soon
                         </div>
                       )}
                       {member.status === 'TIME_BOMBED' && (
-                        <div className="text-xs text-red-300 bg-red-900/30 border border-red-800 rounded px-2 py-1">
+                        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
                           🚫 Access restricted (downgraded to VIEWER)
                         </div>
                       )}
@@ -564,7 +564,7 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                         <button
                           onClick={() => handleClearTimeBomb(member.id)}
                           disabled={actionLoading[`bomb_${member.id}`]}
-                          className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                          className="w-full py-1.5 bg-gray-200 text-gray-600 rounded text-xs font-medium hover:bg-gray-300 disabled:opacity-50"
                         >
                           {actionLoading[`bomb_${member.id}`] ? 'Clearing...' : 'Clear Time Bomb'}
                         </button>
@@ -573,42 +573,42 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                           {!showBombForm[member.id] ? (
                             <button
                               onClick={() => setShowBombForm(p => ({ ...p, [member.id]: true }))}
-                              className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600"
+                              className="w-full py-1.5 bg-gray-200 text-gray-600 rounded text-xs font-medium hover:bg-gray-300"
                             >
                               Set Time Bomb
                             </button>
                           ) : (
                             <div className="space-y-1.5">
                               <div>
-                                <label className="block text-xs text-gray-500 mb-0.5">Bomb date</label>
+                                <label className="block text-xs text-gray-600 mb-0.5">Bomb date</label>
                                 <input
                                   type="datetime-local"
                                   value={bombDate[member.id] ?? ''}
                                   onChange={e => setBombDate(p => ({ ...p, [member.id]: e.target.value }))}
-                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                                  className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs text-gray-500 mb-0.5">Grace period (hours)</label>
+                                <label className="block text-xs text-gray-600 mb-0.5">Grace period (hours)</label>
                                 <input
                                   type="number"
                                   min={1}
                                   value={bombGrace[member.id] ?? '24'}
                                   onChange={e => setBombGrace(p => ({ ...p, [member.id]: e.target.value }))}
-                                  className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                                  className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                                 />
                               </div>
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleSetTimeBomb(member.id)}
                                   disabled={actionLoading[`bomb_${member.id}`]}
-                                  className="flex-1 py-1.5 bg-yellow-800 text-yellow-200 rounded text-xs font-medium hover:bg-yellow-700 disabled:opacity-50"
+                                  className="flex-1 py-1.5 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-500 disabled:opacity-50"
                                 >
                                   {actionLoading[`bomb_${member.id}`] ? 'Setting...' : 'Set Bomb'}
                                 </button>
                                 <button
                                   onClick={() => setShowBombForm(p => ({ ...p, [member.id]: false }))}
-                                  className="px-3 py-1.5 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600"
+                                  className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300"
                                 >
                                   Cancel
                                 </button>
@@ -620,12 +620,12 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                     </div>
 
                     {/* Trial Period */}
-                    <div className="pt-2 border-t border-slate-700 space-y-2">
+                    <div className="pt-2 border-t border-gray-200 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-gray-400 font-medium">Trial Period</p>
+                        <p className="text-xs text-gray-600 font-medium">Trial Period</p>
                         <button
                           onClick={() => setTrialEnabled(p => ({ ...p, [member.id]: !p[member.id] }))}
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[member.id] ? 'bg-yellow-800 text-yellow-300' : 'bg-slate-700 text-gray-500'}`}
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${trialEnabled[member.id] ? 'bg-amber-600 text-amber-600' : 'bg-gray-200 text-gray-600'}`}
                         >
                           {trialEnabled[member.id] ? 'Enabled' : 'Disabled'}
                         </button>
@@ -633,22 +633,22 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                       {trialEnabled[member.id] && (
                         <div className="space-y-1.5">
                           <div>
-                            <label className="block text-xs text-gray-500 mb-0.5">Expiry date</label>
+                            <label className="block text-xs text-gray-600 mb-0.5">Expiry date</label>
                             <input
                               type="date"
                               value={trialDate[member.id] ?? ''}
                               onChange={e => setTrialDate(p => ({ ...p, [member.id]: e.target.value }))}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                              className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-500 mb-0.5">Custom message</label>
+                            <label className="block text-xs text-gray-600 mb-0.5">Custom message</label>
                             <textarea
                               value={trialMsg[member.id] ?? ''}
                               onChange={e => setTrialMsg(p => ({ ...p, [member.id]: e.target.value }))}
                               placeholder="Your trial has expired. Contact your admin to extend access."
                               rows={2}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
+                              className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 resize-none"
                             />
                           </div>
                         </div>
@@ -656,14 +656,14 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
                       <button
                         onClick={() => handleTrialSave(member.id)}
                         disabled={trialLoading[member.id]}
-                        className="w-full py-1.5 bg-slate-700 text-gray-300 rounded text-xs font-medium hover:bg-slate-600 disabled:opacity-50"
+                        className="w-full py-1.5 bg-gray-200 text-gray-600 rounded text-xs font-medium hover:bg-gray-300 disabled:opacity-50"
                       >
                         {trialLoading[member.id] ? 'Saving...' : 'Save Trial Settings'}
                       </button>
                     </div>
                   </>
                 ) : (
-                  <div className="text-xs text-gray-400 pt-2 border-t border-slate-700">Team access is managed through your Stripe subscription.</div>
+                  <div className="text-xs text-gray-600 pt-2 border-t border-gray-200">Team access is managed through your Stripe subscription.</div>
                 )}
               </div>
             )}

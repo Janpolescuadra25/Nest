@@ -3,9 +3,9 @@ import { useQBContext } from '../contexts/QBContext';
 
 const CLASS_COLORS: Record<string, string> = {
   Asset: 'text-emerald-400',
-  Liability: 'text-red-400',
+  Liability: 'text-red-600',
   Equity: 'text-slate-400',
-  Revenue: 'text-green-400',
+  Revenue: 'text-emerald-600',
   Expense: 'text-orange-400',
 };
 
@@ -94,10 +94,10 @@ export default function QBDataView() {
     return (
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-400 animate-pulse">Loading QuickBooks data…</span>
+          <span className="text-xs text-gray-600 animate-pulse">Loading QuickBooks data…</span>
         </div>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 bg-gray-800 rounded-lg animate-pulse" />
+          <div key={i} className="h-10 bg-white rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -107,7 +107,7 @@ export default function QBDataView() {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center px-4">
         <div className="text-4xl mb-3">📊</div>
-        <p className="text-gray-400 text-sm mb-3">Failed to load QB data</p>
+        <p className="text-gray-600 text-sm mb-3">Failed to load QB data</p>
         <p className="text-gray-600 text-xs mb-4">Make sure QuickBooks is connected in Settings</p>
         <button
           onClick={() => void syncAllLists()}
@@ -124,8 +124,8 @@ export default function QBDataView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-semibold text-white">QuickBooks Data</div>
-          <div className="text-xs text-gray-500 mt-0.5">
+          <div className="text-sm font-semibold text-gray-900">QuickBooks Data</div>
+          <div className="text-xs text-gray-600 mt-0.5">
             {counts.accounts} accounts · {counts.customers} customers · {counts.vendors} vendors ·{' '}
             {counts.employees} employees
           </div>
@@ -133,7 +133,7 @@ export default function QBDataView() {
         <button
           onClick={() => void syncAllLists()}
           disabled={listsLoading}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200 border border-gray-700 hover:border-gray-500 px-2.5 py-1.5 rounded transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-700 border border-gray-200 hover:border-gray-500 px-2.5 py-1.5 rounded transition-colors disabled:opacity-50"
         >
           {listsLoading ? '…' : '↻'} Refresh All
         </button>
@@ -145,33 +145,33 @@ export default function QBDataView() {
         const count = counts[section.key] ?? 0;
 
         return (
-          <div key={section.key} className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+          <div key={section.key} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setOpenSection(isOpen ? '' : section.key)}
-              className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-700/50 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 transition-colors"
             >
-              <span className="flex items-center gap-2 text-sm text-gray-200">
+              <span className="flex items-center gap-2 text-sm text-gray-700">
                 <span>{section.icon}</span>
                 <span className="font-medium">{section.label}</span>
-                <span className="text-xs text-gray-500 bg-gray-700 px-1.5 py-0.5 rounded-full">{count}</span>
+                <span className="text-xs text-gray-600 bg-gray-200 px-1.5 py-0.5 rounded-full">{count}</span>
               </span>
-              <span className="text-gray-500 text-xs">{isOpen ? '▲' : '▼'}</span>
+              <span className="text-gray-600 text-xs">{isOpen ? '▲' : '▼'}</span>
             </button>
 
             {isOpen && (
-              <div className="border-t border-gray-700/60">
+              <div className="border-t border-gray-200">
                 {/* Search + filter row */}
                 <div className="px-3 py-2 flex gap-2">
                   <input
-                    className="flex-1 bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+                    className="flex-1 bg-[#F5F5F7] border border-gray-200 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                     placeholder={`Search ${section.label.toLowerCase()}…`}
                     value={getSearch(section.key)}
                     onChange={(e) => setSearch(section.key, e.target.value)}
                   />
                   {section.key === 'accounts' && (
                     <select
-                      className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
+                      className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                       value={classFilter}
                       onChange={(e) => setClassFilter(e.target.value)}
                     >
@@ -184,67 +184,67 @@ export default function QBDataView() {
                 {/* Table */}
                 <div className="overflow-x-auto max-h-72">
                   <table className="w-full text-xs border-collapse">
-                    <thead className="sticky top-0 bg-gray-700">
+                    <thead className="sticky top-0 bg-gray-200">
                       {section.key === 'accounts' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Sub-Type</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Classification</th>
-                          <th className="text-right px-2 py-1.5 text-gray-400 font-medium">Balance</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Sub-Type</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Classification</th>
+                          <th className="text-right px-2 py-1.5 text-gray-600 font-medium">Balance</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                       {section.key === 'customers' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Company</th>
-                          <th className="text-right px-2 py-1.5 text-gray-400 font-medium">Balance</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Company</th>
+                          <th className="text-right px-2 py-1.5 text-gray-600 font-medium">Balance</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                       {section.key === 'vendors' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Company</th>
-                          <th className="text-right px-2 py-1.5 text-gray-400 font-medium">Balance</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Company</th>
+                          <th className="text-right px-2 py-1.5 text-gray-600 font-medium">Balance</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                       {section.key === 'employees' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Display Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">First</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Last</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Status</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Display Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">First</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Last</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Status</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                       {section.key === 'taxCodes' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Description</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Taxable</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Description</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Taxable</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                       {section.key === 'classes' && (
                         <tr>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Name</th>
-                          <th className="text-left px-2 py-1.5 text-gray-400 font-medium">Full Name</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Sub-Class</th>
-                          <th className="text-center px-2 py-1.5 text-gray-400 font-medium">Active</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Name</th>
+                          <th className="text-left px-2 py-1.5 text-gray-600 font-medium">Full Name</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Sub-Class</th>
+                          <th className="text-center px-2 py-1.5 text-gray-600 font-medium">Active</th>
                         </tr>
                       )}
                     </thead>
                     <tbody>
                       {section.key === 'accounts' && filteredAccounts.map((a) => (
-                        <tr key={a.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200 max-w-xs truncate">{a.FullyQualifiedName}</td>
-                          <td className="px-2 py-1 text-gray-400">{a.AccountSubType ?? a.AccountType}</td>
-                          <td className={`px-2 py-1 font-medium ${CLASS_COLORS[a.Classification ?? ''] ?? 'text-gray-400'}`}>
+                        <tr key={a.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700 max-w-xs truncate">{a.FullyQualifiedName}</td>
+                          <td className="px-2 py-1 text-gray-600">{a.AccountSubType ?? a.AccountType}</td>
+                          <td className={`px-2 py-1 font-medium ${CLASS_COLORS[a.Classification ?? ''] ?? 'text-gray-600'}`}>
                             {a.Classification}
                           </td>
-                          <td className="px-2 py-1 text-right font-mono text-gray-300">
+                          <td className="px-2 py-1 text-right font-mono text-gray-600">
                             {a.CurrentBalance != null ? `$${a.CurrentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                           </td>
                           <td className="px-2 py-1 text-center">{a.Active ? '✅' : '❌'}</td>
@@ -252,10 +252,10 @@ export default function QBDataView() {
                       ))}
 
                       {section.key === 'customers' && filteredCustomers.map((c) => (
-                        <tr key={c.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200">{c.DisplayName}</td>
-                          <td className="px-2 py-1 text-gray-400">{c.CompanyName ?? '—'}</td>
-                          <td className="px-2 py-1 text-right font-mono text-gray-300">
+                        <tr key={c.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700">{c.DisplayName}</td>
+                          <td className="px-2 py-1 text-gray-600">{c.CompanyName ?? '—'}</td>
+                          <td className="px-2 py-1 text-right font-mono text-gray-600">
                             {c.Balance != null ? `$${c.Balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                           </td>
                           <td className="px-2 py-1 text-center">{c.Active ? '✅' : '❌'}</td>
@@ -263,10 +263,10 @@ export default function QBDataView() {
                       ))}
 
                       {section.key === 'vendors' && filteredVendors.map((v) => (
-                        <tr key={v.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200">{v.DisplayName}</td>
-                          <td className="px-2 py-1 text-gray-400">{v.CompanyName ?? '—'}</td>
-                          <td className="px-2 py-1 text-right font-mono text-gray-300">
+                        <tr key={v.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700">{v.DisplayName}</td>
+                          <td className="px-2 py-1 text-gray-600">{v.CompanyName ?? '—'}</td>
+                          <td className="px-2 py-1 text-right font-mono text-gray-600">
                             {v.Balance != null ? `$${v.Balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                           </td>
                           <td className="px-2 py-1 text-center">{v.Active ? '✅' : '❌'}</td>
@@ -274,29 +274,29 @@ export default function QBDataView() {
                       ))}
 
                       {section.key === 'employees' && filteredEmployees.map((e) => (
-                        <tr key={e.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200">{e.DisplayName}</td>
-                          <td className="px-2 py-1 text-gray-400">{e.GivenName ?? '—'}</td>
-                          <td className="px-2 py-1 text-gray-400">{e.FamilyName ?? '—'}</td>
-                          <td className="px-2 py-1 text-center text-gray-400">{e.Status ?? '—'}</td>
+                        <tr key={e.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700">{e.DisplayName}</td>
+                          <td className="px-2 py-1 text-gray-600">{e.GivenName ?? '—'}</td>
+                          <td className="px-2 py-1 text-gray-600">{e.FamilyName ?? '—'}</td>
+                          <td className="px-2 py-1 text-center text-gray-600">{e.Status ?? '—'}</td>
                           <td className="px-2 py-1 text-center">{e.Active ? '✅' : '❌'}</td>
                         </tr>
                       ))}
 
                       {section.key === 'taxCodes' && filteredTaxCodes.map((t) => (
-                        <tr key={t.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200">{t.Name}</td>
-                          <td className="px-2 py-1 text-gray-400 truncate max-w-xs">{t.Description ?? '—'}</td>
+                        <tr key={t.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700">{t.Name}</td>
+                          <td className="px-2 py-1 text-gray-600 truncate max-w-xs">{t.Description ?? '—'}</td>
                           <td className="px-2 py-1 text-center">{t.Taxable ? '✅' : '—'}</td>
                           <td className="px-2 py-1 text-center">{t.Active ? '✅' : '❌'}</td>
                         </tr>
                       ))}
 
                       {section.key === 'classes' && filteredClasses.map((c) => (
-                        <tr key={c.Id} className="border-t border-gray-700/50 hover:bg-gray-700/30">
-                          <td className="px-2 py-1 text-gray-200">{c.Name}</td>
-                          <td className="px-2 py-1 text-gray-400">{c.FullyQualifiedName}</td>
-                          <td className="px-2 py-1 text-center text-gray-400">{c.SubClass ? '✅' : '—'}</td>
+                        <tr key={c.Id} className="border-t border-gray-200/50 hover:bg-gray-100/30">
+                          <td className="px-2 py-1 text-gray-700">{c.Name}</td>
+                          <td className="px-2 py-1 text-gray-600">{c.FullyQualifiedName}</td>
+                          <td className="px-2 py-1 text-center text-gray-600">{c.SubClass ? '✅' : '—'}</td>
                           <td className="px-2 py-1 text-center">{c.Active ? '✅' : '❌'}</td>
                         </tr>
                       ))}

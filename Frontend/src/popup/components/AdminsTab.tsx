@@ -178,8 +178,8 @@ export default function AdminsTab({ jwt }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-white">Admins</h2>
-        <button onClick={fetchAdmins} className="text-xs text-gray-500 hover:text-gray-300">↻ Refresh</button>
+        <h2 className="text-base font-semibold text-gray-900">Admins</h2>
+        <button onClick={fetchAdmins} className="text-xs text-gray-600 hover:text-gray-600">↻ Refresh</button>
       </div>
 
       {error && (
@@ -195,37 +195,37 @@ export default function AdminsTab({ jwt }: Props) {
         />
       ) : (
         admins.map(admin => (
-          <div key={admin.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
+          <div key={admin.id} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-white truncate">{admin.name ?? admin.email}</div>
-                {admin.name && <div className="text-xs text-gray-400 truncate">{admin.email}</div>}
-                {admin.company && <div className="text-xs text-gray-500 truncate">{admin.company}</div>}
+                <div className="text-sm font-medium text-gray-900 truncate">{admin.name ?? admin.email}</div>
+                {admin.name && <div className="text-xs text-gray-600 truncate">{admin.email}</div>}
+                {admin.company && <div className="text-xs text-gray-600 truncate">{admin.company}</div>}
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                   <StatusBadge status={admin.status} />
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-600">
                     {admin.currentTeamSize}/{admin.maxUsers ?? '∞'} members
                   </span>
                 </div>
                 {poolData[admin.id]?.poolScans != null && (
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-xs text-gray-600 mt-1">
                     Pool: {poolData[admin.id].poolScans} scans · {poolData[admin.id].poolLocations} locations · max {poolData[admin.id].maxMembers ?? '∞'} members
                   </div>
                 )}
               </div>
-              <button onClick={() => handleExpand(admin)} className="text-gray-500 hover:text-gray-300 text-xs flex-shrink-0">
+              <button onClick={() => handleExpand(admin)} className="text-gray-600 hover:text-gray-600 text-xs flex-shrink-0">
                 {expandedId === admin.id ? '▲' : '▼'}
               </button>
             </div>
 
             {expandedId === admin.id && (
-              <div className="pt-2 border-t border-slate-700 space-y-3">
+              <div className="pt-2 border-t border-gray-200 space-y-3">
                 {poolData[admin.id]?.poolScans != null && (
-                  <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-900 p-3">
+                  <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <p className="text-xs font-medium text-gray-300">Pool Settings</p>
-                        <p className="text-xs text-gray-400">{poolData[admin.id].poolScans} scans · {poolData[admin.id].poolLocations} locations · max {poolData[admin.id].maxMembers ?? '∞'} members</p>
+                        <p className="text-xs font-medium text-gray-600">Pool Settings</p>
+                        <p className="text-xs text-gray-600">{poolData[admin.id].poolScans} scans · {poolData[admin.id].poolLocations} locations · max {poolData[admin.id].maxMembers ?? '∞'} members</p>
                       </div>
                       <button
                         onClick={() => {
@@ -239,7 +239,7 @@ export default function AdminsTab({ jwt }: Props) {
                           }));
                           setShowEditPool(p => ({ ...p, [admin.id]: !p[admin.id] }));
                         }}
-                        className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+                        className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                       >
                         {showEditPool[admin.id] ? 'Cancel' : 'Edit pool'}
                       </button>
@@ -248,33 +248,33 @@ export default function AdminsTab({ jwt }: Props) {
                       <div className="space-y-2">
                         <div className="grid gap-2 sm:grid-cols-3">
                           <div>
-                            <p className="text-xs text-gray-400 mb-1">Scans</p>
+                            <p className="text-xs text-gray-600 mb-1">Scans</p>
                             <input
                               type="number"
                               min={0}
                               value={editPoolValues[admin.id]?.poolScans ?? '200'}
                               onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolLocations: '50', maxMembers: '5' }), poolScans: e.target.value } }))}
-                              className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1.5 w-full"
+                              className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                             />
                           </div>
                           <div>
-                            <p className="text-xs text-gray-400 mb-1">Locations</p>
+                            <p className="text-xs text-gray-600 mb-1">Locations</p>
                             <input
                               type="number"
                               min={0}
                               value={editPoolValues[admin.id]?.poolLocations ?? '50'}
                               onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', maxMembers: '5' }), poolLocations: e.target.value } }))}
-                              className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1.5 w-full"
+                              className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                             />
                           </div>
                           <div>
-                            <p className="text-xs text-gray-400 mb-1">Members</p>
+                            <p className="text-xs text-gray-600 mb-1">Members</p>
                             <input
                               type="number"
                               min={0}
                               value={editPoolValues[admin.id]?.maxMembers ?? '5'}
                               onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', poolLocations: '50' }), maxMembers: e.target.value } }))}
-                              className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1.5 w-full"
+                              className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                             />
                           </div>
                         </div>
@@ -288,7 +288,7 @@ export default function AdminsTab({ jwt }: Props) {
                           </button>
                           <button
                             onClick={() => setShowEditPool(p => ({ ...p, [admin.id]: false }))}
-                            className="flex-1 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-xs rounded"
+                            className="flex-1 py-1.5 bg-gray-300 hover:bg-gray-200 text-gray-900 text-xs rounded"
                           >
                             Cancel
                           </button>
@@ -300,7 +300,7 @@ export default function AdminsTab({ jwt }: Props) {
 
                 {/* maxUsers edit */}
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Member limit</p>
+                  <p className="text-xs text-gray-600 mb-1">Member limit</p>
                   {showEditMaxUsers[admin.id] ? (
                     <div className="flex gap-2">
                       <input
@@ -309,7 +309,7 @@ export default function AdminsTab({ jwt }: Props) {
                         max={1000}
                         value={editMaxUsers[admin.id] ?? String(admin.maxUsers ?? '')}
                         onChange={e => setEditMaxUsers(p => ({ ...p, [admin.id]: e.target.value }))}
-                        className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="flex-1 px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                         placeholder="e.g. 10"
                       />
                       <button
@@ -321,7 +321,7 @@ export default function AdminsTab({ jwt }: Props) {
                       </button>
                       <button
                         onClick={() => setShowEditMaxUsers(p => ({ ...p, [admin.id]: false }))}
-                        className="px-2 py-1 bg-slate-700 text-gray-400 rounded text-xs hover:bg-slate-600"
+                        className="px-2 py-1 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300"
                       >
                         ✕
                       </button>
@@ -332,7 +332,7 @@ export default function AdminsTab({ jwt }: Props) {
                         setEditMaxUsers(p => ({ ...p, [admin.id]: String(admin.maxUsers ?? '') }));
                         setShowEditMaxUsers(p => ({ ...p, [admin.id]: true }));
                       }}
-                      className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+                      className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                     >
                       Edit limit ({admin.maxUsers ?? 'Unlimited'})
                     </button>
@@ -345,8 +345,8 @@ export default function AdminsTab({ jwt }: Props) {
                   disabled={actionLoading[`status_${admin.id}`]}
                   className={`w-full py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
                     admin.status === 'DISABLED'
-                      ? 'bg-green-900 text-green-300 hover:bg-green-800'
-                      : 'bg-red-900 text-red-300 hover:bg-red-800'
+                      ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-700'
+                      : 'bg-red-50 text-red-600 hover:bg-red-700'
                   }`}
                 >
                   {actionLoading[`status_${admin.id}`] ? '…' : admin.status === 'DISABLED' ? 'Enable Admin' : 'Disable Admin'}
@@ -354,25 +354,25 @@ export default function AdminsTab({ jwt }: Props) {
 
                 {/* Team members */}
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Team members</p>
+                  <p className="text-xs text-gray-600 mb-1">Team members</p>
                   {teamLoading[admin.id] ? (
-                    <p className="text-xs text-gray-500">Loading…</p>
+                    <p className="text-xs text-gray-600">Loading…</p>
                   ) : (memberMap[admin.id] ?? []).length === 0 ? (
-                    <p className="text-xs text-gray-500">No team members.</p>
+                    <p className="text-xs text-gray-600">No team members.</p>
                   ) : (
                     <div className="space-y-2">
                       {memberMap[admin.id].map(member => (
-                        <div key={member.id} className="rounded-lg border border-slate-700 bg-slate-900 p-3">
+                        <div key={member.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0">
-                              <div className="text-xs text-white truncate">{member.name ?? member.email}</div>
-                              {member.name && <div className="text-xs text-gray-500 truncate">{member.email}</div>}
-                              <div className="text-xs text-gray-400">{member.role}</div>
+                              <div className="text-xs text-gray-900 truncate">{member.name ?? member.email}</div>
+                              {member.name && <div className="text-xs text-gray-600 truncate">{member.email}</div>}
+                              <div className="text-xs text-gray-600">{member.role}</div>
                             </div>
                             {showEditAllocation[member.id] ? (
                               <button
                                 onClick={() => setShowEditAllocation(p => ({ ...p, [member.id]: false }))}
-                                className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+                                className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                               >
                                 Cancel
                               </button>
@@ -388,7 +388,7 @@ export default function AdminsTab({ jwt }: Props) {
                                   }));
                                   setShowEditAllocation(p => ({ ...p, [member.id]: true }));
                                 }}
-                                className="text-xs px-2 py-1 bg-slate-700 text-gray-300 rounded hover:bg-slate-600"
+                                className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                               >
                                 Edit
                               </button>
@@ -398,27 +398,27 @@ export default function AdminsTab({ jwt }: Props) {
                             <div className="mt-3 space-y-2">
                               <div className="grid gap-2 sm:grid-cols-2">
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Scans</p>
+                                  <p className="text-xs text-gray-600 mb-1">Scans</p>
                                   <input
                                     type="number"
                                     min={0}
                                     value={editAllocationValues[member.id]?.allocatedScans ?? '0'}
                                     onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedLocations: '0' }), allocatedScans: e.target.value } }))}
-                                    className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1.5 w-full"
+                                    className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                                   />
                                 </div>
                                 <div>
-                                  <p className="text-xs text-gray-400 mb-1">Locations</p>
+                                  <p className="text-xs text-gray-600 mb-1">Locations</p>
                                   <input
                                     type="number"
                                     min={0}
                                     value={editAllocationValues[member.id]?.allocatedLocations ?? '0'}
                                     onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedScans: '0' }), allocatedLocations: e.target.value } }))}
-                                    className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1.5 w-full"
+                                    className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                                   />
                                 </div>
                               </div>
-                              <p className="text-xs text-gray-400">Remaining: {poolStats[admin.id]?.remainingScans ?? 0} scans · {poolStats[admin.id]?.remainingLocations ?? 0} locations</p>
+                              <p className="text-xs text-gray-600">Remaining: {poolStats[admin.id]?.remainingScans ?? 0} scans · {poolStats[admin.id]?.remainingLocations ?? 0} locations</p>
                               <button
                                 onClick={() => handleSaveAllocation(admin, member)}
                                 disabled={actionLoading[`alloc_${member.id}`]}
@@ -428,7 +428,7 @@ export default function AdminsTab({ jwt }: Props) {
                               </button>
                             </div>
                           ) : (
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-300">
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
                               <span>{member.allocatedScans ?? 0} / {poolStats[admin.id]?.poolScans ?? 0} scans</span>
                               <span>{member.allocatedLocations ?? 0} / {poolStats[admin.id]?.poolLocations ?? 0} locations</span>
                             </div>

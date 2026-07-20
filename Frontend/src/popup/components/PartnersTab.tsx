@@ -152,58 +152,58 @@ export default function PartnersTab({ jwt }: Props) {
   };
 
   const ROLE_BADGE: Record<string, string> = {
-    ADMIN: 'bg-emerald-900 text-emerald-300',
-    ACCOUNTANT: 'bg-emerald-900 text-emerald-300',
-    STAFF: 'bg-green-900 text-green-300',
-    VIEWER: 'bg-gray-700 text-gray-300',
+    ADMIN: 'bg-emerald-50 text-emerald-600',
+    ACCOUNTANT: 'bg-emerald-50 text-emerald-600',
+    STAFF: 'bg-emerald-50 text-emerald-600',
+    VIEWER: 'bg-gray-200 text-gray-600',
   };
 
-  if (loading) return <div className="p-4 text-gray-500 text-sm">Loading partners…</div>;
+  if (loading) return <div className="p-4 text-gray-600 text-sm">Loading partners…</div>;
 
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-white">Partners</h2>
-        <span className="text-xs text-gray-500">{admins.length} partner{admins.length !== 1 ? 's' : ''}</span>
+        <h2 className="text-base font-semibold text-gray-900">Partners</h2>
+        <span className="text-xs text-gray-600">{admins.length} partner{admins.length !== 1 ? 's' : ''}</span>
       </div>
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      {admins.length === 0 && <p className="text-gray-500 text-sm">No partners yet.</p>}
+      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {admins.length === 0 && <p className="text-gray-600 text-sm">No partners yet.</p>}
       {admins.map(admin => (
-        <div key={admin.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
+        <div key={admin.id} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-white truncate">{admin.name ?? admin.email}</div>
-              {admin.name && <div className="text-xs text-gray-400 truncate">{admin.email}</div>}
-              {admin.company && <div className="text-xs text-gray-500">{admin.company}</div>}
-              <div className="text-xs text-gray-500 mt-0.5">
+              <div className="text-sm font-medium text-gray-900 truncate">{admin.name ?? admin.email}</div>
+              {admin.name && <div className="text-xs text-gray-600 truncate">{admin.email}</div>}
+              {admin.company && <div className="text-xs text-gray-600">{admin.company}</div>}
+              <div className="text-xs text-gray-600 mt-0.5">
                 Team: {admin.currentTeamSize}/{admin.maxUsers ?? '∞'} · Joined {new Date(admin.createdAt).toLocaleDateString()}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`text-xs px-1.5 py-0.5 rounded ${admin.status === 'ACTIVE' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${admin.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                 {admin.status}
               </span>
               <button
                 onClick={() => handleToggleExpand(admin.id)}
-                className="text-gray-500 hover:text-gray-300 text-xs"
+                className="text-gray-600 hover:text-gray-600 text-xs"
               >
                 {expandedId === admin.id ? '▲' : '▼'}
               </button>
             </div>
           </div>
           {expandedId === admin.id && (
-            <div className="pt-2 border-t border-slate-700 space-y-3">
+            <div className="pt-2 border-t border-gray-200 space-y-3">
               {admin.description && (
-                <p className="text-xs text-gray-400 italic">"{admin.description}"</p>
+                <p className="text-xs text-gray-600 italic">"{admin.description}"</p>
               )}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400">Max users:</label>
+                <label className="text-xs text-gray-600">Max users:</label>
                 <input
                   type="number"
                   min={1}
                   value={editMaxUsers[admin.id] ?? (admin.maxUsers ?? 5)}
                   onChange={e => setEditMaxUsers(p => ({ ...p, [admin.id]: e.target.value }))}
-                  className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-16 px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
                 />
                 <button
                   onClick={() => handleUpdateMaxUsers(admin)}
@@ -218,33 +218,33 @@ export default function PartnersTab({ jwt }: Props) {
                 disabled={actionLoading[admin.id]}
                 className={`w-full py-1.5 rounded text-xs font-medium disabled:opacity-50 ${
                   admin.status === 'ACTIVE'
-                    ? 'bg-red-900 text-red-300 hover:bg-red-800'
-                    : 'bg-green-900 text-green-300 hover:bg-green-800'
+                    ? 'bg-red-50 text-red-600 hover:bg-red-700'
+                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-700'
                 }`}
               >
                 {actionLoading[admin.id] ? 'Updating...' : admin.status === 'ACTIVE' ? 'Disable Partner' : 'Re-enable Partner'}
               </button>
 
               {/* Team members */}
-              <div className="pt-2 border-t border-slate-700">
-                <p className="text-xs text-gray-500 mb-1.5">Team Members</p>
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-600 mb-1.5">Team Members</p>
                 {teamLoading[admin.id] ? (
-                  <p className="text-xs text-gray-500">Loading…</p>
+                  <p className="text-xs text-gray-600">Loading…</p>
                 ) : teamError[admin.id] ? (
-                  <p className="text-xs text-red-400">{teamError[admin.id]}</p>
+                  <p className="text-xs text-red-600">{teamError[admin.id]}</p>
                 ) : (teamMembers[admin.id] ?? []).length === 0 ? (
-                  <p className="text-xs text-gray-500">No team members yet.</p>
+                  <p className="text-xs text-gray-600">No team members yet.</p>
                 ) : (
                   <div className="space-y-1">
                     {(teamMembers[admin.id] ?? []).map(m => (
-                      <div key={m.id} className="flex items-center justify-between gap-2 bg-slate-900 rounded px-2 py-1">
+                      <div key={m.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded px-2 py-1">
                         <div className="min-w-0">
-                          <span className="text-xs text-white truncate">{m.name ?? m.email}</span>
-                          {m.name && <span className="text-xs text-gray-500 ml-1 truncate">({m.email})</span>}
+                          <span className="text-xs text-gray-900 truncate">{m.name ?? m.email}</span>
+                          {m.name && <span className="text-xs text-gray-600 ml-1 truncate">({m.email})</span>}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className="text-xs text-gray-500">{m.role}</span>
-                          <span className={`text-xs px-1 py-0.5 rounded ${m.status === 'ACTIVE' ? 'bg-green-900 text-green-400' : 'bg-red-900 text-red-400'}`}>
+                          <span className="text-xs text-gray-600">{m.role}</span>
+                          <span className={`text-xs px-1 py-0.5 rounded ${m.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                             {m.status}
                           </span>
                         </div>
@@ -259,8 +259,8 @@ export default function PartnersTab({ jwt }: Props) {
       ))}
 
       {/* Invite Links */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-2">
-        <h3 className="text-sm font-medium text-emerald-300">Invite Links</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <h3 className="text-sm font-medium text-emerald-600">Invite Links</h3>
 
         {/* Creation form */}
         <div className="space-y-2">
@@ -272,7 +272,7 @@ export default function PartnersTab({ jwt }: Props) {
                 className={`text-xs px-2 py-0.5 rounded border transition-colors ${
                   createRole === role
                     ? `${ROLE_BADGE[role]} border-transparent`
-                    : 'bg-transparent text-gray-500 border-slate-600 hover:border-slate-400'
+                    : 'bg-transparent text-gray-600 border-gray-300 hover:border-gray-300'
                 }`}
               >
                 {role}
@@ -281,25 +281,25 @@ export default function PartnersTab({ jwt }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-0.5">Expires in (hours)</label>
+              <label className="block text-xs text-gray-600 mb-0.5">Expires in (hours)</label>
               <input
                 type="number"
                 value={createExpiry}
                 min={1}
                 max={720}
                 onChange={e => setCreateExpiry(Math.min(720, Math.max(1, Number(e.target.value))))}
-                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-emerald-600"
+                className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-0.5 text-xs text-gray-900 focus:outline-none focus:border-emerald-200"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-0.5">Max uses</label>
+              <label className="block text-xs text-gray-600 mb-0.5">Max uses</label>
               <input
                 type="number"
                 value={createMaxUses}
                 min={1}
                 max={100}
                 onChange={e => setCreateMaxUses(Math.min(100, Math.max(1, Number(e.target.value))))}
-                className="w-full bg-slate-900 border border-slate-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-emerald-600"
+                className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-0.5 text-xs text-gray-900 focus:outline-none focus:border-emerald-200"
               />
             </div>
           </div>
@@ -311,12 +311,12 @@ export default function PartnersTab({ jwt }: Props) {
             {creating ? 'Creating…' : 'Create Invite Link'}
           </button>
           {lastCreatedUrl && (
-            <div className="bg-slate-900 border border-emerald-800 rounded p-2 space-y-1">
-              <div className="text-xs text-emerald-300 font-medium">Your new invite link</div>
-              <div className="text-xs text-gray-400 break-all">{lastCreatedUrl}</div>
+            <div className="bg-gray-50 border border-emerald-200 rounded p-2 space-y-1">
+              <div className="text-xs text-emerald-600 font-medium">Your new invite link</div>
+              <div className="text-xs text-gray-600 break-all">{lastCreatedUrl}</div>
               <button
                 onClick={() => navigator.clipboard.writeText(lastCreatedUrl).catch(() => {}).then(() => showToast('Copied', 'success'))}
-                className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
+                className="text-xs text-emerald-400 hover:text-emerald-600 border border-emerald-200 hover:border-emerald-200 px-2 py-0.5 rounded transition-colors"
               >
                 Copy
               </button>
@@ -325,24 +325,24 @@ export default function PartnersTab({ jwt }: Props) {
         </div>
 
         {inviteLinksLoading ? (
-          <p className="text-xs text-gray-500">Loading…</p>
+          <p className="text-xs text-gray-600">Loading…</p>
         ) : inviteLinks.length === 0 ? (
-          <p className="text-xs text-gray-500">No active invite links.</p>
+          <p className="text-xs text-gray-600">No active invite links.</p>
         ) : (
           <div className="space-y-2">
             {inviteLinks.map((link) => {
               const expired = link.expiresAt ? new Date(link.expiresAt) < new Date() : false;
               const inviteUrl = `${BACKEND_URL}/api/invite/${link.token ?? ''}`;
               return (
-                <div key={link.id} className="bg-slate-900 border border-slate-700 rounded p-2 space-y-1.5">
+                <div key={link.id} className="bg-gray-50 border border-gray-200 rounded p-2 space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${ROLE_BADGE[link.roleHint] ?? 'bg-gray-700 text-gray-300'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${ROLE_BADGE[link.roleHint] ?? 'bg-gray-200 text-gray-600'}`}>
                       {link.roleHint}
                     </span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${expired || link.usedAt ? 'bg-red-900 text-red-400' : link.isActive ? 'bg-green-900 text-green-400' : 'bg-gray-700 text-gray-500'}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${expired || link.usedAt ? 'bg-red-50 text-red-600' : link.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-200 text-gray-600'}`}>
                       {expired ? 'Expired' : link.usedAt ? 'Used' : 'Active'}
                     </span>
-                    <span className="text-xs text-gray-500">{link.useCount}/{link.maxUses} uses</span>
+                    <span className="text-xs text-gray-600">{link.useCount}/{link.maxUses} uses</span>
                     {link.expiresAt && (
                       <span className="text-xs text-gray-600">Expires {new Date(link.expiresAt).toLocaleDateString()}</span>
                     )}
@@ -351,14 +351,14 @@ export default function PartnersTab({ jwt }: Props) {
                     {link.token && (
                       <button
                         onClick={() => navigator.clipboard.writeText(inviteUrl).catch(() => {}).then(() => showToast('Invite URL copied', 'success'))}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors"
+                        className="text-xs text-emerald-400 hover:text-emerald-600 border border-emerald-200 hover:border-emerald-200 px-2 py-0.5 rounded transition-colors"
                       >
                         Copy URL
                       </button>
                     )}
                     <button
                       onClick={() => handleRevokeInviteLink(link.id)}
-                      className="text-xs text-red-400 hover:text-red-300 border border-red-900 hover:border-red-700 px-2 py-0.5 rounded transition-colors"
+                      className="text-xs text-red-600 hover:text-red-600 border border-red-300 hover:border-red-200 px-2 py-0.5 rounded transition-colors"
                     >
                       Revoke
                     </button>

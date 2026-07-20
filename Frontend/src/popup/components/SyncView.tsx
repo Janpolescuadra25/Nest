@@ -20,10 +20,10 @@ interface Props {
 }
 
 const STATUS_CLASSES: Record<string, string> = {
-  SYNCED: 'text-green-400 bg-green-900/30 border-green-800',
-  FAILED: 'text-red-400 bg-red-900/30 border-red-800',
-  PENDING: 'text-yellow-400 bg-yellow-900/30 border-yellow-800',
-  MAPPED: 'text-emerald-400 bg-emerald-900/30 border-emerald-800',
+  SYNCED: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+  FAILED: 'text-red-600 bg-red-50 border-red-200',
+  PENDING: 'text-amber-600 bg-amber-50 border-amber-200',
+  MAPPED: 'text-emerald-400 bg-emerald-50 border-emerald-200',
 };
 
 export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced }: Props) {
@@ -317,17 +317,17 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     <div className="p-3 space-y-3">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-white">{safeScans.length}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Total Scans</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-gray-900">{safeScans.length}</div>
+          <div className="text-xs text-gray-600 mt-0.5">Total Scans</div>
         </div>
-        <div className="bg-gray-800 border border-green-900 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-green-400">{totalSynced}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Synced to QB</div>
+        <div className="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-emerald-600">{totalSynced}</div>
+          <div className="text-xs text-gray-600 mt-0.5">Synced to QB</div>
         </div>
-        <div className="bg-gray-800 border border-red-900 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-red-400">{totalFailed}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Failed</div>
+        <div className="bg-white border border-red-300 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-red-600">{totalFailed}</div>
+          <div className="text-xs text-gray-600 mt-0.5">Failed</div>
         </div>
       </div>
 
@@ -336,7 +336,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             {totalPending > 0 && (
-              <span className="text-xs text-yellow-400 bg-yellow-900/30 border border-yellow-800 px-2 py-0.5 rounded flex-shrink-0">
+              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded flex-shrink-0">
                 {totalPending} pending
               </span>
             )}
@@ -344,7 +344,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
               <button
                 onClick={() => void handleSyncAll()}
                 disabled={batchSyncing || isRetryingAll}
-                className="text-xs bg-amber-700 hover:bg-amber-600 disabled:bg-amber-900 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
+                className="text-xs bg-amber-700 hover:bg-amber-600 disabled:bg-amber-200 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
               >
                 {batchSyncing ? '⏳ Syncing...' : '⚡ Sync All Pending'}
               </button>
@@ -353,7 +353,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
               <button
                 onClick={() => void handleRetryAllFailed()}
                 disabled={batchSyncing || isRetryingAll}
-                className="text-xs bg-amber-600 hover:bg-amber-700 disabled:bg-amber-900 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
+                className="text-xs bg-amber-600 hover:bg-amber-700 disabled:bg-amber-200 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
               >
                 {isRetryingAll ? '⏳ Retrying...' : `↻ Retry ${totalFailed} Failed`}
               </button>
@@ -366,8 +366,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       )}
 
       {totalAttention > 0 && (
-        <div className="mb-3 px-3 py-2 rounded bg-amber-900/20 border border-amber-800/50 text-xs">
-          <span className="text-amber-300 font-medium">
+        <div className="mb-3 px-3 py-2 rounded bg-amber-50 border border-amber-200 text-xs">
+          <span className="text-amber-600 font-medium">
             ⚠ {totalAttention} scan{totalAttention > 1 ? 's' : ''} need{totalAttention === 1 ? 's' : ''} attention
           </span>
           <span className="text-slate-400 ml-2">
@@ -384,14 +384,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       )}
 
       {/* History table */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-        <div className="px-3 py-2 border-b border-gray-700">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sync History</span>
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="px-3 py-2 border-b border-gray-200">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Sync History</span>
         </div>
-        <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2">
-          <span className="text-xs text-gray-500 flex-shrink-0">Filter:</span>
+        <div className="px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+          <span className="text-xs text-gray-600 flex-shrink-0">Filter:</span>
           <select
-            className="bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+            className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
           >
@@ -402,32 +402,32 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <option value="pdf">PDF Only</option>
           </select>
           {sourceFilter !== 'all' && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
             </span>
           )}
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-gray-500 text-sm">Loading…</div>
+          <div className="py-8 text-center text-gray-600 text-sm">Loading…</div>
         ) : error ? (
-          <div className="py-4 text-center text-red-400 text-xs px-3">{error}</div>
+          <div className="py-4 text-center text-red-600 text-xs px-3">{error}</div>
         ) : !locationId ? (
           <div className="py-8 text-center">
             <div className="text-2xl mb-2">📍</div>
-            <p className="text-gray-500 text-sm">No location selected</p>
+            <p className="text-gray-600 text-sm">No location selected</p>
             <p className="text-gray-600 text-xs mt-1">Add a location in Settings first</p>
           </div>
         ) : filteredScans.length === 0 && safeScans.length > 0 ? (
           <div className="py-8 text-center">
             <div className="text-2xl mb-2">🔍</div>
-            <p className="text-gray-500 text-sm">No scans match the selected filter</p>
+            <p className="text-gray-600 text-sm">No scans match the selected filter</p>
             <p className="text-gray-600 text-xs mt-1">Try changing the source filter above</p>
           </div>
         ) : safeScans.length === 0 ? (
           <div className="py-8 text-center">
             <div className="text-2xl mb-2">📭</div>
-            <p className="text-gray-500 text-sm">No scans yet</p>
+            <p className="text-gray-600 text-sm">No scans yet</p>
             <p className="text-gray-600 text-xs mt-1">
               {onboardingStep === 4
                 ? 'Begin your first sync — scan a report or invoice, map it, and push to QuickBooks'
@@ -438,16 +438,16 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="border-b border-gray-700 bg-gray-700/30">
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Scan Date</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">QB Document ID</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Created</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Source</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Vendor</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Invoice #</th>
-                  <th className="text-right px-3 py-2 text-gray-400 font-medium">Total</th>
-                  <th className="text-left px-3 py-2 text-gray-400 font-medium">Actions</th>
+                <tr className="border-b border-gray-200 bg-gray-200/30">
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Scan Date</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Status</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">QB Document ID</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Created</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Source</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Vendor</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Invoice #</th>
+                  <th className="text-right px-3 py-2 text-gray-600 font-medium">Total</th>
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -467,10 +467,10 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                   const scanSource = (scan.source ?? 'pos').toLowerCase();
                   return (
                     <React.Fragment key={scan.id}>
-                      <tr className={`border-t border-gray-700/50 hover:bg-gray-700/20 ${attention === 'max-retried' ? 'bg-red-900/20' : attention === 'stale' || attention === 'old-failure' ? 'bg-amber-900/10' : ''}`}>
-                        <td className="px-3 py-2 text-gray-200 font-mono">{scan.scanDate}</td>
+                      <tr className={`border-t border-gray-200/50 hover:bg-gray-100 ${attention === 'max-retried' ? 'bg-red-50' : attention === 'stale' || attention === 'old-failure' ? 'bg-amber-50' : ''}`}>
+                        <td className="px-3 py-2 text-gray-700 font-mono">{scan.scanDate}</td>
                         <td className="px-3 py-2">
-                          <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-400'}`}>
+                          <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-600'}`}>
                             {scan.status}
                             {scan.status === 'FAILED' ? ` (${attempts}/3)` : ''}
                             {attention === 'stale' && (
@@ -484,19 +484,19 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             )}
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-mono text-gray-400">
+                        <td className="px-3 py-2 font-mono text-gray-600">
                           {txnId
                             ? <a href={`${qbBaseUrl}/app/${qbPath}?txnId=${txnId}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline" title="View in QuickBooks">{txnId} ↗</a>
                             : '—'
                           }
                         </td>
-                        <td className="px-3 py-2 text-gray-500">
+                        <td className="px-3 py-2 text-gray-600">
                           {new Date(scan.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2">
                           {scanSource === 'excel' ? (
                             <span
-                              className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400 cursor-pointer hover:bg-emerald-900/50"
+                              className="px-2 py-0.5 rounded border text-xs bg-emerald-50 border-emerald-200 text-emerald-400 cursor-pointer hover:bg-emerald-100"
                               title="Excel import — click to inspect"
                               onClick={() => {
                                 if (scan.rawScanEntry) {
@@ -508,7 +508,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             </span>
                           ) : scanSource === 'image' ? (
                             <span
-                              className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400 cursor-pointer hover:bg-emerald-900/50"
+                              className="px-2 py-0.5 rounded border text-xs bg-emerald-50 border-emerald-200 text-emerald-400 cursor-pointer hover:bg-emerald-100"
                               title="Image scan — click to inspect"
                               onClick={() => {
                                 if (scan.rawScanEntry) {
@@ -520,7 +520,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             </span>
                           ) : scanSource === 'pdf' ? (
                             <span
-                              className="px-2 py-0.5 rounded border text-xs bg-orange-900/30 border-orange-800 text-orange-400 cursor-pointer hover:bg-orange-900/50"
+                              className="px-2 py-0.5 rounded border text-xs bg-orange-50 border-orange-200 text-orange-400 cursor-pointer hover:bg-orange-100"
                               title="PDF scan — click to inspect"
                               onClick={() => {
                                 if (scan.rawScanEntry) {
@@ -531,18 +531,18 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               PDF{expandedScanId === scan.id ? ' ▾' : ' ▸'}
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded border text-xs bg-emerald-900/30 border-emerald-800 text-emerald-400" title="POS scan">
+                            <span className="px-2 py-0.5 rounded border text-xs bg-emerald-50 border-emerald-200 text-emerald-400" title="POS scan">
                               POS
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-gray-300 max-w-[120px] truncate" title={scan.rawScanEntry?.header?.vendor ?? ''}>
+                        <td className="px-3 py-2 text-gray-600 max-w-[120px] truncate" title={scan.rawScanEntry?.header?.vendor ?? ''}>
                           {scan.rawScanEntry?.header?.vendor || '—'}
                         </td>
-                        <td className="px-3 py-2 text-gray-300 font-mono">
+                        <td className="px-3 py-2 text-gray-600 font-mono">
                           {scan.rawScanEntry?.header?.invoiceNumber || '—'}
                         </td>
-                        <td className="px-3 py-2 text-right text-gray-200 font-mono">
+                        <td className="px-3 py-2 text-right text-gray-700 font-mono">
                           {scan.rawScanEntry?.header?.total
                             ? `$${scan.rawScanEntry.header.total}`
                             : '—'
@@ -554,7 +554,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               onClick={() => void handleRetryScan(scan.id)}
                               disabled={isRetryingId === scan.id || retryDisabled}
                               title={retryDisabled ? 'Maximum retries reached (3 attempts)' : 'Retry sync'}
-                              className="text-xs text-emerald-400 hover:text-emerald-300 border border-emerald-800 hover:border-emerald-600 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                              className="text-xs text-emerald-400 hover:text-emerald-600 border border-emerald-200 hover:border-emerald-200 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
                             >
                               {isRetryingId === scan.id ? '⏳ Retrying...' : '↻ Retry'}
                             </button>
@@ -562,7 +562,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                         </td>
                       </tr>
                       {expandedScanId === scan.id && scan.rawScanEntry && (
-                        <tr className="border-t border-gray-700/30 bg-gray-900/50">
+                        <tr className="border-t border-gray-200/30 bg-gray-100">
                           <td colSpan={9} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
                             {(() => {
                               const entry = scan.rawScanEntry as ScanEntry;
@@ -570,19 +570,19 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               const headerKeys = Object.keys(header);
                               return (
                                 <div className="space-y-2">
-                                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
                                     {entry.fileName && (
-                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                      <span className="bg-white border border-gray-200 rounded px-2 py-0.5">
                                         📄 {entry.fileName}
                                       </span>
                                     )}
                                     {entry.rowNumber != null && (
-                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                      <span className="bg-white border border-gray-200 rounded px-2 py-0.5">
                                         Row {entry.rowNumber}
                                       </span>
                                     )}
                                     {entry.source && (
-                                      <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5">
+                                      <span className="bg-white border border-gray-200 rounded px-2 py-0.5">
                                         Source: {entry.source}
                                       </span>
                                     )}
@@ -591,14 +591,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                       {headerKeys.map((key) => (
                                         <div key={key} className="text-xs">
-                                          <span className="text-gray-500">{key}:</span>{' '}
-                                          <span className="text-gray-300">{header[key]}</span>
+                                          <span className="text-gray-600">{key}:</span>{' '}
+                                          <span className="text-gray-600">{header[key]}</span>
                                         </div>
                                       ))}
                                     </div>
                                   )}
                                   {entry.lineItems && entry.lineItems.length > 0 && (
-                                    <div className="mt-1 text-xs text-gray-500">
+                                    <div className="mt-1 text-xs text-gray-600">
                                       {entry.lineItems.length} line item{entry.lineItems.length !== 1 ? 's' : ''}
                                     </div>
                                   )}
@@ -612,7 +612,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                         <tr>
                           <td colSpan={9} className="px-3 pb-2 pt-0">
                             {latestLog.errorType === 'AUTH' ? (
-                              <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1.5 space-y-1">
+                              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-2 py-1.5 space-y-1">
                                 <div>QuickBooks connection expired. Please reconnect.</div>
                                 <button
                                   onClick={() => {
@@ -620,25 +620,25 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                       .then(({ authUrl }) => window.open(authUrl, '_blank'))
                                       .catch(() => showToast('Failed to start QuickBooks reconnection', 'error'));
                                   }}
-                                  className="text-xs text-orange-400 hover:text-orange-300 border border-orange-800 hover:border-orange-600 px-2 py-0.5 rounded transition-colors"
+                                  className="text-xs text-orange-400 hover:text-orange-600 border border-orange-200 hover:border-orange-600 px-2 py-0.5 rounded transition-colors"
                                 >
                                   ↻ Reconnect QuickBooks
                                 </button>
                               </div>
                             ) : latestLog.errorType === 'TRANSIENT' ? (
-                              <div className="text-xs text-amber-400 bg-amber-900/20 border border-amber-800 rounded px-2 py-1">
+                              <div className="text-xs text-amber-400 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                                 ⚠ Sync failed due to a temporary issue. Please try again.
                               </div>
                             ) : latestLog.errorType === 'VALIDATION' ? (
-                              <div className="text-xs text-gray-300 bg-slate-900 border border-slate-700 rounded px-2 py-1">
+                              <div className="text-xs text-gray-700 bg-gray-100 border border-gray-200 rounded px-2 py-1">
                                 Sync failed: {latestLog.errorMessage}
                               </div>
                             ) : latestLog.errorType === 'FATAL' ? (
-                              <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1">
+                              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-2 py-1">
                                 Sync failed. Please try again or contact support.
                               </div>
                             ) : (
-                              <div className="text-xs text-red-400 bg-red-900/20 border border-red-900 rounded px-2 py-1">
+                              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-2 py-1">
                                 {latestLog.errorMessage}
                               </div>
                             )}
@@ -664,7 +664,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         <button
           onClick={loadMore}
           disabled={loading || batchSyncing}
-          className="w-full py-2 text-xs text-gray-400 hover:text-gray-200 border border-dashed border-gray-700 hover:border-gray-500 rounded-lg transition-colors disabled:opacity-50"
+          className="w-full py-2 text-xs text-gray-600 hover:text-gray-700 border border-dashed border-gray-200 hover:border-gray-500 rounded-lg transition-colors disabled:opacity-50"
         >
           {loading ? 'Loading…' : 'Load more'}
         </button>

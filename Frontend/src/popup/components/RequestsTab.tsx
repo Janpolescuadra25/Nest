@@ -75,11 +75,11 @@ export default function RequestsTab({ jwt }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-semibold text-white">Partner Requests</h2>
+        <h2 className="text-base font-semibold text-gray-900">Partner Requests</h2>
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 text-gray-300 focus:outline-none"
+          className="text-xs bg-gray-200 border border-gray-300 rounded px-2 py-1 text-gray-600 focus:outline-none"
         >
           <option value="PENDING">Pending</option>
           <option value="APPROVED">Approved</option>
@@ -89,80 +89,80 @@ export default function RequestsTab({ jwt }: Props) {
       </div>
 
       {approveResult && (
-        <div className="bg-green-900/40 border border-green-700 rounded-lg p-3 text-sm">
-          <p className="text-green-400 font-medium">Partner approved!</p>
-          <p className="text-gray-300 text-xs mt-1">Email: <span className="font-mono">{approveResult.user.email}</span></p>
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">
+          <p className="text-emerald-600 font-medium">Partner approved!</p>
+          <p className="text-gray-600 text-xs mt-1">Email: <span className="font-mono">{approveResult.user.email}</span></p>
           {approveResult.emailWarning ? (
-            <p className="text-yellow-300 text-xs mt-1">{approveResult.emailWarning}</p>
+            <p className="text-amber-600 text-xs mt-1">{approveResult.emailWarning}</p>
           ) : (
-            <p className="text-gray-500 text-xs mt-1">A welcome email was sent to the partner with login instructions.</p>
+            <p className="text-gray-600 text-xs mt-1">A welcome email was sent to the partner with login instructions.</p>
           )}
-          <button onClick={() => setApproveResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-300">Dismiss</button>
+          <button onClick={() => setApproveResult(null)} className="mt-2 text-xs text-gray-600 hover:text-gray-600">Dismiss</button>
         </div>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-600 text-sm">{error}</p>}
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading…</p>
+        <p className="text-gray-600 text-sm">Loading…</p>
       ) : requests.length === 0 ? (
-        <p className="text-gray-500 text-sm">No {statusFilter.toLowerCase() || ''} requests.</p>
+        <p className="text-gray-600 text-sm">No {statusFilter.toLowerCase() || ''} requests.</p>
       ) : (
         requests.map(req => (
-          <div key={req.id} className="bg-slate-800 rounded-lg p-3 space-y-2">
+          <div key={req.id} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-white truncate">{req.name ?? req.email}</div>
-                {req.name && <div className="text-xs text-gray-400 truncate">{req.email}</div>}
-                {req.company && <div className="text-xs text-gray-500">{req.company}</div>}
-                <div className="text-xs text-gray-500">{new Date(req.createdAt).toLocaleDateString()}</div>
+                <div className="text-sm font-medium text-gray-900 truncate">{req.name ?? req.email}</div>
+                {req.name && <div className="text-xs text-gray-600 truncate">{req.email}</div>}
+                {req.company && <div className="text-xs text-gray-600">{req.company}</div>}
+                <div className="text-xs text-gray-600">{new Date(req.createdAt).toLocaleDateString()}</div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-xs px-1.5 py-0.5 rounded ${
-                  req.status === 'PENDING' ? 'bg-yellow-900 text-yellow-400' :
-                  req.status === 'APPROVED' ? 'bg-green-900 text-green-400' :
-                  'bg-red-900 text-red-400'
+                  req.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                  req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                  'bg-red-50 text-red-600'
                 }`}>{req.status}</span>
-                <button onClick={() => setExpandedId(expandedId === req.id ? null : req.id)} className="text-gray-500 hover:text-gray-300 text-xs">
+                <button onClick={() => setExpandedId(expandedId === req.id ? null : req.id)} className="text-gray-600 hover:text-gray-600 text-xs">
                   {expandedId === req.id ? '▲' : '▼'}
                 </button>
               </div>
             </div>
             {expandedId === req.id && (
-              <div className="pt-2 border-t border-slate-700 space-y-2">
+              <div className="pt-2 border-t border-gray-200 space-y-2">
                 {req.description && (
-                  <p className="text-xs text-gray-400 italic">"{req.description}"</p>
+                  <p className="text-xs text-gray-600 italic">"{req.description}"</p>
                 )}
                 {req.status === 'PENDING' && (
                   <>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <p className="text-xs text-gray-400 mb-1">Scans</p>
+                        <p className="text-xs text-gray-600 mb-1">Scans</p>
                         <input
                           type="number"
                           min={0}
                           value={poolInputs[req.id]?.poolScans ?? '200'}
                           onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolLocations: '50', maxMembers: '5' }), poolScans: e.target.value } }))}
-                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1 w-full"
                         />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-400 mb-1">Locations</p>
+                        <p className="text-xs text-gray-600 mb-1">Locations</p>
                         <input
                           type="number"
                           min={0}
                           value={poolInputs[req.id]?.poolLocations ?? '50'}
                           onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', maxMembers: '5' }), poolLocations: e.target.value } }))}
-                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1 w-full"
                         />
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs text-gray-400 mb-1">Members</p>
+                        <p className="text-xs text-gray-600 mb-1">Members</p>
                         <input
                           type="number"
                           min={0}
                           value={poolInputs[req.id]?.maxMembers ?? '5'}
                           onChange={e => setPoolInputs(p => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolLocations: '50' }), maxMembers: e.target.value } }))}
-                          className="bg-slate-700 border border-slate-600 rounded text-xs text-white p-1 w-full"
+                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1 w-full"
                         />
                       </div>
                     </div>
@@ -170,14 +170,14 @@ export default function RequestsTab({ jwt }: Props) {
                       <button
                         onClick={() => handleApprove(req.id)}
                         disabled={actionLoading[req.id]}
-                        className="flex-1 py-1.5 bg-green-800 text-green-200 rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                        className="flex-1 py-1.5 bg-emerald-600 text-emerald-700 rounded text-xs font-medium hover:bg-emerald-600 disabled:opacity-50"
                       >
                         {actionLoading[req.id] ? 'Approving...' : 'Approve'}
                       </button>
                       <button
                         onClick={() => handleReject(req.id)}
                         disabled={actionLoading[`r_${req.id}`]}
-                        className="flex-1 py-1.5 bg-red-900 text-red-300 rounded text-xs font-medium hover:bg-red-800 disabled:opacity-50"
+                        className="flex-1 py-1.5 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50"
                       >
                         {actionLoading[`r_${req.id}`] ? 'Rejecting...' : 'Reject'}
                       </button>
