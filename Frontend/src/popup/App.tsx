@@ -279,6 +279,11 @@ export default function App() {
             <span className="text-emerald-400 font-bold text-base tracking-tight">🪹 Nest</span>
             <span className="text-gray-600 text-xs">Restaurant Financial Automation</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
+            {user.bonusScans ? (
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
+                +{user.bonusScans} bonus scans
+              </span>
+            ) : null}
           </div>
           <div className="flex justify-end gap-2">
             <select

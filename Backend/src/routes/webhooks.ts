@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
-import { stripe, isStripeConfigured, type PlanKey, getPlanLimits, PLANS } from '../lib/stripe';
+import { stripe, isStripeConfigured, type PlanKey, getScanPack, getPlanLimits, PLANS } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 
@@ -70,10 +70,25 @@ router.post(
         const session = event.data.object as CheckoutSessionPayload;
         const teamId = session.metadata?.teamId;
         const planKey = session.metadata?.planKey as PlanKey | undefined;
-        if (!teamId || !planKey) break;
-
+        const scanPack = session.metadata?.scanPack as string | undefined;
         const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
         const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+
+        if (scanPack) {
+          const pack = getScanPack(scanPack);
+          if (teamId && pack) {
+            await prisma.user.update({
+              where: { id: teamId },
+              data: {
+                bonusScans: { increment: pack.scans },
+                stripeCustomerId: customerId ?? undefined,
+              },
+            });
+          }
+          break;
+        }
+
+        if (!teamId || !planKey) break;
         if (!subscriptionId) break;
 
         const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as SubscriptionPayload;

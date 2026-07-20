@@ -13,6 +13,7 @@ function getEffectiveLimits(team: {
   maxUsers: number | null;
   maxLocations: number | null;
   maxScans: number | null;
+  bonusScans: number | null;
   poolScans: number | null;
   poolLocations: number | null;
   allocatedScans: number | null;
@@ -42,7 +43,7 @@ function getEffectiveLimits(team: {
     return {
       maxUsers: team.maxUsers ?? PLANS.free.maxUsers,
       maxLocations: team.maxLocations ?? PLANS.free.maxLocations,
-      maxScans: team.maxScans ?? PLANS.free.maxScans,
+      maxScans: (team.maxScans ?? PLANS.free.maxScans) + (team.bonusScans ?? 0),
       scanHistoryDays: team.scanHistoryDays ?? PLANS.free.scanHistoryDays,
       prioritySupport: team.prioritySupport ?? false,
     };
@@ -52,7 +53,7 @@ function getEffectiveLimits(team: {
   return {
     maxUsers: PLANS.free.maxUsers,
     maxLocations: PLANS.free.maxLocations,
-    maxScans: PLANS.free.maxScans,
+    maxScans: PLANS.free.maxScans + (team.bonusScans ?? 0),
     scanHistoryDays: PLANS.free.scanHistoryDays,
     prioritySupport: false,
   };
@@ -73,6 +74,7 @@ export function requireCapacity(action: CapacityAction) {
           maxLocations: true,
           maxScans: true,
           poolScans: true,
+          bonusScans: true,
           poolLocations: true,
           allocatedScans: true,
           allocatedLocations: true,
@@ -97,7 +99,10 @@ export function requireCapacity(action: CapacityAction) {
       const allocatedScans = team.allocatedScans ?? 0;
       const allocatedLocations = team.allocatedLocations ?? 0;
 
-      if (action === 'scan' && allocatedScans > 0) {
+      if (action === 'scan') {
+        const allocatedScans = team.allocatedScans ?? 0;
+        const bonusScans = (team as any).bonusScans ?? 0;
+        const effectiveMax = allocatedScans + bonusScans;
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const scanCount = await prisma.scanRecord.count({
           where: {
@@ -106,10 +111,14 @@ export function requireCapacity(action: CapacityAction) {
             createdAt: { gte: thirtyDaysAgo },
           },
         });
-        if (scanCount >= allocatedScans) {
+        if (scanCount >= effectiveMax) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
-            message: `Scan limit reached (${allocatedScans}). Contact your admin.`,
+            currentUsage: scanCount,
+            monthlyLimit: allocatedScans,
+            bonusScans,
+            totalAvailable: effectiveMax,
+            message: 'You have reached your scan limit.',
           });
           return;
         }
@@ -149,10 +158,16 @@ export function requireCapacity(action: CapacityAction) {
             createdAt: { gte: thirtyDaysAgo },
           },
         });
-        if (scanCount >= team.poolScans) {
+        const bonusScans = (team as any).bonusScans ?? 0;
+        const effectivePoolScans = (team.poolScans ?? 0) + bonusScans;
+        if (scanCount >= effectivePoolScans) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
-            message: `Team scan limit reached (${team.poolScans}). Contact the owner to increase your pool.`,
+            currentUsage: scanCount,
+            monthlyLimit: team.poolScans ?? 0,
+            bonusScans,
+            totalAvailable: effectivePoolScans,
+            message: 'You have reached your scan limit.',
           });
           return;
         }
@@ -189,10 +204,17 @@ export function requireCapacity(action: CapacityAction) {
           },
         });
 
-        if (scanCount >= limits.maxScans) {
+        const bonusScans = (team as any).bonusScans ?? 0;
+        const monthlyLimit = limits.maxScans - bonusScans;
+        const totalAvailable = limits.maxScans;
+        if (scanCount >= totalAvailable) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
-            message: `AI scan limit reached (${limits.maxScans}/month). Upgrade your plan for more scans.`,
+            currentUsage: scanCount,
+            monthlyLimit,
+            bonusScans,
+            totalAvailable,
+            message: 'You have reached your scan limit.',
           });
           return;
         }

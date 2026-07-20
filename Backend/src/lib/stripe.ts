@@ -12,6 +12,16 @@ if (!isStripeConfigured) {
 }
 
 export type PlanKey = 'free' | 'starter' | 'professional' | 'premium' | 'enterprise';
+export type ScanPackKey = 'scan_pack_100' | 'scan_pack_250' | 'scan_pack_500';
+
+export interface ScanPack {
+  id: ScanPackKey;
+  name: string;
+  scans: number;
+  price: number;
+  stripePriceId: string | undefined;
+  description: string;
+}
 
 export const PLANS: Record<PlanKey, {
   name: string;
@@ -86,6 +96,38 @@ export const PLANS: Record<PlanKey, {
     annualPriceId: process.env.STRIPE_ENTERPRISE_ANNUAL_PRICE_ID,
   },
 };
+
+const SCAN_PACKS: Record<ScanPackKey, Omit<ScanPack, 'id'>> = {
+  scan_pack_100: {
+    name: '100 Scan Pack',
+    scans: 100,
+    price: 39,
+    stripePriceId: process.env.STRIPE_SCAN_PACK_100_PRICE_ID,
+    description: 'One-time purchase for 100 bonus AI scans.',
+  },
+  scan_pack_250: {
+    name: '250 Scan Pack',
+    scans: 250,
+    price: 89,
+    stripePriceId: process.env.STRIPE_SCAN_PACK_250_PRICE_ID,
+    description: 'One-time purchase for 250 bonus AI scans.',
+  },
+  scan_pack_500: {
+    name: '500 Scan Pack',
+    scans: 500,
+    price: 159,
+    stripePriceId: process.env.STRIPE_SCAN_PACK_500_PRICE_ID,
+    description: 'One-time purchase for 500 bonus AI scans.',
+  },
+};
+
+export function getScanPacks(): ScanPack[] {
+  return Object.entries(SCAN_PACKS).map(([id, pack]) => ({ id: id as ScanPackKey, ...pack }));
+}
+
+export function getScanPack(scanPackId: string): ScanPack | undefined {
+  return SCAN_PACKS[scanPackId as ScanPackKey] ? { id: scanPackId as ScanPackKey, ...SCAN_PACKS[scanPackId as ScanPackKey] } : undefined;
+}
 
 export function getPlanLimits(planKey: PlanKey) {
   const plan = PLANS[planKey];

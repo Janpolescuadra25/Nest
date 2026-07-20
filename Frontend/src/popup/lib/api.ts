@@ -96,6 +96,14 @@ export interface Plan {
   prioritySupport: boolean;
 }
 
+export interface ScanPack {
+  id: string;
+  name: string;
+  scans: number;
+  price: number;
+  description: string;
+}
+
 export interface UserInfo {
   id: string;
   email: string;
@@ -118,6 +126,7 @@ export interface UserInfo {
   maxUsers?: number | null;
   maxLocations?: number | null;
   maxScans?: number | null;
+  bonusScans?: number | null;
   scanHistoryDays?: number | null;
   prioritySupport?: boolean;
   poolScans?: number | null;
@@ -426,6 +435,12 @@ export const api = {
 
   saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string) =>
     post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}) }, jwt),
+
+  getScanPacks: (jwt: string) =>
+    get<{ scanPacks: ScanPack[] }>('/api/checkout/scan-packs', jwt),
+
+  createScanPackSession: (jwt: string, scanPack: string) =>
+    post<{ url: string }>('/api/checkout/create-scan-pack-session', { scanPack }, jwt),
 
   parseInvoiceAI: async (jwt: string, file: File): Promise<{ header: Record<string, string>; lineItems: Record<string, string>[] }> => {
     const form = new FormData();

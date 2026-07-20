@@ -51,6 +51,7 @@ model User {
   maxScans                Int?
   managedById             String?
   poolScans               Int?
+  bonusScans              Int       @default(0)
   poolLocations           Int?
   maxMembers              Int?
   allocatedScans          Int?

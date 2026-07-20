@@ -9,6 +9,19 @@ import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
 import multer from 'multer';
 import { detectPOS, parseDocumentWithGemini, parseInvoiceWithGemini, parsePOSReport } from '../lib/gemini';
+
+async function deductBonusScan(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { bonusScans: true },
+  });
+  if (!user || user.bonusScans <= 0) return false;
+  await prisma.user.update({
+    where: { id: userId },
+    data: { bonusScans: { decrement: 1 } },
+  });
+  return true;
+}
 import type { ParsePOSTabResponse } from '../types';
 import { validateTransactionType } from './templates';
 
@@ -188,6 +201,7 @@ router.post(
     }
 
     try {
+      await deductBonusScan(req.user!.id);
       const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
       res.json({ success: true, data: result });
     } catch (err: any) {
@@ -212,6 +226,7 @@ router.post(
     }
 
     try {
+      await deductBonusScan(req.user!.id);
       const result = await parseDocumentWithGemini(req.file.buffer, req.file.mimetype);
       res.json({
         success: true,
@@ -252,6 +267,7 @@ router.post(
     if (!req.file) {
       throw new AppError('Image file is required', 400);
     }
+    await deductBonusScan(req.user!.id);
 
     const tabUrl = typeof req.body.tabUrl === 'string' ? req.body.tabUrl : undefined;
 

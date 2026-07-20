@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanSource, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
-import { api } from '../lib/api';
+import { api, type ScanPack, ApiError } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
 import { parseNumericValue } from '../lib/parse-numeric-value';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
@@ -8,6 +8,60 @@ import CheckReviewPanel from './ScanView/CheckReviewPanel';
 import ScanHistory from './ScanHistory';
 import { ErrorCard, EmptyState } from './shared';
 import { useToast } from './Toast';
+
+interface ScanPackModalProps {
+  open: boolean;
+  onClose: () => void;
+  scanPacks: ScanPack[];
+  onPurchase: (scanPackId: string) => Promise<void>;
+  loadingPackId: string | null;
+}
+
+function ScanPackModal({ open, onClose, scanPacks, onPurchase, loadingPackId }: ScanPackModalProps) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-5 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Buy bonus scan packs</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-900 text-sm"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mt-4 space-y-4">
+          {scanPacks.map((pack) => (
+            <div key={pack.id} className="rounded-2xl border border-gray-200 bg-[#F5F5F7] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{pack.name}</div>
+                  <div className="text-xs text-gray-600">{pack.description}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-gray-900">${pack.price}</div>
+                  <div className="text-[10px] text-gray-600">One-time</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onPurchase(pack.id)}
+                disabled={loadingPackId !== null}
+                className="mt-3 w-full rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loadingPackId === pack.id ? 'Processing…' : `Buy ${pack.scans} scans`}
+              </button>
+            </div>
+          ))}
+          <div className="text-xs text-gray-500">Bonus scans are added to your monthly allowance. Use them before the next billing cycle ends.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const POS_URLS: Record<string, { pattern: RegExp; name: string }> = {
   toast: { pattern: /toasttab\.com/, name: 'Toast' },
@@ -114,6 +168,10 @@ export default function ScanView({
   const [aiScanError, setAiScanError] = useState<string | null>(null);
   const [aiConfidence, setAiConfidence] = useState<{ confidence: number; reasoning: string; posType: string | null } | null>(null);
   const [capturedScreenshot, setCapturedScreenshot] = useState<File | null>(null);
+  const [scanPackModalOpen, setScanPackModalOpen] = useState(false);
+  const [scanPacks, setScanPacks] = useState<ScanPack[]>([]);
+  const [scanPackLoading, setScanPackLoading] = useState<string | null>(null);
+  const [scanPurchaseError, setScanPurchaseError] = useState<string | null>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const invoiceFileInputRef = useRef<HTMLInputElement>(null);
   const previousScanModeRef = useRef<ScanSource>(scanMode);
@@ -188,6 +246,53 @@ export default function ScanView({
       invoiceFileInputRef.current.value = '';
     }
   }, [scanMode, setInvoiceFile]);
+
+  useEffect(() => {
+    if (!jwt) return;
+    let active = true;
+
+    const loadScanPacks = async () => {
+      try {
+        const result = await api.getScanPacks(jwt);
+        if (!active) return;
+        setScanPacks(result.scanPacks);
+      } catch (err) {
+        if (!active) return;
+        console.error('[Nest Popup] Failed to load scan packs:', err);
+      }
+    };
+
+    loadScanPacks();
+    return () => {
+      active = false;
+    };
+  }, [jwt]);
+
+  const handlePurchaseScanPack = async (scanPackId: string) => {
+    if (!jwt) return;
+    setScanPackLoading(scanPackId);
+    setScanPurchaseError(null);
+    try {
+      const result = await api.createScanPackSession(jwt, scanPackId);
+      window.open(result.url, '_blank');
+      setScanPackModalOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.payload?.error) {
+        setScanPurchaseError(err.payload.error as string);
+      } else {
+        setScanPurchaseError(err instanceof Error ? err.message : 'Purchase failed. Please try again.');
+      }
+    } finally {
+      setScanPackLoading(null);
+    }
+  };
+
+  const isScanLimitError = Boolean(
+    error?.includes('SCAN_LIMIT_REACHED') ||
+    error?.toLowerCase().includes('scan limit reached') ||
+    aiScanError?.includes('SCAN_LIMIT_REACHED') ||
+    aiScanError?.toLowerCase().includes('scan limit reached')
+  );
 
   useEffect(() => {
     if (previousScanModeRef.current === scanMode) return;
@@ -1371,7 +1476,24 @@ export default function ScanView({
           )}
 
           {error && (
-            <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
+            <div className="space-y-3">
+              <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
+              {isScanLimitError && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p>Purchase more scans if you hit your limit.</p>
+                    <button
+                      type="button"
+                      onClick={() => setScanPackModalOpen(true)}
+                      className="mt-2 sm:mt-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+                    >
+                      Buy scans
+                    </button>
+                  </div>
+                  {scanPurchaseError && <div className="mt-2 text-red-600">{scanPurchaseError}</div>}
+                </div>
+              )}
+            </div>
           )}
 
           {scanData ? (
@@ -1431,6 +1553,13 @@ export default function ScanView({
           )}
         </>
       )}
+      <ScanPackModal
+        open={scanPackModalOpen}
+        onClose={() => setScanPackModalOpen(false)}
+        scanPacks={scanPacks}
+        onPurchase={handlePurchaseScanPack}
+        loadingPackId={scanPackLoading}
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ function mergeTeamBilling(user: any) {
     paymentIssue: user.paymentIssue ?? teamOwner.paymentIssue ?? false,
     maxUsers: user.maxUsers ?? teamOwner.maxUsers ?? null,
     maxLocations: user.maxLocations ?? teamOwner.maxLocations ?? null,
+    bonusScans: user.bonusScans ?? teamOwner.bonusScans ?? 0,
   };
 }
 
@@ -55,6 +56,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
             paymentIssue: true,
             maxUsers: true,
             maxLocations: true,
+            bonusScans: true,
           },
         },
       },
@@ -172,6 +174,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         paymentIssue: user.paymentIssue ?? false,
         maxUsers: user.maxUsers ?? null,
         maxLocations: user.maxLocations ?? null,
+        bonusScans: user.bonusScans ?? 0,
       },
       emailWarning: !emailResult?.success ? 'Account created but verification email failed. Please request a new verification link from Settings.' : undefined,
     });
@@ -239,6 +242,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
         paymentIssue: true,
         maxUsers: true,
         maxLocations: true,
+        bonusScans: true,
         createdAt: true,
         _count: { select: { teamMembers: true } },
         admin: {
@@ -253,6 +257,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
             paymentIssue: true,
             maxUsers: true,
             maxLocations: true,
+            bonusScans: true,
           },
         },
       },
@@ -293,6 +298,7 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
         paymentIssue: true,
         maxUsers: true,
         maxLocations: true,
+        bonusScans: true,
         admin: {
           select: {
             subscriptionSource: true,
@@ -305,6 +311,7 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
             paymentIssue: true,
             maxUsers: true,
             maxLocations: true,
+            bonusScans: true,
           },
         },
       },
