@@ -56,6 +56,12 @@ services:
         sync: false
       - key: STRIPE_ENTERPRISE_ANNUAL_PRICE_ID
         sync: false
+      - key: STRIPE_SCAN_PACK_100_PRICE_ID
+        sync: false
+      - key: STRIPE_SCAN_PACK_250_PRICE_ID
+        sync: false
+      - key: STRIPE_SCAN_PACK_500_PRICE_ID
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: ENCRYPTION_KEY

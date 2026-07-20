@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, type UserInfo } from '../lib/api';
+import { api, type UserInfo, type ScanPack } from '../lib/api';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import PricingView from './PricingView';
 
@@ -14,7 +14,6 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [showPricing, setShowPricing] = useState(false);
-  const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [scanUsage, setScanUsage] = useState<{
@@ -24,7 +23,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
     totalAvailable: number;
     plan: string;
   } | null>(null);
-  const [scanPacks, setScanPacks] = useState<any[]>([]);
+  const [scanPacks, setScanPacks] = useState<ScanPack[]>([]);
   const [showPackOptions, setShowPackOptions] = useState(false);
   const [packLoading, setPackLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(true);
@@ -46,10 +45,9 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
   const handleOpenBillingPortal = async () => {
     setBillingLoading(true);
     setBillingError(null);
-    setBillingMessage(null);
     try {
       const response = await api.createPortalSession(jwt);
-      window.location.href = response.url;
+      chrome.tabs.create({ url: response.url });
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : 'Failed to open billing portal.');
     } finally {
@@ -85,7 +83,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
     setShowPackOptions((current) => !current);
   };
 
-  const handleSelectPack = async (pack: any) => {
+  const handleSelectPack = async (pack: ScanPack) => {
     if (!jwt) return;
     setPackLoading(true);
     setPackError(null);
@@ -266,7 +264,6 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
               ))}
             </div>
           )}
-          {billingMessage && <div className="text-emerald-600 text-xs">{billingMessage}</div>}
           {billingError && <div className="text-red-600 text-xs">{billingError}</div>}
           <div className="grid gap-2 sm:grid-cols-2">
             {user.subscriptionSource === 'owner' ? null : user.subscriptionSource === 'stripe' ? (

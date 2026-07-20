@@ -100,8 +100,7 @@ export function requireCapacity(action: CapacityAction) {
       const allocatedLocations = team.allocatedLocations ?? 0;
 
       if (action === 'scan') {
-        const allocatedScans = team.allocatedScans ?? 0;
-        const bonusScans = (team as any).bonusScans ?? 0;
+        const bonusScans = team.bonusScans ?? 0;
         const effectiveMax = allocatedScans + bonusScans;
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const scanCount = await prisma.scanRecord.count({
@@ -158,7 +157,7 @@ export function requireCapacity(action: CapacityAction) {
             createdAt: { gte: thirtyDaysAgo },
           },
         });
-        const bonusScans = (team as any).bonusScans ?? 0;
+        const bonusScans = team.bonusScans ?? 0;
         const effectivePoolScans = (team.poolScans ?? 0) + bonusScans;
         if (scanCount >= effectivePoolScans) {
           res.status(403).json({
@@ -204,7 +203,7 @@ export function requireCapacity(action: CapacityAction) {
           },
         });
 
-        const bonusScans = (team as any).bonusScans ?? 0;
+        const bonusScans = team.bonusScans ?? 0;
         const monthlyLimit = limits.maxScans - bonusScans;
         const totalAvailable = limits.maxScans;
         if (scanCount >= totalAvailable) {
