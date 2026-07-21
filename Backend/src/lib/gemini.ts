@@ -2,6 +2,32 @@ import { GoogleGenerativeAI, ArraySchema, ObjectSchema, SchemaType } from '@goog
 import { AppError } from './errors';
 import type { POSDetectionResult, POSReportData } from '../types';
 
+// Simple in-memory rate limiter for Gemini API (15 RPM limit, using 13 to leave buffer)
+const geminiCallTimestamps: number[] = [];
+const GEMINI_RPM_LIMIT = 13;
+const GEMINI_QUEUE_TIMEOUT_MS = 10_000;
+
+async function waitForGeminiSlot(): Promise<void> {
+  const now = Date.now();
+
+  while (geminiCallTimestamps.length > 0 && geminiCallTimestamps[0] < now - 60_000) {
+    geminiCallTimestamps.shift();
+  }
+
+  if (geminiCallTimestamps.length < GEMINI_RPM_LIMIT) {
+    geminiCallTimestamps.push(now);
+    return;
+  }
+
+  const waitMs = geminiCallTimestamps[0] + 60_000 - now;
+  if (waitMs > GEMINI_QUEUE_TIMEOUT_MS) {
+    throw new Error('Scan queue is full. Please try again in a moment.');
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, Math.min(waitMs + 100, GEMINI_QUEUE_TIMEOUT_MS)));
+  return waitForGeminiSlot();
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const invoiceSchema: ObjectSchema = {
@@ -116,6 +142,8 @@ export async function classifyDocument(
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
+  await waitForGeminiSlot();
+
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
@@ -168,6 +196,8 @@ export async function parseChequeWithGemini(
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
+
+  await waitForGeminiSlot();
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -252,6 +282,8 @@ export async function detectPOS(imageBuffer: Buffer, mimeType: string): Promise<
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
+  await waitForGeminiSlot();
+
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
@@ -335,6 +367,8 @@ export async function parsePOSReport(
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
+
+  await waitForGeminiSlot();
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -458,6 +492,8 @@ export async function suggestMappings(
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
+  await waitForGeminiSlot();
+
   const ACCOUNT_CAP = 100;
 
   const fieldsText = scanFields.map((field) => `- ${field}`).join('\n');
@@ -532,6 +568,8 @@ export async function parseInvoiceWithGemini(
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
+
+  await waitForGeminiSlot();
 
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
