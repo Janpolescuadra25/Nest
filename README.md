@@ -1,8 +1,8 @@
 # Nest
 
-> Seamless restaurant POS to QuickBooks sync, right from your browser.
+> Seamless POS to QuickBooks sync, right from your browser.
 
-Nest is a Chrome extension that bridges restaurant point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
+Nest is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
 
 ## Features
 
@@ -33,7 +33,7 @@ Nest is a Chrome extension that bridges restaurant point-of-sale systems with Qu
 ### Team and Access
 - **Role hierarchy**: Owner (full access) and Admin (location-scoped access)
 - **Invite-based onboarding**: Send invite links to add team members without sharing passwords
-- **Multi-location**: Each admin manages their assigned restaurant locations
+- **Multi-location**: Each admin manages their assigned business locations
 - **Email verification**: Verify email addresses during signup
 - **Password reset**: Secure password reset flow via email
 
@@ -45,7 +45,7 @@ Nest is a Chrome extension that bridges restaurant point-of-sale systems with Qu
 
 ```
                     +-------------------+
-                    |   Restaurant POS  |
+                    |   Business POS  |
                     |                   |
                     |   Receipts        |
                     |   Invoices        |

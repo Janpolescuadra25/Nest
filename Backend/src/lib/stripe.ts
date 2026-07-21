@@ -40,7 +40,7 @@ export const PLANS: Record<PlanKey, {
     monthlyPrice: 0,
     annualPrice: 0,
     maxUsers: 1,
-    maxLocations: 2,
+    maxLocations: 1,
     maxScans: 10,
     scanHistoryDays: 7,
     prioritySupport: false,

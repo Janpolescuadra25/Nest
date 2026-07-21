@@ -7,7 +7,7 @@ Version 1.0  |  June 2026
 Internal Technical Reference
 Classification: Internal
 
-Restaurant Financial Automation
+Financial Automation
  
 Table of Contents
 

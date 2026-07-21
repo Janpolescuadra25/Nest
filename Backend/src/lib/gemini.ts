@@ -122,7 +122,7 @@ export async function classifyDocument(
       responseMimeType: 'application/json',
       responseSchema: classificationSchema,
     },
-    systemInstruction: `You are an expert document classifier for restaurant automation. Identify the document type for the image provided. The categories are:
+    systemInstruction: `You are an expert document classifier for business automation. Identify the document type for the image provided. The categories are:
 - INVOICE: Vendor bill with line items, amounts, vendor info, due dates.
 - CHEQUE: Bank cheque or check with payee, amount, date, cheque number, memo.
 - POS_REPORT: Point-of-sale sales summary/report with sales categories, totals, payment breakdowns.
@@ -474,7 +474,7 @@ export async function suggestMappings(
       responseMimeType: 'application/json',
       responseSchema: mappingSuggestionSchema,
     },
-    systemInstruction: `You are an expert restaurant accounting assistant. Given a list of POS scan field names and a list of available QuickBooks account names, recommend the best mapping for each field.
+    systemInstruction: `You are an expert accounting assistant. Given a list of POS scan field names and a list of available QuickBooks account names, recommend the best mapping for each field.
 
 RULES:
 - For each scan field, choose the most likely QuickBooks account from the list when possible.
@@ -539,7 +539,7 @@ export async function parseInvoiceWithGemini(
       responseMimeType: 'application/json',
       responseSchema: invoiceSchema,
     },
-    systemInstruction: `You are an expert accounts payable assistant. Extract structured data from restaurant/vendor invoices.
+    systemInstruction: `You are an expert accounts payable assistant. Extract structured data from vendor invoices.
 
 RULES:
 - Extract the vendor/supplier name exactly as written on the invoice.

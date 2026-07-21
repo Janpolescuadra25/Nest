@@ -201,7 +201,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             <div className="text-sm text-gray-400">Usage info unavailable</div>
           ) : (
             <>
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Scans This Month</div>
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Scans (Last 30 Days)</div>
               <div className="w-full bg-gray-100 rounded-full h-2.5">
                 <div
                   className={`h-2.5 rounded-full ${Math.min((scanUsage.scansUsed / scanUsage.totalAvailable) * 100, 100) >= 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
@@ -217,7 +217,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
               ) : null}
             </>
           )}
-          {user.role !== 'VIEWER' ? (
+          {user.subscriptionSource === 'stripe' || user.currentPlan !== 'free' ? (
             <>
               <button
                 type="button"
@@ -243,7 +243,18 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
                 </div>
               )}
             </>
-          ) : null}
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+              <p>Upgrade to a paid plan to purchase additional scan packs.</p>
+              <button
+                type="button"
+                onClick={() => setShowPricing(true)}
+                className="mt-3 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+              >
+                Upgrade Plan
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,7 +353,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <div>
             <div className="text-gray-900 font-bold text-sm">Nest</div>
             <div className="text-gray-600 text-xs">Version 1.0.0</div>
-            <div className="text-gray-600 text-xs mt-0.5">Restaurant Financial Automation</div>
+            <div className="text-gray-600 text-xs mt-0.5">Financial Automation</div>
           </div>
         </div>
 
@@ -351,9 +362,9 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Created By</div>
           <div className="text-gray-900 text-sm font-medium">John Paul O. Escuadra</div>
           <div className="text-gray-600 text-xs mt-1 leading-relaxed">
-            John Paul is a full-stack developer specializing in restaurant technology and financial integrations.
+            John Paul is a full-stack developer specializing in financial technology and financial integrations.
             Nest was built to solve the real-world challenge of bridging POS sales data with QuickBooks accounting,
-            making daily bookkeeping effortless for restaurant teams.
+            making daily bookkeeping effortless for business teams.
           </div>
         </div>
 

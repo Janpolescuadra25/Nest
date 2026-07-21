@@ -1,6 +1,6 @@
 Nest Mapping Template System
 Mode-Specific Blueprint & Implementation Guide
-Project: Nest — Restaurant Financial Automation
+Project: Nest — Financial Automation
 Version: 1.0
 Date: 2026-06-16
 Author: Technical Architecture Team

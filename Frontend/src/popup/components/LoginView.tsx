@@ -101,7 +101,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
           <div className="mb-6 flex flex-col items-center">
             <img src="/public/icons/nest-logo.png" alt="Nest" className="h-12 w-12" />
             <p className="mt-2 text-base font-semibold text-gray-900">Nest</p>
-            <p className="text-xs text-gray-400">Restaurant bookkeeping, simplified.</p>
+            <p className="text-xs text-gray-400">Bookkeeping, simplified.</p>
           </div>
           {renderTabs()}
           {view === 'forgot-password' ? (
