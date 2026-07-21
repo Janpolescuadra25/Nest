@@ -140,6 +140,8 @@ app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/checkout', checkoutRoutes);
 
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
 // ── Web Pages ───────────────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/landing/index.html'));

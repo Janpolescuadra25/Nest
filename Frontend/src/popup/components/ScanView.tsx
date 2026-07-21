@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanData, ScanEntry, ScanSource, Template, ExcelDataParseResult, ExcelParseResult, TabId } from '../../types';
-import { api, type ScanPack, ApiError } from '../lib/api';
+import { api, type ScanPack, type UserInfo, ApiError } from '../lib/api';
 import { detectBlur } from '../lib/blur-detect';
 import { parseNumericValue } from '../lib/parse-numeric-value';
 import InvoiceReviewPanel from './ScanView/InvoiceReviewPanel';
@@ -82,6 +82,7 @@ const generateId = () => Math.random().toString(36).substring(2, 11);
 
 interface Props {
   jwt: string;
+  user: UserInfo;
   scanData: ScanData | null;
   onScanData: (data: ScanData) => void;
   onClearScanData: () => void;
@@ -102,6 +103,7 @@ interface Props {
 
 export default function ScanView({
   jwt,
+  user,
   scanData,
   onScanData,
   onClearScanData,
@@ -623,7 +625,6 @@ export default function ScanView({
       const posType = posResult?.posType ?? 'toast';
       const posName = posResult?.posName ?? 'POS';
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`[Nest Popup] Scan triggered — found ${posName} tab:`, tab?.id, 'url:', tab?.url);
       }
       if (!tab?.id) throw new Error('No POS report tab found — open a supported POS report page');
 
@@ -638,8 +639,7 @@ export default function ScanView({
             ? 'content/oracle-scanner.js'
             : 'content/scanner.js';
         if (process.env.NODE_ENV !== 'production') {
-          console.log('[Nest Popup] Content script not responding — injecting scanner into tab', tab.id);
-        }
+          }
         try {
           await chrome.scripting.executeScript({
             target: { tabId: tab.id },
@@ -647,7 +647,6 @@ export default function ScanView({
           });
           await new Promise((r) => setTimeout(r, 1500));
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[Nest Popup] Scanner injected — retrying scan...');
           }
           response = await sendScanMessage(tab.id);
         } catch (injectErr) {
@@ -677,7 +676,6 @@ export default function ScanView({
               selectedTemplate?.transactionType,
             );
             if (process.env.NODE_ENV !== 'production') {
-              console.log('[Nest] Scan data saved to backend');
             }
             if (scanRecord?.id && onScanRecordId) {
               onScanRecordId(scanRecord.id);
@@ -988,7 +986,6 @@ export default function ScanView({
           setExcelParseError(`Saved ${savedCount}/${parsedEntries.length} entries. ${failCount} failed to save to backend.`);
         } else {
           if (process.env.NODE_ENV !== 'production') {
-            console.log(`[Nest] Excel batch save complete: ${savedCount}/${parsedEntries.length} saved.`);
           }
         }
       }
@@ -1480,16 +1477,29 @@ export default function ScanView({
               <ErrorCard message={error} onRetry={handleRescan} onDismiss={() => setError(null)} />
               {isScanLimitError && (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p>Purchase more scans if you hit your limit.</p>
-                    <button
-                      type="button"
-                      onClick={() => setScanPackModalOpen(true)}
-                      className="mt-2 sm:mt-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
-                    >
-                      Buy scans
-                    </button>
-                  </div>
+                  {user.subscriptionSource === 'stripe' || user.currentPlan !== 'free' ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p>Purchase more scans if you hit your limit.</p>
+                      <button
+                        type="button"
+                        onClick={() => setScanPackModalOpen(true)}
+                        className="mt-2 sm:mt-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+                      >
+                        Buy scans
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p>Upgrade your plan to purchase additional scans.</p>
+                      <button
+                        type="button"
+                        onClick={() => onTabChange('settings')}
+                        className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600"
+                      >
+                        Upgrade Plan
+                      </button>
+                    </div>
+                  )}
                   {scanPurchaseError && <div className="mt-2 text-red-600">{scanPurchaseError}</div>}
                 </div>
               )}

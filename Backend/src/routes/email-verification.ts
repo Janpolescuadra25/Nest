@@ -61,7 +61,6 @@ router.get('/verify/:token', asyncHandler(async (req: Request, res: Response) =>
 
     await prisma.$transaction([
       prisma.user.update({ where: { id: token.userId }, data: { emailVerified: true } }),
-      prisma.emailVerificationToken.delete({ where: { id: token.id } }),
       prisma.auditLog.create({
         data: {
           actorId: token.userId,
