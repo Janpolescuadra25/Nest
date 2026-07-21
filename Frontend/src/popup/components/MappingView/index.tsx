@@ -300,6 +300,17 @@ export default function MappingView({
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   const locId = selectedLocationId || locations[0]?.id || '';
+  if (!locId) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#F5F5F7] p-4">
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center">
+          <div className="text-sm font-semibold text-gray-900">Select a location first to start mapping.</div>
+          <div className="mt-2 text-xs text-gray-600">Once you select a location, your mapping workflow will appear here.</div>
+        </div>
+      </div>
+    );
+  }
+
   const showExcelImportModal = showExcelImportModalProp ?? localExcelImportModalOpen;
   const setShowExcelImportModal = setShowExcelImportModalProp ?? setLocalExcelImportModalOpen;
 

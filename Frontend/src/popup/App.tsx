@@ -94,7 +94,7 @@ export default function App() {
   }, [user?.emailVerified]);
 
   useEffect(() => {
-    if (!jwt || !user || user.role !== 'OWNER' || dropdownLocations.length === 0) return;
+    if (!jwt || !user || dropdownLocations.length === 0) return;
     if (selectedLocationId === '') {
       setSelectedLocationId(dropdownLocations[0]?.id);
     }

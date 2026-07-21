@@ -42,7 +42,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
     setSubmittingPlan(planId);
     try {
       const result = await api.createCheckoutSession(jwt, planId, billingInterval);
-      window.open(result.url, '_blank');
+      chrome.tabs.create({ url: result.url });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Checkout failed');
     } finally {

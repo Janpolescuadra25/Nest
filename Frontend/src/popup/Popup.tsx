@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { ha
             </button>
             <button
               type="button"
-              onClick={() => chrome.tabs.create({ url: 'mailto:support@nestsync.fyi' })}
+              onClick={() => { window.location.href = 'mailto:support@nestsync.fyi'; }}
               className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded text-sm text-gray-900"
             >
               Get help

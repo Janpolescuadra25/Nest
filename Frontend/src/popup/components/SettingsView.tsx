@@ -100,7 +100,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
     setPackError(null);
     try {
       const response = await api.createScanPackSession(jwt, pack.id);
-      window.open(response.url, '_blank');
+      chrome.tabs.create({ url: response.url });
     } catch (err) {
       setPackError(err instanceof Error ? err.message : 'Failed to create scan pack checkout session.');
     } finally {
@@ -309,7 +309,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             ) : user.subscriptionSource === 'partner' ? (
               <button
                 type="button"
-                onClick={() => chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest Billing Inquiry' })}
+                onClick={() => { window.location.href = 'mailto:support@nestsync.fyi?subject=Nest Billing Inquiry'; }}
                 className="w-full rounded-lg border border-gray-200 bg-[#F5F5F7] text-gray-600 py-2 text-xs font-semibold hover:bg-gray-50"
               >
                 Contact owner for billing
@@ -325,7 +325,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             )}
             <button
               type="button"
-              onClick={() => chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest Billing Help' })}
+              onClick={() => { window.location.href = 'mailto:support@nestsync.fyi?subject=Nest Billing Help'; }}
               className="w-full rounded-lg border border-gray-200 bg-[#F5F5F7] text-gray-600 py-2 text-xs font-semibold hover:bg-gray-50"
             >
               Billing help
@@ -413,8 +413,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
         <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Need Help?</div>
           <a
-            href="javascript:void(0)"
-            onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi' }); }}
+            href="mailto:support@nestsync.fyi"
             className="flex items-center gap-2 text-emerald-400 hover:text-emerald-600 text-xs transition-colors mb-2"
           >
             <span>✉️</span>
@@ -422,15 +421,13 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           </a>
           <div className="flex gap-2">
             <a
-              href="javascript:void(0)"
-              onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest%20Bug%20Report' }); }}
+              href="mailto:support@nestsync.fyi?subject=Nest%20Bug%20Report"
               className="flex-1 text-center text-xs bg-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900 py-1.5 rounded transition-colors"
             >
               🐛 Report a Bug
             </a>
             <a
-              href="javascript:void(0)"
-              onClick={(e) => { e.preventDefault(); chrome.tabs.create({ url: 'mailto:support@nestsync.fyi?subject=Nest%20Feature%20Request' }); }}
+              href="mailto:support@nestsync.fyi?subject=Nest%20Feature%20Request"
               className="flex-1 text-center text-xs bg-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900 py-1.5 rounded transition-colors"
             >
               💡 Feature Request
