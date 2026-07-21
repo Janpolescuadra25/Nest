@@ -114,6 +114,15 @@ export interface RecentScan {
   location: { name: string };
 }
 
+export interface ScanPackPurchase {
+  id: string;
+  packKey: string;
+  scans: number;
+  pricePaid: number;
+  status: string;
+  createdAt: string;
+}
+
 export interface UserInfo {
   id: string;
   email: string;
@@ -208,6 +217,9 @@ export const api = {
 
   getPlans: (jwt?: string | null) =>
     get<{ plans: Plan[] }>('/api/checkout/plans', jwt),
+
+  getScanPackPurchases: (jwt: string) =>
+    get<ScanPackPurchase[]>('/api/checkout/scan-pack-purchases', jwt),
 
   changePassword: (jwt: string, currentPassword: string, newPassword: string) =>
     post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, jwt),

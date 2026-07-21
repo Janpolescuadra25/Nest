@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api, type UserInfo, type ScanPack } from '../lib/api';
+import { api, type UserInfo, type ScanPack, type ScanPackPurchase } from '../lib/api';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import PricingView from './PricingView';
 
@@ -23,6 +23,8 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
     totalAvailable: number;
     plan: string;
   } | null>(null);
+  const [purchases, setPurchases] = useState<ScanPackPurchase[]>([]);
+  const [purchasesLoading, setPurchasesLoading] = useState(true);
   const [scanPacks, setScanPacks] = useState<ScanPack[]>([]);
   const [showPackOptions, setShowPackOptions] = useState(false);
   const [packLoading, setPackLoading] = useState(false);
@@ -62,6 +64,15 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       .then(setScanUsage)
       .catch(() => setScanUsage(null))
       .finally(() => setUsageLoading(false));
+  }, [jwt]);
+
+  useEffect(() => {
+    if (!jwt) return;
+    setPurchasesLoading(true);
+    api.getScanPackPurchases(jwt)
+      .then(setPurchases)
+      .catch(() => setPurchases([]))
+      .finally(() => setPurchasesLoading(false));
   }, [jwt]);
 
   const handleBuyMoreScans = async () => {
@@ -328,6 +339,36 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <PricingView jwt={jwt} user={user} onManageBilling={handleOpenBillingPortal} onClose={() => setShowPricing(false)} />
         </div>
       )}
+
+      <div>
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Purchase History</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          {purchasesLoading ? (
+            <div className="text-sm text-gray-400">Loading purchase history…</div>
+          ) : purchases.length === 0 ? (
+            <div className="text-sm text-gray-400 text-center">No purchases yet</div>
+          ) : (
+            <div className="space-y-3">
+              {purchases.map((purchase) => (
+                <div key={purchase.id} className="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">{purchase.scans} Scans</div>
+                      <div className="text-xs text-gray-500">{new Date(purchase.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-gray-900">${purchase.pricePaid.toFixed(2)}</div>
+                      <div className={`text-xs font-semibold ${purchase.status === 'refunded' ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {purchase.status === 'refunded' ? 'Refunded' : 'Active'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Account section */}
       <div>

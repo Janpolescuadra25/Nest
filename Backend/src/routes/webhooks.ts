@@ -13,6 +13,8 @@ type WebhookEvent = {
 };
 
 type CheckoutSessionPayload = {
+  id: string;
+  amount_total: number | null;
   metadata?: Record<string, string>;
   customer?: string | { id: string };
   subscription?: string | { id: string };
@@ -77,13 +79,25 @@ router.post(
         if (scanPack) {
           const pack = getScanPack(scanPack);
           if (teamId && pack) {
-            await prisma.user.update({
-              where: { id: teamId },
-              data: {
-                bonusScans: { increment: pack.scans },
-                stripeCustomerId: customerId ?? undefined,
-              },
-            });
+            await prisma.$transaction([
+              prisma.user.update({
+                where: { id: teamId },
+                data: {
+                  bonusScans: { increment: pack.scans },
+                  stripeCustomerId: customerId ?? undefined,
+                },
+              }),
+              prisma.scanPackPurchase.create({
+                data: {
+                  userId: teamId,
+                  packKey: scanPack,
+                  scans: pack.scans,
+                  pricePaid: session.amount_total ?? 0,
+                  stripeSessionId: session.id,
+                  status: 'active',
+                },
+              }),
+            ]);
           }
           break;
         }

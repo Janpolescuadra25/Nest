@@ -83,6 +83,7 @@ model User {
   invitedUsers            User[]                   @relation("InvitedBy")
   transferredFrom         User?                    @relation("TransferredFrom", fields: [transferredFromId], references: [id])
   transferredTo           User[]                   @relation("TransferredFrom")
+  scanPackPurchases       ScanPackPurchase[]
 
   @@index([blockedById])
   @@index([approvedById])
@@ -293,6 +294,21 @@ model ScanRecord {
   @@index([createdAt])
   @@index([source])
   @@map("scan_records")
+}
+
+model ScanPackPurchase {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packKey         String
+  scans           Int
+  pricePaid       Int
+  stripeSessionId String   @unique
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([stripeSessionId])
 }
 
 model SyncLog {

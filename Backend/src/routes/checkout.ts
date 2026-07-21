@@ -262,4 +262,30 @@ router.get(
   })
 );
 
+router.get(
+  '/scan-pack-purchases',
+  authenticate,
+  asyncHandler(async (req: AuthRequest, res) => {
+    const teamId = req.user!.adminId ?? req.user!.userId;
+    const purchases = await prisma.scanPackPurchase.findMany({
+      where: { userId: teamId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true,
+        packKey: true,
+        scans: true,
+        pricePaid: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(purchases.map((p) => ({
+      ...p,
+      pricePaid: p.pricePaid / 100,
+    })));
+  })
+);
+
 export default router;
