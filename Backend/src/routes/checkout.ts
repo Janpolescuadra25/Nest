@@ -165,15 +165,24 @@ router.post(
     if (team.subscriptionSource === 'owner') {
       throw new AppError('Platform owner does not use Stripe billing', 400);
     }
-    if (!team.stripeCustomerId) {
-      throw new AppError('No Stripe customer found for this team', 400);
+
+    let stripeCustomerId = team.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: team.email ?? undefined,
+        name: team.name || undefined,
+        metadata: { userId: team.id },
+      });
+      stripeCustomerId = customer.id;
+      await prisma.user.update({ where: { id: team.id }, data: { stripeCustomerId: customer.id } });
     }
+
     if (!process.env.FRONTEND_URL) {
       throw new AppError('Frontend URL is not configured', 500);
     }
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: team.stripeCustomerId,
+      customer: stripeCustomerId,
       return_url: `${process.env.FRONTEND_URL}/settings`,
     });
 

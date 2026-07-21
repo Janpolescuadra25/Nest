@@ -119,7 +119,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         email: normalizedEmail,
         name: name ?? null,
         password: hashedPassword,
-        role: 'VIEWER',
+        role: 'ADMIN',
         status: 'ACTIVE',
         mustChangePassword: false,
         subscriptionSource: 'stripe',
