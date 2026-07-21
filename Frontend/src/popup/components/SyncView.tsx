@@ -4,6 +4,7 @@ import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import { useToast } from './Toast';
+import ConfirmDialog from './shared/ConfirmDialog';
 import { buildJEPayload } from '../lib/je-builder';
 import { buildBillLikePayload, buildChequePayload } from '../lib/batch-payload-builder';
 import type { BatchSyncItem, ScanRecord, ScanEntry } from '../../types';
@@ -41,6 +42,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [batchProgress, setBatchProgress] = useState('');
   const [isRetryingId, setIsRetryingId] = useState<string | null>(null);
   const [isRetryingAll, setIsRetryingAll] = useState(false);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
 
@@ -342,7 +344,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             )}
             {status.connected && (totalPending > 0 || batchSyncing) && (
               <button
-                onClick={() => void handleSyncAll()}
+                onClick={() => setShowSyncConfirm(true)}
                 disabled={batchSyncing || isRetryingAll}
                 className="text-xs bg-amber-700 hover:bg-amber-600 disabled:bg-amber-200 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
               >
@@ -362,6 +364,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           {batchSyncing && batchProgress && (
             <p className="text-xs text-amber-400 text-center animate-pulse">{batchProgress}</p>
           )}
+          <ConfirmDialog
+            open={showSyncConfirm}
+            title="Sync to QuickBooks"
+            message={`Sync ${totalPending} entries to QuickBooks? This will create journal entries in your QuickBooks account.`}
+            confirmText="Sync All"
+            onConfirm={() => { setShowSyncConfirm(false); void handleSyncAll(); }}
+            onCancel={() => setShowSyncConfirm(false)}
+          />
         </div>
       )}
 
@@ -617,7 +627,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                 <button
                                   onClick={() => {
                                     api.getQBAuthUrl(jwt)
-                                      .then(({ authUrl }) => window.open(authUrl, '_blank'))
+                                      .then(({ authUrl }) => chrome.tabs.create({ url: authUrl }))
                                       .catch(() => showToast('Failed to start QuickBooks reconnection', 'error'));
                                   }}
                                   className="text-xs text-orange-400 hover:text-orange-600 border border-orange-200 hover:border-orange-600 px-2 py-0.5 rounded transition-colors"

@@ -162,6 +162,7 @@ export default function ScanView({
   const [parsedInvoiceLineItems, setParsedInvoiceLineItems] = useState<Record<string, string>[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isScanLimit, setIsScanLimit] = useState(false);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
   const [showTabPicker, setShowTabPicker] = useState(false);
   const [allTabs, setAllTabs] = useState<chrome.tabs.Tab[]>([]);
@@ -276,7 +277,7 @@ export default function ScanView({
     setScanPurchaseError(null);
     try {
       const result = await api.createScanPackSession(jwt, scanPackId);
-      window.open(result.url, '_blank');
+      chrome.tabs.create({ url: result.url });
       setScanPackModalOpen(false);
     } catch (err) {
       if (err instanceof ApiError && err.payload?.error) {
@@ -289,12 +290,7 @@ export default function ScanView({
     }
   };
 
-  const isScanLimitError = Boolean(
-    error?.includes('SCAN_LIMIT_REACHED') ||
-    error?.toLowerCase().includes('scan limit reached') ||
-    aiScanError?.includes('SCAN_LIMIT_REACHED') ||
-    aiScanError?.toLowerCase().includes('scan limit reached')
-  );
+  const isScanLimitError = isScanLimit;
 
   useEffect(() => {
     if (previousScanModeRef.current === scanMode) return;
@@ -373,6 +369,7 @@ export default function ScanView({
   const scanKnownPOSTab = async (tab: chrome.tabs.Tab, posType: string, posName: string) => {
     setScanning(true);
     setError(null);
+    setIsScanLimit(false);
     try {
       let response = await sendScanMessage(tab.id!);
 
@@ -425,7 +422,11 @@ export default function ScanView({
       } else {
         throw new Error('No data returned from scanner — try refreshing the page');
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof ApiError && err.status === 403 && err.payload?.error === 'SCAN_LIMIT_REACHED') {
+        setIsScanLimit(true);
+        return;
+      }
       console.error('[Nest Popup] Scan error:', err);
       setError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
@@ -443,6 +444,7 @@ export default function ScanView({
     setCapturedScreenshot(null);
     setAiScanning(true);
     setAiScanError(null);
+    setIsScanLimit(false);
     setScanning(true);
     try {
       await chrome.windows.update(tab.windowId, { focused: true });
@@ -494,7 +496,11 @@ export default function ScanView({
           console.error('[Nest] Failed to save AI scan to backend:', saveErr);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof ApiError && err.status === 403 && err.payload?.error === 'SCAN_LIMIT_REACHED') {
+        setIsScanLimit(true);
+        return;
+      }
       console.error('[Nest Popup] AI scan error:', err);
       setAiScanError(err instanceof Error ? err.message : 'AI tab scan failed');
     } finally {
@@ -508,6 +514,7 @@ export default function ScanView({
     setScanMode('image');
     setCapturedScreenshot(null);
     setAiScanning(true);
+    setIsScanLimit(false);
 
     try {
       const parsed = await api.parseDocumentAI(jwt, file);
@@ -542,6 +549,10 @@ export default function ScanView({
         setShowCheckReview(false);
       }
     } catch (err: any) {
+      if (err instanceof ApiError && err.status === 403 && err.payload?.error === 'SCAN_LIMIT_REACHED') {
+        setIsScanLimit(true);
+        return;
+      }
       const rawMessage = err instanceof Error ? err.message : String(err);
       if (rawMessage.includes('503') || rawMessage.includes('temporarily busy') || rawMessage.includes('high demand')) {
         setInvoiceUploadError('⚠️ AI service is temporarily busy. Please wait about 30 seconds and try again.');
@@ -618,6 +629,7 @@ export default function ScanView({
   const handleRescan = async () => {
     setScanning(true);
     setError(null);
+    setIsScanLimit(false);
     try {
       // Find any open POS tab across ALL windows
       const posResult = await findPOSTab();
@@ -798,6 +810,7 @@ export default function ScanView({
     if (!invoiceFile || !jwt || !locationId) return;
     setInvoiceUploading(true);
     setInvoiceUploadError(null);
+    setIsScanLimit(false);
     try {
       // Blur detection (image mode only)
       if (scanMode === 'image' && invoiceFile) {
@@ -840,6 +853,10 @@ export default function ScanView({
         setShowCheckReview(false);
       }
     } catch (err: any) {
+      if (err instanceof ApiError && err.status === 403 && err.payload?.error === 'SCAN_LIMIT_REACHED') {
+        setIsScanLimit(true);
+        return;
+      }
       const rawMessage = err instanceof Error ? err.message : String(err);
       if (rawMessage.includes('503') || rawMessage.includes('temporarily busy') || rawMessage.includes('high demand')) {
         setInvoiceUploadError('⚠️ AI service is temporarily busy. Please wait about 30 seconds and try again.');
@@ -1223,7 +1240,8 @@ export default function ScanView({
               <button
                 type="button"
                 onClick={() => invoiceFileInputRef.current?.click()}
-                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5"
+                disabled={!locationId}
+                className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded px-3 py-1.5 disabled:cursor-not-allowed"
               >
                 Choose file
               </button>
@@ -1316,7 +1334,7 @@ export default function ScanView({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!invoiceFile || !jwt || invoiceUploading}
+                disabled={!invoiceFile || !jwt || invoiceUploading || !locationId}
                 onClick={handleParseInvoice}
                 className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
@@ -1330,6 +1348,11 @@ export default function ScanView({
                 Clear scan
               </button>
             </div>
+            {!locationId && (
+              <div className="text-xs text-center text-gray-500 mt-2">
+                Select a location first before scanning.
+              </div>
+            )}
             {(blurWarning || ocrConfidence !== null) && (
               <div className="space-y-2">
                 {blurWarning && (

@@ -5,6 +5,7 @@ import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
+import ConfirmDialog from './shared/ConfirmDialog';
 import ErrorCard from './shared/ErrorCard';
 import type { ScanData, ScanEntry, Mapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
@@ -118,6 +119,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; skipped?: boolean; docNumber?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [autoBalancePending, setAutoBalancePending] = useState(false);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
@@ -900,7 +902,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
               setAutoBalancePending(true);
               return;
             }
-            void handleSync();
+            setShowSyncConfirm(true);
           }}
           disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
@@ -914,6 +916,14 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
                 : '⚡ Sync to QuickBooks'}
         </button>
       </div>
+      <ConfirmDialog
+        open={showSyncConfirm}
+        title="Sync to QuickBooks"
+        message="This will create a journal entry in your QuickBooks account. Are you sure?"
+        confirmText="Sync"
+        onConfirm={() => { setShowSyncConfirm(false); void handleSync(); }}
+        onCancel={() => setShowSyncConfirm(false)}
+      />
       {imbalanceWarning && (
         <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
           ⚠️ {imbalanceWarning}
