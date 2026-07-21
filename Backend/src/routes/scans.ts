@@ -289,13 +289,11 @@ router.post(
   authenticate,
   enforceEffectiveRole,
   requireFeaturePermission('scan', 'write'),
-  requireCapacity('scan'),
   upload.single('file'),
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       throw new AppError('Image file is required', 400);
     }
-    await deductBonusScan(req.user!.adminId ?? req.user!.userId);
     const tabUrl = typeof req.body.tabUrl === 'string' ? req.body.tabUrl : undefined;
 
     const detection = await detectPOS(req.file.buffer, req.file.mimetype);

@@ -7,6 +7,13 @@ import { prisma } from '../lib/prisma';
 import { authenticate, type AuthRequest } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate';
 
+function getStartOfWeek(): Date {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+}
+
 const createSessionSchema = z.object({
   plan: z.enum(['free', 'starter', 'professional', 'premium', 'enterprise']),
   interval: z.enum(['month', 'year']).default('month'),
@@ -238,12 +245,12 @@ router.get(
       return;
     }
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const weekStart = getStartOfWeek();
     const scansUsed = await prisma.scanRecord.count({
       where: {
         location: { adminId: teamId },
         source: { in: ['image', 'pdf'] },
-        createdAt: { gte: thirtyDaysAgo },
+        createdAt: { gte: weekStart },
       },
     });
 
@@ -251,7 +258,7 @@ router.get(
     const bonusScans = user.bonusScans ?? 0;
     const totalAvailable = maxScans + bonusScans;
 
-    res.json({ scansUsed, maxScans, bonusScans, totalAvailable, plan: user.currentPlan });
+    res.json({ scansUsed, maxScans, bonusScans, totalAvailable, plan: user.currentPlan, periodStart: weekStart.toISOString() });
   })
 );
 

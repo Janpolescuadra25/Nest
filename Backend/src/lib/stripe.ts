@@ -41,7 +41,7 @@ export const PLANS: Record<PlanKey, {
     annualPrice: 0,
     maxUsers: 1,
     maxLocations: 1,
-    maxScans: 10,
+    maxScans: 7,
     scanHistoryDays: 7,
     prioritySupport: false,
     monthlyPriceId: undefined,
@@ -53,7 +53,7 @@ export const PLANS: Record<PlanKey, {
     annualPrice: 15,
     maxUsers: 2,
     maxLocations: 5,
-    maxScans: 200,
+    maxScans: 50,
     scanHistoryDays: 30,
     prioritySupport: false,
     monthlyPriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
@@ -65,7 +65,7 @@ export const PLANS: Record<PlanKey, {
     annualPrice: 31,
     maxUsers: 5,
     maxLocations: 20,
-    maxScans: 1000,
+    maxScans: 250,
     scanHistoryDays: 90,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
@@ -77,7 +77,7 @@ export const PLANS: Record<PlanKey, {
     annualPrice: 63,
     maxUsers: 12,
     maxLocations: 75,
-    maxScans: 5000,
+    maxScans: 1250,
     scanHistoryDays: 365,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,
@@ -89,7 +89,7 @@ export const PLANS: Record<PlanKey, {
     annualPrice: 119,
     maxUsers: 20,
     maxLocations: 250,
-    maxScans: 20000,
+    maxScans: 5000,
     scanHistoryDays: 730,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
@@ -97,25 +97,29 @@ export const PLANS: Record<PlanKey, {
   },
 };
 
+// NOTE: Display prices updated to $19/$39/$69.
+// JP needs to create NEW products in Stripe Dashboard with these prices
+// and update STRIPE_SCAN_PACK_100/250/500_PRICE_ID env vars on Render.
+// The current Stripe price IDs still point to $39/$89/$159 products.
 const SCAN_PACKS: Record<ScanPackKey, Omit<ScanPack, 'id'>> = {
   scan_pack_100: {
     name: '100 Scan Pack',
     scans: 100,
-    price: 39,
+    price: 19,
     stripePriceId: process.env.STRIPE_SCAN_PACK_100_PRICE_ID,
     description: 'One-time purchase for 100 bonus AI scans.',
   },
   scan_pack_250: {
     name: '250 Scan Pack',
     scans: 250,
-    price: 89,
+    price: 39,
     stripePriceId: process.env.STRIPE_SCAN_PACK_250_PRICE_ID,
     description: 'One-time purchase for 250 bonus AI scans.',
   },
   scan_pack_500: {
     name: '500 Scan Pack',
     scans: 500,
-    price: 159,
+    price: 69,
     stripePriceId: process.env.STRIPE_SCAN_PACK_500_PRICE_ID,
     description: 'One-time purchase for 500 bonus AI scans.',
   },

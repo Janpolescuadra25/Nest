@@ -56,7 +56,7 @@ function ScanPackModal({ open, onClose, scanPacks, onPurchase, loadingPackId }: 
               </button>
             </div>
           ))}
-          <div className="text-xs text-gray-500">Bonus scans are added to your monthly allowance. Use them before the next billing cycle ends.</div>
+          <div className="text-xs text-gray-500">Bonus scans are added to your weekly allowance. Use them before the week resets.</div>
         </div>
       </div>
     </div>

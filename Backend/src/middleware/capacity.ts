@@ -6,6 +6,13 @@ import { AuthRequest } from './auth.middleware';
 
 type CapacityAction = 'user' | 'location' | 'scan';
 
+function getStartOfWeek(): Date {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Shift to Monday
+  return new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+}
+
 function getEffectiveLimits(team: {
   subscriptionSource: string | null;
   currentPlan: string | null;
@@ -102,19 +109,19 @@ export function requireCapacity(action: CapacityAction) {
       if (action === 'scan') {
         const bonusScans = team.bonusScans ?? 0;
         const effectiveMax = allocatedScans + bonusScans;
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const weekStart = getStartOfWeek();
         const scanCount = await prisma.scanRecord.count({
           where: {
             location: { userId: team.id },
             source: { in: ['image', 'pdf'] },
-            createdAt: { gte: thirtyDaysAgo },
+            createdAt: { gte: weekStart },
           },
         });
         if (scanCount >= effectiveMax) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
             currentUsage: scanCount,
-            monthlyLimit: allocatedScans,
+            weeklyLimit: allocatedScans,
             bonusScans,
             totalAvailable: effectiveMax,
             message: 'You have reached your scan limit.',
@@ -144,7 +151,7 @@ export function requireCapacity(action: CapacityAction) {
       const memberIds = managedMembers.map((member) => member.id);
 
       if (action === 'scan' && team.poolScans != null) {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const weekStart = getStartOfWeek();
         const scanCount = await prisma.scanRecord.count({
           where: {
             location: {
@@ -154,7 +161,7 @@ export function requireCapacity(action: CapacityAction) {
               ],
             },
             source: { in: ['image', 'pdf'] },
-            createdAt: { gte: thirtyDaysAgo },
+            createdAt: { gte: weekStart },
           },
         });
         const bonusScans = team.bonusScans ?? 0;
@@ -163,7 +170,7 @@ export function requireCapacity(action: CapacityAction) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
             currentUsage: scanCount,
-            monthlyLimit: team.poolScans ?? 0,
+            weeklyLimit: team.poolScans ?? 0,
             bonusScans,
             totalAvailable: effectivePoolScans,
             message: 'You have reached your scan limit.',
@@ -193,24 +200,24 @@ export function requireCapacity(action: CapacityAction) {
 
     switch (action) {
       case 'user': {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const weekStart = getStartOfWeek();
 
         const scanCount = await prisma.scanRecord.count({
           where: {
             location: { adminId: team.id },
             source: { in: ['image', 'pdf'] },
-            createdAt: { gte: thirtyDaysAgo },
+            createdAt: { gte: weekStart },
           },
         });
 
         const bonusScans = team.bonusScans ?? 0;
-        const monthlyLimit = limits.maxScans - bonusScans;
+        const weeklyLimit = limits.maxScans - bonusScans;
         const totalAvailable = limits.maxScans;
         if (scanCount >= totalAvailable) {
           res.status(403).json({
             error: 'SCAN_LIMIT_REACHED',
             currentUsage: scanCount,
-            monthlyLimit,
+            weeklyLimit,
             bonusScans,
             totalAvailable,
             message: 'You have reached your scan limit.',

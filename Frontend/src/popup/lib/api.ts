@@ -200,6 +200,7 @@ export const api = {
       bonusScans: number;
       totalAvailable: number;
       plan: string;
+      periodStart: string;
     }>('/api/checkout/scan-usage', jwt),
 
   getRecentScans: (jwt: string) =>

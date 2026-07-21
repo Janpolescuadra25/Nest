@@ -201,7 +201,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             <div className="text-sm text-gray-400">Usage info unavailable</div>
           ) : (
             <>
-              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Scans (Last 30 Days)</div>
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Scans This Week</div>
               <div className="w-full bg-gray-100 rounded-full h-2.5">
                 <div
                   className={`h-2.5 rounded-full ${Math.min((scanUsage.scansUsed / scanUsage.totalAvailable) * 100, 100) >= 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
