@@ -66,7 +66,7 @@ export default function App() {
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const { status: qbStatus } = useQuickBooks(jwt);
-  const { locations, loading: locationsLoading } = useLocations(jwt);
+  const { locations, loading: locationsLoading, refetch: refetchLocations } = useLocations(jwt);
 
   // After password change: refresh auth state by re-fetching session
   const handlePasswordChanged = useCallback(async () => {
@@ -604,9 +604,10 @@ export default function App() {
             jwt={jwt!}
             onDismiss={async () => {
               try {
+                await refetchLocations();
                 await refreshUser();
               } catch (err) {
-                console.error('Failed to refresh user after welcome dismissal:', err);
+                console.error('Failed to refresh after welcome dismissal:', err);
               }
             }}
           />

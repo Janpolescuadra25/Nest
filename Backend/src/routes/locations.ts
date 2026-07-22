@@ -56,11 +56,10 @@ router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<voi
 // ── POST /api/locations ───────────────────────────────────────────────────────
 router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity('location'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, posUrl } = req.body as { name?: string; posUrl?: string };
+    const { name, posUrl = '' } = req.body as { name?: string; posUrl?: string };
 
-    if (!name || !posUrl) {
-      throw new AppError('name and posUrl are required', 400);
-      return;
+    if (!name) {
+      throw new AppError('name is required', 400);
     }
 
     const user = req.user!;

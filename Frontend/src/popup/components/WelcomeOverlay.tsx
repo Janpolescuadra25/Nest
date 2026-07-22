@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { UserInfo } from '../lib/api';
 import { api } from '../lib/api';
 
@@ -28,6 +28,9 @@ const roleSteps: Record<string, string[]> = {
 
 export default function WelcomeOverlay({ user, jwt, onDismiss }: WelcomeOverlayProps) {
   const steps = roleSteps[user.role] ?? roleSteps.VIEWER;
+  const [businessName, setBusinessName] = useState('');
+  const [welcomeError, setWelcomeError] = useState<string | null>(null);
+  const isOwner = user.role === 'OWNER';
 
   const markSeen = useCallback(async () => {
     try {
@@ -38,6 +41,27 @@ export default function WelcomeOverlay({ user, jwt, onDismiss }: WelcomeOverlayP
       onDismiss();
     }
   }, [jwt, onDismiss]);
+
+  const handleGetStarted = useCallback(async () => {
+    if (!jwt) return;
+
+    if (isOwner && businessName.trim() === '') {
+      setWelcomeError('Business name is required.');
+      return;
+    }
+
+    if (isOwner) {
+      try {
+        await api.createLocation(jwt, businessName.trim());
+      } catch (err) {
+        setWelcomeError(err instanceof Error ? err.message : 'Failed to create location.');
+        return;
+      }
+    }
+
+    setWelcomeError(null);
+    await markSeen();
+  }, [businessName, isOwner, jwt, markSeen]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -79,10 +103,31 @@ export default function WelcomeOverlay({ user, jwt, onDismiss }: WelcomeOverlayP
           ))}
         </div>
 
+        {welcomeError && (
+          <div className="mb-4 text-sm text-red-600">{welcomeError}</div>
+        )}
+
+        {isOwner && (
+          <div className="mb-4">
+            <label htmlFor="business-name" className="mb-2 block text-sm font-medium text-gray-700">
+              Business name
+            </label>
+            <input
+              id="business-name"
+              type="text"
+              value={businessName}
+              onChange={(event) => setBusinessName(event.target.value)}
+              placeholder="e.g. Juan's Café"
+              className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        )}
+
         <button
           type="button"
-          onClick={markSeen}
-          className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+          onClick={handleGetStarted}
+          disabled={isOwner && businessName.trim() === ''}
+          className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:bg-gray-300 disabled:text-gray-500"
         >
           Get Started
         </button>

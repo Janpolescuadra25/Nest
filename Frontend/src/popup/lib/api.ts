@@ -378,8 +378,8 @@ export const api = {
   // ── Locations ──────────────────────────────────────────────────────────────
   getLocations: (jwt: string) => get<{ data: Location[]; pagination: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>('/api/locations', jwt),
 
-  createLocation: (jwt: string, name: string, posUrl: string) =>
-    post<Location>('/api/locations', { name, posUrl }, jwt),
+  createLocation: (jwt: string, name: string, posUrl?: string) =>
+    post<Location>('/api/locations', { name, posUrl: posUrl || '' }, jwt),
 
   updateLocation: (jwt: string, id: string, data: Partial<Location>) =>
     put<Location>(`/api/locations/${id}`, data, jwt),
