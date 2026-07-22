@@ -120,6 +120,18 @@ export default function App() {
   }, [user?.emailVerified]);
 
   useEffect(() => {
+    if (!jwt || !user || user.emailVerified) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      void refreshUser();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [jwt, user?.emailVerified, refreshUser, user]);
+
+  useEffect(() => {
     if (!jwt || !user || dropdownLocations.length === 0) return;
     if (selectedLocationId === '') {
       setSelectedLocationId(dropdownLocations[0]?.id);
