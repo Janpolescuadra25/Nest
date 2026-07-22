@@ -418,6 +418,7 @@ model StripeEvent {
 enum UserRole {
   OWNER
   ADMIN
+  MANAGER
   ACCOUNTANT
   STAFF
   VIEWER

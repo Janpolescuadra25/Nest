@@ -40,6 +40,7 @@ import { ToastProvider, ToastContainer } from './components/Toast';
 const ROLE_META: Record<string, { icon: string; color: string }> = {
   OWNER: { icon: '👑', color: 'bg-amber-50 text-amber-600 border-amber-300' },
   ADMIN: { icon: '🛡️', color: 'bg-emerald-50 text-emerald-600 border-emerald-300' },
+  MANAGER: { icon: '🔧', color: 'bg-indigo-50 text-indigo-600 border-indigo-300' },
   ACCOUNTANT: { icon: '📊', color: 'bg-emerald-50 text-emerald-600 border-emerald-300' },
   STAFF: { icon: '🧑‍💻', color: 'bg-emerald-50 text-emerald-600 border-emerald-300' },
   VIEWER: { icon: '👁️', color: 'bg-gray-100 text-gray-600 border-gray-300' },
@@ -297,7 +298,7 @@ export default function App() {
 
   if (role === 'OWNER') {
     visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'sync', 'payments', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
-  } else if (role === 'ADMIN') {
+  } else if (role === 'ADMIN' || role === 'MANAGER') {
     visibleTabs.push('dashboard', 'my-team');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
     if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'products', 'rules', 'preview');

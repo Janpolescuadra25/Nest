@@ -199,7 +199,7 @@ export function requireOwnTeam(paramField: string) {
  */
 export function locationFilter(user: AuthPayload): Record<string, unknown> {
   if (user.role === 'OWNER') return {};
-  if (user.role === 'ADMIN') return { adminId: user.userId };
+  if (user.role === 'ADMIN' || user.role === 'MANAGER') return { adminId: user.userId };
   if (user.adminId) return { adminId: user.adminId };
   // Legacy fallback for users who pre-date the hierarchy
   return { userId: user.userId };

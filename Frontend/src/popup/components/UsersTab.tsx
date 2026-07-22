@@ -34,6 +34,7 @@ interface Props {
 
 function roleBadge(role: string) {
   if (role === 'ACCOUNTANT') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-400">Accountant</span>;
+  if (role === 'MANAGER') return <span className="text-xs px-1 py-0.5 rounded bg-indigo-50 text-indigo-600">Manager</span>;
   if (role === 'STAFF') return <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">Staff</span>;
   return <span className="text-xs px-1 py-0.5 rounded bg-gray-200 text-gray-600">{role}</span>;
 }
@@ -181,6 +182,7 @@ export default function UsersTab({ jwt }: Props) {
         >
           <option value="">All roles</option>
           <option value="ACCOUNTANT">Accountant</option>
+          <option value="MANAGER">Manager</option>
           <option value="STAFF">Staff</option>
           <option value="VIEWER">Viewer</option>
         </select>

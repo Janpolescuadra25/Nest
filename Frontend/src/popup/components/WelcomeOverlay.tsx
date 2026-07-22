@@ -20,6 +20,11 @@ const roleSteps: Record<string, string[]> = {
     'Review your assigned locations',
     'Start scanning reports',
   ],
+  MANAGER: [
+    'Check your team\'s QuickBooks connection',
+    'Review your assigned locations',
+    'Start scanning reports',
+  ],
   VIEWER: [
     'Explore the dashboard',
     'Check your team\'s sync status',

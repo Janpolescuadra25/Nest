@@ -65,6 +65,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
     ['read', 'write', 'execute'],
   ),
 
+  MANAGER: permissionsFrom(
+    ['dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
+     'locations', 'settings', 'templates', 'sopUpload', 'sopView',
+     'manageUsers', 'products'],
+    ['read', 'write', 'execute'],
+  ),
+
   ACCOUNTANT: new Set<PermissionKey>([
     'dashboard:read', 'dashboard:write',
     'scan:read', 'scan:write',

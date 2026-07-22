@@ -36,12 +36,12 @@ function buildUserForAccess(user: {
   };
 }
 
-// All admin routes require authentication + at least OWNER or ADMIN role
-router.use(authenticate, requireRole('OWNER', 'ADMIN'));
+// All admin routes require authentication + at least OWNER, ADMIN, or MANAGER role
+router.use(authenticate, requireRole('OWNER', 'ADMIN', 'MANAGER'));
 router.use(enforceEffectiveRole);  // defense-in-depth: blocks TIME_BOMBED/BLOCKED/PENDING_APPROVAL writes
 
 // ── GET /api/admin/team  (ADMIN only) ─────────────────────────────────────────
-router.get('/team', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
+router.get('/team', requireRole('ADMIN', 'MANAGER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { page, limit, skip, take } = parsePagination(req.query);
     const where = { adminId: req.user!.userId };
@@ -86,7 +86,7 @@ router.get('/team', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, r
 }))
 
 // ── GET /api/admin/stats  (ADMIN only) ───────────────────────────────────────
-router.get('/stats', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
+router.get('/stats', requireRole('ADMIN', 'MANAGER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const adminId = req.user!.userId;
     const now = new Date();
@@ -167,7 +167,7 @@ router.get('/audit-log', requireRole('ADMIN'), asyncHandler(async(req: AuthReque
 }))
 
 // ── POST /api/admin/team/invite  (ADMIN only) ─────────────────────────────────
-router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), validate(teamInviteSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
+router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('user'), validate(teamInviteSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const { email, role, name, trialDays, customExpiryMessage } = req.body as { email?: string; role?: string; name?: string; trialDays?: number; customExpiryMessage?: string };
 
@@ -179,9 +179,9 @@ router.post('/team/invite', requireRole('ADMIN'), requireCapacity('user'), valid
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new AppError('Valid email is required.', 400);
     }
-    const validRoles = ['STAFF', 'ACCOUNTANT', 'VIEWER'];
+    const validRoles = ['STAFF', 'ACCOUNTANT', 'VIEWER', 'MANAGER'];
     if (!role || !validRoles.includes(role)) {
-      throw new AppError('Role must be one of: STAFF, ACCOUNTANT, VIEWER.', 400);
+      throw new AppError('Role must be one of: STAFF, ACCOUNTANT, VIEWER, MANAGER.', 400);
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -243,8 +243,8 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
     };
 
     // Role hint restrictions based on caller role
-    const validAdminRoles: string[] = ['STAFF', 'VIEWER', 'ACCOUNTANT'];
-    const validOwnerRoles: string[] = ['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN'];
+    const validAdminRoles: string[] = ['STAFF', 'VIEWER', 'ACCOUNTANT', 'MANAGER'];
+    const validOwnerRoles: string[] = ['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'];
     const allRoles = Object.values(UserRole) as string[];
 
     if (roleHint && !allRoles.includes(roleHint)) {
@@ -611,7 +611,7 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
 }))
 
 // ── PATCH /api/admin/users/:id/timebomb  (OWNER + ADMIN) ───────────────────
-router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb', requireRole('OWNER', 'ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { timeBombAt, gracePeriodHours } = req.body as { timeBombAt?: string; gracePeriodHours?: number };
@@ -680,7 +680,7 @@ router.patch('/users/:id/timebomb', asyncHandler(async(req: AuthRequest, res: Re
 }))
 
 // ── PATCH /api/admin/users/:id/timebomb/clear  (OWNER + ADMIN) ────────────────
-router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, res: Response) => {
+router.patch('/users/:id/timebomb/clear', requireRole('OWNER', 'ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     if (id === req.user!.userId) {
@@ -747,7 +747,7 @@ router.patch('/users/:id/timebomb/clear', asyncHandler(async(req: AuthRequest, r
 }))
 
 // ── PATCH /api/admin/users/:id/role  (OWNER + ADMIN) ─────────────────────────
-router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Response) => {
+router.patch('/users/:id/role', requireRole('OWNER', 'ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
     const { role } = req.body as { role?: string };
@@ -759,9 +759,9 @@ router.patch('/users/:id/role', asyncHandler(async(req: AuthRequest, res: Respon
       throw new AppError('Cannot modify your own account', 400);
     }
 
-    const allowedRoles: string[] = ['STAFF', 'ACCOUNTANT', 'VIEWER'];
+    const allowedRoles: string[] = ['STAFF', 'ACCOUNTANT', 'VIEWER', 'MANAGER'];
     if (!allowedRoles.includes(role)) {
-      throw new AppError('Allowed roles for admin assignment: STAFF, ACCOUNTANT, VIEWER', 400);
+      throw new AppError('Allowed roles for admin assignment: STAFF, ACCOUNTANT, VIEWER, MANAGER', 400);
     }
 
     const target = await prisma.user.findUnique({

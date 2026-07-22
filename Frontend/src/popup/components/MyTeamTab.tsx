@@ -19,7 +19,7 @@ interface Props {
   onUpgrade?: () => void;
 }
 
-const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT'];
+const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT', 'MANAGER'];
 
 export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props) {
   const { showToast } = useToast();

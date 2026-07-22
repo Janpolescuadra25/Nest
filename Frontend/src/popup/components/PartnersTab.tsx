@@ -156,6 +156,7 @@ export default function PartnersTab({ jwt }: Props) {
     ACCOUNTANT: 'bg-emerald-50 text-emerald-600',
     STAFF: 'bg-emerald-50 text-emerald-600',
     VIEWER: 'bg-gray-200 text-gray-600',
+    MANAGER: 'bg-indigo-50 text-indigo-600',
   };
 
   if (loading) return <div className="p-4 text-gray-600 text-sm">Loading partners…</div>;
@@ -265,7 +266,7 @@ export default function PartnersTab({ jwt }: Props) {
         {/* Creation form */}
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1">
-            {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN'] as const).map(role => (
+            {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'] as const).map(role => (
               <button
                 key={role}
                 onClick={() => setCreateRole(role)}
