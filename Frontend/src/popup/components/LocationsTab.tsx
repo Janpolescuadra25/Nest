@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { useToast } from './Toast';
+import UpgradePrompt from './UpgradePrompt';
 import type { Location } from '../../types';
 
 interface Props {
   jwt: string;
   onboardingStep?: number;
+  onUpgrade?: () => void;
 }
 
 const EMPTY_FORM = { name: '', posUrl: '' };
 
-export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
+export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Props) {
   const { showToast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   // Add-form state
   const [showAdd, setShowAdd] = useState(false);
@@ -54,10 +58,19 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
     try {
       await api.createLocation(jwt, addForm.name.trim(), addForm.posUrl.trim());
       showToast('Location created', 'success');
+      setShowUpgrade(false);
+      setUpgradeMessage('');
       setAddForm(EMPTY_FORM);
       setShowAdd(false);
       await fetchLocations();
     } catch (err: any) {
+      if (err instanceof ApiError) {
+        if (err.status === 403 && err.payload?.error === 'LOCATION_LIMIT_REACHED') {
+          setUpgradeMessage('Location limit reached. Upgrade your plan to add more locations.');
+          setShowUpgrade(true);
+          return;
+        }
+      }
       showToast(err.message || 'Failed to create location', 'error');
     } finally {
       setAddLoading(false);
@@ -142,6 +155,13 @@ export default function LocationsTab({ jwt, onboardingStep = 0 }: Props) {
           </button>
         </div>
       </div>
+
+      {showUpgrade && (
+        <UpgradePrompt
+          message={upgradeMessage}
+          onUpgrade={() => { onUpgrade?.(); setShowUpgrade(false); }}
+        />
+      )}
 
       {/* Add form */}
       {showAdd && (

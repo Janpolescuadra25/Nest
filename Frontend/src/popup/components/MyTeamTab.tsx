@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
 import { ErrorCard, StatusBadge, PermissionToggle, DashboardSkeleton, EmptyState } from './shared';
 import { trialCountdown } from '../lib/utils';
 import { BACKEND_URL } from '../../lib/config';
+import UpgradePrompt from './UpgradePrompt';
 import type { TeamMember, InviteLink } from '../../types';
 
 interface InviteResult {
@@ -15,11 +16,12 @@ interface InviteResult {
 interface Props {
   jwt: string;
   subscriptionSource?: string | null;
+  onUpgrade?: () => void;
 }
 
 const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT'];
 
-export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
+export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props) {
   const { showToast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +95,10 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
       await fetchTeam();
       showToast('Invitation sent!', 'success');
     } catch (err: any) {
+      if (err instanceof ApiError && err.status === 403 && err.payload?.error === 'USER_LIMIT_REACHED') {
+        setError('Team member limit reached. Upgrade your plan to add more members.');
+        return;
+      }
       setError(err.message || 'Failed to invite member.');
       showToast('Failed to send invitation', 'error');
     } finally {
@@ -264,6 +270,8 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
     return null;
   };
 
+  const isFreeUser = !subscriptionSource;
+
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
@@ -271,18 +279,27 @@ export default function MyTeamTab({ jwt, subscriptionSource }: Props) {
         <div className="flex gap-2">
           <button
             onClick={() => setShowLinkForm(!showLinkForm)}
-            className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+            disabled={isFreeUser}
+            className={`text-xs px-2 py-1 rounded ${isFreeUser ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
           >
             🔗 Link
           </button>
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="text-xs px-2 py-1 bg-emerald-700 text-emerald-200 rounded hover:bg-emerald-600"
+            disabled={isFreeUser}
+            className={`text-xs px-2 py-1 rounded ${isFreeUser ? 'bg-emerald-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-emerald-200 hover:bg-emerald-600'}`}
           >
             + Invite
           </button>
         </div>
       </div>
+
+      {isFreeUser && (
+        <UpgradePrompt
+          message="Team access requires a paid plan. Upgrade to invite team members and manage permissions."
+          onUpgrade={() => onUpgrade?.()}
+        />
+      )}
 
       {inviteResult && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">

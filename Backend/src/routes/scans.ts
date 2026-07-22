@@ -167,7 +167,7 @@ router.get('/recent', asyncHandler(async (req: AuthRequest, res: Response): Prom
     const recentScans = await prisma.scanRecord.findMany({
       where: {
         location: { adminId: teamId },
-        source: { in: ['image', 'pdf'] },
+        source: { in: ['pos', 'excel', 'image'] },
       },
       orderBy: { createdAt: 'desc' },
       take: 5,

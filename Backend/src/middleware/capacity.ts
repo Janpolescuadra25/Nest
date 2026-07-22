@@ -113,7 +113,7 @@ export function requireCapacity(action: CapacityAction) {
         const scanCount = await prisma.scanRecord.count({
           where: {
             location: { userId: team.id },
-            source: { in: ['image', 'pdf'] },
+            source: { in: ['pos', 'excel', 'image'] },
             createdAt: { gte: weekStart },
           },
         });
@@ -160,7 +160,7 @@ export function requireCapacity(action: CapacityAction) {
                 ...(memberIds.length > 0 ? [{ userId: { in: memberIds } }] : []),
               ],
             },
-            source: { in: ['image', 'pdf'] },
+            source: { in: ['pos', 'excel', 'image'] },
             createdAt: { gte: weekStart },
           },
         });
@@ -200,16 +200,29 @@ export function requireCapacity(action: CapacityAction) {
 
     switch (action) {
       case 'user': {
+        const memberCount = await prisma.user.count({
+          where: { adminId: team.id, status: { not: 'DISABLED' } },
+        });
+        if (memberCount >= limits.maxUsers) {
+          res.status(403).json({
+            error: 'USER_LIMIT_REACHED',
+            currentUsage: memberCount,
+            limit: limits.maxUsers,
+            message: `You have reached your team member limit (${limits.maxUsers}).`,
+          });
+          return;
+        }
+        return next();
+      }
+      case 'scan': {
         const weekStart = getStartOfWeek();
-
         const scanCount = await prisma.scanRecord.count({
           where: {
             location: { adminId: team.id },
-            source: { in: ['image', 'pdf'] },
+            source: { in: ['pos', 'excel', 'image'] },
             createdAt: { gte: weekStart },
           },
         });
-
         const bonusScans = team.bonusScans ?? 0;
         const weeklyLimit = limits.maxScans - bonusScans;
         const totalAvailable = limits.maxScans;
@@ -224,12 +237,26 @@ export function requireCapacity(action: CapacityAction) {
           });
           return;
         }
-
         return next();
       }
+      case 'location': {
+        const locationCount = await prisma.location.count({
+          where: { adminId: team.id },
+        });
+        if (locationCount >= limits.maxLocations) {
+          res.status(403).json({
+            error: 'LOCATION_LIMIT_REACHED',
+            currentUsage: locationCount,
+            limit: limits.maxLocations,
+            message: `You have reached your location limit (${limits.maxLocations}).`,
+          });
+          return;
+        }
+        return next();
+      }
+      default:
+        return next();
     }
-
-    next();
   } catch (err) {
     next(err);
   }

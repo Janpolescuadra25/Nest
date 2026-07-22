@@ -249,12 +249,12 @@ router.get(
     const scansUsed = await prisma.scanRecord.count({
       where: {
         location: { adminId: teamId },
-        source: { in: ['image', 'pdf'] },
+        source: { in: ['pos', 'excel', 'image'] },
         createdAt: { gte: weekStart },
       },
     });
 
-    const maxScans = user.maxScans ?? 10;
+    const maxScans = user.maxScans ?? PLANS.free.maxScans;
     const bonusScans = user.bonusScans ?? 0;
     const totalAvailable = maxScans + bonusScans;
 

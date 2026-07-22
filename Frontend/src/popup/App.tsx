@@ -572,7 +572,7 @@ export default function App() {
           )}
           {effectiveTab === 'partners' && <PartnersTab jwt={jwt!} />}
           {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
-          {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} subscriptionSource={user.subscriptionSource} />}
+          {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} subscriptionSource={user.subscriptionSource} onUpgrade={() => setCurrentTab('settings')} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
           {effectiveTab === 'admins' && <AdminsTab jwt={jwt!} />}
           {effectiveTab === 'users' && <UsersTab jwt={jwt!} />}
@@ -580,6 +580,7 @@ export default function App() {
             <LocationsTab
               jwt={jwt!}
               onboardingStep={onboardingState.step}
+              onUpgrade={() => setCurrentTab('settings')}
             />
           )}
           {effectiveTab === 'rules' && <RulesView jwt={jwt!} selectedLocationId={selectedLocationId} onLocationChange={setSelectedLocationId} scanData={scanData} />}
