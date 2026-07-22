@@ -8,6 +8,7 @@ export interface AuthPayload {
   /** Backward-compat alias for id — all existing routes use this */
   userId: string;
   email: string;
+  emailVerified: boolean;
   name?: string | null;
   role: UserRole;
   status: UserStatus;

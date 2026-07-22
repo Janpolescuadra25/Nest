@@ -38,6 +38,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       select: {
         id: true,
         email: true,
+        emailVerified: true,
         name: true,
         role: true,
         status: true,
@@ -76,6 +77,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       id: user.id,
       userId: user.id,   // backward-compat alias — existing routes use this
       email: user.email,
+      emailVerified: user.emailVerified,
       name: user.name,
       role: user.role,
       status: user.status,
@@ -95,6 +97,21 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
       invitedById: user.invitedById,
       transferredFromId: user.transferredFromId,
     };
+
+    if (!user.emailVerified) {
+      const exemptPaths = [
+        '/api/email-verification/request',
+        '/api/auth/session',
+        '/api/auth/welcome',
+      ];
+      if (!exemptPaths.some((p) => req.path.startsWith(p))) {
+        res.status(403).json({
+          error: 'EMAIL_NOT_VERIFIED',
+          message: 'Please verify your email address to continue.',
+        });
+        return;
+      }
+    }
 
     next();
   } catch (err) {

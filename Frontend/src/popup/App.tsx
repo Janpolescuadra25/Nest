@@ -62,6 +62,9 @@ export default function App() {
   const [deferredSynced, setDeferredSynced] = useState(false);
   const [hasSavedMappings, setHasSavedMappings] = useState(false);
   const [hasSyncedBefore, setHasSyncedBefore] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const { status: qbStatus } = useQuickBooks(jwt);
   const { locations, loading: locationsLoading } = useLocations(jwt);
 
@@ -70,6 +73,29 @@ export default function App() {
     // Force reload to re-run useAuth session fetch with updated mustChangePassword
     window.location.reload();
   }, []);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const interval = window.setInterval(() => {
+      setResendCooldown((current) => Math.max(current - 1, 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [resendCooldown]);
+
+  const handleResendVerification = useCallback(async () => {
+    if (!jwt || resendCooldown > 0) return;
+    setResendStatus('sending');
+    setResendMessage(null);
+    try {
+      await api.resendEmailVerification(jwt);
+      setResendStatus('success');
+      setResendMessage('Verification email sent!');
+      setResendCooldown(60);
+    } catch (err) {
+      setResendStatus('error');
+      setResendMessage(err instanceof Error ? err.message : 'Failed to resend verification email.');
+    }
+  }, [jwt, resendCooldown]);
 
   useEffect(() => {
     if (scanData === null) {
@@ -205,6 +231,48 @@ export default function App() {
             <button onClick={logout} className="text-xs text-gray-600 hover:text-gray-900">Sign Out</button>
           </div>
           <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
+          <ToastContainer />
+        </div>
+      </ToastProvider>
+    );
+  }
+
+  if (!user.emailVerified) {
+    return (
+      <ToastProvider>
+        <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
+            <span className="text-sm font-semibold text-gray-900">Nest</span>
+            <button onClick={logout} className="text-xs text-gray-600 hover:text-gray-900">Sign Out</button>
+          </div>
+          <div className="flex flex-col items-center justify-center flex-1 px-6 py-10 text-center">
+            <div className="max-w-md w-full rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="text-base font-semibold text-gray-900 mb-3">Verify your email address</div>
+              <div className="text-sm text-gray-600 mb-6">
+                Please verify your email to continue using Nest. A verification link was sent to <span className="font-medium text-gray-900">{user.email}</span>.
+              </div>
+              {resendMessage && (
+                <div className={`mb-4 text-xs ${resendStatus === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {resendMessage}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendCooldown > 0 || resendStatus === 'sending'}
+                className="w-full rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:text-gray-500 text-white py-2 text-xs font-semibold transition-colors"
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="mt-3 w-full rounded-lg border border-gray-200 bg-white text-gray-900 py-2 text-xs font-semibold hover:bg-gray-50"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
           <ToastContainer />
         </div>
       </ToastProvider>
