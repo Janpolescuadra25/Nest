@@ -31,7 +31,10 @@ type AuditAction =
   | 'EMAIL_VERIFIED'
   | 'CANX_RESET'
   | 'PERMISSIONS_RESET'
-  | 'SYNC_FAILURE_ALERT';
+  | 'SYNC_FAILURE_ALERT'
+  | 'DRAFT_SUBMITTED'
+  | 'DRAFT_APPROVED'
+  | 'DRAFT_REJECTED';
 
 export async function logAction(params: {
   actorId: string;

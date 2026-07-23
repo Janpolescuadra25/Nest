@@ -13,6 +13,7 @@ export type Feature =
   | 'sopUpload'
   | 'sopView'
   | 'manageUsers'
+  | 'drafts'
   | 'approveUsers'
   | 'setPermissions'
   | 'blockUsers'
@@ -28,7 +29,7 @@ export type PermissionKey = `${Feature}:${Action}`;
 export const ALL_FEATURES: Feature[] = [
   'dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
   'locations', 'settings', 'templates', 'sopUpload', 'sopView',
-  'manageUsers', 'approveUsers', 'setPermissions', 'blockUsers',
+  'manageUsers', 'drafts', 'approveUsers', 'setPermissions', 'blockUsers',
   'setTimeBomb', 'setUserLimits', 'transferOwnership', 'viewAuditLog',
   'products',
 ];
@@ -61,14 +62,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
   ADMIN: permissionsFrom(
     ['dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
      'locations', 'settings', 'templates', 'sopUpload', 'sopView',
-     'manageUsers', 'setPermissions', 'products'],
+     'manageUsers', 'drafts', 'setPermissions', 'products'],
     ['read', 'write', 'execute'],
   ),
 
   MANAGER: permissionsFrom(
     ['dashboard', 'scan', 'map', 'rules', 'preview', 'sync',
      'locations', 'settings', 'templates', 'sopUpload', 'sopView',
-     'manageUsers', 'products'],
+     'manageUsers', 'products', 'drafts'],
     ['read', 'write', 'execute'],
   ),
 

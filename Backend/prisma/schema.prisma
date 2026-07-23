@@ -79,6 +79,8 @@ model User {
   managedMembers          User[]                   @relation("TeamManager")
   approvedBy              User?                    @relation("ApprovedBy", fields: [approvedById], references: [id])
   approvedUsers           User[]                   @relation("ApprovedBy")
+  submittedScans          ScanRecord[]             @relation("ScanSubmitter")
+  approvedScans           ScanRecord[]             @relation("ScanApprover")
   blockedBy               User?                    @relation("BlockedBy", fields: [blockedById], references: [id])
   blockedUsers            User[]                   @relation("BlockedBy")
   invitedBy               User?                    @relation("InvitedBy", fields: [invitedById], references: [id])
@@ -286,9 +288,16 @@ model ScanRecord {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   rawScanEntry    Json?
+  submittedById   String?
+  submittedAt     DateTime?
+  approvedById    String?
+  approvedAt      DateTime?
+  approvalNotes   String?
   source          String     @default("pos")
   transactionType String     @default("JOURNAL_ENTRY")
   location        Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  submittedBy     User?      @relation("ScanSubmitter", fields: [submittedById], references: [id])
+  approvedBy      User?      @relation("ScanApprover", fields: [approvedById], references: [id])
   syncLogs        SyncLog[]
 
   @@index([locationId])
@@ -460,6 +469,9 @@ enum ScanStatus {
   MAPPED
   SYNCED
   FAILED
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
 }
 
 enum SyncStatus {

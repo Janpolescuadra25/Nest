@@ -4,6 +4,7 @@ import path from 'path';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
+import { logAction } from '../middleware/audit';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
@@ -215,6 +216,108 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
     console.error('[Scans] get error:', err);
     throw new AppError('Failed to fetch scan record', 500);
   }
+}));
+
+router.post('/:id/submit', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params['id']);
+  const userId = req.user!.userId;
+
+  const scan = await prisma.scanRecord.findFirst({ where: { id }, select: { status: true, locationId: true } });
+  if (!scan) {
+    throw new AppError('Scan record not found', 404);
+  }
+
+  if (!['PENDING', 'MAPPED', 'REJECTED'].includes(scan.status)) {
+    throw new AppError(`Cannot submit scan with status: ${scan.status}`, 400);
+  }
+
+  const updated = await prisma.scanRecord.update({
+    where: { id },
+    data: {
+      status: 'PENDING_APPROVAL',
+      submittedById: userId,
+      submittedAt: new Date(),
+      approvedById: null,
+      approvedAt: null,
+      approvalNotes: null,
+    },
+  });
+
+  await logAction({
+    actorId: userId,
+    action: 'DRAFT_SUBMITTED',
+    details: { scanRecordId: id, locationId: scan.locationId },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json(updated);
+}));
+
+router.post('/:id/approve', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params['id']);
+  const userId = req.user!.userId;
+
+  const scan = await prisma.scanRecord.findFirst({ where: { id }, select: { status: true, locationId: true } });
+  if (!scan) {
+    throw new AppError('Scan record not found', 404);
+  }
+  if (scan.status !== 'PENDING_APPROVAL') {
+    throw new AppError(`Cannot approve scan with status: ${scan.status}`, 400);
+  }
+
+  const updated = await prisma.scanRecord.update({
+    where: { id },
+    data: {
+      status: 'APPROVED',
+      approvedById: userId,
+      approvedAt: new Date(),
+    },
+  });
+
+  await logAction({
+    actorId: userId,
+    action: 'DRAFT_APPROVED',
+    details: { scanRecordId: id, locationId: scan.locationId },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json(updated);
+}));
+
+router.post('/:id/reject', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params['id']);
+  const userId = req.user!.userId;
+  const { notes } = req.body as { notes?: string };
+
+  const scan = await prisma.scanRecord.findFirst({ where: { id }, select: { status: true, locationId: true } });
+  if (!scan) {
+    throw new AppError('Scan record not found', 404);
+  }
+  if (scan.status !== 'PENDING_APPROVAL') {
+    throw new AppError(`Cannot reject scan with status: ${scan.status}`, 400);
+  }
+
+  const updated = await prisma.scanRecord.update({
+    where: { id },
+    data: {
+      status: 'REJECTED',
+      approvedById: userId,
+      approvedAt: new Date(),
+      approvalNotes: notes ?? null,
+    },
+  });
+
+  await logAction({
+    actorId: userId,
+    action: 'DRAFT_REJECTED',
+    details: { scanRecordId: id, locationId: scan.locationId, notes },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json(updated);
 }));
 
 // AI Invoice Parsing — sends image to Gemini 2.5 Flash

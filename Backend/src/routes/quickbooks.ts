@@ -247,16 +247,22 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
-        select: { locationId: true },
+        select: { locationId: true, status: true },
       });
-      if (scan) {
-        const loc = await prisma.location.findFirst({
-          where: { id: scan.locationId, ...locationFilter(req.user!) },
-        });
-        if (!loc) {
-          throw new AppError("You don't have access to this location", 403);
-          return;
-        }
+      if (!scan) {
+        throw new AppError('Scan record not found', 404);
+      }
+
+      const loc = await prisma.location.findFirst({
+        where: { id: scan.locationId, ...locationFilter(req.user!) },
+      });
+      if (!loc) {
+        throw new AppError("You don't have access to this location", 403);
+      }
+
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        throw new AppError(`Scan must be approved before syncing (current status: ${scan.status})`, 403);
       }
     }
 
@@ -347,74 +353,28 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
-        select: { locationId: true },
+        select: { locationId: true, status: true },
       });
-      if (scan) {
-        const loc = await prisma.location.findFirst({
-          where: { id: scan.locationId, ...locationFilter(req.user!) },
-        });
-        if (!loc) {
-          throw new AppError("You don't have access to this location", 403);
-          return;
-        }
+      if (!scan) {
+        throw new AppError('Scan record not found', 404);
       }
 
-      const result = await syncSingleBill(
-        req.user!.userId,
-        scanRecordId,
-        txnDate,
-        vendorRef,
-        apAccountRef,
-        termsRef,
-        dueDate,
-        memo,
-        lines,
-        docNumber,
-        Boolean(req.body.skipDedupCheck),
-      );
-
-      if (result.status === 'SKIPPED') {
-        if (result.reason === 'already_synced') {
-          res.json({
-            success: true,
-            skipped: true,
-            qbJournalEntryId: result.qbJournalEntryId,
-            docNumber: result.docNumber,
-            message: 'Already synced',
-          });
-          return;
-        }
-
-        res.status(409).json({
-          error: 'Duplicate bill detected',
-          reason: result.reason,
-          qbJournalEntryId: result.qbJournalEntryId,
-          docNumber: result.docNumber,
-        });
-        return;
-      }
-
-      if (result.status === 'FAILED') {
-        console.error('[QB] bill error:', result.errorMessage);
-        throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage ?? 'Unknown error'
-            : 'An unexpected error occurred. Please try again.', 500);
-        return;
-      }
-
-      res.json({
-        message: 'Bill created successfully',
-        billId: result.qbJournalEntryId,
-        txnDate: result.txnDate,
-        totalAmount: result.totalAmount,
-        docNumber: result.docNumber,
+      const loc = await prisma.location.findFirst({
+        where: { id: scan.locationId, ...locationFilter(req.user!) },
       });
-      return;
+      if (!loc) {
+        throw new AppError("You don't have access to this location", 403);
+      }
+
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        throw new AppError(`Scan must be approved before syncing (current status: ${scan.status})`, 403);
+      }
     }
 
     const result = await syncSingleBill(
       req.user!.userId,
-      undefined,
+      scanRecordId,
       txnDate,
       vendorRef,
       apAccountRef,
@@ -427,6 +387,17 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
     );
 
     if (result.status === 'SKIPPED') {
+      if (result.reason === 'already_synced') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
       res.status(409).json({
         error: 'Duplicate bill detected',
         reason: result.reason,
@@ -450,6 +421,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       totalAmount: result.totalAmount,
       docNumber: result.docNumber,
     });
+    return;
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -488,71 +460,28 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
-        select: { locationId: true },
+        select: { locationId: true, status: true },
       });
-      if (scan) {
-        const loc = await prisma.location.findFirst({
-          where: { id: scan.locationId, ...locationFilter(req.user!) },
-        });
-        if (!loc) {
-          throw new AppError("You don't have access to this location", 403);
-        }
+      if (!scan) {
+        throw new AppError('Scan record not found', 404);
       }
 
-      const result = await syncSingleVendorCredit(
-        req.user!.userId,
-        scanRecordId,
-        txnDate,
-        vendorRef,
-        apAccountRef,
-        memo,
-        lines,
-        docNumber,
-        Boolean(req.body.skipDedupCheck),
-      );
-
-      if (result.status === 'SKIPPED') {
-        if (result.reason === 'already_synced') {
-          res.json({
-            success: true,
-            skipped: true,
-            qbJournalEntryId: result.qbJournalEntryId,
-            docNumber: result.docNumber,
-            message: 'Already synced',
-          });
-          return;
-        }
-
-        res.status(409).json({
-          error: 'Duplicate vendor credit detected',
-          reason: result.reason,
-          qbJournalEntryId: result.qbJournalEntryId,
-          docNumber: result.docNumber,
-        });
-        return;
-      }
-
-      if (result.status === 'FAILED') {
-        console.error('[QB] vendorcredit error:', result.errorMessage);
-        throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage ?? 'Unknown error'
-            : 'An unexpected error occurred. Please try again.', 500);
-        return;
-      }
-
-      res.json({
-        message: 'Vendor Credit created successfully',
-        vendorCreditId: result.qbJournalEntryId,
-        txnDate: result.txnDate,
-        totalAmount: result.totalAmount,
-        docNumber: result.docNumber,
+      const loc = await prisma.location.findFirst({
+        where: { id: scan.locationId, ...locationFilter(req.user!) },
       });
-      return;
+      if (!loc) {
+        throw new AppError("You don't have access to this location", 403);
+      }
+
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        throw new AppError(`Scan must be approved before syncing (current status: ${scan.status})`, 403);
+      }
     }
 
     const result = await syncSingleVendorCredit(
       req.user!.userId,
-      undefined,
+      scanRecordId,
       txnDate,
       vendorRef,
       apAccountRef,
@@ -563,6 +492,17 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
     );
 
     if (result.status === 'SKIPPED') {
+      if (result.reason === 'already_synced') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
       res.status(409).json({
         error: 'Duplicate vendor credit detected',
         reason: result.reason,
@@ -586,6 +526,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       totalAmount: result.totalAmount,
       docNumber: result.docNumber,
     });
+    return;
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -626,73 +567,28 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
-        select: { locationId: true },
+        select: { locationId: true, status: true },
       });
-      if (scan) {
-        const loc = await prisma.location.findFirst({
-          where: { id: scan.locationId, ...locationFilter(req.user!) },
-        });
-        if (!loc) {
-          throw new AppError("You don't have access to this location", 403);
-          return;
-        }
+      if (!scan) {
+        throw new AppError('Scan record not found', 404);
       }
 
-      const result = await syncSingleCheque(
-        req.user!.userId,
-        scanRecordId,
-        txnDate,
-        bankAccountRef,
-        payeeRef,
-        amount,
-        memo,
-        lines,
-        docNumber,
-        Boolean(req.body.skipDedupCheck),
-      );
-
-      if (result.status === 'SKIPPED') {
-        if (result.reason === 'already_synced') {
-          res.json({
-            success: true,
-            skipped: true,
-            qbJournalEntryId: result.qbJournalEntryId,
-            docNumber: result.docNumber,
-            message: 'Already synced',
-          });
-          return;
-        }
-
-        res.status(409).json({
-          error: 'Duplicate check detected',
-          reason: result.reason,
-          qbJournalEntryId: result.qbJournalEntryId,
-          docNumber: result.docNumber,
-        });
-        return;
-      }
-
-      if (result.status === 'FAILED') {
-        console.error('[QB] cheque error:', result.errorMessage);
-        throw new AppError(process.env.NODE_ENV !== 'production'
-            ? result.errorMessage ?? 'Unknown error'
-            : 'An unexpected error occurred. Please try again.', 500);
-        return;
-      }
-
-      res.json({
-        message: 'Cheque created successfully',
-        chequeId: result.qbJournalEntryId,
-        txnDate: result.txnDate,
-        totalAmount: result.totalAmount,
-        docNumber: result.docNumber,
+      const loc = await prisma.location.findFirst({
+        where: { id: scan.locationId, ...locationFilter(req.user!) },
       });
-      return;
+      if (!loc) {
+        throw new AppError("You don't have access to this location", 403);
+      }
+
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        throw new AppError(`Scan must be approved before syncing (current status: ${scan.status})`, 403);
+      }
     }
 
     const result = await syncSingleCheque(
       req.user!.userId,
-      undefined,
+      scanRecordId ?? undefined,
       txnDate,
       bankAccountRef,
       payeeRef,
@@ -704,6 +600,17 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
     );
 
     if (result.status === 'SKIPPED') {
+      if (result.reason === 'already_synced') {
+        res.json({
+          success: true,
+          skipped: true,
+          qbJournalEntryId: result.qbJournalEntryId,
+          docNumber: result.docNumber,
+          message: 'Already synced',
+        });
+        return;
+      }
+
       res.status(409).json({
         error: 'Duplicate check detected',
         reason: result.reason,
@@ -1329,6 +1236,8 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
       throw new AppError('Batch size cannot exceed 100 items', 400);
     }
 
+    const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+
     for (const item of items) {
       if (!item.scanRecordId) {
         throw new AppError('Each item must have a scanRecordId', 400);
@@ -1373,6 +1282,17 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
           status: 'FAILED',
           errorType: 'VALIDATION',
           errorMessage: 'Scan not found or access denied',
+        });
+        continue;
+      }
+
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        results.push({
+          scanRecordId: item.scanRecordId,
+          transactionType: item.transactionType ?? 'JOURNAL_ENTRY',
+          status: 'FAILED',
+          errorType: 'VALIDATION',
+          errorMessage: 'Scan must be approved before syncing',
         });
         continue;
       }
@@ -2005,6 +1925,21 @@ router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeatureP
   try {
     const body = req.body as CreateBillPaymentInput & { scanRecordId?: string; skipDedupCheck?: boolean };
     const { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum, scanRecordId, skipDedupCheck } = body;
+
+    if (scanRecordId) {
+      const scan = await prisma.scanRecord.findUnique({
+        where: { id: scanRecordId },
+        select: { status: true },
+      });
+      if (!scan) {
+        throw new AppError('Scan record not found', 404);
+      }
+
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner && scan.status !== 'APPROVED') {
+        throw new AppError(`Scan must be approved before syncing (current status: ${scan.status})`, 403);
+      }
+    }
 
     const result = await syncSingleBillPayment(
       req.user!.userId,
