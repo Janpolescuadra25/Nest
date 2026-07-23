@@ -54,9 +54,11 @@ model User {
   poolScans               Int?
   bonusScans              Int       @default(0)
   poolLocations           Int?
+  poolTemplates           Int?
   maxMembers              Int?
   allocatedScans          Int?
   allocatedLocations      Int?
+  allocatedTemplates      Int?
   prioritySupport         Boolean                  @default(false)
   scanHistoryDays         Int?
   approvedRequests        AdminRequest[]           @relation("ApprovedAdminRequests")

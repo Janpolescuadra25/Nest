@@ -450,6 +450,9 @@ export interface TeamMember {
     cancelAtPeriodEnd?: boolean;
     paymentIssue?: boolean;
   };
+  allocatedScans?: number | null;
+  allocatedLocations?: number | null;
+  allocatedTemplates?: number | null;
 }
 
 export interface AdminRequest {

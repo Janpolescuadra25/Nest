@@ -161,6 +161,7 @@ router.post(
           updateData.maxScans = limits.maxScans;
           updateData.poolScans = limits.maxScans;
           updateData.poolLocations = limits.maxLocations;
+          updateData.poolTemplates = limits.maxTemplates;
           updateData.maxMembers = limits.maxUsers > 1 ? limits.maxUsers - 1 : 0;
           updateData.role = limits.maxUsers > 1 ? 'ADMIN' : 'VIEWER';
           updateData.scanHistoryDays = limits.scanHistoryDays;
@@ -169,7 +170,7 @@ router.post(
 
         const currentTeams = await prisma.user.findMany({
           where: { stripeSubscriptionId: subscription.id },
-          select: { id: true, poolScans: true, poolLocations: true },
+          select: { id: true, poolScans: true, poolLocations: true, poolTemplates: true },
         });
 
         await prisma.user.updateMany({
@@ -199,6 +200,16 @@ router.post(
               });
             }
           }
+          if (updateData.poolTemplates != null) {
+            const newTemplates = updateData.poolTemplates as number;
+            const currentTemplates = team.poolTemplates ?? 0;
+            if (newTemplates < currentTemplates) {
+              await prisma.user.updateMany({
+                where: { managedById: team.id, allocatedTemplates: { gt: newTemplates } },
+                data: { allocatedTemplates: newTemplates },
+              });
+            }
+          }
         }
         break;
       }
@@ -225,6 +236,7 @@ router.post(
             maxScans: null,
             poolScans: null,
             poolLocations: null,
+            poolTemplates: null,
             maxMembers: null,
             scanHistoryDays: null,
             prioritySupport: false,
@@ -241,6 +253,7 @@ router.post(
               managedById: null,
               allocatedScans: null,
               allocatedLocations: null,
+              allocatedTemplates: null,
             },
           });
         }

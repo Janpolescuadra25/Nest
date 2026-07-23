@@ -62,6 +62,9 @@ router.get('/team', requireRole('ADMIN', 'MANAGER'), asyncHandler(async(req: Aut
           createdAt: true,
           timeBombAt: true,
           gracePeriodHours: true,
+          allocatedScans: true,
+          allocatedLocations: true,
+          allocatedTemplates: true,
           admin: {
             select: {
               subscriptionSource: true,
@@ -606,6 +609,77 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error('[Admin] disableTeamMember error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}))
+
+router.patch('/team/:id/allocation', requireRole('ADMIN'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const adminId = req.user!.userId;
+    const userId = String(req.params['id']);
+
+    const { allocatedScans, allocatedLocations, allocatedTemplates } = req.body as {
+      allocatedScans?: number | null;
+      allocatedLocations?: number | null;
+      allocatedTemplates?: number | null;
+    };
+
+    const member = await prisma.user.findFirst({
+      where: { id: userId, managedById: adminId },
+    });
+    if (!member) {
+      throw new AppError('Member not found or not managed by you', 404);
+    }
+
+    const admin = await prisma.user.findFirst({ where: { id: adminId } });
+    const siblings = await prisma.user.findMany({
+      where: { managedById: adminId, id: { not: userId } },
+      select: { allocatedScans: true, allocatedLocations: true, allocatedTemplates: true },
+    });
+
+    if (allocatedScans !== undefined) {
+      const totalScansAllocated = siblings.reduce((sum, s) => sum + (s.allocatedScans ?? 0), 0) + (allocatedScans ?? 0);
+      if (admin?.poolScans != null && totalScansAllocated > admin.poolScans) {
+        throw new AppError(`Total allocated scans (${totalScansAllocated}) would exceed pool (${admin.poolScans})`, 400);
+      }
+    }
+
+    if (allocatedLocations !== undefined) {
+      const totalLocationsAllocated = siblings.reduce((sum, s) => sum + (s.allocatedLocations ?? 0), 0) + (allocatedLocations ?? 0);
+      if (admin?.poolLocations != null && totalLocationsAllocated > admin.poolLocations) {
+        throw new AppError(`Total allocated locations (${totalLocationsAllocated}) would exceed pool (${admin.poolLocations})`, 400);
+      }
+    }
+
+    if (allocatedTemplates !== undefined) {
+      const totalTemplatesAllocated = siblings.reduce((sum, s) => sum + (s.allocatedTemplates ?? 0), 0) + (allocatedTemplates ?? 0);
+      if (admin?.poolTemplates != null && totalTemplatesAllocated > admin.poolTemplates) {
+        throw new AppError(`Total allocated templates (${totalTemplatesAllocated}) would exceed pool (${admin.poolTemplates})`, 400);
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(allocatedScans !== undefined && { allocatedScans }),
+        ...(allocatedLocations !== undefined && { allocatedLocations }),
+        ...(allocatedTemplates !== undefined && { allocatedTemplates }),
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: req.user!.userId,
+        action: 'PERMISSION_OVERRIDE',
+        targetUserId: userId,
+        details: { type: 'allocation_update', allocatedScans, allocatedLocations, allocatedTemplates, adminId },
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Admin] patchTeamAllocation error:', err);
     throw new AppError('Internal server error.', 500);
   }
 }))

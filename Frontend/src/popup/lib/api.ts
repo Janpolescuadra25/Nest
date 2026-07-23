@@ -345,6 +345,9 @@ export const api = {
   patchTeamMember: (jwt: string, id: string, data: object) =>
     patch<{ user: UserInfo }>(`/api/admin/team/${id}`, data, jwt),
 
+  patchTeamMemberAllocation: (jwt: string, memberId: string, data: { allocatedScans?: number | null; allocatedLocations?: number | null; allocatedTemplates?: number | null }) =>
+    patch<UserInfo>(`/api/admin/team/${memberId}/allocation`, data, jwt),
+
   disableTeamMember: (jwt: string, id: string) =>
     post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 

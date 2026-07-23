@@ -86,8 +86,10 @@ export function requireCapacity(action: CapacityAction) {
           poolScans: true,
           bonusScans: true,
           poolLocations: true,
+          poolTemplates: true,
           allocatedScans: true,
           allocatedLocations: true,
+          allocatedTemplates: true,
           maxMembers: true,
           managedById: true,
           scanHistoryDays: true,
@@ -142,6 +144,24 @@ export function requireCapacity(action: CapacityAction) {
         }
       }
 
+      if (action === 'template') {
+        const allocatedTemplates = team.allocatedTemplates ?? 0;
+        if (allocatedTemplates > 0) {
+          const templateCount = await prisma.template.count({
+            where: { location: { userId: team.id } },
+          });
+          if (templateCount >= allocatedTemplates) {
+            res.status(403).json({
+              error: 'TEMPLATE_LIMIT_REACHED',
+              currentUsage: templateCount,
+              limit: allocatedTemplates,
+              message: `Template limit reached (${allocatedTemplates}). Contact your admin.`,
+            });
+            return;
+          }
+        }
+      }
+
       return next();
     }
 
@@ -193,6 +213,27 @@ export function requireCapacity(action: CapacityAction) {
         });
         if (locationCount >= team.poolLocations) {
           return next(new AppError(`Team location limit reached (${team.poolLocations}). Contact the owner to increase your pool.`, 403));
+        }
+      }
+
+      if (action === 'template' && team.poolTemplates != null) {
+        const templateCount = await prisma.template.count({
+          where: {
+            OR: [
+              { location: { adminId: team.id } },
+              ...(memberIds.length > 0 ? [{ location: { userId: { in: memberIds } } }] : []),
+            ],
+          },
+        });
+        const poolTemplates = team.poolTemplates ?? 0;
+        if (templateCount >= poolTemplates) {
+          res.status(403).json({
+            error: 'TEMPLATE_POOL_EXCEEDED',
+            currentUsage: templateCount,
+            limit: poolTemplates,
+            message: `Team template limit reached (${poolTemplates}). Contact the owner to increase your pool.`,
+          });
+          return;
         }
       }
 

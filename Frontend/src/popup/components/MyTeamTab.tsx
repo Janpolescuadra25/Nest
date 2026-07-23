@@ -17,11 +17,12 @@ interface Props {
   jwt: string;
   subscriptionSource?: string | null;
   onUpgrade?: () => void;
+  userRole?: string;
 }
 
 const ROLE_OPTIONS = ['VIEWER', 'STAFF', 'ACCOUNTANT', 'MANAGER'];
 
-export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props) {
+export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade, userRole }: Props) {
   const { showToast } = useToast();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,8 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
   const [linkExpiry, setLinkExpiry] = useState('72');
   const [linkMaxUses, setLinkMaxUses] = useState('1');
   const [createdLink, setCreatedLink] = useState<InviteLink | null>(null);
+  const [allocationDraft, setAllocationDraft] = useState<Record<string, { scans: string; locations: string; templates: string }>>({});
+  const [allocationSaving, setAllocationSaving] = useState<Record<string, boolean>>({});
 
   const fetchTeam = useCallback(async () => {
     setLoading(true);
@@ -145,6 +148,31 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
       showToast('Update failed', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`role_${id}`]: false }));
+    }
+  };
+
+  const handleSaveAllocation = async (memberId: string) => {
+    const draft = allocationDraft[memberId];
+    if (!draft) return;
+    setAllocationSaving(prev => ({ ...prev, [memberId]: true }));
+    try {
+      const body: Record<string, number | null> = {};
+      if (draft.scans !== '') body.allocatedScans = draft.scans === '0' ? 0 : Number(draft.scans);
+      if (draft.locations !== '') body.allocatedLocations = draft.locations === '0' ? 0 : Number(draft.locations);
+      if (draft.templates !== '') body.allocatedTemplates = draft.templates === '0' ? 0 : Number(draft.templates);
+      if (Object.keys(body).length === 0) return;
+      await api.patchTeamMemberAllocation(jwt, memberId, body);
+      await fetchTeam();
+      setAllocationDraft(prev => {
+        const next = { ...prev };
+        delete next[memberId];
+        return next;
+      });
+      showToast('Allocation updated', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update allocation', 'error');
+    } finally {
+      setAllocationSaving(prev => ({ ...prev, [memberId]: false }));
     }
   };
 
@@ -570,6 +598,79 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
                     />
                   </div>
                 </div>
+                {userRole === 'ADMIN' && (
+                  <div className="pt-2 border-t border-gray-200 space-y-2">
+                    <p className="text-xs text-gray-600 font-medium">Resource Allocation</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs text-gray-500">Scans/wk</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={member.allocatedScans != null ? String(member.allocatedScans) : 'No limit'}
+                          value={allocationDraft[member.id]?.scans ?? ''}
+                          onChange={e => setAllocationDraft(prev => ({
+                            ...prev,
+                            [member.id]: { ...prev[member.id], scans: e.target.value, locations: prev[member.id]?.locations ?? '', templates: prev[member.id]?.templates ?? '' }
+                          }))}
+                          className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Locations</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={member.allocatedLocations != null ? String(member.allocatedLocations) : 'No limit'}
+                          value={allocationDraft[member.id]?.locations ?? ''}
+                          onChange={e => setAllocationDraft(prev => ({
+                            ...prev,
+                            [member.id]: { ...prev[member.id], locations: e.target.value, scans: prev[member.id]?.scans ?? '', templates: prev[member.id]?.templates ?? '' }
+                          }))}
+                          className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Templates</label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder={member.allocatedTemplates != null ? String(member.allocatedTemplates) : 'No limit'}
+                          value={allocationDraft[member.id]?.templates ?? ''}
+                          onChange={e => setAllocationDraft(prev => ({
+                            ...prev,
+                            [member.id]: { ...prev[member.id], templates: e.target.value, scans: prev[member.id]?.scans ?? '', locations: prev[member.id]?.locations ?? '' }
+                          }))}
+                          className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                        />
+                      </div>
+                    </div>
+                    {allocationDraft[member.id] && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveAllocation(member.id)}
+                          disabled={allocationSaving[member.id]}
+                          className="text-xs px-3 py-1 bg-emerald-700 text-white rounded hover:bg-emerald-800 disabled:opacity-50"
+                        >
+                          {allocationSaving[member.id] ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setAllocationDraft(prev => {
+                            const next = { ...prev };
+                            delete next[member.id];
+                            return next;
+                          })}
+                          className="text-xs px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400">
+                      Leave empty to keep current value. Set to 0 to block.
+                    </p>
+                  </div>
+                )}
                 {member.status === 'ACTIVE' && (
                   <button
                     onClick={() => handleDisable(member.id)}

@@ -1,0 +1,1 @@
+This folder is managed by Prisma Migrate. Do not edit migration SQL files manually unless necessary.

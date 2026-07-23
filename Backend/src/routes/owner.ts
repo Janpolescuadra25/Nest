@@ -203,9 +203,10 @@ router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: Aut
   try {
     const adminId = String(req.params['id']);
     const userId = String(req.params['userId']);
-    const { allocatedScans, allocatedLocations } = req.body as {
+    const { allocatedScans, allocatedLocations, allocatedTemplates } = req.body as {
       allocatedScans?: number;
       allocatedLocations?: number;
+      allocatedTemplates?: number;
     };
 
     const member = await prisma.user.findFirst({
@@ -215,11 +216,11 @@ router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: Aut
       throw new AppError('Member not found under this admin', 404);
     }
 
-    if (allocatedScans !== undefined || allocatedLocations !== undefined) {
+    if (allocatedScans !== undefined || allocatedLocations !== undefined || allocatedTemplates !== undefined) {
       const admin = await prisma.user.findFirst({ where: { id: adminId } });
       const siblings = await prisma.user.findMany({
         where: { managedById: adminId, id: { not: userId } },
-        select: { allocatedScans: true, allocatedLocations: true },
+        select: { allocatedScans: true, allocatedLocations: true, allocatedTemplates: true },
       });
 
       const totalScansAllocated = siblings.reduce((sum, s) => sum + (s.allocatedScans ?? 0), 0) + (allocatedScans ?? member.allocatedScans ?? 0);
@@ -231,6 +232,10 @@ router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: Aut
       if (admin?.poolLocations != null && totalLocationsAllocated > admin.poolLocations) {
         throw new AppError(`Total allocated locations (${totalLocationsAllocated}) would exceed admin pool (${admin.poolLocations})`, 400);
       }
+      const totalTemplatesAllocated = siblings.reduce((sum, s) => sum + (s.allocatedTemplates ?? 0), 0) + (allocatedTemplates ?? member.allocatedTemplates ?? 0);
+      if (admin?.poolTemplates != null && totalTemplatesAllocated > admin.poolTemplates) {
+        throw new AppError(`Total allocated templates (${totalTemplatesAllocated}) would exceed admin pool (${admin.poolTemplates})`, 400);
+      }
     }
 
     const updated = await prisma.user.update({
@@ -238,6 +243,7 @@ router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: Aut
       data: {
         ...(allocatedScans !== undefined && { allocatedScans }),
         ...(allocatedLocations !== undefined && { allocatedLocations }),
+        ...(allocatedTemplates !== undefined && { allocatedTemplates }),
       },
     });
 
@@ -245,7 +251,7 @@ router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: Aut
       actorId: req.user!.userId,
       action: 'PERMISSION_OVERRIDE',
       targetUserId: userId,
-      details: { type: 'allocation_update', allocatedScans, allocatedLocations, adminId },
+      details: { type: 'allocation_update', allocatedScans, allocatedLocations, allocatedTemplates, adminId },
       ip: req.ip,
       userAgent: req.headers['user-agent'],
     });
