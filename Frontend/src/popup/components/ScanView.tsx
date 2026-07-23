@@ -165,6 +165,7 @@ export default function ScanView({
   const [isScanLimit, setIsScanLimit] = useState(false);
   const [detectedPOS, setDetectedPOS] = useState<{ type: string; name: string } | null>(null);
   const [showTabPicker, setShowTabPicker] = useState(false);
+  const [forceAIScan, setForceAIScan] = useState(false);
   const [allTabs, setAllTabs] = useState<chrome.tabs.Tab[]>([]);
   const [selectedTab, setSelectedTab] = useState<chrome.tabs.Tab | null>(null);
   const [aiScanning, setAiScanning] = useState(false);
@@ -570,6 +571,13 @@ export default function ScanView({
       return;
     }
 
+    if (forceAIScan) {
+      setForceAIScan(false);
+      await handleAIScan(selectedTab);
+      return;
+    }
+
+    setForceAIScan(false);
     const posInfo = getPOSTabInfo(selectedTab);
     if (posInfo) {
       await scanKnownPOSTab(selectedTab, posInfo.posType, posInfo.posName);
@@ -638,67 +646,71 @@ export default function ScanView({
       const posName = posResult?.posName ?? 'POS';
       if (process.env.NODE_ENV !== 'production') {
       }
-      if (!tab?.id) throw new Error('No POS report tab found — open a supported POS report page');
+      if (tab?.id) {
+        // Try sending the scan message
+        let response = await sendScanMessage(tab.id);
 
-      // Try sending the scan message
-      let response = await sendScanMessage(tab.id);
-
-      // If content script isn't injected yet, inject it and retry
-      if (!response) {
-        const scriptFile = posType === 'salido'
-          ? 'content/salido-scanner.js'
-          : posType === 'oracle'
-            ? 'content/oracle-scanner.js'
-            : 'content/scanner.js';
-        if (process.env.NODE_ENV !== 'production') {
-          }
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: [scriptFile],
-          });
-          await new Promise((r) => setTimeout(r, 1500));
+        // If content script isn't injected yet, inject it and retry
+        if (!response) {
+          const scriptFile = posType === 'salido'
+            ? 'content/salido-scanner.js'
+            : posType === 'oracle'
+              ? 'content/oracle-scanner.js'
+              : 'content/scanner.js';
           if (process.env.NODE_ENV !== 'production') {
           }
-          response = await sendScanMessage(tab.id);
-        } catch (injectErr) {
-          console.error('[Nest Popup] Failed to inject content script:', injectErr);
-          throw new Error('Could not inject scanner into tab — try refreshing the page');
-        }
-      }
-
-      if (response?.data) {
-        const entry: ScanEntry = {
-          id: generateId(),
-          source: 'pos',
-          header: {},
-          lineItems: [Object.fromEntries(Object.entries(response.data).map(([key, value]) => [key, String(value)]))],
-        };
-        setScanEntries([entry]);
-        setActiveScanEntryId(entry.id);
-        onScanData(response.data);
-        chrome.storage.local.set({ lastScanData: response.data });
-        if (locationId) {
           try {
-            const scanRecord = await api.saveScan(
-              jwt,
-              locationId,
-              new Date().toISOString().split('T')[0],
-              response.data,
-              selectedTemplate?.transactionType,
-            );
+            await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              files: [scriptFile],
+            });
+            await new Promise((r) => setTimeout(r, 1500));
             if (process.env.NODE_ENV !== 'production') {
             }
-            if (scanRecord?.id && onScanRecordId) {
-              onScanRecordId(scanRecord.id);
-            }
-          } catch (saveErr) {
-            console.error('[Nest] Failed to save scan to backend:', saveErr);
-            // Don't block the UI — scan still worked locally
+            response = await sendScanMessage(tab.id);
+          } catch (injectErr) {
+            console.error('[Nest Popup] Failed to inject content script:', injectErr);
+            throw new Error('Could not inject scanner into tab — try refreshing the page');
           }
         }
+
+        if (response?.data) {
+          const entry: ScanEntry = {
+            id: generateId(),
+            source: 'pos',
+            header: {},
+            lineItems: [Object.fromEntries(Object.entries(response.data).map(([key, value]) => [key, String(value)]))],
+          };
+          setScanEntries([entry]);
+          setActiveScanEntryId(entry.id);
+          onScanData(response.data);
+          chrome.storage.local.set({ lastScanData: response.data });
+          if (locationId) {
+            try {
+              const scanRecord = await api.saveScan(
+                jwt,
+                locationId,
+                new Date().toISOString().split('T')[0],
+                response.data,
+                selectedTemplate?.transactionType,
+              );
+              if (process.env.NODE_ENV !== 'production') {
+              }
+              if (scanRecord?.id && onScanRecordId) {
+                onScanRecordId(scanRecord.id);
+              }
+            } catch (saveErr) {
+              console.error('[Nest] Failed to save scan to backend:', saveErr);
+              // Don't block the UI — scan still worked locally
+            }
+          }
+        } else {
+          throw new Error('No data returned from scanner — try refreshing the page');
+        }
+      } else if (selectedTab) {
+        await handleAIScan(selectedTab);
       } else {
-        throw new Error('No data returned from scanner — try refreshing the page');
+        throw new Error('No POS tab found. Click "Any POS (AI)" to scan any POS system.');
       }
     } catch (err) {
       console.error('[Nest Popup] Scan error:', err);
@@ -1410,6 +1422,21 @@ export default function ScanView({
                 <button
                   type="button"
                   onClick={() => {
+                    setForceAIScan(true);
+                    setShowTabPicker((prev) => {
+                      const next = !prev;
+                      if (next) loadAllTabs();
+                      return next;
+                    });
+                  }}
+                  className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg transition-colors"
+                >
+                  ✨ Any POS (AI)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForceAIScan(false);
                     setShowTabPicker((prev) => {
                       const next = !prev;
                       if (next) loadAllTabs();
@@ -1438,7 +1465,10 @@ export default function ScanView({
                   {isKnownPOSTab(selectedTab) ? ' — Known POS tab' : ' — Unknown tab (AI scan will be used)'}
                 </div>
               ) : (
-                <div className="text-xs text-gray-600">Pick a tab above to scan it with Nest.</div>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>Pick a tab above to scan it with Nest.</div>
+                  <div className="text-gray-500">Use "Any POS (AI)" to scan any POS system.</div>
+                </div>
               )}
               {aiConfidence && scanMode === 'pos' && !scanning && !aiScanning && (
                 <div className="mt-1 flex items-center gap-1.5 text-[10px]">
