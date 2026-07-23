@@ -50,6 +50,7 @@ const TRANSACTION_TYPE_OPTIONS = ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHE
 type TransactionType = (typeof TRANSACTION_TYPE_OPTIONS)[number];
 
 const POS_SYSTEM_OPTIONS = [
+  { value: 'generic', label: 'Any POS (AI)' },
   { value: 'toast', label: 'Toast' },
   { value: 'oracle', label: 'Oracle' },
   { value: 'salido', label: 'SALIDO' },

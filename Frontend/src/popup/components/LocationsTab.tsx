@@ -50,8 +50,8 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
   // ── Create ────────────────────────────────────────────────────────────────
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.name.trim() || !addForm.posUrl.trim()) {
-      showToast('Name and POS URL are required', 'error');
+    if (!addForm.name.trim()) {
+      showToast('Location name is required', 'error');
       return;
     }
     setAddLoading(true);
@@ -101,8 +101,8 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
   const handleSave = async (loc: Location) => {
     const form = editForms[loc.id];
     if (!form) return;
-    if (!String(form.name ?? '').trim() || !String(form.posUrl ?? '').trim()) {
-      showToast('Name and POS URL are required', 'error');
+    if (!String(form.name ?? '').trim()) {
+      showToast('Location name is required', 'error');
       return;
     }
     setEditLoading(p => ({ ...p, [loc.id]: true }));
@@ -178,7 +178,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-0.5">POS URL</label>
+            <label className="block text-xs text-gray-600 mb-0.5">POS URL (optional)</label>
             <input
               type="url"
               value={addForm.posUrl}
@@ -248,7 +248,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-0.5">POS URL</label>
+                    <label className="block text-xs text-gray-600 mb-0.5">POS URL (optional)</label>
                     <input
                       type="url"
                       aria-label="POS URL"

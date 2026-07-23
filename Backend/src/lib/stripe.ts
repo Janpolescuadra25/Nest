@@ -30,6 +30,7 @@ export const PLANS: Record<PlanKey, {
   maxUsers: number;
   maxLocations: number;
   maxScans: number;
+  maxTemplates: number;
   scanHistoryDays: number;
   prioritySupport: boolean;
   monthlyPriceId: string | undefined;
@@ -42,6 +43,7 @@ export const PLANS: Record<PlanKey, {
     maxUsers: 1,
     maxLocations: 1,
     maxScans: 7,
+    maxTemplates: 3,
     scanHistoryDays: 7,
     prioritySupport: false,
     monthlyPriceId: undefined,
@@ -54,6 +56,7 @@ export const PLANS: Record<PlanKey, {
     maxUsers: 2,
     maxLocations: 5,
     maxScans: 50,
+    maxTemplates: 10,
     scanHistoryDays: 30,
     prioritySupport: false,
     monthlyPriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
@@ -66,6 +69,7 @@ export const PLANS: Record<PlanKey, {
     maxUsers: 5,
     maxLocations: 20,
     maxScans: 250,
+    maxTemplates: 25,
     scanHistoryDays: 90,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
@@ -78,6 +82,7 @@ export const PLANS: Record<PlanKey, {
     maxUsers: 12,
     maxLocations: 75,
     maxScans: 1250,
+    maxTemplates: 75,
     scanHistoryDays: 365,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,
@@ -90,6 +95,7 @@ export const PLANS: Record<PlanKey, {
     maxUsers: 20,
     maxLocations: 250,
     maxScans: 5000,
+    maxTemplates: 200,
     scanHistoryDays: 730,
     prioritySupport: true,
     monthlyPriceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
@@ -139,6 +145,7 @@ export function getPlanLimits(planKey: PlanKey) {
     maxUsers: plan.maxUsers,
     maxLocations: plan.maxLocations,
     maxScans: plan.maxScans,
+    maxTemplates: plan.maxTemplates,
     scanHistoryDays: plan.scanHistoryDays,
   };
 }

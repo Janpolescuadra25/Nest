@@ -6,6 +6,7 @@ import { Prisma, ScanMode } from '@prisma/client';
 import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
+import { requireCapacity } from '../middleware/capacity';
 import { prisma } from '../lib/prisma';
 
 function sheetToArrays(worksheet: Excel.Worksheet, defval: string = ''): string[][] {
@@ -104,7 +105,7 @@ router.get('/', requireFeaturePermission('templates', 'read'), asyncHandler(asyn
   res.json(templates);
 }));
 
-router.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const body = req.body as {
     locationId?: string;
     name?: string;
@@ -119,6 +120,19 @@ router.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(as
 
   if (!body.locationId || !body.name) {
     throw new AppError('locationId and name are required', 400);
+  }
+
+  if (body.scanMode === 'POS' && body.posSystem) {
+    const validPOS = ['toast', 'oracle', 'salido', 'generic'];
+    if (!validPOS.includes(body.posSystem)) {
+      throw new AppError(
+        `Invalid POS system: "${body.posSystem}". Must be one of: ${validPOS.join(', ')}`,
+        400,
+      );
+    }
+  }
+  if (body.scanMode === 'POS' && !body.posSystem) {
+    throw new AppError('POS system is required when scan mode is POS', 400);
   }
 
   validateTransactionType(body.transactionType);
@@ -362,7 +376,7 @@ export function createLocationTemplateRouter() {
     res.json(templates);
   }));
 
-  locationRouter.post('/', requireFeaturePermission('templates', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  locationRouter.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const locationId = String(req.params.id);
     await getLocationOrFail(locationId, req.user);
     const body = req.body as {
@@ -378,6 +392,19 @@ export function createLocationTemplateRouter() {
 
     if (!body.name) {
       throw new AppError('name is required', 400);
+    }
+
+    if (body.scanMode === 'POS' && body.posSystem) {
+      const validPOS = ['toast', 'oracle', 'salido', 'generic'];
+      if (!validPOS.includes(body.posSystem)) {
+        throw new AppError(
+          `Invalid POS system: "${body.posSystem}". Must be one of: ${validPOS.join(', ')}`,
+          400,
+        );
+      }
+    }
+    if (body.scanMode === 'POS' && !body.posSystem) {
+      throw new AppError('POS system is required when scan mode is POS', 400);
     }
 
     validateTransactionType(body.transactionType);

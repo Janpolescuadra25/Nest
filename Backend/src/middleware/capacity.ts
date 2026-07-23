@@ -4,7 +4,7 @@ import { AppError } from '../lib/errors';
 import { PLANS, type PlanKey, getPlanLimits } from '../lib/stripe';
 import { AuthRequest } from './auth.middleware';
 
-type CapacityAction = 'user' | 'location' | 'scan';
+type CapacityAction = 'user' | 'location' | 'scan' | 'template';
 
 function getStartOfWeek(): Date {
   const now = new Date();
@@ -40,6 +40,7 @@ function getEffectiveLimits(team: {
       maxUsers: premiumLimits.maxUsers,
       maxLocations: premiumLimits.maxLocations,
       maxScans: premiumLimits.maxScans,
+      maxTemplates: premiumLimits.maxTemplates,
       scanHistoryDays: premiumLimits.scanHistoryDays,
       prioritySupport: true,
     };
@@ -51,6 +52,7 @@ function getEffectiveLimits(team: {
       maxUsers: team.maxUsers ?? PLANS.free.maxUsers,
       maxLocations: team.maxLocations ?? PLANS.free.maxLocations,
       maxScans: (team.maxScans ?? PLANS.free.maxScans) + (team.bonusScans ?? 0),
+      maxTemplates: PLANS[team.currentPlan as PlanKey]?.maxTemplates ?? PLANS.free.maxTemplates,
       scanHistoryDays: team.scanHistoryDays ?? PLANS.free.scanHistoryDays,
       prioritySupport: team.prioritySupport ?? false,
     };
@@ -61,6 +63,7 @@ function getEffectiveLimits(team: {
     maxUsers: PLANS.free.maxUsers,
     maxLocations: PLANS.free.maxLocations,
     maxScans: PLANS.free.maxScans + (team.bonusScans ?? 0),
+    maxTemplates: PLANS.free.maxTemplates,
     scanHistoryDays: PLANS.free.scanHistoryDays,
     prioritySupport: false,
   };
@@ -249,6 +252,21 @@ export function requireCapacity(action: CapacityAction) {
             currentUsage: locationCount,
             limit: limits.maxLocations,
             message: `You have reached your location limit (${limits.maxLocations}).`,
+          });
+          return;
+        }
+        return next();
+      }
+      case 'template': {
+        const templateCount = await prisma.template.count({
+          where: { location: { adminId: team.id } },
+        });
+        if (templateCount >= limits.maxTemplates) {
+          res.status(403).json({
+            error: 'TEMPLATE_LIMIT_REACHED',
+            currentUsage: templateCount,
+            limit: limits.maxTemplates,
+            message: `Template limit reached (${limits.maxTemplates}). Upgrade your plan for more templates.`,
           });
           return;
         }

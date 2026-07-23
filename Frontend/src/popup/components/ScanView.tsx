@@ -181,6 +181,18 @@ export default function ScanView({
   const previousScanModeRef = useRef<ScanSource>(scanMode);
   const isInitialMount = useRef(true);
 
+  const templateScanMode = selectedTemplate?.scanMode;
+  const templatePosSystem = selectedTemplate?.posSystem;
+  const visibleScanModes: ScanSource[] = templateScanMode
+    ? [templateScanMode.toLowerCase() as ScanSource]
+    : ['pos', 'excel', 'image'];
+
+  useEffect(() => {
+    if (templateScanMode && visibleScanModes.length === 1) {
+      setScanMode(visibleScanModes[0]);
+    }
+  }, [templateScanMode, visibleScanModes]);
+
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {
     chrome.storage.local.get(['lastScanData'], (result) => {
@@ -1037,27 +1049,33 @@ export default function ScanView({
   return (
     <div className="p-3 space-y-4">
       <div className="flex flex-wrap gap-2 mb-3">
-        <button
-          type="button"
-          onClick={() => setScanMode('pos')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
-        >
-          POS Scan
-        </button>
-        <button
-          type="button"
-          onClick={() => setScanMode('excel')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
-        >
-          Excel Scan
-        </button>
-        <button
-          type="button"
-          onClick={() => setScanMode('image')}
-          className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
-        >
-          📷 Image
-        </button>
+        {visibleScanModes.includes('pos') && (
+          <button
+            type="button"
+            onClick={() => setScanMode('pos')}
+            className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'pos' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+          >
+            POS Scan
+          </button>
+        )}
+        {visibleScanModes.includes('excel') && (
+          <button
+            type="button"
+            onClick={() => setScanMode('excel')}
+            className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'excel' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+          >
+            Excel Scan
+          </button>
+        )}
+        {visibleScanModes.includes('image') && (
+          <button
+            type="button"
+            onClick={() => setScanMode('image')}
+            className={`text-xs rounded px-3 py-1.5 transition ${scanMode === 'image' ? 'bg-emerald-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-200'}`}
+          >
+            📷 Image
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowHistory((prev) => !prev)}
@@ -1413,7 +1431,19 @@ export default function ScanView({
         <>
           <div className="flex flex-col gap-3 mb-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className={`text-xs px-2 py-1 rounded-full ${
+              {templatePosSystem && templatePosSystem !== 'generic' && (
+              ((detectedPOS?.type && detectedPOS.type.toLowerCase() !== templatePosSystem.toLowerCase()) ||
+                (aiConfidence?.posType && aiConfidence.posType.toLowerCase() !== templatePosSystem.toLowerCase())) && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
+                  <span>⚠️</span>
+                  <span>
+                    POS mismatch: Template is for <strong>{templatePosSystem}</strong> but detected <strong>{detectedPOS?.type || aiConfidence?.posType}</strong>.
+                    Results may be inaccurate. Consider switching to an "Any POS (AI)" template.
+                  </span>
+                </div>
+              )
+            )}
+            <div className={`text-xs px-2 py-1 rounded-full ${
                 detectedPOS ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-200 text-gray-600'
               }`}>
                 {detectedPOS ? `🟢 ${detectedPOS.name} report page detected` : '⚪ No POS tab found'}

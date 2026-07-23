@@ -1566,7 +1566,7 @@ export default function MappingView({
             >
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
-                  {template.name} ({TRANSACTION_TYPE_LABELS[template.transactionType] ?? template.transactionType})
+                  {template.name} ({TRANSACTION_TYPE_LABELS[template.transactionType] ?? template.transactionType}) [{template.scanMode}{template.posSystem && template.posSystem !== 'generic' ? ` · ${template.posSystem}` : ''}]
                 </option>
               ))}
             </select>
