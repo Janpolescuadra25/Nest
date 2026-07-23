@@ -28,7 +28,8 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
-  const [showInvite, setShowInvite] = useState(false);
+  const [showInvitePanel, setShowInvitePanel] = useState(false);
+  const [inviteMode, setInviteMode] = useState<'email' | 'link'>('email');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('STAFF');
   const [inviteName, setInviteName] = useState('');
@@ -48,7 +49,6 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
 
   // Invite links state
   const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([]);
-  const [showLinkForm, setShowLinkForm] = useState(false);
   const [linkRoleHint, setLinkRoleHint] = useState('VIEWER');
   const [linkExpiry, setLinkExpiry] = useState('72');
   const [linkMaxUses, setLinkMaxUses] = useState('1');
@@ -91,7 +91,7 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
       setInviteRole('STAFF');
       setInviteTrialDays('');
       setInviteExpiryMsg('');
-      setShowInvite(false);
+      setShowInvitePanel(false);
       await fetchTeam();
       showToast('Invitation sent!', 'success');
     } catch (err: any) {
@@ -231,7 +231,7 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
       setLinkRoleHint('VIEWER');
       setLinkExpiry('72');
       setLinkMaxUses('1');
-      setShowLinkForm(false);
+      setShowInvitePanel(false);
       await fetchInviteLinks();
       showToast('Invite link created!', 'success');
     } catch (err: any) {
@@ -276,22 +276,20 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-semibold text-gray-900">My Team</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowLinkForm(!showLinkForm)}
-            disabled={isFreeUser}
-            className={`text-xs px-2 py-1 rounded ${isFreeUser ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-          >
-            🔗 Link
-          </button>
-          <button
-            onClick={() => setShowInvite(!showInvite)}
-            disabled={isFreeUser}
-            className={`text-xs px-2 py-1 rounded ${isFreeUser ? 'bg-emerald-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-emerald-200 hover:bg-emerald-600'}`}
-          >
-            + Invite
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            if (showInvitePanel) {
+              setShowInvitePanel(false);
+            } else {
+              setInviteMode('email');
+              setShowInvitePanel(true);
+            }
+          }}
+          disabled={isFreeUser}
+          className={`text-xs px-2 py-1 rounded ${isFreeUser ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-emerald-200 hover:bg-emerald-600'}`}
+        >
+          + Invite
+        </button>
       </div>
 
       {isFreeUser && (
@@ -299,6 +297,31 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
           message="Team access requires a paid plan. Upgrade to invite team members and manage permissions."
           onUpgrade={() => onUpgrade?.()}
         />
+      )}
+
+      {showInvitePanel && (
+        <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded mb-3">
+          <button
+            onClick={() => setInviteMode('email')}
+            className={`text-xs px-3 py-1 rounded transition-colors ${
+              inviteMode === 'email'
+                ? 'bg-white text-gray-900 shadow-sm font-medium'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Email
+          </button>
+          <button
+            onClick={() => setInviteMode('link')}
+            className={`text-xs px-3 py-1 rounded transition-colors ${
+              inviteMode === 'link'
+                ? 'bg-white text-gray-900 shadow-sm font-medium'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Link
+          </button>
+        </div>
       )}
 
       {inviteResult && (
@@ -328,7 +351,7 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
         </div>
       )}
 
-      {showInvite && (
+      {showInvitePanel && inviteMode === 'email' && (
         <form onSubmit={handleInvite} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
           <input
             type="email"
@@ -385,14 +408,14 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
             <button type="submit" disabled={actionLoading['invite']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['invite'] ? 'Inviting...' : 'Send Invite'}
             </button>
-            <button type="button" onClick={() => setShowInvite(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
+            <button type="button" onClick={() => setShowInvitePanel(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {showLinkForm && (
+      {showInvitePanel && inviteMode === 'link' && (
         <form onSubmit={handleCreateLink} className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
           <p className="text-xs text-gray-600 font-medium">Create Invite Link</p>
           <select
@@ -430,7 +453,7 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
             <button type="submit" disabled={actionLoading['linkCreate']} className="flex-1 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-500 disabled:opacity-50">
               {actionLoading['linkCreate'] ? 'Creating...' : 'Create Link'}
             </button>
-            <button type="button" onClick={() => setShowLinkForm(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
+            <button type="button" onClick={() => setShowInvitePanel(false)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded text-xs hover:bg-gray-300">
               Cancel
             </button>
           </div>
@@ -476,7 +499,7 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade }: Props)
           icon="👥"
           title="No team members yet"
           description="Invite someone to get your team started."
-          action={{ label: 'Invite member', onClick: () => setShowInvite(true) }}
+          action={{ label: 'Invite member', onClick: () => { setInviteMode('email'); setShowInvitePanel(true); } }}
         />
       ) : (
         members.map(member => (
