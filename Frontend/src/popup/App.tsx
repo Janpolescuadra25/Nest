@@ -512,6 +512,7 @@ export default function App() {
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
                 onNavigateToPayments={() => setCurrentTab('payments')}
+                userRole={user?.role}
               />
             ) : selectedTemplateForScan.transactionType === 'VENDOR_CREDIT' ? (
               <VendorCreditPreviewForm
@@ -521,6 +522,7 @@ export default function App() {
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
+                userRole={user?.role}
               />
             ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
               <CheckPreviewForm
@@ -530,6 +532,7 @@ export default function App() {
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
+                userRole={user?.role}
               />
             ) : (
               <JournalEntryPreview
@@ -541,6 +544,7 @@ export default function App() {
                 onActiveScanEntryIdChange={setActiveScanEntryId}
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
+                userRole={user?.role}
               />
             )
           )}
@@ -562,6 +566,7 @@ export default function App() {
               onScanRecordId={setScanRecordId}
               onboardingStep={onboardingState.step}
               onHasSynced={handleHasSynced}
+              userRole={user?.role ?? 'VIEWER'}
             />
           )}
           {effectiveTab === 'settings' && (

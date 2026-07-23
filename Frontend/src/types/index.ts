@@ -240,9 +240,14 @@ export interface ScanRecord {
   rawScanEntry?: ScanEntry | null;
   source?: string;
   transactionType?: string;
-  status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED';
+  status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   syncLogs?: SyncLog[];
+  submittedById?: string | null;
+  submittedAt?: string | null;
+  approvedById?: string | null;
+  approvedAt?: string | null;
+  approvalNotes?: string | null;
 }
 
 export interface SyncLog {

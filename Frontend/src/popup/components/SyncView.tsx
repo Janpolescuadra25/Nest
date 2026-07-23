@@ -18,6 +18,7 @@ interface Props {
   onScanRecordId?: (id: string) => void;
   onboardingStep?: number;
   onHasSynced?: () => void;
+  userRole: string;
 }
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -25,9 +26,12 @@ const STATUS_CLASSES: Record<string, string> = {
   FAILED: 'text-red-600 bg-red-50 border-red-200',
   PENDING: 'text-amber-600 bg-amber-50 border-amber-200',
   MAPPED: 'text-emerald-400 bg-emerald-50 border-emerald-200',
+  PENDING_APPROVAL: 'text-blue-600 bg-blue-50 border-blue-200',
+  APPROVED: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+  REJECTED: 'text-red-500 bg-red-50 border-red-200',
 };
 
-export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced }: Props) {
+export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced, userRole }: Props) {
   const { locations } = useLocations(jwt);
   const { status } = useQuickBooks(jwt);
   const { accounts } = useQBContext();
@@ -45,6 +49,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!locationId) return;
@@ -120,6 +126,32 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     }
   };
 
+  const handleApprove = async (scanId: string) => {
+    setApprovingId(scanId);
+    try {
+      await api.approveScan(jwt, scanId);
+      showToast('Scan approved', 'success');
+      await refreshScans();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Approval failed', 'error');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (scanId: string) => {
+    setRejectingId(scanId);
+    try {
+      await api.rejectScan(jwt, scanId);
+      showToast('Scan rejected', 'success');
+      await refreshScans();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Rejection failed', 'error');
+    } finally {
+      setRejectingId(null);
+    }
+  };
+
   const getScanAttention = (scan: ScanRecord): 'stale' | 'max-retried' | 'old-failure' | null => {
     if (scan.status === 'PENDING' || scan.status === 'MAPPED') {
       const scanAge = Date.now() - new Date(scan.scanDate).getTime();
@@ -140,6 +172,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     setBatchSyncing(true);
     setBatchProgress('Preparing...');
     try {
+      const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER';
       // Fetch all pending/mapped scans for this location (all pages)
       const allPending: ScanRecord[] = [];
       let fetchPage = 1;
@@ -147,7 +180,11 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       while (fetchMore) {
         if (fetchPage > 100) break;
         const { scans: pageScans, hasMore: more } = await api.getScans(jwt, locationId, fetchPage, 100);
-        allPending.push(...(pageScans ?? []).filter((s) => s.status === 'PENDING' || s.status === 'MAPPED'));
+        allPending.push(...(pageScans ?? []).filter((s) =>
+          isAdminOrOwner
+            ? (s.status === 'PENDING' || s.status === 'MAPPED')
+            : s.status === 'APPROVED'
+        ));
         fetchMore = more;
         fetchPage++;
       }
@@ -342,7 +379,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                 {totalPending} pending
               </span>
             )}
-            {status.connected && (totalPending > 0 || batchSyncing) && (
+            {status.connected && (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (totalPending > 0 || batchSyncing) && (
               <button
                 onClick={() => setShowSyncConfirm(true)}
                 disabled={batchSyncing || isRetryingAll}
@@ -568,6 +605,25 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                             >
                               {isRetryingId === scan.id ? '⏳ Retrying...' : '↻ Retry'}
                             </button>
+                          )}
+                          {scan.status === 'PENDING_APPROVAL' &&
+                            (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => void handleApprove(scan.id)}
+                                disabled={approvingId === scan.id}
+                                className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 disabled:opacity-50"
+                              >
+                                {approvingId === scan.id ? '...' : 'Approve'}
+                              </button>
+                              <button
+                                onClick={() => void handleReject(scan.id)}
+                                disabled={rejectingId === scan.id}
+                                className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                              >
+                                {rejectingId === scan.id ? '...' : 'Reject'}
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

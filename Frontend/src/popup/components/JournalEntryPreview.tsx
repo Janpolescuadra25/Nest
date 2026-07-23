@@ -98,9 +98,10 @@ interface Props {
   onActiveScanEntryIdChange: (id: string) => void;
   selectedLocationId: string;
   scanRecordId?: string | null;
+  userRole?: string;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -122,6 +123,8 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [autoBalancePending, setAutoBalancePending] = useState(false);
+  const [approvalSubmitted, setApprovalSubmitted] = useState(false);
+  const canSyncDirectly = !userRole || userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER';
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
@@ -558,6 +561,25 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     }
   }, [jwt, effectiveDisplayLines, txnDate, docNumber, privateNote, locations, entityOptions, isBalanced, consolidate]);
 
+  const handleSubmitForApproval = useCallback(async () => {
+    if (!scanRecordId) {
+      setError('No scan record to submit');
+      return;
+    }
+    setSyncing(true);
+    setError(null);
+    setApprovalSubmitted(false);
+    try {
+      await api.submitScanForApproval(jwt, scanRecordId);
+      setApprovalSubmitted(true);
+      setSyncResult({ id: '', txnDate: '', skipped: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit for approval');
+    } finally {
+      setSyncing(false);
+    }
+  }, [jwt, scanRecordId]);
+
   const handleForceSync = useCallback(() => {
     if (!isBalanced) return;
     void handleSync(true);
@@ -859,7 +881,12 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           {error}
         </div>
       )}
-      {syncResult && (
+      {approvalSubmitted ? (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 mt-4">
+          <div className="text-blue-800 font-semibold">✅ Submitted for Approval</div>
+          <div className="text-blue-600 text-sm mt-1">Your sync is pending manager review.</div>
+        </div>
+      ) : syncResult && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs rounded-lg px-3 py-2 space-y-1.5">
           <div>
             {syncResult.skipped ? '✅ Journal Entry already synced' : '✅ Journal Entry created'} —
@@ -897,33 +924,35 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           Clear All
         </button>
         <button
-          onClick={() => {
+          onClick={canSyncDirectly ? () => {
             if (autoBalanced && !autoBalancePending) {
               setAutoBalancePending(true);
               return;
             }
             setShowSyncConfirm(true);
-          }}
+          } : () => void handleSubmitForApproval()}
           disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
           className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
-            ? 'Syncing to QuickBooks…'
+            ? (canSyncDirectly ? 'Syncing to QuickBooks…' : 'Submitting…')
             : !isBalanced
               ? '⚠️ Journal Entry is Unbalanced'
               : !allMapped
                 ? `⚠️ ${unmappedCount} unmapped line${unmappedCount !== 1 ? 's' : ''} — assign all accounts`
-                : '⚡ Sync to QuickBooks'}
+                : (canSyncDirectly ? '⚡ Sync to QuickBooks' : '📋 Submit for Approval')}
         </button>
       </div>
-      <ConfirmDialog
-        open={showSyncConfirm}
-        title="Sync to QuickBooks"
-        message="This will create a journal entry in your QuickBooks account. Are you sure?"
-        confirmText="Sync"
-        onConfirm={() => { setShowSyncConfirm(false); void handleSync(); }}
-        onCancel={() => setShowSyncConfirm(false)}
-      />
+      {canSyncDirectly && (
+        <ConfirmDialog
+          open={showSyncConfirm}
+          title="Sync to QuickBooks"
+          message="This will create a journal entry in your QuickBooks account. Are you sure?"
+          confirmText="Sync"
+          onConfirm={() => { setShowSyncConfirm(false); void handleSync(); }}
+          onCancel={() => setShowSyncConfirm(false)}
+        />
+      )}
       {imbalanceWarning && (
         <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
           ⚠️ {imbalanceWarning}

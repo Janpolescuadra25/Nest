@@ -81,6 +81,7 @@ interface Props {
   selectedLocationId: string;
   scanRecordId?: string | null;
   selectedTemplate?: Template | null;
+  userRole?: string;
 }
 
 export default function VendorCreditPreviewForm({
@@ -90,6 +91,7 @@ export default function VendorCreditPreviewForm({
   selectedLocationId,
   scanRecordId,
   selectedTemplate,
+  userRole,
 }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
@@ -120,6 +122,8 @@ export default function VendorCreditPreviewForm({
   const [syncResult, setSyncResult] = useState<{ id: string; txnDate: string; docNumber?: string; skipped?: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [approvalSubmitted, setApprovalSubmitted] = useState(false);
+  const canSyncDirectly = !userRole || userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER';
 
   const accountsRef = useRef(accounts);
   accountsRef.current = accounts;
@@ -478,6 +482,25 @@ export default function VendorCreditPreviewForm({
     }
   }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, txnDate, vendorRef]);
 
+  const handleSubmitForApproval = useCallback(async () => {
+    if (!scanRecordId) {
+      setError('No scan record to submit');
+      return;
+    }
+    setSyncing(true);
+    setError(null);
+    setApprovalSubmitted(false);
+    try {
+      await api.submitScanForApproval(jwt, scanRecordId);
+      setApprovalSubmitted(true);
+      setSyncResult({ id: '', txnDate: '', skipped: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit for approval');
+    } finally {
+      setSyncing(false);
+    }
+  }, [jwt, scanRecordId]);
+
   const handleForceSync = useCallback(() => {
     if (!hasHeader || !allMapped || !hasAmount) return;
     void handleSync(true);
@@ -699,7 +722,12 @@ export default function VendorCreditPreviewForm({
           {error}
         </div>
       )}
-      {syncResult && (
+      {approvalSubmitted ? (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 mt-4">
+          <div className="text-blue-800 font-semibold">✅ Submitted for Approval</div>
+          <div className="text-blue-600 text-sm mt-1">Your sync is pending manager review.</div>
+        </div>
+      ) : syncResult && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs rounded-lg px-3 py-2 space-y-1.5">
           <div>{syncResult.skipped ? '✅ Vendor Credit already synced' : '✅ Vendor Credit created'} — <span className="font-mono">{syncResult.id}</span></div>
           {syncResult.docNumber && <div>Credit # {syncResult.docNumber}</div>}
@@ -732,19 +760,19 @@ export default function VendorCreditPreviewForm({
         </button>
         <button
           type="button"
-          onClick={() => void handleSync()}
+          onClick={canSyncDirectly ? () => void handleSync() : () => void handleSubmitForApproval()}
           disabled={syncing || !hasHeader || !allMapped || !hasAmount}
           className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
-            ? 'Syncing Vendor Credit…'
+            ? (canSyncDirectly ? 'Syncing Vendor Credit…' : 'Submitting…')
             : !hasHeader
               ? '⚠️ Vendor and AP account required'
               : !hasAmount
                 ? '⚠️ Add credit amounts'
                 : !allMapped
                   ? '⚠️ Assign all line accounts'
-                  : '⚡ Sync Vendor Credit to QuickBooks'}
+                  : (canSyncDirectly ? '⚡ Sync Vendor Credit to QuickBooks' : '📋 Submit for Approval')}
         </button>
       </div>
     </div>

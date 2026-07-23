@@ -626,6 +626,15 @@ export const api = {
       jwt,
     ),
 
+  submitScanForApproval: (jwt: string, scanId: string) =>
+    post<{ id: string; status: string }>(`/api/scans/${scanId}/submit`, {}, jwt),
+
+  approveScan: (jwt: string, scanId: string) =>
+    post<{ id: string; status: string }>(`/api/scans/${scanId}/approve`, {}, jwt),
+
+  rejectScan: (jwt: string, scanId: string, notes?: string) =>
+    post<{ id: string; status: string }>(`/api/scans/${scanId}/reject`, notes ? { notes } : {}, jwt),
+
   getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
   getOutstandingBills: (jwt: string, vendorId?: string) =>
     get<{ bills: OutstandingBill[] }>(`/api/quickbooks/bills${vendorId ? `?vendorId=${vendorId}` : ''}`, jwt),
