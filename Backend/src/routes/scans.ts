@@ -5,6 +5,8 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { logAction } from '../middleware/audit';
+import { validate } from '../middleware/validate';
+import { scanSubmitSchema, scanApproveSchema, scanRejectSchema, scanCreateSchema } from '../lib/validators';
 import type { Prisma } from '@prisma/client';
 import { ScanRawData } from '../types';
 import { prisma } from '../lib/prisma';
@@ -54,7 +56,7 @@ router.use(authenticate, enforceEffectiveRole);
 
 // ── POST /api/scans ───────────────────────────────────────────────────────────
 // Save raw Toast POS scan data for a location
-router.post('/', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { locationId, scanDate, rawData, rawScanEntry, source, transactionType } = req.body as {
       locationId?: string;
@@ -218,7 +220,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
   }
 }));
 
-router.post('/:id/submit', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/submit', requireFeaturePermission('scan', 'write'), validate(scanSubmitSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params['id']);
   const userId = req.user!.userId;
 
@@ -254,7 +256,7 @@ router.post('/:id/submit', requireFeaturePermission('scan', 'write'), asyncHandl
   res.json(updated);
 }));
 
-router.post('/:id/approve', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/approve', requireFeaturePermission('drafts', 'execute'), validate(scanApproveSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params['id']);
   const userId = req.user!.userId;
 
@@ -286,7 +288,7 @@ router.post('/:id/approve', requireFeaturePermission('drafts', 'execute'), async
   res.json(updated);
 }));
 
-router.post('/:id/reject', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/reject', requireFeaturePermission('drafts', 'execute'), validate(scanRejectSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params['id']);
   const userId = req.user!.userId;
   const { notes } = req.body as { notes?: string };

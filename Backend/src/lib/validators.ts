@@ -38,13 +38,13 @@ export const passwordResetVerifySchema = z.object({
 export const teamInviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
-  role: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER']),
+  role: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER', 'MANAGER']),
   trialDays: z.number().int().min(1).max(365).optional(),
   customExpiryMessage: z.string().max(200).optional(),
 });
 
 export const inviteLinkSchema = z.object({
-  roleHint: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER', 'ADMIN']).optional(),
+  roleHint: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER', 'ADMIN', 'MANAGER']).optional(),
   expiresInHours: z.number().int().min(1).max(720).optional(),
   maxUses: z.number().int().min(1).max(100).optional(),
 });
@@ -217,3 +217,26 @@ export const journalEntrySchema = z.object({
   privateNote: z.string().optional(),
   docNumber: z.string().optional(),
 });
+
+export const scanSubmitSchema = z.object({}).strict();
+
+export const scanApproveSchema = z.object({}).strict();
+
+export const scanRejectSchema = z.object({
+  notes: z.string().max(500).optional(),
+}).strict();
+
+export const scanCreateSchema = z.object({
+  locationId: z.string().min(1),
+  scanDate: z.string().min(1),
+  rawData: z.unknown().optional(),
+  rawScanEntry: z.unknown().optional(),
+  source: z.string().max(100).optional(),
+  transactionType: z.string().max(50).optional(),
+}).strict();
+
+export const teamAllocationSchema = z.object({
+  allocatedScans: z.number().int().min(0).nullable().optional(),
+  allocatedLocations: z.number().int().min(0).nullable().optional(),
+  allocatedTemplates: z.number().int().min(0).nullable().optional(),
+}).strict();

@@ -8,7 +8,7 @@ import { requireCapacity } from '../middleware/capacity';
 import { prisma } from '../lib/prisma';
 import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
 import { validate } from '../middleware/validate';
-import { teamInviteSchema, patchTeamMemberSchema, inviteLinkSchema } from '../lib/validators';
+import { teamInviteSchema, patchTeamMemberSchema, inviteLinkSchema, teamAllocationSchema } from '../lib/validators';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { logAction } from '../middleware/audit';
 import { createInviteLink } from '../utils/invite.utils';
@@ -613,7 +613,7 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
   }
 }))
 
-router.patch('/team/:id/allocation', requireRole('ADMIN'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/team/:id/allocation', requireRole('ADMIN'), validate(teamAllocationSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const adminId = req.user!.userId;
     const userId = String(req.params['id']);
