@@ -240,3 +240,81 @@ export const teamAllocationSchema = z.object({
   allocatedLocations: z.number().int().min(0).nullable().optional(),
   allocatedTemplates: z.number().int().min(0).nullable().optional(),
 }).strict();
+
+export const locationCreateSchema = z.object({
+  name: z.string().min(1).max(200),
+  posUrl: z.string().max(500).optional(),
+}).strict();
+
+export const locationUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  posUrl: z.string().max(500).optional(),
+  isActive: z.boolean().optional(),
+  memoTemplate: z.string().max(1000).optional(),
+  docNumberTemplate: z.string().max(200).optional(),
+}).strict();
+
+export const importTemplateSchema = z.object({
+  mappings: z.array(z.record(z.string(), z.unknown())).optional(),
+  rules: z.array(z.record(z.string(), z.unknown())).optional(),
+  memoTemplate: z.string().max(1000).optional(),
+  docNumberTemplate: z.string().max(200).optional(),
+  mode: z.enum(['replace', 'merge']).optional(),
+  templateId: z.string().optional(),
+}).strict();
+
+export const mappingCreateSchema = z.object({
+  sourceField: z.string().min(1),
+  targetAccount: z.string().min(1),
+  postingType: z.string().optional(),
+  keepSeparate: z.boolean().optional(),
+  targetClass: z.string().max(200).optional(),
+  targetName: z.string().max(500).optional(),
+  targetDescription: z.string().max(1000).optional(),
+  targetMemo: z.string().max(1000).optional(),
+  priority: z.number().int().optional(),
+  conditions: z.unknown().optional(),
+  templateId: z.string().optional(),
+}).strict();
+
+export const ruleCreateSchema = z.object({
+  name: z.string().min(1).max(200),
+  ruleType: z.enum(['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA']),
+  config: z.record(z.string(), z.unknown()),
+  isActive: z.boolean().optional(),
+  templateId: z.string().nullable().optional(),
+}).strict();
+
+export const templateCreateSchema = z.object({
+  locationId: z.string().min(1),
+  name: z.string().min(1).max(200),
+  transactionType: z.string().max(50).optional(),
+  scanMode: z.string().max(50).optional(),
+  posSystem: z.string().max(50).nullable().optional(),
+  memoTemplate: z.string().max(1000).optional(),
+  docNumberTemplate: z.string().max(200).optional(),
+  defaults: z.record(z.string(), z.unknown()).nullable().optional(),
+  columnMappings: z.record(z.string(), z.unknown()).nullable().optional(),
+}).strict();
+
+export const templateUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  scanMode: z.string().max(50).optional(),
+  posSystem: z.string().max(50).nullable().optional(),
+  memoTemplate: z.string().max(1000).nullable().optional(),
+  docNumberTemplate: z.string().max(200).nullable().optional(),
+  isActive: z.boolean().optional(),
+  defaults: z.record(z.string(), z.unknown()).nullable().optional(),
+  columnMappings: z.record(z.string(), z.unknown()).nullable().optional(),
+}).strict();
+
+export const locationTemplateCreateSchema = z.object({
+  name: z.string().min(1).max(200),
+  transactionType: z.string().max(50).optional(),
+  scanMode: z.string().max(50).optional(),
+  posSystem: z.string().max(50).nullable().optional(),
+  memoTemplate: z.string().max(1000).optional(),
+  docNumberTemplate: z.string().max(200).optional(),
+  defaults: z.record(z.string(), z.unknown()).nullable().optional(),
+  columnMappings: z.record(z.string(), z.unknown()).nullable().optional(),
+}).strict();

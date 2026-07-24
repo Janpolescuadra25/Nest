@@ -7,7 +7,9 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { requireCapacity } from '../middleware/capacity';
+import { validate } from '../middleware/validate';
 import { prisma } from '../lib/prisma';
+import { templateCreateSchema, templateUpdateSchema, locationTemplateCreateSchema } from '../lib/validators';
 
 function sheetToArrays(worksheet: Excel.Worksheet, defval: string = ''): string[][] {
   const rows: string[][] = [];
@@ -105,7 +107,7 @@ router.get('/', requireFeaturePermission('templates', 'read'), asyncHandler(asyn
   res.json(templates);
 }));
 
-router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), validate(templateCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const body = req.body as {
     locationId?: string;
     name?: string;
@@ -317,7 +319,7 @@ router.get('/:id', requireFeaturePermission('templates', 'read'), asyncHandler(a
   res.json(template);
 }));
 
-router.put('/:id', requireFeaturePermission('templates', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('templates', 'write'), validate(templateUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const template = await getTemplateOrFail(String(req.params.id), req.user);
   const body = req.body as {
     name?: string;
@@ -376,7 +378,7 @@ export function createLocationTemplateRouter() {
     res.json(templates);
   }));
 
-  locationRouter.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  locationRouter.post('/', requireFeaturePermission('templates', 'write'), requireCapacity('template'), validate(locationTemplateCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const locationId = String(req.params.id);
     await getLocationOrFail(locationId, req.user);
     const body = req.body as {
@@ -441,7 +443,7 @@ export function createLocationTemplateRouter() {
     res.json(template);
   }));
 
-  locationRouter.put('/:templateId', requireFeaturePermission('templates', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  locationRouter.put('/:templateId', requireFeaturePermission('templates', 'write'), validate(templateUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const locationId = String(req.params.id);
     const templateId = String(req.params.templateId);
     await getLocationOrFail(locationId, req.user);

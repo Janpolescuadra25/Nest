@@ -8,6 +8,8 @@ import type { Prisma } from '@prisma/client';
 import { createLocationTemplateRouter } from './templates';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validateMappingConditions } from '../lib/validate-conditions';
+import { validate } from '../middleware/validate';
+import { locationCreateSchema, locationUpdateSchema, importTemplateSchema, mappingCreateSchema, ruleCreateSchema } from '../lib/validators';
 
 const router = Router();
 
@@ -54,7 +56,7 @@ router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<voi
 }))
 
 // ── POST /api/locations ───────────────────────────────────────────────────────
-router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity('location'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity('location'), validate(locationCreateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { name, posUrl = '' } = req.body as { name?: string; posUrl?: string };
 
@@ -103,7 +105,7 @@ router.get('/:id', asyncHandler(async(req: AuthRequest, res: Response): Promise<
 }))
 
 // ── PUT /api/locations/:id ────────────────────────────────────────────────────
-router.put('/:id', requireFeaturePermission('locations', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('locations', 'write'), validate(locationUpdateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const existing = await prisma.location.findFirst({
@@ -162,7 +164,7 @@ router.delete('/:id', requireFeaturePermission('locations', 'write'), asyncHandl
 }))
 
 // ── POST /api/locations/:id/import-template ──────────────────────────────────
-router.post('/:id/import-template', requireFeaturePermission('map', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/import-template', requireFeaturePermission('map', 'write'), validate(importTemplateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = req.params['id'] as string;
     const lf = locationFilter(req.user!);
@@ -325,7 +327,7 @@ router.get('/:id/mappings', asyncHandler(async(req: AuthRequest, res: Response):
 }))
 
 // ── POST /api/locations/:id/mappings ──────────────────────────────────────────
-router.post('/:id/mappings', requireFeaturePermission('map', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/mappings', requireFeaturePermission('map', 'write'), validate(mappingCreateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({
@@ -442,7 +444,7 @@ router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Pr
 }))
 
 // ── POST /api/locations/:id/rules ─────────────────────────────────────────────
-router.post('/:id/rules', requireFeaturePermission('rules', 'write'), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
+router.post('/:id/rules', requireFeaturePermission('rules', 'write'), validate(ruleCreateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const location = await prisma.location.findFirst({

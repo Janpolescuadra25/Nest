@@ -190,7 +190,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
 }));
 
 // ── GET /api/invite/:token  (Public — view invite details) ───────────────────
-router.get('/:token', asyncHandler(async (req: Request, res: Response) => {
+router.get('/:token', authLimiter, asyncHandler(async (req: Request, res: Response) => {
   const wantsHtml = req.headers.accept?.includes('text/html') &&
                     !req.headers.accept?.includes('application/json');
   if (wantsHtml) {

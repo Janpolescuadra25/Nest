@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { AppError, asyncHandler } from '../lib/errors';
 import { randomBytes } from 'crypto';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
+import { authLimiter } from '../middleware/rate-limit';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
 import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem, BillPaymentLine } from '../types';
@@ -73,7 +74,7 @@ router.get('/auth-url', authenticate, asyncHandler(async(req: AuthRequest, res: 
 // ── GET /api/quickbooks/callback ──────────────────────────────────────────────
 // Browser redirect from Intuit — NO Authorization header.
 // Uses the DB-persisted state to identify the user.
-router.get('/callback', asyncHandler(async(req: Request, res: Response) => {
+router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Response) => {
   const { code, realmId, state, error } = req.query as {
     code?: string; realmId?: string; state?: string; error?: string;
   };
