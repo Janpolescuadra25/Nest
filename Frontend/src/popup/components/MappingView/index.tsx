@@ -386,6 +386,13 @@ export default function MappingView({
     }));
   }, [scanData]);
 
+  const unmappedCount = useMemo(() => {
+    if (!scanData) return 0;
+    return Object.keys(scanData).filter(
+      (field) => !localMappings.some((mapping) => mapping.sourceField === field),
+    ).length;
+  }, [scanData, localMappings]);
+
   const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
@@ -1584,6 +1591,11 @@ export default function MappingView({
             {selectedTemplate && !showNewTemplateForm && (
               <div className="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-200 overflow-hidden text-ellipsis whitespace-nowrap">
                 {TRANSACTION_TYPE_LABELS[selectedTemplate.transactionType] ?? selectedTemplate.transactionType}
+              </div>
+            )}
+            {unmappedCount > 0 && (
+              <div className="text-xs bg-amber-50 text-amber-900 border border-amber-200 px-3 py-1.5 rounded-lg">
+                {unmappedCount} field{unmappedCount !== 1 ? 's' : ''} unmapped
               </div>
             )}
             {templates.length > 1 && (
