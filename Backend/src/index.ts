@@ -85,14 +85,14 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      // TODO: Refactor inline scripts in reset-password and verify-email HTML pages to external files to remove 'unsafe-inline'
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
       imgSrc: ["'self'", 'data:'],
       fontSrc: ["'self'"],
       connectSrc: ["'self'"],
     },
   },
 }));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ── Health Check — before globalLimiter so Render's poller is never 429'd ──
 app.get('/health', async (_req, res) => {

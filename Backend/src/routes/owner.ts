@@ -10,6 +10,7 @@ import { logAction } from '../middleware/audit';
 import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validate } from '../middleware/validate';
+import { teamAllocationSchema } from '../lib/validators';
 
 const router = Router();
 
@@ -199,7 +200,7 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
 }))
 
 // ── PUT /api/owner/admins/:id/members/:userId/allocation ──────────────────────
-router.put('/admins/:id/members/:userId/allocation', asyncHandler(async(req: AuthRequest, res: Response) => {
+router.put('/admins/:id/members/:userId/allocation', validate(teamAllocationSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const adminId = String(req.params['id']);
     const userId = String(req.params['userId']);
