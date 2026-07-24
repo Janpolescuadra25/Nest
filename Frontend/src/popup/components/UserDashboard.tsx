@@ -84,6 +84,8 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
     ? Math.ceil((new Date(user.trialExpiresAt).getTime() - Date.now()) / 86400000)
     : null;
 
+  const canApprove = ['MANAGER', 'ADMIN', 'OWNER'].includes(user.role);
+
   return (
     <div className="p-4 space-y-3">
       <div className="bg-white border border-gray-200 rounded-lg p-3">
@@ -93,6 +95,14 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
       {scanHealth && (
         <div className="bg-white border border-gray-200 rounded-lg p-3">
           <ScannerHealthCard scanHealth={scanHealth} days={healthDays} onDaysChange={setHealthDays} />
+        </div>
+      )}
+
+      {scanHealth && canApprove && scanHealth.pendingApprovalScans > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="text-sm font-medium text-blue-700">Pending Approval</div>
+          <div className="mt-2 text-3xl font-bold text-blue-900">{scanHealth.pendingApprovalScans}</div>
+          <div className="text-xs text-blue-600">scans awaiting approval</div>
         </div>
       )}
 

@@ -405,6 +405,7 @@ export interface ScanHealth {
   failedScans: number;
   pendingScans: number;
   mappedScans: number;
+  pendingApprovalScans: number;
   successRate: number;
   lastScanAt: string | null;
   lastSuccessAt: string | null;
