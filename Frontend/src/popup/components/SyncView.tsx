@@ -10,6 +10,17 @@ import { buildBillLikePayload, buildChequePayload } from '../lib/batch-payload-b
 import type { BatchSyncItem, ScanRecord, ScanEntry } from '../../types';
 import { TRANSACTION_TYPE_LABELS } from '../../types';
 
+const STATUS_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'All Statuses' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'MAPPED', label: 'Mapped' },
+  { value: 'PENDING_APPROVAL', label: 'Pending Approval' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'SYNCED', label: 'Synced' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
+
 interface Props {
   jwt: string;
   selectedLocationId: string;
@@ -48,6 +59,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [isRetryingAll, setIsRetryingAll] = useState(false);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -335,11 +347,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   };
 
   const safeScans = scans ?? [];
-  const filteredScans = sourceFilter === 'all'
-    ? safeScans
-    : safeScans.filter((s) => (s.source ?? 'pos').toLowerCase() === sourceFilter);
+  const filteredScans = safeScans.filter((s) => {
+    if (sourceFilter !== 'all' && (s.source ?? 'pos').toLowerCase() !== sourceFilter) return false;
+    if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
+    return true;
+  });
   const totalSynced = safeScans.filter((s) => s.status === 'SYNCED').length;
   const totalFailed = safeScans.filter((s) => s.status === 'FAILED').length;
+  const totalPendingApproval = safeScans.filter((s) => s.status === 'PENDING_APPROVAL').length;
   const totalPending = safeScans.filter((s) => s.status === 'PENDING' || s.status === 'MAPPED').length;
   const staleCount = safeScans.filter((s) => getScanAttention(s) === 'stale').length;
   const maxRetriedCount = safeScans.filter((s) => getScanAttention(s) === 'max-retried').length;
@@ -355,7 +370,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   return (
     <div className="p-3 space-y-3">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
           <div className="text-2xl font-bold text-gray-900">{safeScans.length}</div>
           <div className="text-xs text-gray-600 mt-0.5">Total Scans</div>
@@ -368,6 +383,12 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           <div className="text-2xl font-bold text-red-600">{totalFailed}</div>
           <div className="text-xs text-gray-600 mt-0.5">Failed</div>
         </div>
+        {totalPendingApproval > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-blue-600">{totalPendingApproval}</div>
+            <div className="text-xs text-blue-500">Pending Approval</div>
+          </div>
+        )}
       </div>
 
       {/* Location picker */}
@@ -448,7 +469,16 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <option value="image">Image Only</option>
             <option value="pdf">PDF Only</option>
           </select>
-          {sourceFilter !== 'all' && (
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+          >
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {(sourceFilter !== 'all' || statusFilter !== 'ALL') && (
             <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
             </span>
@@ -666,6 +696,12 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                                   {entry.lineItems && entry.lineItems.length > 0 && (
                                     <div className="mt-1 text-xs text-gray-600">
                                       {entry.lineItems.length} line item{entry.lineItems.length !== 1 ? 's' : ''}
+                                    </div>
+                                  )}
+                                  {scan.status === 'REJECTED' && scan.approvalNotes && (
+                                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                      <div className="text-xs font-semibold text-red-700 mb-1">Rejection Reason:</div>
+                                      <div className="text-sm text-red-600">{scan.approvalNotes}</div>
                                     </div>
                                   )}
                                 </div>
