@@ -1,11 +1,13 @@
-export class QBApiError extends Error {
+import { AppError } from './errors';
+
+export class QBApiError extends AppError {
   constructor(
     message: string,
     public statusCode: number,
     public qbErrorCode?: string,
     public intuitTid?: string,
   ) {
-    super(message);
+    super(message, statusCode);
     this.name = 'QBApiError';
   }
 
