@@ -63,7 +63,7 @@ export function useToast(): ToastContextValue {
 // ── Toast Item ────────────────────────────────────────────────────────────────
 
 const BORDER_COLOR: Record<ToastType, string> = {
-  success: 'border-l-4 border-green-500',
+  success: 'border-l-4 border-emerald-500',
   error:   'border-l-4 border-red-500',
   info:    'border-l-4 border-emerald-500',
 };

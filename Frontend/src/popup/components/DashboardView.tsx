@@ -280,7 +280,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
 
       {showCelebration && (
         <div
-          className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-center cursor-pointer"
+          className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-4 text-center cursor-pointer"
           onClick={() => setShowCelebration(false)}
           role="button"
           tabIndex={0}

@@ -932,7 +932,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             setShowSyncConfirm(true);
           } : () => void handleSubmitForApproval()}
           disabled={syncing || !isBalanced || !allMapped || effectiveDisplayLines.every((l) => !l.accountId)}
-          className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
+          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-200 disabled:text-gray-600 text-white text-sm font-bold rounded-lg transition-colors"
         >
           {syncing
             ? (canSyncDirectly ? 'Syncing to QuickBooks…' : 'Submitting…')

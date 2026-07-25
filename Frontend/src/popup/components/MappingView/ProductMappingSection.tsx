@@ -536,7 +536,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                     {testResults.map((result) => (
                       <div key={result.mappingId} className="flex items-center justify-between text-xs rounded px-3 py-2 bg-white">
                         <div className="flex items-center gap-2">
-                          <span className={`w-1.5 h-1.5 rounded-full ${result.matched ? 'bg-green-400' : 'bg-gray-600'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full ${result.matched ? 'bg-emerald-400' : 'bg-gray-600'}`} />
                           <span className="text-gray-700">{result.productName}</span>
                         </div>
                         <div className="flex items-center gap-3">
