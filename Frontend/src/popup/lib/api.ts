@@ -22,6 +22,15 @@ async function headers(jwt?: string | null): Promise<Record<string, string>> {
 
 async function parseResponse<T>(res: Response, path: string): Promise<T> {
   const payload = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+
+  // 401 auto-logout — JWT expired mid-session
+  if (res.status === 401) {
+    chrome.storage.local.remove(['jwt'], () => {
+      chrome.runtime.reload();
+    });
+    throw new ApiError('Your session has expired. Please log in again.', 401, payload);
+  }
+
   if (!res.ok) {
     const message = payload?.error ?? `API ${path} failed`;
     throw new ApiError(message, res.status, payload);
