@@ -233,16 +233,16 @@ async function scanDailyOperations(): Promise<Record<string, number>> {
 // ---------------------------------------------------------------------------
 
 if ((globalThis as unknown as Record<string, boolean>).__oracleScannerLoaded) {
-  console.log('[Oracle Scanner] Already loaded, skipping duplicate registration');
+  if (process.env.NODE_ENV !== 'production') console.log('[Oracle Scanner] Already loaded, skipping duplicate registration');
 } else {
   (globalThis as unknown as Record<string, boolean>).__oracleScannerLoaded = true;
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== 'REQUEST_SCAN') return false;
-    console.log('[Oracle Scanner] REQUEST_SCAN received');
+    if (process.env.NODE_ENV !== 'production') console.log('[Oracle Scanner] REQUEST_SCAN received');
     (async () => {
       try {
         const data = await scanDailyOperations();
-        console.log(`[Oracle Scanner] Extracted ${Object.keys(data).length} fields`);
+        if (process.env.NODE_ENV !== 'production') console.log(`[Oracle Scanner] Extracted ${Object.keys(data).length} fields`);
         sendResponse({ data });
       } catch (err) {
         console.error('[Oracle Scanner] Scan error:', err);
@@ -253,4 +253,4 @@ if ((globalThis as unknown as Record<string, boolean>).__oracleScannerLoaded) {
   });
 }
 
-console.log('[Oracle Scanner] Content script loaded on', window.location.href);
+if (process.env.NODE_ENV !== 'production') console.log('[Oracle Scanner] Content script loaded on', window.location.href);

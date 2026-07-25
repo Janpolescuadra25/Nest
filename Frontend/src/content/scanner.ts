@@ -362,7 +362,7 @@ function scanSalesSummary(): Record<string, number> {
 // ---------------------------------------------------------------------------
 
 if ((globalThis as unknown as Record<string, boolean>).__toastScannerLoaded) {
-  console.log('[Toast Scanner] Already loaded, skipping duplicate registration');
+  if (process.env.NODE_ENV !== 'production') console.log('[Toast Scanner] Already loaded, skipping duplicate registration');
 } else {
   (globalThis as unknown as Record<string, boolean>).__toastScannerLoaded = true;
   chrome.runtime.onMessage.addListener((message: { type: string }, _sender, sendResponse) => {
