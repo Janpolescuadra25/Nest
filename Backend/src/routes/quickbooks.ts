@@ -245,6 +245,13 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
       throw new AppError('txnDate and lines[] are required', 400);
     }
 
+    if (!scanRecordId) {
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner) {
+        throw new AppError('Only admins and owners can sync without an approved scan record', 403);
+      }
+    }
+
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
@@ -349,6 +356,13 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
 
     if (!txnDate || !lines || !Array.isArray(lines) || lines.length === 0 || !vendorRef?.value || !apAccountRef?.value) {
       throw new AppError('txnDate, vendorRef, apAccountRef and lines[] are required', 400);
+    }
+
+    if (!scanRecordId) {
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner) {
+        throw new AppError('Only admins and owners can sync without an approved scan record', 403);
+      }
     }
 
     if (scanRecordId) {
@@ -458,6 +472,13 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       throw new AppError('vendorRef, txnDate, apAccountRef and lines[] are required', 400);
     }
 
+    if (!scanRecordId) {
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner) {
+        throw new AppError('Only admins and owners can sync without an approved scan record', 403);
+      }
+    }
+
     if (scanRecordId) {
       const scan = await prisma.scanRecord.findUnique({
         where: { id: scanRecordId },
@@ -563,6 +584,13 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
 
     if (!txnDate || !bankAccountRef?.value || !payeeRef?.value || amount === undefined || amount === null || amount <= 0 || !lines || !Array.isArray(lines) || lines.length === 0) {
       throw new AppError('txnDate, bankAccountRef, payeeRef, amount and lines[] are required', 400);
+    }
+
+    if (!scanRecordId) {
+      const isAdminOrOwner = req.user!.role === 'ADMIN' || req.user!.role === 'OWNER';
+      if (!isAdminOrOwner) {
+        throw new AppError('Only admins and owners can sync without an approved scan record', 403);
+      }
     }
 
     if (scanRecordId) {
