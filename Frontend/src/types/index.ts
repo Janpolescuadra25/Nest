@@ -63,7 +63,7 @@ export interface Template {
   locationId: string;
   name: string;
   transactionType: string;
-  scanMode?: ScanMode;
+  scanModes?: ScanMode[];
   posSystem?: string | null;
   lineType: string;
   version: number;

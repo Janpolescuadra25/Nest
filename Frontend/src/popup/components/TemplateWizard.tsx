@@ -120,12 +120,12 @@ export default function TemplateWizard({
       const data: {
         name: string;
         transactionType: string;
-        scanMode: ScanMode;
+        scanModes: ScanMode[];
         posSystem?: string;
       } = {
         name: name.trim(),
         transactionType,
-        scanMode,
+        scanModes: [scanMode],
       };
 
       if (scanMode === 'POS') {

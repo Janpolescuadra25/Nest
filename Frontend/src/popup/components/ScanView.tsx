@@ -181,17 +181,19 @@ export default function ScanView({
   const previousScanModeRef = useRef<ScanSource>(scanMode);
   const isInitialMount = useRef(true);
 
-  const templateScanMode = selectedTemplate?.scanMode;
+  const templateScanModes = selectedTemplate?.scanModes;
   const templatePosSystem = selectedTemplate?.posSystem;
-  const visibleScanModes: ScanSource[] = templateScanMode
-    ? [templateScanMode.toLowerCase() as ScanSource]
+  const visibleScanModes: ScanSource[] = templateScanModes
+    ? templateScanModes.map((m) => m.toLowerCase() as ScanSource)
     : ['pos', 'excel', 'image'];
 
   useEffect(() => {
-    if (templateScanMode && visibleScanModes.length === 1) {
-      setScanMode(visibleScanModes[0]);
+    if (templateScanModes && templateScanModes.length > 0) {
+      if (!visibleScanModes.includes(scanMode)) {
+        setScanMode(visibleScanModes[0]);
+      }
     }
-  }, [templateScanMode, visibleScanModes]);
+  }, [templateScanModes, visibleScanModes, scanMode]);
 
   // Load cached scan data and detect POS tab on mount
   useEffect(() => {

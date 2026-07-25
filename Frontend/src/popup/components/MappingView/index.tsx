@@ -397,10 +397,10 @@ export default function MappingView({
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
   const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
   const activeScanMode = useMemo(() => {
-    if (selectedTemplate?.scanMode) return selectedTemplate.scanMode;
     if (activeScanEntry?.source) return sourceToScanMode(activeScanEntry.source);
+    if (selectedTemplate?.scanModes?.[0]) return selectedTemplate.scanModes[0];
     return 'IMAGE' as const;
-  }, [selectedTemplate?.scanMode, activeScanEntry?.source]);
+  }, [selectedTemplate?.scanModes, activeScanEntry?.source]);
   const hasProductNameColumn = useMemo(() => {
     if (!selectedTemplate?.columnMappings) return false;
     try {
@@ -1573,7 +1573,7 @@ export default function MappingView({
             >
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
-                  {template.name} ({TRANSACTION_TYPE_LABELS[template.transactionType] ?? template.transactionType}) [{template.scanMode}{template.posSystem && template.posSystem !== 'generic' ? ` · ${template.posSystem}` : ''}]
+                  {template.name} ({TRANSACTION_TYPE_LABELS[template.transactionType] ?? template.transactionType}) [{template.scanModes?.join('/') ?? ''}{template.posSystem && template.posSystem !== 'generic' ? ` · ${template.posSystem}` : ''}]
                 </option>
               ))}
             </select>
