@@ -172,6 +172,7 @@ export default function ScanView({
   const [aiScanError, setAiScanError] = useState<string | null>(null);
   const [aiConfidence, setAiConfidence] = useState<{ confidence: number; reasoning: string; posType: string | null } | null>(null);
   const [capturedScreenshot, setCapturedScreenshot] = useState<File | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<{ fileName: string; storageKey: string; fileSize: number; mimeType: string } | null>(null);
   const [scanPackModalOpen, setScanPackModalOpen] = useState(false);
   const [scanPacks, setScanPacks] = useState<ScanPack[]>([]);
   const [scanPackLoading, setScanPackLoading] = useState<string | null>(null);
@@ -382,6 +383,7 @@ export default function ScanView({
   };
 
   const scanKnownPOSTab = async (tab: chrome.tabs.Tab, posType: string, posName: string) => {
+    setPendingAttachment(null);
     setScanning(true);
     setError(null);
     setIsScanLimit(false);
@@ -426,6 +428,7 @@ export default function ScanView({
               new Date().toISOString().split('T')[0],
               response.data,
               selectedTemplate?.transactionType,
+              pendingAttachment ?? undefined,
             );
             if (scanRecord?.id && onScanRecordId) {
               onScanRecordId(scanRecord.id);
@@ -456,6 +459,7 @@ export default function ScanView({
       return;
     }
 
+    setPendingAttachment(null);
     setCapturedScreenshot(null);
     setAiScanning(true);
     setAiScanError(null);
@@ -473,6 +477,8 @@ export default function ScanView({
       const file = new File([blob], 'pos-tab.png', { type: blob.type || 'image/png' });
       setCapturedScreenshot(file);
       const response = await api.parsePOSTab(jwt, file, tab.url ?? undefined);
+      const attachment = response.attachment ?? null;
+      setPendingAttachment(attachment);
 
       if (!response.detection.isPOS || !response.data) {
         const message = response.detection.reasoning || 'This tab does not appear to contain a POS report.';
@@ -503,6 +509,7 @@ export default function ScanView({
             new Date().toISOString().split('T')[0],
             response.data.rawData,
             selectedTemplate?.transactionType,
+            attachment,
           );
           if (scanRecord?.id && onScanRecordId) {
             onScanRecordId(scanRecord.id);
@@ -525,6 +532,7 @@ export default function ScanView({
   };
 
   const handleFallbackDocumentScan = async (file: File) => {
+    setPendingAttachment(null);
     setAiScanError(null);
     setScanMode('image');
     setCapturedScreenshot(null);
@@ -533,6 +541,7 @@ export default function ScanView({
 
     try {
       const parsed = await api.parseDocumentAI(jwt, file);
+      setPendingAttachment(parsed.attachment ?? null);
       setDocumentClassification(parsed.classification);
       setOcrConfidence(null);
       setInvoiceFile(file);
@@ -605,6 +614,7 @@ export default function ScanView({
     chrome.storage.local.remove(['lastScanData']);
     setScanEntries([]);
     setActiveScanEntryId(null);
+    setPendingAttachment(null);
     setUploadedExcelFile(null);
     setExcelPreviewSheets([]);
     setExcelPreviewSheetName('');
@@ -649,6 +659,7 @@ export default function ScanView({
   };
 
   const handleRescan = async () => {
+    setPendingAttachment(null);
     setScanning(true);
     setError(null);
     setIsScanLimit(false);
@@ -707,6 +718,7 @@ export default function ScanView({
                 new Date().toISOString().split('T')[0],
                 response.data,
                 selectedTemplate?.transactionType,
+                pendingAttachment ?? undefined,
               );
               if (process.env.NODE_ENV !== 'production') {
               }
@@ -908,7 +920,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined).catch(() => {
         showToast('Failed to save scanned invoice data', 'error');
       });
     }
@@ -947,7 +959,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType).catch(() => {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined).catch(() => {
         showToast('Failed to save scanned check data', 'error');
       });
     }
@@ -1018,6 +1030,7 @@ export default function ScanView({
               entry,
               'excel',
               selectedTemplate?.transactionType,
+              pendingAttachment ?? undefined,
             );
             savedCount++;
           } catch (saveErr) {

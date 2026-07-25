@@ -2,6 +2,7 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import path from 'path';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
+import { uploadFile, deleteFile, getPresignedUrl } from '../lib/storage';
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { logAction } from '../middleware/audit';
@@ -58,13 +59,14 @@ router.use(authenticate, enforceEffectiveRole);
 // Save raw Toast POS scan data for a location
 router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { locationId, scanDate, rawData, rawScanEntry, source, transactionType } = req.body as {
+    const { locationId, scanDate, rawData, rawScanEntry, source, transactionType, attachment } = req.body as {
       locationId?: string;
       scanDate?: string;
       rawData?: ScanRawData;
       rawScanEntry?: unknown;
       source?: string;
       transactionType?: string;
+      attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string };
     };
     validateTransactionType(transactionType);
 
@@ -103,6 +105,18 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
         ...(transactionType ? { transactionType } : {}),
       },
     });
+
+    if (attachment) {
+      await prisma.attachment.create({
+        data: {
+          scanRecordId: scan.id,
+          fileName: attachment.fileName,
+          storageKey: attachment.storageKey,
+          fileSize: attachment.fileSize,
+          mimeType: attachment.mimeType,
+        },
+      });
+    }
 
     res.status(201).json(scan);
   } catch (err) {
@@ -223,6 +237,34 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
   }
 }));
 
+router.get('/:id/attachment-url', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params['id']);
+    const attachment = await prisma.attachment.findFirst({
+      where: {
+        scanRecord: {
+          id,
+          location: {
+            ...locationFilter(req.user!),
+          },
+        },
+      },
+      select: { storageKey: true },
+    });
+
+    if (!attachment) {
+      throw new AppError('Attachment not found', 404);
+    }
+
+    const url = await getPresignedUrl(attachment.storageKey);
+    res.json({ url });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Scans] attachment url error:', err);
+    throw new AppError('Failed to fetch attachment URL', 500);
+  }
+}));
+
 router.post('/:id/submit', requireFeaturePermission('scan', 'write'), validate(scanSubmitSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params['id']);
   const userId = req.user!.userId;
@@ -339,10 +381,19 @@ router.post(
       throw new AppError('No file uploaded', 400);
     }
 
+    let attachment: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null = null;
+    if (req.file) {
+      try {
+        attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
+      } catch (err) {
+        console.error('[storage] Failed to upload file:', err);
+      }
+    }
+
     try {
       await deductBonusScan(req.user!.adminId ?? req.user!.userId);
       const result = await parseInvoiceWithGemini(req.file.buffer, req.file.mimetype);
-      res.json({ success: true, data: result });
+      res.json({ success: true, attachment, data: result });
     } catch (err: any) {
       if (err instanceof AppError) throw err;
       if (err.message?.includes('GEMINI_API_KEY')) {
@@ -364,11 +415,21 @@ router.post(
       throw new AppError('No file uploaded', 400);
     }
 
+    let attachment: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null = null;
+    if (req.file) {
+      try {
+        attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
+      } catch (err) {
+        console.error('[storage] Failed to upload file:', err);
+      }
+    }
+
     try {
       await deductBonusScan(req.user!.adminId ?? req.user!.userId);
       const result = await parseDocumentWithGemini(req.file.buffer, req.file.mimetype);
       res.json({
         success: true,
+        attachment,
         data: {
           classification: result.classification,
           invoiceData: result.invoiceData,
@@ -407,15 +468,24 @@ router.post(
     }
     const tabUrl = typeof req.body.tabUrl === 'string' ? req.body.tabUrl : undefined;
 
+    let attachment: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null = null;
+    if (req.file) {
+      try {
+        attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
+      } catch (err) {
+        console.error('[storage] Failed to upload file:', err);
+      }
+    }
+
     const detection = await detectPOS(req.file.buffer, req.file.mimetype);
     if (!detection.isPOS) {
-      return res.json({ detection, data: null } as ParsePOSTabResponse);
+      return res.json({ detection, data: null, attachment } as ParsePOSTabResponse);
     }
 
     const posType = detection.posType || 'unknown_pos';
     const data = await parsePOSReport(req.file.buffer, req.file.mimetype, posType);
 
-    return res.json({ detection, data } as ParsePOSTabResponse);
+    return res.json({ detection, data, attachment } as ParsePOSTabResponse);
   })
 );
 

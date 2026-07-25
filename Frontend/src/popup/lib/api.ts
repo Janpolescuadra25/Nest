@@ -448,14 +448,15 @@ export const api = {
     };
     invoiceData: { header: Record<string, string>; lineItems: Record<string, string>[] } | null;
     chequeData: { chequeNumber: string; payeeName: string; amount: string; date: string; memo: string; bankName: string; lineItems: { description: string; amount: string }[] } | null;
+    attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null;
   }> => {
     const form = new FormData();
     form.append('file', file);
-    return postForm<{ success: boolean; data: { classification: { documentType: 'INVOICE' | 'CHEQUE' | 'POS_REPORT' | 'RECEIPT' | 'OTHER'; confidence: number; reasoning: string; }; invoiceData: { header: Record<string, string>; lineItems: Record<string, string>[] } | null; chequeData: { chequeNumber: string; payeeName: string; amount: string; date: string; memo: string; bankName: string; lineItems: { description: string; amount: string }[] } | null; } }>(
+    return postForm<{ success: boolean; attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null; data: { classification: { documentType: 'INVOICE' | 'CHEQUE' | 'POS_REPORT' | 'RECEIPT' | 'OTHER'; confidence: number; reasoning: string; }; invoiceData: { header: Record<string, string>; lineItems: Record<string, string>[] } | null; chequeData: { chequeNumber: string; payeeName: string; amount: string; date: string; memo: string; bankName: string; lineItems: { description: string; amount: string }[] } | null; } }>(
       '/api/scans/parse-document',
       form,
       jwt
-    ).then(res => res.data);
+    ).then((res: any) => ({ ...res.data, attachment: res.attachment ?? null }));
   },
 
   // ── Rules ──────────────────────────────────────────────────────────────────
@@ -481,11 +482,14 @@ export const api = {
     post<ImportResult>(`/api/locations/${locationId}/import-template`, data, jwt),
 
   // ── Scans ──────────────────────────────────────────────────────────────────
-  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData, transactionType?: string) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData, ...(transactionType ? { transactionType } : {}) }, jwt),
+  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}) }, jwt),
 
-  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}) }, jwt),
+  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}) }, jwt),
+
+  getScanAttachmentUrl: (jwt: string, scanId: string) =>
+    get<{ url: string }>(`/api/scans/${scanId}/attachment-url`, jwt),
 
   getScanPacks: (jwt: string) =>
     get<{ scanPacks: ScanPack[] }>('/api/checkout/scan-packs', jwt),
@@ -493,23 +497,23 @@ export const api = {
   createScanPackSession: (jwt: string, scanPack: string) =>
     post<{ url: string }>('/api/checkout/create-scan-pack-session', { scanPack }, jwt),
 
-  parseInvoiceAI: async (jwt: string, file: File): Promise<{ header: Record<string, string>; lineItems: Record<string, string>[] }> => {
+  parseInvoiceAI: async (jwt: string, file: File): Promise<{ header: Record<string, string>; lineItems: Record<string, string>[]; attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null }> => {
     const form = new FormData();
     form.append('file', file);
-    return postForm<{ success: boolean; data: { header: Record<string, string>; lineItems: Record<string, string>[] } }>(
+    return postForm<{ success: boolean; attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null; data: { header: Record<string, string>; lineItems: Record<string, string>[] } }>(
       '/api/scans/parse-invoice',
       form,
       jwt
-    ).then(res => res.data);
+    ).then((res: any) => ({ ...res.data, attachment: res.attachment ?? null }));
   },
 
-  parsePOSTab: async (jwt: string, file: File, tabUrl?: string): Promise<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null }> => {
+  parsePOSTab: async (jwt: string, file: File, tabUrl?: string): Promise<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null; attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null }> => {
     const form = new FormData();
     form.append('file', file);
     if (tabUrl) {
       form.append('tabUrl', tabUrl);
     }
-    return postForm<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null }>(
+    return postForm<{ detection: { isPOS: boolean; posType: string | null; confidence: number; reasoning: string }; data: { rawData: Record<string, number>; scanDate: string; totalSales: number; paymentBreakdown?: Record<string, number> } | null; attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null }>(
       '/api/scans/parse-pos-tab',
       form,
       jwt

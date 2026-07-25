@@ -299,12 +299,28 @@ model ScanRecord {
   submittedBy     User?      @relation("ScanSubmitter", fields: [submittedById], references: [id])
   approvedBy      User?      @relation("ScanApprover", fields: [approvedById], references: [id])
   syncLogs        SyncLog[]
+  attachments     Attachment[]
 
   @@index([locationId])
   @@index([status])
   @@index([createdAt])
   @@index([source])
   @@map("scan_records")
+}
+
+model Attachment {
+  id           String     @id @default(cuid())
+  scanRecordId String
+  scanRecord   ScanRecord @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  storageKey   String     @unique
+  fileSize     Int
+  mimeType     String
+
+  createdAt    DateTime   @default(now())
+
+  @@index([scanRecordId])
 }
 
 model ScanPackPurchase {

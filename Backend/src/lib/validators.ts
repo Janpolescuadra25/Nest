@@ -233,6 +233,12 @@ export const scanCreateSchema = z.object({
   rawScanEntry: z.unknown().optional(),
   source: z.string().max(100).optional(),
   transactionType: z.string().max(50).optional(),
+  attachment: z.object({
+    fileName: z.string(),
+    storageKey: z.string(),
+    fileSize: z.number(),
+    mimeType: z.string(),
+  }).optional(),
 }).strict();
 
 export const teamAllocationSchema = z.object({

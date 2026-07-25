@@ -210,4 +210,5 @@ export interface POSReportData {
 export interface ParsePOSTabResponse {
   detection: POSDetectionResult;
   data: POSReportData | null;
+  attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null;
 }
