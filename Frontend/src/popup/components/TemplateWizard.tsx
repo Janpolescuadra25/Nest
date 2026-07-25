@@ -56,6 +56,13 @@ const POS_SYSTEM_OPTIONS = [
   { value: 'salido', label: 'SALIDO' },
 ];
 
+const TRANSACTION_TYPE_SCAN_MODE_CONFIG: Record<string, { available: ScanMode[]; defaults: ScanMode[] }> = {
+  JOURNAL_ENTRY: { available: ['POS', 'EXCEL', 'IMAGE'], defaults: ['POS', 'EXCEL', 'IMAGE'] },
+  BILL:          { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE'] },
+  VENDOR_CREDIT: { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE'] },
+  CHEQUE:        { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE', 'EXCEL'] },
+};
+
 export default function TemplateWizard({
   isOpen,
   onClose,
@@ -66,7 +73,7 @@ export default function TemplateWizard({
   const { showToast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState('');
-  const [scanMode, setScanMode] = useState<ScanMode | ''>('');
+  const [scanModes, setScanModes] = useState<ScanMode[]>([]);
   const [posSystem, setPosSystem] = useState('');
   const [transactionType, setTransactionType] = useState<TransactionType | ''>('');
   const [isCreating, setIsCreating] = useState(false);
@@ -76,7 +83,7 @@ export default function TemplateWizard({
     if (!isOpen) {
       setStep(1);
       setName('');
-      setScanMode('');
+      setScanModes([]);
       setPosSystem('');
       setTransactionType('');
       setIsCreating(false);
@@ -85,25 +92,31 @@ export default function TemplateWizard({
   }, [isOpen]);
 
   useEffect(() => {
-    if (scanMode === 'POS' && step === 2) {
-      setTransactionType('JOURNAL_ENTRY');
+    if (step === 2 && transactionType) {
+      const config = TRANSACTION_TYPE_SCAN_MODE_CONFIG[transactionType];
+      if (config) {
+        setScanModes(config.defaults);
+        if (!config.defaults.includes('POS')) {
+          setPosSystem('');
+        }
+      }
     }
-  }, [scanMode, step]);
+  }, [step, transactionType]);
 
   const canContinue = useMemo(() => {
-    if (!name.trim() || !scanMode) return false;
-    if (scanMode === 'POS' && !posSystem) return false;
-    return true;
-  }, [name, scanMode, posSystem]);
+    return Boolean(name.trim() && transactionType);
+  }, [name, transactionType]);
 
   const canCreate = useMemo(() => {
-    return Boolean(transactionType);
-  }, [transactionType]);
+    if (scanModes.length === 0) return false;
+    if (scanModes.includes('POS') && !posSystem) return false;
+    return true;
+  }, [scanModes, posSystem]);
 
   const handleClose = () => {
     setStep(1);
     setName('');
-    setScanMode('');
+    setScanModes([]);
     setPosSystem('');
     setTransactionType('');
     setIsCreating(false);
@@ -112,7 +125,7 @@ export default function TemplateWizard({
   };
 
   const handleCreateTemplate = async () => {
-    if (!canCreate || !scanMode || !name.trim()) return;
+    if (!canCreate || scanModes.length === 0 || !name.trim()) return;
     setIsCreating(true);
     setError(null);
 
@@ -125,10 +138,10 @@ export default function TemplateWizard({
       } = {
         name: name.trim(),
         transactionType,
-        scanModes: [scanMode],
+        scanModes,
       };
 
-      if (scanMode === 'POS') {
+      if (scanModes.includes('POS')) {
         data.posSystem = posSystem;
       }
 
@@ -136,7 +149,7 @@ export default function TemplateWizard({
       onTemplateCreated(created);
       setStep(1);
       setName('');
-      setScanMode('');
+      setScanModes([]);
       setPosSystem('');
       setTransactionType('');
     } catch (err) {
@@ -160,7 +173,7 @@ export default function TemplateWizard({
       >
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            {step === 1 ? 'Step 1 of 2 — Scan Mode' : 'Step 2 of 2 — Transaction Type'}
+            {step === 1 ? 'Step 1 of 2 — Transaction Type' : 'Step 2 of 2 — Scan Mode'}
           </div>
           <button
             type="button"
@@ -186,44 +199,26 @@ export default function TemplateWizard({
           {step === 1 ? (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                {SCAN_MODE_CARDS.map((card) => (
+                {TRANSACTION_TYPE_OPTIONS.map((type) => (
                   <button
-                    key={card.value}
+                    key={type}
                     type="button"
-                    onClick={() => {
-                      setScanMode(card.value);
-                      if (card.value !== 'POS') {
-                        setPosSystem('');
-                      }
-                    }}
+                    onClick={() => setTransactionType(type)}
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
-                      scanMode === card.value
+                      transactionType === type
                         ? 'border-emerald-500 ring-2 ring-emerald-200'
                         : 'border-gray-200 hover:border-gray-500'
                     }`}
                   >
-                    <div className="text-2xl mb-3">{card.icon}</div>
-                    <div className="font-semibold text-gray-900 mb-1">{card.title}</div>
-                    <div className="text-xs text-gray-600">{card.description}</div>
+                    <div className="font-semibold text-gray-900 mb-1">{TRANSACTION_TYPE_LABELS[type]}</div>
+                    <div className="text-xs text-gray-600">{TRANSACTION_TYPE_DESCRIPTIONS[type]}</div>
                   </button>
                 ))}
               </div>
 
-              {scanMode === 'POS' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Select POS System</label>
-                  <select
-                    value={posSystem}
-                    onChange={(e) => setPosSystem(e.target.value)}
-                    className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="" disabled>Select POS System</option>
-                    {POS_SYSTEM_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-3 py-2">
+                  {error}
                 </div>
               )}
 
@@ -248,25 +243,53 @@ export default function TemplateWizard({
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                {TRANSACTION_TYPE_OPTIONS.filter((type) => scanMode !== 'POS' || type === 'JOURNAL_ENTRY').map((type) => (
+                {SCAN_MODE_CARDS.filter((card) => {
+                  const config = TRANSACTION_TYPE_SCAN_MODE_CONFIG[transactionType];
+                  return config ? config.available.includes(card.value) : true;
+                }).map((card) => (
                   <button
-                    key={type}
+                    key={card.value}
                     type="button"
-                    onClick={() => setTransactionType(type)}
+                    onClick={() => {
+                      setScanModes((prev) => {
+                        if (prev.includes(card.value)) {
+                          if (card.value === 'POS') {
+                            setPosSystem('');
+                          }
+                          return prev.filter((m) => m !== card.value);
+                        }
+                        return [...prev, card.value];
+                      });
+                    }}
                     className={`text-left rounded-lg border p-4 transition-colors focus:outline-none ${
-                      transactionType === type
+                      scanModes.includes(card.value)
                         ? 'border-emerald-500 ring-2 ring-emerald-200'
                         : 'border-gray-200 hover:border-gray-500'
                     }`}
                   >
-                    <div className="font-semibold text-gray-900 mb-1">{TRANSACTION_TYPE_LABELS[type]}</div>
-                    <div className="text-xs text-gray-600">{TRANSACTION_TYPE_DESCRIPTIONS[type]}</div>
+                    <div className="text-2xl mb-3">{card.icon}</div>
+                    <div className="font-semibold text-gray-900 mb-1">{card.title}</div>
+                    <div className="text-xs text-gray-600">{card.description}</div>
                   </button>
                 ))}
               </div>
 
-              {scanMode === 'POS' && (
-                <div className="text-sm text-gray-600">POS mode only supports Journal Entry.</div>
+              {scanModes.includes('POS') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Select POS System</label>
+                  <select
+                    value={posSystem}
+                    onChange={(e) => setPosSystem(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="" disabled>Select POS System</option>
+                    {POS_SYSTEM_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {error && (
