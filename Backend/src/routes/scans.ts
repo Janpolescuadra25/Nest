@@ -263,12 +263,15 @@ router.post('/:id/approve', requireFeaturePermission('drafts', 'execute'), valid
   const id = String(req.params['id']);
   const userId = req.user!.userId;
 
-  const scan = await prisma.scanRecord.findFirst({ where: { id }, select: { status: true, locationId: true } });
+  const scan = await prisma.scanRecord.findFirst({ where: { id }, select: { status: true, locationId: true, submittedById: true } });
   if (!scan) {
     throw new AppError('Scan record not found', 404);
   }
   if (scan.status !== 'PENDING_APPROVAL') {
     throw new AppError(`Cannot approve scan with status: ${scan.status}`, 400);
+  }
+  if (scan.submittedById === userId) {
+    throw new AppError('You cannot approve your own submission', 403);
   }
 
   const updated = await prisma.scanRecord.update({
