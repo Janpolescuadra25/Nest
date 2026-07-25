@@ -289,7 +289,7 @@ export const templateCreateSchema = z.object({
   locationId: z.string().min(1),
   name: z.string().min(1).max(200),
   transactionType: z.string().max(50).optional(),
-  scanMode: z.string().max(50).optional(),
+  scanModes: z.array(z.enum(['IMAGE', 'EXCEL', 'POS'])).optional().default(['IMAGE']),
   posSystem: z.string().max(50).nullable().optional(),
   memoTemplate: z.string().max(1000).optional(),
   docNumberTemplate: z.string().max(200).optional(),
@@ -299,7 +299,7 @@ export const templateCreateSchema = z.object({
 
 export const templateUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  scanMode: z.string().max(50).optional(),
+  scanModes: z.array(z.enum(['IMAGE', 'EXCEL', 'POS'])).optional(),
   posSystem: z.string().max(50).nullable().optional(),
   memoTemplate: z.string().max(1000).nullable().optional(),
   docNumberTemplate: z.string().max(200).nullable().optional(),
@@ -311,7 +311,7 @@ export const templateUpdateSchema = z.object({
 export const locationTemplateCreateSchema = z.object({
   name: z.string().min(1).max(200),
   transactionType: z.string().max(50).optional(),
-  scanMode: z.string().max(50).optional(),
+  scanModes: z.array(z.enum(['IMAGE', 'EXCEL', 'POS'])).optional().default(['IMAGE']),
   posSystem: z.string().max(50).nullable().optional(),
   memoTemplate: z.string().max(1000).optional(),
   docNumberTemplate: z.string().max(200).optional(),

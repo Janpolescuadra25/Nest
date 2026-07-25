@@ -190,7 +190,7 @@ model Template {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   posSystem         String?
-  scanMode          ScanMode         @default(IMAGE)
+  scanModes         ScanMode[]       @default([IMAGE])
   mappings          Mapping[]
   productMappings   ProductMapping[]
   rules             Rule[]

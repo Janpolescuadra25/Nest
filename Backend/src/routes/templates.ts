@@ -51,18 +51,16 @@ export function validateTransactionType(transactionType?: string): void {
   }
 }
 
-function validateModeTypeCompatibility(scanMode: string, transactionType: string): void {
+function validateModeTypeCompatibility(scanModes: string[], transactionType: string): void {
   const compatibleModes: Record<string, string[]> = {
     POS: ['JOURNAL_ENTRY'],
     IMAGE: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
     EXCEL: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
   };
-
-  const allowed = compatibleModes[scanMode];
-  if (!allowed || !allowed.includes(transactionType)) {
+  const hasCompatible = scanModes.some((m) => compatibleModes[m]?.includes(transactionType));
+  if (!hasCompatible) {
     throw new AppError(
-      `Incompatible scan mode "${scanMode}" with transaction type "${transactionType}". ` +
-      `POS mode only supports JOURNAL_ENTRY. IMAGE and EXCEL support all types.`,
+      `No compatible scan mode found in [${scanModes.join(', ')}] for transaction type "${transactionType}".`,
       400,
     );
   }
@@ -97,7 +95,7 @@ router.get('/', requireFeaturePermission('templates', 'read'), asyncHandler(asyn
   const where: any = locationId ? { locationId, location: { ...locationFilter(req.user!) } } : { location: { ...locationFilter(req.user!) } };
 
   if (scanModeFilter) {
-    Object.assign(where, { scanMode: scanModeFilter as any });
+    Object.assign(where, { scanModes: { has: scanModeFilter as any } });
   }
 
   const templates = await prisma.template.findMany({
@@ -112,7 +110,7 @@ router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity
     locationId?: string;
     name?: string;
     transactionType?: string;
-    scanMode?: string;
+    scanModes?: ScanMode[];
     posSystem?: string | null;
     memoTemplate?: string;
     docNumberTemplate?: string;
@@ -124,7 +122,7 @@ router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity
     throw new AppError('locationId and name are required', 400);
   }
 
-  if (body.scanMode === 'POS' && body.posSystem) {
+  if (body.scanModes?.includes('POS') && body.posSystem) {
     const validPOS = ['toast', 'oracle', 'salido', 'generic'];
     if (!validPOS.includes(body.posSystem)) {
       throw new AppError(
@@ -133,13 +131,13 @@ router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity
       );
     }
   }
-  if (body.scanMode === 'POS' && !body.posSystem) {
+  if (body.scanModes?.includes('POS') && !body.posSystem) {
     throw new AppError('POS system is required when scan mode is POS', 400);
   }
 
   validateTransactionType(body.transactionType);
-  if (body.scanMode) {
-    validateModeTypeCompatibility(body.scanMode, body.transactionType ?? 'JOURNAL_ENTRY');
+  if (body.scanModes) {
+    validateModeTypeCompatibility(body.scanModes, body.transactionType ?? 'JOURNAL_ENTRY');
   }
   await getLocationOrFail(body.locationId, req.user);
 
@@ -148,7 +146,7 @@ router.post('/', requireFeaturePermission('templates', 'write'), requireCapacity
       locationId: body.locationId,
       name: body.name.trim(),
       ...(body.transactionType && { transactionType: body.transactionType as string }),
-      scanMode: (body.scanMode ?? 'IMAGE') as ScanMode,
+      scanModes: body.scanModes ?? ['IMAGE'],
       posSystem: body.posSystem ?? null,
       memoTemplate: body.memoTemplate ?? null,
       docNumberTemplate: body.docNumberTemplate ?? null,
@@ -323,7 +321,7 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), validate(temp
   const template = await getTemplateOrFail(String(req.params.id), req.user);
   const body = req.body as {
     name?: string;
-    scanMode?: string;
+    scanModes?: string[];
     posSystem?: string | null;
     transactionType?: string;
     memoTemplate?: string | null;
@@ -334,8 +332,8 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), validate(temp
   };
 
   validateTransactionType(body.transactionType);
-  if (body.scanMode) {
-    validateModeTypeCompatibility(body.scanMode, template.transactionType);
+  if (body.scanModes) {
+    validateModeTypeCompatibility(body.scanModes, template.transactionType);
   }
 
   const updateData: any = {
@@ -348,7 +346,7 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), validate(temp
     ...(body.columnMappings !== undefined && { columnMappings: body.columnMappings as unknown as Prisma.InputJsonValue }),
   };
 
-  if (body.scanMode !== undefined) updateData.scanMode = body.scanMode as ScanMode;
+  if (body.scanModes !== undefined) updateData.scanModes = body.scanModes;
   if (body.posSystem !== undefined) updateData.posSystem = body.posSystem;
 
   const updated = await prisma.template.update({
@@ -384,7 +382,7 @@ export function createLocationTemplateRouter() {
     const body = req.body as {
       name?: string;
       transactionType?: string;
-      scanMode?: string;
+      scanModes?: ScanMode[];
       posSystem?: string | null;
       memoTemplate?: string;
       docNumberTemplate?: string;
@@ -396,7 +394,7 @@ export function createLocationTemplateRouter() {
       throw new AppError('name is required', 400);
     }
 
-    if (body.scanMode === 'POS' && body.posSystem) {
+    if (body.scanModes?.includes('POS') && body.posSystem) {
       const validPOS = ['toast', 'oracle', 'salido', 'generic'];
       if (!validPOS.includes(body.posSystem)) {
         throw new AppError(
@@ -405,20 +403,20 @@ export function createLocationTemplateRouter() {
         );
       }
     }
-    if (body.scanMode === 'POS' && !body.posSystem) {
+    if (body.scanModes?.includes('POS') && !body.posSystem) {
       throw new AppError('POS system is required when scan mode is POS', 400);
     }
 
     validateTransactionType(body.transactionType);
-    if (body.scanMode) {
-      validateModeTypeCompatibility(body.scanMode, body.transactionType ?? 'JOURNAL_ENTRY');
+    if (body.scanModes) {
+      validateModeTypeCompatibility(body.scanModes, body.transactionType ?? 'JOURNAL_ENTRY');
     }
     const template = await prisma.template.create({
       data: {
         locationId,
         name: body.name.trim(),
         ...(body.transactionType && { transactionType: body.transactionType as string }),
-        scanMode: (body.scanMode ?? 'IMAGE') as ScanMode,
+        scanModes: body.scanModes ?? ['IMAGE'],
         posSystem: body.posSystem ?? null,
         memoTemplate: body.memoTemplate ?? null,
         docNumberTemplate: body.docNumberTemplate ?? null,

@@ -40,7 +40,16 @@ export function asyncHandler<T extends RequestHandler>(fn: T): T {
 
 export function createErrorHandler(): ErrorRequestHandler {
   return (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    const error = err as { message?: string; status?: number; statusCode?: number; fields?: Record<string, string> };
+    const error = err as { message?: string; status?: number; statusCode?: number; fields?: Record<string, string>; category?: string };
+
+    // QB auth failures return 401 internally but should be 403 to the client
+    // to avoid triggering the frontend Nest JWT auto-logout interceptor
+    if (error.category === 'AUTH') {
+      const qbMessage = error.message ?? 'QuickBooks connection expired';
+      res.status(403).json({ error: qbMessage, errorType: 'AUTH' });
+      return;
+    }
+
     const status = error.status ?? error.statusCode ?? 500;
     const message = process.env.NODE_ENV === 'production'
       ? (status < 500 ? error.message ?? 'An error occurred' : 'Internal server error')
