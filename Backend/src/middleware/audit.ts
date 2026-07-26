@@ -38,7 +38,8 @@ type AuditAction =
   | 'ATTACHMENT_UPLOADED'
   | 'ATTACHMENT_AUTO_ATTACHED'
   | 'ATTACHMENT_FAILED'
-  | 'BRANDING_UPDATED';
+  | 'BRANDING_UPDATED'
+  | 'AGREEMENT_UPDATED';
 
 export async function logAction(params: {
   actorId: string;

@@ -17,6 +17,9 @@ interface Admin {
   brandName?: string | null;
   brandColor?: string | null;
   logoUrl?: string | null;
+  agreementPrice?: string | null;
+  agreementDate?: string | null;
+  agreementTerms?: string | null;
 }
 
 interface ApproveResult {
@@ -47,6 +50,8 @@ export default function AdminsTab({ jwt }: Props) {
   const [editAllocationValues, setEditAllocationValues] = useState<Record<string, { allocatedScans: string; allocatedLocations: string }>>({});
   const [showEditBranding, setShowEditBranding] = useState<Record<string, boolean>>({});
   const [editBrandingValues, setEditBrandingValues] = useState<Record<string, { brandName: string; brandColor: string; logoUrl: string }>>({});
+  const [showEditAgreement, setShowEditAgreement] = useState<Record<string, boolean>>({});
+  const [agreementInputs, setAgreementInputs] = useState<Record<string, { agreementPrice: string; agreementDate: string; agreementTerms: string }>>({});
   const [viewMode, setViewMode] = useState<'clients' | 'requests'>('clients');
   const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([]);
   const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
@@ -559,6 +564,107 @@ export default function AdminsTab({ jwt }: Props) {
                           className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                         >
                           Edit branding
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Agreement Section */}
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Agreement</p>
+                      {showEditAgreement[admin.id] ? (
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Price ($)</p>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={agreementInputs[admin.id]?.agreementPrice ?? ''}
+                              onChange={e => setAgreementInputs(prev => ({
+                                ...prev,
+                                [admin.id]: { ...(prev[admin.id] ?? { agreementPrice: '', agreementDate: '', agreementTerms: '' }), agreementPrice: e.target.value },
+                              }))}
+                              placeholder="0.00"
+                              className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                            />
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Date</p>
+                            <input
+                              type="date"
+                              value={agreementInputs[admin.id]?.agreementDate ?? ''}
+                              onChange={e => setAgreementInputs(prev => ({
+                                ...prev,
+                                [admin.id]: { ...(prev[admin.id] ?? { agreementPrice: '', agreementDate: '', agreementTerms: '' }), agreementDate: e.target.value },
+                              }))}
+                              className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                            />
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Terms</p>
+                            <textarea
+                              value={agreementInputs[admin.id]?.agreementTerms ?? ''}
+                              onChange={e => setAgreementInputs(prev => ({
+                                ...prev,
+                                [admin.id]: { ...(prev[admin.id] ?? { agreementPrice: '', agreementDate: '', agreementTerms: '' }), agreementTerms: e.target.value },
+                              }))}
+                              placeholder="Agreement terms..."
+                              rows={3}
+                              className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const inputs = agreementInputs[admin.id];
+                                if (!inputs) return;
+                                setActionLoading(p => ({ ...p, [`agreement_${admin.id}`]: true }));
+                                try {
+                                  await api.updateAgreement(jwt, admin.id, {
+                                    agreementPrice: inputs.agreementPrice || null,
+                                    agreementDate: inputs.agreementDate || null,
+                                    agreementTerms: inputs.agreementTerms || null,
+                                  });
+                                  showToast('Agreement updated', 'success');
+                                  setShowEditAgreement(p => ({ ...p, [admin.id]: false }));
+                                  await fetchAdmins();
+                                } catch (err: any) {
+                                  showToast(err.message || 'Failed to update agreement', 'error');
+                                } finally {
+                                  setActionLoading(p => ({ ...p, [`agreement_${admin.id}`]: false }));
+                                }
+                              }}
+                              className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setShowEditAgreement(p => ({ ...p, [admin.id]: false }))}
+                              className="flex-1 py-1.5 bg-gray-300 hover:bg-gray-200 text-gray-900 text-xs rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAgreementInputs(prev => ({
+                              ...prev,
+                              [admin.id]: {
+                                agreementPrice: admin.agreementPrice ?? '',
+                                agreementDate: admin.agreementDate ? new Date(admin.agreementDate).toISOString().split('T')[0] : '',
+                                agreementTerms: admin.agreementTerms ?? '',
+                              },
+                            }));
+                            setShowEditAgreement(p => ({ ...p, [admin.id]: true }));
+                          }}
+                          className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+                        >
+                          Edit agreement
                         </button>
                       )}
                     </div>

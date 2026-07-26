@@ -283,7 +283,7 @@ export const api = {
   },
 
   getOwnerAdmins: (jwt: string) =>
-    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null; brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }> }>('/api/owner/admins', jwt),
+    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null; brandName?: string | null; brandColor?: string | null; logoUrl?: string | null; agreementPrice?: string | null; agreementDate?: string | null; agreementTerms?: string | null }> }>('/api/owner/admins', jwt),
 
   getOwnerAdminPools: (jwt: string) =>
     get<{ admins: OwnerAdminPool[] }>('/api/owner/admins/pools', jwt),
@@ -293,6 +293,11 @@ export const api = {
 
   updateBranding: (jwt: string, adminId: string, data: { brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }) =>
     put<{ id: string; brandName: string | null; brandColor: string | null; logoUrl: string | null }>(`/api/owner/admins/${adminId}/branding`, data, jwt),
+
+  updateAgreement: (jwt: string, adminId: string, data: { agreementPrice?: string | null; agreementDate?: string | null; agreementTerms?: string | null }) =>
+    put<{ id: string; agreementPrice: string | null; agreementDate: string | null; agreementTerms: string | null }>(
+      `/api/owner/admins/${adminId}/agreement`, data, jwt
+    ),
 
   getOwnerAdminMembers: (jwt: string, adminId: string, page?: number, limit?: number) => {
     const sp = new URLSearchParams();

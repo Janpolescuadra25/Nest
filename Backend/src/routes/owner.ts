@@ -34,6 +34,9 @@ router.get('/admins', asyncHandler(async(req: AuthRequest, res: Response) => {
           brandName: true,
           brandColor: true,
           logoUrl: true,
+          agreementPrice: true,
+          agreementDate: true,
+          agreementTerms: true,
           createdAt: true,
           updatedAt: true,
           _count: { select: { teamMembers: true } },
@@ -207,6 +210,63 @@ router.put('/admins/:id/branding', asyncHandler(async (req: AuthRequest, res: Re
     if (err instanceof AppError) throw err;
     console.error('[Owner] Failed to update branding:', err);
     throw new AppError('Failed to update branding', 500);
+  }
+}))
+
+// ── PUT /api/owner/admins/:id/agreement ───────────────────────────────────────
+router.put('/admins/:id/agreement', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const adminId = String(req.params.id);
+    const { agreementPrice, agreementDate, agreementTerms } = req.body;
+
+    if (agreementPrice !== undefined && agreementPrice !== null) {
+      const price = parseFloat(agreementPrice);
+      if (isNaN(price) || price < 0) {
+        throw new AppError('Invalid agreementPrice', 400);
+      }
+    }
+
+    const admin = await prisma.user.findFirst({ where: { id: adminId, role: 'ADMIN' } });
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    const updateData: Record<string, any> = {};
+    if (agreementPrice !== undefined) {
+      updateData.agreementPrice = agreementPrice !== null ? parseFloat(agreementPrice) : null;
+    }
+    if (agreementDate !== undefined) {
+      updateData.agreementDate = agreementDate !== null ? new Date(agreementDate) : null;
+    }
+    if (agreementTerms !== undefined) {
+      updateData.agreementTerms = agreementTerms;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: admin.id },
+      data: updateData,
+      select: {
+        id: true,
+        agreementPrice: true,
+        agreementDate: true,
+        agreementTerms: true,
+      },
+    });
+
+    logAction({
+      actorId: req.user!.userId,
+      action: 'AGREEMENT_UPDATED',
+      targetUserId: admin.id,
+      details: { targetAdminId: admin.id, fields: Object.keys(updateData) },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] Failed to update agreement:', err);
+    throw new AppError('Failed to update agreement', 500);
   }
 }))
 
