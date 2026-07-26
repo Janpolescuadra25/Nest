@@ -5,6 +5,7 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { authLimiter } from '../middleware/rate-limit';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
+import { getFileBuffer } from '../lib/storage';
 import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJournalEntryInput, QBJournalLineItem, QBBillLineItem, QBChequeLineItem, BillPaymentLine } from '../types';
 import { Prisma, SyncType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
@@ -759,6 +760,29 @@ async function syncSingleScan(
         where: { id: scanRecordId },
         data: { status: 'SYNCED' },
       });
+
+      try {
+        const scan = await prisma.scanRecord.findUnique({ where: { id: scanRecordId }, select: { autoAttach: true } });
+        if (scan?.autoAttach) {
+          const attachments = await prisma.attachment.findMany({ where: { scanRecordId } });
+          for (const att of attachments) {
+            const { buffer, mimeType } = await getFileBuffer(att.storageKey);
+            await qbService.callQB(userId, ({ accessToken, realmId }) =>
+              qbService.createAttachment({
+                realmId,
+                accessToken,
+                fileBuffer: buffer,
+                fileName: att.fileName,
+                mimeType,
+                entityId: result.id,
+                entityType: 'JournalEntry',
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[QB] Failed to attach file to QB entity:', err);
+      }
     }
 
     return {
@@ -871,6 +895,29 @@ async function syncSingleVendorCredit(
         where: { id: scanRecordId },
         data: { status: 'SYNCED' },
       });
+
+      try {
+        const scan = await prisma.scanRecord.findUnique({ where: { id: scanRecordId }, select: { autoAttach: true } });
+        if (scan?.autoAttach) {
+          const attachments = await prisma.attachment.findMany({ where: { scanRecordId } });
+          for (const att of attachments) {
+            const { buffer, mimeType } = await getFileBuffer(att.storageKey);
+            await qbService.callQB(userId, ({ accessToken, realmId }) =>
+              qbService.createAttachment({
+                realmId,
+                accessToken,
+                fileBuffer: buffer,
+                fileName: att.fileName,
+                mimeType,
+                entityId: result.id,
+                entityType: 'VendorCredit',
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[QB] Failed to attach file to QB entity:', err);
+      }
     }
 
     return {
@@ -985,6 +1032,29 @@ async function syncSingleCheque(
         where: { id: scanRecordId },
         data: { status: 'SYNCED' },
       });
+
+      try {
+        const scan = await prisma.scanRecord.findUnique({ where: { id: scanRecordId }, select: { autoAttach: true } });
+        if (scan?.autoAttach) {
+          const attachments = await prisma.attachment.findMany({ where: { scanRecordId } });
+          for (const att of attachments) {
+            const { buffer, mimeType } = await getFileBuffer(att.storageKey);
+            await qbService.callQB(userId, ({ accessToken, realmId }) =>
+              qbService.createAttachment({
+                realmId,
+                accessToken,
+                fileBuffer: buffer,
+                fileName: att.fileName,
+                mimeType,
+                entityId: result.id,
+                entityType: 'Purchase',
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[QB] Failed to attach file to QB entity:', err);
+      }
     }
 
     return {
@@ -1101,6 +1171,29 @@ async function syncSingleBill(
         where: { id: scanRecordId },
         data: { status: 'SYNCED' },
       });
+
+      try {
+        const scan = await prisma.scanRecord.findUnique({ where: { id: scanRecordId }, select: { autoAttach: true } });
+        if (scan?.autoAttach) {
+          const attachments = await prisma.attachment.findMany({ where: { scanRecordId } });
+          for (const att of attachments) {
+            const { buffer, mimeType } = await getFileBuffer(att.storageKey);
+            await qbService.callQB(userId, ({ accessToken, realmId }) =>
+              qbService.createAttachment({
+                realmId,
+                accessToken,
+                fileBuffer: buffer,
+                fileName: att.fileName,
+                mimeType,
+                entityId: result.id,
+                entityType: 'Bill',
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[QB] Failed to attach file to QB entity:', err);
+      }
     }
 
     return {
@@ -1200,6 +1293,29 @@ async function syncSingleBillPayment(
         where: { id: scanRecordId },
         data: { status: 'SYNCED' },
       });
+
+      try {
+        const scan = await prisma.scanRecord.findUnique({ where: { id: scanRecordId }, select: { autoAttach: true } });
+        if (scan?.autoAttach) {
+          const attachments = await prisma.attachment.findMany({ where: { scanRecordId } });
+          for (const att of attachments) {
+            const { buffer, mimeType } = await getFileBuffer(att.storageKey);
+            await qbService.callQB(userId, ({ accessToken, realmId }) =>
+              qbService.createAttachment({
+                realmId,
+                accessToken,
+                fileBuffer: buffer,
+                fileName: att.fileName,
+                mimeType,
+                entityId: result.id,
+                entityType: 'BillPayment',
+              }),
+            );
+          }
+        }
+      } catch (err) {
+        console.error('[QB] Failed to attach file to QB entity:', err);
+      }
     }
 
     return {

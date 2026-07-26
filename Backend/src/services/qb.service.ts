@@ -267,6 +267,61 @@ async function createBillPayment(input: CreateBillPaymentInput): Promise<BillPay
   };
 }
 
+async function createAttachment(input: {
+  realmId: string;
+  accessToken: string;
+  fileBuffer: Buffer;
+  fileName: string;
+  mimeType: string;
+  entityId: string;
+  entityType: string;
+}): Promise<{ id: string }> {
+  const { realmId, accessToken, fileBuffer, fileName, mimeType, entityId, entityType } = input;
+
+  const metadata = {
+    AttachableReq: {
+      Attachable: {
+        FileName: fileName,
+        AttachableRef: [{
+          EntityRef: {
+            type: entityType,
+            value: entityId,
+          },
+          IncludeOnSend: true,
+        }],
+      },
+    },
+  };
+
+  const formData = new FormData();
+  formData.append('file_content', new Blob([fileBuffer], { type: mimeType }), fileName);
+  formData.append('attachable', JSON.stringify(metadata));
+
+  const response = await fetchWithTimeout(
+    `${QB_API_BASE_URL}/${realmId}/upload?minorversion=65`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`QB attachment upload failed (${response.status}): ${text}`);
+  }
+
+  const data = await response.json() as any;
+  const attachable = data?.AttachableResponse?.[0]?.Attachable;
+  if (!attachable?.Id) {
+    throw new Error('QB attachment upload response missing Attachable.Id');
+  }
+
+  return { id: attachable.Id };
+}
+
 /**
  * Build the QuickBooks JournalEntry payload per the QB API spec.
  * Validates that total debits === total credits (required by QB).
@@ -801,6 +856,7 @@ export const qbService = {
   createVendorCredit,
   createCheque,
   createBillPayment,
+  createAttachment,
   refreshAccessToken,
   buildJournalEntryPayload,
   buildBillPayload,

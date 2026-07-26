@@ -173,6 +173,7 @@ export default function ScanView({
   const [aiConfidence, setAiConfidence] = useState<{ confidence: number; reasoning: string; posType: string | null } | null>(null);
   const [capturedScreenshot, setCapturedScreenshot] = useState<File | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<{ fileName: string; storageKey: string; fileSize: number; mimeType: string } | null>(null);
+  const [autoAttach, setAutoAttach] = useState(true);
   const [scanPackModalOpen, setScanPackModalOpen] = useState(false);
   const [scanPacks, setScanPacks] = useState<ScanPack[]>([]);
   const [scanPackLoading, setScanPackLoading] = useState<string | null>(null);
@@ -384,6 +385,7 @@ export default function ScanView({
 
   const scanKnownPOSTab = async (tab: chrome.tabs.Tab, posType: string, posName: string) => {
     setPendingAttachment(null);
+    setAutoAttach(true);
     setScanning(true);
     setError(null);
     setIsScanLimit(false);
@@ -429,6 +431,7 @@ export default function ScanView({
               response.data,
               selectedTemplate?.transactionType,
               pendingAttachment ?? undefined,
+              autoAttach,
             );
             if (scanRecord?.id && onScanRecordId) {
               onScanRecordId(scanRecord.id);
@@ -460,6 +463,7 @@ export default function ScanView({
     }
 
     setPendingAttachment(null);
+    setAutoAttach(true);
     setCapturedScreenshot(null);
     setAiScanning(true);
     setAiScanError(null);
@@ -510,6 +514,7 @@ export default function ScanView({
             response.data.rawData,
             selectedTemplate?.transactionType,
             attachment,
+            autoAttach,
           );
           if (scanRecord?.id && onScanRecordId) {
             onScanRecordId(scanRecord.id);
@@ -534,6 +539,7 @@ export default function ScanView({
   const handleFallbackDocumentScan = async (file: File) => {
     setPendingAttachment(null);
     setAiScanError(null);
+    setAutoAttach(true);
     setScanMode('image');
     setCapturedScreenshot(null);
     setAiScanning(true);
@@ -615,6 +621,7 @@ export default function ScanView({
     setScanEntries([]);
     setActiveScanEntryId(null);
     setPendingAttachment(null);
+    setAutoAttach(true);
     setUploadedExcelFile(null);
     setExcelPreviewSheets([]);
     setExcelPreviewSheetName('');
@@ -660,6 +667,7 @@ export default function ScanView({
 
   const handleRescan = async () => {
     setPendingAttachment(null);
+    setAutoAttach(true);
     setScanning(true);
     setError(null);
     setIsScanLimit(false);
@@ -719,6 +727,7 @@ export default function ScanView({
                 response.data,
                 selectedTemplate?.transactionType,
                 pendingAttachment ?? undefined,
+                autoAttach,
               );
               if (process.env.NODE_ENV !== 'production') {
               }
@@ -920,7 +929,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined).catch(() => {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined, autoAttach).catch(() => {
         showToast('Failed to save scanned invoice data', 'error');
       });
     }
@@ -959,7 +968,7 @@ export default function ScanView({
 
     const scanDate = new Date().toISOString().split('T')[0];
     if (locationId) {
-      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined).catch(() => {
+      api.saveScanEntry(jwt, locationId, scanDate, scanEntry, scanEntry.source, selectedTemplate?.transactionType, pendingAttachment ?? undefined, autoAttach).catch(() => {
         showToast('Failed to save scanned check data', 'error');
       });
     }
@@ -1031,6 +1040,7 @@ export default function ScanView({
               'excel',
               selectedTemplate?.transactionType,
               pendingAttachment ?? undefined,
+              autoAttach,
             );
             savedCount++;
           } catch (saveErr) {
@@ -1091,6 +1101,22 @@ export default function ScanView({
             📷 Image
           </button>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-700 mb-3">
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={autoAttach}
+            onChange={(e) => setAutoAttach(e.target.checked)}
+            className="form-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded"
+          />
+          <span>Auto attach scan files on sync</span>
+        </label>
+        <span className="text-gray-500">Disable to save scans without uploading attachments to QuickBooks.</span>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-3">
         <button
           type="button"
           onClick={() => setShowHistory((prev) => !prev)}

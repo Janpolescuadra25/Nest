@@ -482,11 +482,11 @@ export const api = {
     post<ImportResult>(`/api/locations/${locationId}/import-template`, data, jwt),
 
   // ── Scans ──────────────────────────────────────────────────────────────────
-  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}) }, jwt),
+  saveScan: (jwt: string, locationId: string, scanDate: string, rawData: ScanData, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null, autoAttach?: boolean) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawData, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}), ...(autoAttach !== undefined ? { autoAttach } : {}) }, jwt),
 
-  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null) =>
-    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}) }, jwt),
+  saveScanEntry: (jwt: string, locationId: string, scanDate: string, rawScanEntry: ScanEntry, source: string, transactionType?: string, attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null, autoAttach?: boolean) =>
+    post<{ id: string }>('/api/scans', { locationId, scanDate, rawScanEntry, source, ...(transactionType ? { transactionType } : {}), ...(attachment ? { attachment } : {}), ...(autoAttach !== undefined ? { autoAttach } : {}) }, jwt),
 
   getScanAttachmentUrl: (jwt: string, scanId: string) =>
     get<{ url: string }>(`/api/scans/${scanId}/attachment-url`, jwt),

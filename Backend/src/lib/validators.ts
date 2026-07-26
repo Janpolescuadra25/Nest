@@ -239,6 +239,7 @@ export const scanCreateSchema = z.object({
     fileSize: z.number(),
     mimeType: z.string(),
   }).optional(),
+  autoAttach: z.boolean().optional(),
 }).strict();
 
 export const teamAllocationSchema = z.object({

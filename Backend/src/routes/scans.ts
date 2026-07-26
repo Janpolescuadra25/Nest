@@ -1,6 +1,7 @@
 import { AppError, asyncHandler } from '../lib/errors';
 import { Router, Response } from 'express';
 import path from 'path';
+import Excel from 'exceljs';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { uploadFile, deleteFile, getPresignedUrl } from '../lib/storage';
 import { requireCapacity } from '../middleware/capacity';
@@ -59,7 +60,7 @@ router.use(authenticate, enforceEffectiveRole);
 // Save raw Toast POS scan data for a location
 router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { locationId, scanDate, rawData, rawScanEntry, source, transactionType, attachment } = req.body as {
+    const { locationId, scanDate, rawData, rawScanEntry, source, transactionType, attachment, autoAttach } = req.body as {
       locationId?: string;
       scanDate?: string;
       rawData?: ScanRawData;
@@ -67,6 +68,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
       source?: string;
       transactionType?: string;
       attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string };
+      autoAttach?: boolean;
     };
     validateTransactionType(transactionType);
 
@@ -102,6 +104,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
         rawScanEntry: rawScanEntry ? rawScanEntry as unknown as Prisma.InputJsonValue : undefined,
         source: source || 'pos',
         status: 'PENDING',
+        autoAttach: autoAttach ?? true,
         ...(transactionType ? { transactionType } : {}),
       },
     });
@@ -116,6 +119,40 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
           mimeType: attachment.mimeType,
         },
       });
+    }
+
+    // Generate Excel from POS scan data
+    if (source === 'pos' && rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+      try {
+        const posData = rawData as Record<string, unknown>;
+        const keys = Object.keys(posData);
+        if (keys.length > 0) {
+          const workbook = new Excel.Workbook();
+          const worksheet = workbook.addWorksheet('POS Data');
+          worksheet.columns = keys.map((key) => ({ header: key, key }));
+          worksheet.addRow(posData);
+          const excelBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+          const excelFile = await uploadFile(
+            excelBuffer,
+            `pos-data-${scan.id}.xlsx`,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            req.user!.adminId ?? req.user!.userId,
+          );
+
+          await prisma.attachment.create({
+            data: {
+              scanRecordId: scan.id,
+              fileName: `pos-data-${scan.id}.xlsx`,
+              storageKey: excelFile.storageKey,
+              fileSize: excelFile.fileSize,
+              mimeType: excelFile.mimeType,
+            },
+          });
+        }
+      } catch (err) {
+        console.error('[storage] Failed to generate POS Excel export:', err);
+      }
     }
 
     res.status(201).json(scan);

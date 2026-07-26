@@ -47,3 +47,14 @@ export async function getPresignedUrl(storageKey: string, expirySeconds = 3600):
 export async function deleteFile(storageKey: string): Promise<void> {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: storageKey }));
 }
+
+/**
+ * Download a file from R2 and return it as a Buffer.
+ * Used server-side to re-upload files to QuickBooks.
+ */
+export async function getFileBuffer(storageKey: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  const response = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET, Key: storageKey }));
+  const bytes = await response.Body!.transformToByteArray();
+  const buffer = Buffer.from(bytes);
+  return { buffer, mimeType: response.ContentType || 'application/octet-stream' };
+}
