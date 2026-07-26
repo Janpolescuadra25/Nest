@@ -51,8 +51,8 @@ export function validateTransactionType(transactionType?: string): void {
   }
 }
 
-function validateModeTypeCompatibility(scanModes: string[], transactionType: string): void {
-  const compatibleModes: Record<string, string[]> = {
+function validateModeTypeCompatibility(scanModes: ScanMode[], transactionType: string): void {
+  const compatibleModes: Record<ScanMode, string[]> = {
     POS: ['JOURNAL_ENTRY'],
     IMAGE: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
     EXCEL: ['JOURNAL_ENTRY', 'BILL', 'VENDOR_CREDIT', 'CHEQUE'],
@@ -91,11 +91,11 @@ async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) 
 
 router.get('/', requireFeaturePermission('templates', 'read'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const locationId = String(req.query.locationId || '');
-  const scanModeFilter = String(req.query.scanMode || '').trim();
-  const where: any = locationId ? { locationId, location: { ...locationFilter(req.user!) } } : { location: { ...locationFilter(req.user!) } };
+  const scanModeFilter = String(req.query.scanModes || '').trim();
+  const where: Prisma.TemplateWhereInput = locationId ? { locationId, location: { ...locationFilter(req.user!) } } : { location: { ...locationFilter(req.user!) } };
 
   if (scanModeFilter) {
-    Object.assign(where, { scanModes: { has: scanModeFilter as any } });
+    Object.assign(where, { scanModes: { has: scanModeFilter } });
   }
 
   const templates = await prisma.template.findMany({
@@ -321,7 +321,7 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), validate(temp
   const template = await getTemplateOrFail(String(req.params.id), req.user);
   const body = req.body as {
     name?: string;
-    scanModes?: string[];
+    scanModes?: ScanMode[];
     posSystem?: string | null;
     transactionType?: string;
     memoTemplate?: string | null;
@@ -336,11 +336,11 @@ router.put('/:id', requireFeaturePermission('templates', 'write'), validate(temp
     validateModeTypeCompatibility(body.scanModes, template.transactionType);
   }
 
-  const updateData: any = {
+  const updateData: Prisma.TemplateUpdateInput = {
     ...(body.name !== undefined && { name: body.name.trim() }),
     // transactionType is intentionally NOT updatable — locked at creation
-    ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
-    ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),
+    ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate ?? undefined }),
+    ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate ?? undefined }),
     ...(body.isActive !== undefined && { isActive: body.isActive }),
     ...(body.defaults !== undefined && { defaults: body.defaults as unknown as Prisma.InputJsonValue }),
     ...(body.columnMappings !== undefined && { columnMappings: body.columnMappings as unknown as Prisma.InputJsonValue }),
