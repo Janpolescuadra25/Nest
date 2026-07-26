@@ -20,6 +20,7 @@ interface Admin {
   agreementPrice?: string | null;
   agreementDate?: string | null;
   agreementTerms?: string | null;
+  agreementDocUrl?: string | null;
 }
 
 interface ApproveResult {
@@ -50,6 +51,7 @@ export default function AdminsTab({ jwt }: Props) {
   const [editAllocationValues, setEditAllocationValues] = useState<Record<string, { allocatedScans: string; allocatedLocations: string }>>({});
   const [showEditAgreement, setShowEditAgreement] = useState<Record<string, boolean>>({});
   const [agreementInputs, setAgreementInputs] = useState<Record<string, { agreementPrice: string; agreementDate: string; agreementTerms: string }>>({});
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'clients' | 'requests'>('clients');
   const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([]);
   const [inviteLinksLoading, setInviteLinksLoading] = useState(false);
@@ -509,6 +511,69 @@ export default function AdminsTab({ jwt }: Props) {
                               rows={3}
                               className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
                             />
+                          </div>
+
+                          <div className="mt-3">
+                            <label className="block text-xs font-medium text-slate-400 mb-1">Signed Agreement Document</label>
+                            {admin.agreementDocUrl ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await api.getAgreementDocUrl(jwt, admin.id);
+                                      window.open(res.url, '_blank');
+                                    } catch {
+                                      showToast('Failed to load document', 'error');
+                                    }
+                                  }}
+                                  className="text-xs text-emerald-400 hover:text-emerald-300 underline"
+                                >
+                                  View / Download
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm('Remove this agreement document?')) return;
+                                    try {
+                                      await api.removeAgreementDoc(jwt, admin.id);
+                                      await fetchAdmins();
+                                      showToast('Document removed', 'success');
+                                    } catch {
+                                      showToast('Failed to remove document', 'error');
+                                    }
+                                  }}
+                                  className="text-xs text-red-400 hover:text-red-300"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ) : (
+                              <input
+                                type="file"
+                                accept=".pdf,image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  setUploadingDoc(admin.id);
+                                  try {
+                                    await api.uploadAgreementDoc(jwt, admin.id, file);
+                                    await fetchAdmins();
+                                    showToast('Document uploaded', 'success');
+                                  } catch {
+                                    showToast('Failed to upload document', 'error');
+                                  } finally {
+                                    setUploadingDoc(null);
+                                    if (e.target) {
+                                      (e.target as HTMLInputElement).value = '';
+                                    }
+                                  }
+                                }}
+                                disabled={uploadingDoc === admin.id}
+                                className="block w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 disabled:opacity-50"
+                              />
+                            )}
+                            {uploadingDoc === admin.id && <p className="text-xs text-slate-500 mt-1">Uploading...</p>}
                           </div>
 
                           <div className="flex gap-2">

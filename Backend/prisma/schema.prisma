@@ -65,6 +65,7 @@ model User {
   agreementPrice          Decimal?                 @db.Decimal(10, 2)
   agreementDate           DateTime?
   agreementTerms          String?                  @db.Text
+  agreementDocUrl         String?
   prioritySupport         Boolean                  @default(false)
   scanHistoryDays         Int?
   approvedRequests        AdminRequest[]           @relation("ApprovedAdminRequests")

@@ -283,7 +283,7 @@ export const api = {
   },
 
   getOwnerAdmins: (jwt: string) =>
-    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null; brandName?: string | null; brandColor?: string | null; logoUrl?: string | null; agreementPrice?: string | null; agreementDate?: string | null; agreementTerms?: string | null }> }>('/api/owner/admins', jwt),
+    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null; brandName?: string | null; brandColor?: string | null; logoUrl?: string | null; agreementPrice?: string | null; agreementDate?: string | null; agreementTerms?: string | null; agreementDocUrl?: string | null }> }>('/api/owner/admins', jwt),
 
   getOwnerAdminPools: (jwt: string) =>
     get<{ admins: OwnerAdminPool[] }>('/api/owner/admins/pools', jwt),
@@ -298,6 +298,18 @@ export const api = {
     put<{ id: string; agreementPrice: string | null; agreementDate: string | null; agreementTerms: string | null }>(
       `/api/owner/admins/${adminId}/agreement`, data, jwt
     ),
+
+  uploadAgreementDoc: (jwt: string, adminId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<{ id: string; agreementDocUrl: string }>(`/api/owner/admins/${adminId}/agreement-doc`, form, jwt);
+  },
+
+  getAgreementDocUrl: (jwt: string, adminId: string) =>
+    get<{ url: string }>(`/api/owner/admins/${adminId}/agreement-doc`, jwt),
+
+  removeAgreementDoc: (jwt: string, adminId: string) =>
+    del(`/api/owner/admins/${adminId}/agreement-doc`, jwt),
 
   getOwnerAdminMembers: (jwt: string, adminId: string, page?: number, limit?: number) => {
     const sp = new URLSearchParams();

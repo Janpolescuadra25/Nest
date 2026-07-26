@@ -11,6 +11,10 @@ import { prisma } from '../lib/prisma';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validate } from '../middleware/validate';
 import { teamAllocationSchema } from '../lib/validators';
+import multer from 'multer';
+import { uploadAgreementDoc, deleteFile, getPresignedUrl } from '../lib/storage';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -37,6 +41,7 @@ router.get('/admins', asyncHandler(async(req: AuthRequest, res: Response) => {
           agreementPrice: true,
           agreementDate: true,
           agreementTerms: true,
+          agreementDocUrl: true,
           createdAt: true,
           updatedAt: true,
           _count: { select: { teamMembers: true } },
@@ -268,6 +273,61 @@ router.put('/admins/:id/agreement', asyncHandler(async (req: AuthRequest, res: R
     console.error('[Owner] Failed to update agreement:', err);
     throw new AppError('Failed to update agreement', 500);
   }
+}))
+
+// ── PUT /api/owner/admins/:id/agreement-doc ─────────────────────────────────
+router.put('/admins/:id/agreement-doc', upload.single('file'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.file) throw new AppError('No file uploaded', 400);
+  if (!req.file.mimetype.startsWith('application/pdf') && !req.file.mimetype.startsWith('image/')) {
+    throw new AppError('Only PDF and image files are allowed', 400);
+  }
+  const adminId = String(req.params.id);
+  const admin = await prisma.user.findFirst({ where: { id: adminId, role: 'ADMIN' } });
+  if (!admin) throw new AppError('Admin not found', 404);
+  const { storageKey } = await uploadAgreementDoc(req.file.buffer, req.file.originalname, req.file.mimetype, adminId);
+  const updated = await prisma.user.update({
+    where: { id: adminId },
+    data: { agreementDocUrl: storageKey },
+    select: { id: true, agreementDocUrl: true },
+  });
+  logAction({
+    actorId: req.user!.userId,
+    action: 'AGREEMENT_UPDATED',
+    details: { targetAdminId: admin.id, action: 'doc_upload' },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+  res.json(updated);
+}))
+
+router.get('/admins/:id/agreement-doc', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const adminId = String(req.params.id);
+  const admin = await prisma.user.findFirst({ where: { id: adminId, role: 'ADMIN' }, select: { id: true, agreementDocUrl: true } });
+  if (!admin) throw new AppError('Admin not found', 404);
+  if (!admin.agreementDocUrl) throw new AppError('No agreement document uploaded', 404);
+  const url = await getPresignedUrl(admin.agreementDocUrl, 3600);
+  res.json({ url });
+}))
+
+router.delete('/admins/:id/agreement-doc', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const adminId = String(req.params.id);
+  const admin = await prisma.user.findFirst({ where: { id: adminId, role: 'ADMIN' }, select: { id: true, agreementDocUrl: true } });
+  if (!admin) throw new AppError('Admin not found', 404);
+  if (!admin.agreementDocUrl) throw new AppError('No agreement document to remove', 404);
+  await deleteFile(admin.agreementDocUrl);
+  const updated = await prisma.user.update({
+    where: { id: adminId },
+    data: { agreementDocUrl: null },
+    select: { id: true, agreementDocUrl: true },
+  });
+  logAction({
+    actorId: req.user!.userId,
+    action: 'AGREEMENT_UPDATED',
+    details: { targetAdminId: admin.id, action: 'doc_delete' },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+  res.json(updated);
 }))
 
 // ── GET /api/owner/admins/:id/members ─────────────────────────────────────────
