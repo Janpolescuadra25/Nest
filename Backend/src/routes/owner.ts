@@ -151,6 +151,62 @@ router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Respons
   }
 }))
 
+// ── PUT /api/owner/admins/:id/branding ────────────────────────────────────────
+router.put('/admins/:id/branding', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const adminId = String(req.params['id']);
+    const { brandName, brandColor, logoUrl } = req.body;
+
+    if (brandColor !== undefined && brandColor !== null) {
+      const hexRegex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+      if (!hexRegex.test(brandColor)) {
+        throw new AppError('brandColor must be a valid hex color (e.g., #0e7490)', 400);
+      }
+    }
+    if (logoUrl !== undefined && logoUrl !== null) {
+      try {
+        new URL(logoUrl);
+      } catch {
+        throw new AppError('logoUrl must be a valid URL', 400);
+      }
+    }
+
+    const updateData: Record<string, string | null> = {};
+    if (brandName !== undefined) updateData.brandName = brandName;
+    if (brandColor !== undefined) updateData.brandColor = brandColor;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+
+    if (Object.keys(updateData).length === 0) {
+      throw new AppError('No branding fields provided', 400);
+    }
+
+    const admin = await prisma.user.findFirst({ where: { id: adminId, role: 'ADMIN' } });
+    if (!admin) {
+      throw new AppError('Admin not found', 404);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: adminId },
+      data: updateData,
+      select: { id: true, brandName: true, brandColor: true, logoUrl: true },
+    });
+
+    logAction({
+      actorId: req.user!.userId,
+      action: 'BRANDING_UPDATED',
+      details: { targetAdminId: adminId, fields: Object.keys(updateData) },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] Failed to update branding:', err);
+    throw new AppError('Failed to update branding', 500);
+  }
+}))
+
 // ── GET /api/owner/admins/:id/members ─────────────────────────────────────────
 router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {

@@ -59,6 +59,9 @@ model User {
   allocatedScans          Int?
   allocatedLocations      Int?
   allocatedTemplates      Int?
+  brandName               String?
+  brandColor              String?
+  logoUrl                 String?
   prioritySupport         Boolean                  @default(false)
   scanHistoryDays         Int?
   approvedRequests        AdminRequest[]           @relation("ApprovedAdminRequests")

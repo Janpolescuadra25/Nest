@@ -143,8 +143,10 @@ export interface UserInfo {
   permissions?: Record<string, boolean> | null;
   trialExpiresAt: string | null;
   customExpiryMessage: string | null;
+  brandName?: string | null;
+  brandColor?: string | null;
+  logoUrl?: string | null;
   subscriptionSource?: string | null;
-  stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   currentPlan?: string | null;
   planInterval?: string | null;

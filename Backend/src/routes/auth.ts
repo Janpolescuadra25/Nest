@@ -305,6 +305,9 @@ router.get('/session', authenticate, asyncHandler(async(req: AuthRequest, res: R
         maxLocations: true,
         bonusScans: true,
         welcomedAt: true,
+        brandName: true,
+        brandColor: true,
+        logoUrl: true,
         admin: {
           select: {
             subscriptionSource: true,

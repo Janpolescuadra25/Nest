@@ -37,7 +37,8 @@ type AuditAction =
   | 'DRAFT_REJECTED'
   | 'ATTACHMENT_UPLOADED'
   | 'ATTACHMENT_AUTO_ATTACHED'
-  | 'ATTACHMENT_FAILED';
+  | 'ATTACHMENT_FAILED'
+  | 'BRANDING_UPDATED';
 
 export async function logAction(params: {
   actorId: string;
