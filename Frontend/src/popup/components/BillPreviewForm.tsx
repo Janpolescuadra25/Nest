@@ -83,6 +83,7 @@ interface Props {
   selectedTemplate?: Template | null;
   onNavigateToPayments?: () => void;
   userRole?: string;
+  attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
 }
 
 export default function BillPreviewForm({
@@ -94,6 +95,7 @@ export default function BillPreviewForm({
   selectedTemplate,
   onNavigateToPayments,
   userRole,
+  attachments,
 }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
@@ -561,6 +563,12 @@ export default function BillPreviewForm({
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+      {attachments && attachments.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+          <span>📎</span>
+          <span>{attachments.length} attachment{attachments.length > 1 ? 's' : ''}: {attachments.map((a) => a.fileName).join(', ')}</span>
+        </div>
+      )}
       {listsError && (
         <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
       )}

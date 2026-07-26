@@ -14,6 +14,7 @@ import { billSchema, chequeSchema, vendorCreditSchema, billPaymentSchema, journa
 import { encrypt, decryptSafe, hashToken } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
 import { createSyncLogEntry, countSyncAttempts, findDuplicateSync, hashSyncRequest } from '../lib/dedup';
+import { logAction } from '../middleware/audit';
 
 const router = Router();
 
@@ -779,8 +780,18 @@ async function syncSingleScan(
               }),
             );
           }
+          logAction({
+            actorId: userId,
+            action: 'ATTACHMENT_AUTO_ATTACHED',
+            details: { scanRecordId, entityType: 'JournalEntry', entityId: result.id, attachmentCount: attachments.length },
+          });
         }
       } catch (err) {
+        logAction({
+          actorId: userId,
+          action: 'ATTACHMENT_FAILED',
+          details: { scanRecordId, entityType: 'JournalEntry', error: err instanceof Error ? err.message : String(err) },
+        });
         console.error('[QB] Failed to attach file to QB entity:', err);
       }
     }
@@ -914,8 +925,18 @@ async function syncSingleVendorCredit(
               }),
             );
           }
+          logAction({
+            actorId: userId,
+            action: 'ATTACHMENT_AUTO_ATTACHED',
+            details: { scanRecordId, entityType: 'VendorCredit', entityId: result.id, attachmentCount: attachments.length },
+          });
         }
       } catch (err) {
+        logAction({
+          actorId: userId,
+          action: 'ATTACHMENT_FAILED',
+          details: { scanRecordId, entityType: 'VendorCredit', error: err instanceof Error ? err.message : String(err) },
+        });
         console.error('[QB] Failed to attach file to QB entity:', err);
       }
     }
@@ -1051,8 +1072,18 @@ async function syncSingleCheque(
               }),
             );
           }
+          logAction({
+            actorId: userId,
+            action: 'ATTACHMENT_AUTO_ATTACHED',
+            details: { scanRecordId, entityType: 'Purchase', entityId: result.id, attachmentCount: attachments.length },
+          });
         }
       } catch (err) {
+        logAction({
+          actorId: userId,
+          action: 'ATTACHMENT_FAILED',
+          details: { scanRecordId, entityType: 'Purchase', error: err instanceof Error ? err.message : String(err) },
+        });
         console.error('[QB] Failed to attach file to QB entity:', err);
       }
     }
@@ -1190,8 +1221,18 @@ async function syncSingleBill(
               }),
             );
           }
+          logAction({
+            actorId: userId,
+            action: 'ATTACHMENT_AUTO_ATTACHED',
+            details: { scanRecordId, entityType: 'Bill', entityId: result.id, attachmentCount: attachments.length },
+          });
         }
       } catch (err) {
+        logAction({
+          actorId: userId,
+          action: 'ATTACHMENT_FAILED',
+          details: { scanRecordId, entityType: 'Bill', error: err instanceof Error ? err.message : String(err) },
+        });
         console.error('[QB] Failed to attach file to QB entity:', err);
       }
     }
@@ -1312,8 +1353,18 @@ async function syncSingleBillPayment(
               }),
             );
           }
+          logAction({
+            actorId: userId,
+            action: 'ATTACHMENT_AUTO_ATTACHED',
+            details: { scanRecordId, entityType: 'BillPayment', entityId: result.id, attachmentCount: attachments.length },
+          });
         }
       } catch (err) {
+        logAction({
+          actorId: userId,
+          action: 'ATTACHMENT_FAILED',
+          details: { scanRecordId, entityType: 'BillPayment', error: err instanceof Error ? err.message : String(err) },
+        });
         console.error('[QB] Failed to attach file to QB entity:', err);
       }
     }

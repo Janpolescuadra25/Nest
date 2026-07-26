@@ -34,7 +34,10 @@ type AuditAction =
   | 'SYNC_FAILURE_ALERT'
   | 'DRAFT_SUBMITTED'
   | 'DRAFT_APPROVED'
-  | 'DRAFT_REJECTED';
+  | 'DRAFT_REJECTED'
+  | 'ATTACHMENT_UPLOADED'
+  | 'ATTACHMENT_AUTO_ATTACHED'
+  | 'ATTACHMENT_FAILED';
 
 export async function logAction(params: {
   actorId: string;

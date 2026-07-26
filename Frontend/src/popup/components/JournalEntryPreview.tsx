@@ -99,9 +99,10 @@ interface Props {
   selectedLocationId: string;
   scanRecordId?: string | null;
   userRole?: string;
+  attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole, attachments }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -625,6 +626,12 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           {listsLoading ? '…' : '↻'}
         </button>
       </div>
+      {attachments && attachments.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+          <span>📎</span>
+          <span>{attachments.length} attachment{attachments.length > 1 ? 's' : ''}: {attachments.map((a) => a.fileName).join(', ')}</span>
+        </div>
+      )}
       {listsError && (
         <ErrorCard message={listsError} onRetry={() => void syncAllLists()} variant="warning" />
       )}

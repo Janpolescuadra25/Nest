@@ -57,6 +57,7 @@ export default function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
+  const [scanAttachments, setScanAttachments] = useState<Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>>([]);
   const [showHelp, setShowHelp] = useState(false);
   const [showEmailVerificationBanner, setShowEmailVerificationBanner] = useState(true);
   const [deferredMappings, setDeferredMappings] = useState(false);
@@ -103,6 +104,17 @@ export default function App() {
       setScanRecordId(null);
     }
   }, [scanData]);
+
+  useEffect(() => {
+    if (!scanRecordId || !jwt) {
+      setScanAttachments([]);
+      return;
+    }
+
+    api.getScan(jwt, scanRecordId)
+      .then((res) => setScanAttachments(res.attachments ?? []))
+      .catch(() => setScanAttachments([]));
+  }, [scanRecordId, jwt]);
 
   const activeScanEntry = scanEntries.find((entry) => entry.id === activeScanEntryId) ?? null;
   const currentScanSource = activeScanEntry?.source;
@@ -513,6 +525,7 @@ export default function App() {
                 selectedTemplate={selectedTemplateForScan}
                 onNavigateToPayments={() => setCurrentTab('payments')}
                 userRole={user?.role}
+                attachments={scanAttachments}
               />
             ) : selectedTemplateForScan.transactionType === 'VENDOR_CREDIT' ? (
               <VendorCreditPreviewForm
@@ -523,6 +536,7 @@ export default function App() {
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
                 userRole={user?.role}
+                attachments={scanAttachments}
               />
             ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
               <CheckPreviewForm
@@ -533,6 +547,7 @@ export default function App() {
                 scanRecordId={scanRecordId}
                 selectedTemplate={selectedTemplateForScan}
                 userRole={user?.role}
+                attachments={scanAttachments}
               />
             ) : (
               <JournalEntryPreview
@@ -545,6 +560,7 @@ export default function App() {
                 selectedLocationId={selectedLocationId}
                 scanRecordId={scanRecordId}
                 userRole={user?.role}
+                attachments={scanAttachments}
               />
             )
           )}

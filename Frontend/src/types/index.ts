@@ -243,6 +243,7 @@ export interface ScanRecord {
   status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   syncLogs?: SyncLog[];
+  attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
   submittedById?: string | null;
   submittedAt?: string | null;
   approvedById?: string | null;

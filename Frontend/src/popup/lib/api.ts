@@ -557,6 +557,9 @@ export const api = {
     );
   },
 
+  getScan: (jwt: string, scanId: string) =>
+    get<ScanRecord>(`/api/scans/${scanId}`, jwt),
+
   // ── QuickBooks ─────────────────────────────────────────────────────────────
   getQBAuthUrl: (jwt: string) =>
     get<{ authUrl: string; state: string }>('/api/quickbooks/auth-url', jwt),

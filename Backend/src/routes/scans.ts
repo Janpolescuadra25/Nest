@@ -110,7 +110,7 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
     });
 
     if (attachment) {
-      await prisma.attachment.create({
+      const createdAttachment = await prisma.attachment.create({
         data: {
           scanRecordId: scan.id,
           fileName: attachment.fileName,
@@ -118,6 +118,13 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
           fileSize: attachment.fileSize,
           mimeType: attachment.mimeType,
         },
+      });
+      logAction({
+        actorId: req.user!.userId,
+        action: 'ATTACHMENT_UPLOADED',
+        details: { fileName: createdAttachment.fileName, fileSize: createdAttachment.fileSize, scanRecordId: scan.id },
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
       });
     }
 
@@ -148,6 +155,13 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
               fileSize: excelFile.fileSize,
               mimeType: excelFile.mimeType,
             },
+          });
+          logAction({
+            actorId: req.user!.userId,
+            action: 'ATTACHMENT_UPLOADED',
+            details: { fileName: `pos-data-${scan.id}.xlsx`, fileSize: excelFile.fileSize, scanRecordId: scan.id },
+            ip: req.ip,
+            userAgent: req.headers['user-agent'],
           });
         }
       } catch (err) {
@@ -252,7 +266,13 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
     const id = String(req.params['id']);
     const scan = await prisma.scanRecord.findUnique({
       where: { id },
-      include: { location: true, syncLogs: true },
+      include: {
+        location: true,
+        syncLogs: true,
+        attachments: {
+          select: { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
+        },
+      },
     });
 
     if (!scan) {
