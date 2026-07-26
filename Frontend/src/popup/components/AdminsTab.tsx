@@ -12,6 +12,9 @@ interface Admin {
   currentTeamSize: number;
   description: string | null;
   company: string | null;
+  brandName?: string | null;
+  brandColor?: string | null;
+  logoUrl?: string | null;
 }
 
 interface Props {
@@ -35,6 +38,8 @@ export default function AdminsTab({ jwt }: Props) {
   const [editPoolValues, setEditPoolValues] = useState<Record<string, { poolScans: string; poolLocations: string; maxMembers: string }>>({});
   const [showEditAllocation, setShowEditAllocation] = useState<Record<string, boolean>>({});
   const [editAllocationValues, setEditAllocationValues] = useState<Record<string, { allocatedScans: string; allocatedLocations: string }>>({});
+  const [showEditBranding, setShowEditBranding] = useState<Record<string, boolean>>({});
+  const [editBrandingValues, setEditBrandingValues] = useState<Record<string, { brandName: string; brandColor: string; logoUrl: string }>>({});
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
@@ -134,6 +139,30 @@ export default function AdminsTab({ jwt }: Props) {
       showToast(err.message || 'Failed to save pool settings', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`pool_${admin.id}`]: false }));
+    }
+  };
+
+  const handleSaveBranding = async (admin: Admin) => {
+    const values = editBrandingValues[admin.id] ?? {
+      brandName: admin.brandName ?? '',
+      brandColor: admin.brandColor ?? '',
+      logoUrl: admin.logoUrl ?? '',
+    };
+
+    setActionLoading(p => ({ ...p, [`brand_${admin.id}`]: true }));
+    try {
+      await api.updateBranding(jwt, admin.id, {
+        brandName: values.brandName || null,
+        brandColor: values.brandColor || null,
+        logoUrl: values.logoUrl || null,
+      });
+      showToast('Branding updated', 'success');
+      setShowEditBranding(p => ({ ...p, [admin.id]: false }));
+      await fetchAdmins();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update branding', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`brand_${admin.id}`]: false }));
     }
   };
 
@@ -297,6 +326,85 @@ export default function AdminsTab({ jwt }: Props) {
                     )}
                   </div>
                 )}
+
+                {/* Branding */}
+                <div>
+                  <p className="text-xs text-gray-600 mb-1">Branding</p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 mb-2">
+                    <span>{admin.brandName ?? 'Default brand'}</span>
+                    {admin.brandColor ? (
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium" style={{ backgroundColor: admin.brandColor, color: '#fff' }}>
+                        {admin.brandColor}
+                      </span>
+                    ) : null}
+                    {admin.logoUrl ? <span className="underline">Logo set</span> : <span className="text-gray-400">No logo</span>}
+                  </div>
+                  {showEditBranding[admin.id] ? (
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Brand name</p>
+                        <input
+                          type="text"
+                          value={editBrandingValues[admin.id]?.brandName ?? admin.brandName ?? ''}
+                          onChange={e => setEditBrandingValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { brandColor: admin.brandColor ?? '', logoUrl: admin.logoUrl ?? '' }), brandName: e.target.value } }))}
+                          className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Brand color</p>
+                        <input
+                          type="text"
+                          value={editBrandingValues[admin.id]?.brandColor ?? admin.brandColor ?? ''}
+                          onChange={e => setEditBrandingValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { brandName: admin.brandName ?? '', logoUrl: admin.logoUrl ?? '' }), brandColor: e.target.value } }))}
+                          placeholder="#34d399"
+                          className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Logo URL</p>
+                        <input
+                          type="text"
+                          value={editBrandingValues[admin.id]?.logoUrl ?? admin.logoUrl ?? ''}
+                          onChange={e => setEditBrandingValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { brandName: admin.brandName ?? '', brandColor: admin.brandColor ?? '' }), logoUrl: e.target.value } }))}
+                          placeholder="https://example.com/logo.png"
+                          className="w-full bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveBranding(admin)}
+                          disabled={actionLoading[`brand_${admin.id}`]}
+                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded disabled:opacity-50"
+                        >
+                          Save branding
+                        </button>
+                        <button
+                          onClick={() => setShowEditBranding(p => ({ ...p, [admin.id]: false }))}
+                          className="flex-1 py-1.5 bg-gray-300 hover:bg-gray-200 text-gray-900 text-xs rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditBrandingValues(p => ({
+                          ...p,
+                          [admin.id]: {
+                            brandName: admin.brandName ?? '',
+                            brandColor: admin.brandColor ?? '',
+                            logoUrl: admin.logoUrl ?? '',
+                          },
+                        }));
+                        setShowEditBranding(p => ({ ...p, [admin.id]: true }));
+                      }}
+                      className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
+                    >
+                      Edit branding
+                    </button>
+                  )}
+                </div>
 
                 {/* maxUsers edit */}
                 <div>

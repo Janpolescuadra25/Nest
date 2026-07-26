@@ -384,15 +384,22 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       {/* Divider */}
       <div className="border-t border-gray-200" />
 
-      {/* About Nest */}
+      {/* About */}
       <div>
-        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">About Nest</div>
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">About {user.brandName || 'Nest'}</div>
 
         {/* Branding card */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3 flex items-center gap-3">
-          <span className="text-3xl leading-none">🪹</span>
+        <div
+          className="bg-white border rounded-lg p-3 mb-3 flex items-center gap-3"
+          style={{ borderColor: user.brandColor || undefined }}
+        >
+          {user.logoUrl ? (
+            <img src={user.logoUrl} alt={user.brandName || 'Nest'} className="h-10 w-10 rounded object-contain" />
+          ) : (
+            <span className="text-3xl leading-none">🪹</span>
+          )}
           <div>
-            <div className="text-gray-900 font-bold text-sm">Nest</div>
+            <div className="text-gray-900 font-bold text-sm">{user.brandName || 'Nest'}</div>
             <div className="text-gray-600 text-xs">Version 1.0.0</div>
             <div className="text-gray-600 text-xs mt-0.5">Financial Automation</div>
           </div>

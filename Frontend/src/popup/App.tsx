@@ -105,6 +105,15 @@ export default function App() {
     }
   }, [scanData]);
 
+  // Inject partner branding color as CSS variable
+  useEffect(() => {
+    if (user?.brandColor) {
+      document.documentElement.style.setProperty('--brand-color', user.brandColor);
+    } else {
+      document.documentElement.style.removeProperty('--brand-color');
+    }
+  }, [user?.brandColor]);
+
   useEffect(() => {
     if (!scanRecordId || !jwt) {
       setScanAttachments([]);

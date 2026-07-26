@@ -283,13 +283,16 @@ export const api = {
   },
 
   getOwnerAdmins: (jwt: string) =>
-    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null }> }>('/api/owner/admins', jwt),
+    get<{ admins: Array<{ id: string; email: string; name: string | null; maxUsers: number | null; status: string; createdAt: string; updatedAt: string; currentTeamSize: number; description: string | null; company: string | null; brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }> }>('/api/owner/admins', jwt),
 
   getOwnerAdminPools: (jwt: string) =>
     get<{ admins: OwnerAdminPool[] }>('/api/owner/admins/pools', jwt),
 
   updateOwnerAdminPool: (jwt: string, adminId: string, data: { poolScans?: number; poolLocations?: number; maxMembers?: number }) =>
     put<UserInfo>(`/api/owner/admins/${adminId}/pool`, data, jwt),
+
+  updateBranding: (jwt: string, adminId: string, data: { brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }) =>
+    put<{ id: string; brandName: string | null; brandColor: string | null; logoUrl: string | null }>(`/api/owner/admins/${adminId}/branding`, data, jwt),
 
   getOwnerAdminMembers: (jwt: string, adminId: string, page?: number, limit?: number) => {
     const sp = new URLSearchParams();
