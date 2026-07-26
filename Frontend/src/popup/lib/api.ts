@@ -310,9 +310,6 @@ export const api = {
   patchOwnerAdmin: (jwt: string, id: string, data: { maxUsers?: number; status?: string }) =>
     patch<{ admin: { id: string; email: string; name: string | null; maxUsers: number | null; status: string } }>(`/api/owner/admins/${id}`, data, jwt),
 
-  getOwnerAdminTeam: (jwt: string, adminId: string) =>
-    get<{ users: Array<UserInfo & { createdAt?: string; trialExpiresAt?: string | null; customExpiryMessage?: string | null }> }>(`/api/owner/admins/${adminId}/team`, jwt),
-
   getOwnerUsers: (jwt: string, params?: { role?: string; status?: string; search?: string; page?: number }) => {
     const sp = new URLSearchParams();
     if (params?.role) sp.set('role', params.role);

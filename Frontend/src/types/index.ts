@@ -396,7 +396,7 @@ export interface RetryBatchSummary {
   skipped: number;
   failed: number;
 }
-export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'payments' | 'data' | 'sync' | 'settings' | 'products' | 'partners' | 'requests' | 'my-team' | 'activity' | 'admins' | 'users' | 'locations';
+export type TabId = 'dashboard' | 'scan' | 'mappings' | 'rules' | 'preview' | 'payments' | 'data' | 'sync' | 'settings' | 'products' | 'clients' | 'my-team' | 'activity' | 'users' | 'locations';
 
 export type ScanData = Record<string, number>;
 

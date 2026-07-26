@@ -13,10 +13,8 @@ const ALL_TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'sync', label: 'Sync', icon: '⚡' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
   { id: 'my-team', label: 'Team', icon: '👥' },
-  { id: 'partners', label: 'Partners', icon: '🤝' },
-  { id: 'requests', label: 'Requests', icon: '📬' },
+  { id: 'clients', label: 'Clients', icon: '🤝' },
   { id: 'activity', label: 'Activity', icon: '📜' },
-  { id: 'admins', label: 'Admins', icon: '🛡️' },
   { id: 'users', label: 'Users', icon: '👤' },
   { id: 'locations', label: 'Locations', icon: '📍' },
 ];

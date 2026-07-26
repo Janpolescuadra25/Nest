@@ -21,8 +21,6 @@ import QBDataView from './components/QBDataView';
 import SyncView from './components/SyncView';
 import SettingsView from './components/SettingsView';
 import HelpPanel from './components/HelpPanel';
-import PartnersTab from './components/PartnersTab';
-import RequestsTab from './components/RequestsTab';
 import MyTeamTab from './components/MyTeamTab';
 import ActivityTab from './components/ActivityTab';
 import RulesView from './components/RulesView';
@@ -318,7 +316,7 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'sync', 'payments', 'partners', 'requests', 'admins', 'users', 'locations', 'activity', 'settings');
+    visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'sync', 'payments', 'clients', 'users', 'locations', 'activity', 'settings');
   } else if (role === 'ADMIN' || role === 'MANAGER') {
     visibleTabs.push('dashboard', 'my-team');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
@@ -601,11 +599,9 @@ export default function App() {
               onLogout={logout}
             />
           )}
-          {effectiveTab === 'partners' && <PartnersTab jwt={jwt!} />}
-          {effectiveTab === 'requests' && <RequestsTab jwt={jwt!} />}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} subscriptionSource={user.subscriptionSource} userRole={user.role} onUpgrade={() => setCurrentTab('settings')} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
-          {effectiveTab === 'admins' && <AdminsTab jwt={jwt!} />}
+          {effectiveTab === 'clients' && <AdminsTab jwt={jwt!} />}
           {effectiveTab === 'users' && <UsersTab jwt={jwt!} />}
           {effectiveTab === 'locations' && (
             <LocationsTab
