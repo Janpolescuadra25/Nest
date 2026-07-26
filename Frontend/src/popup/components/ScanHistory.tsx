@@ -89,19 +89,15 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
                   <div className="text-xs text-gray-600 font-semibold">{new Date(scan.scanDate).toLocaleDateString()}</div>
                   <div className="text-[10px] uppercase px-2 py-0.5 rounded bg-gray-200 text-gray-600">{scan.source?.toUpperCase() ?? 'POS'}</div>
                 </div>
-                <div className="text-[10px] inline-flex items-center rounded px-2 py-0.5 font-medium">
-                  {scan.status === 'PENDING' && (
-                    <span className="bg-amber-100 text-amber-600">PENDING</span>
-                  )}
-                  {scan.status === 'MAPPED' && (
-                    <span className="bg-emerald-600/30 text-emerald-400">MAPPED</span>
-                  )}
-                  {scan.status === 'SYNCED' && (
-                    <span className="bg-emerald-100 text-emerald-600">SYNCED</span>
-                  )}
-                  {scan.status === 'FAILED' && (
-                    <span className="bg-red-600/30 text-red-600">FAILED</span>
-                  )}
+                <div className="flex flex-wrap items-center gap-2 text-[10px] font-medium">
+                  <div className="inline-flex items-center rounded px-2 py-0.5 bg-gray-100 text-gray-600">
+                    {scan.status}
+                  </div>
+                  {scan.attachments?.length ? (
+                    <div className="inline-flex items-center rounded px-2 py-0.5 bg-gray-100 text-gray-600">
+                      📎 {scan.attachments.length}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <button

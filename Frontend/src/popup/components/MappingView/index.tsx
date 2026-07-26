@@ -265,8 +265,6 @@ export default function MappingView({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplate?.id ?? '');
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
-  const [billDefaults, setBillDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
-  const [billDefaultsDirty, setBillDefaultsDirty] = useState(false);
   const [vendorCreditDefaults, setVendorCreditDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
   const [vendorCreditDefaultsDirty, setVendorCreditDefaultsDirty] = useState(false);
   const [chequeDefaults, setChequeDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
@@ -495,44 +493,23 @@ export default function MappingView({
   };
 
   useEffect(() => {
-    if (selectedTemplate?.transactionType === 'BILL') {
-      setBillDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
-      setBillDefaultsDirty(false);
-      setVendorCreditDefaults({});
-      setVendorCreditDefaultsDirty(false);
-      setChequeDefaults({});
-      setChequeDefaultsDirty(false);
-    } else if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
+    if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
       setVendorCreditDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
       setVendorCreditDefaultsDirty(false);
-      setBillDefaults({});
-      setBillDefaultsDirty(false);
       setChequeDefaults({});
       setChequeDefaultsDirty(false);
     } else if (selectedTemplate?.transactionType === 'CHEQUE') {
       setChequeDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
       setChequeDefaultsDirty(false);
-      setBillDefaults({});
-      setBillDefaultsDirty(false);
       setVendorCreditDefaults({});
       setVendorCreditDefaultsDirty(false);
     } else {
-      setBillDefaults({});
-      setBillDefaultsDirty(false);
       setVendorCreditDefaults({});
       setVendorCreditDefaultsDirty(false);
       setChequeDefaults({});
       setChequeDefaultsDirty(false);
     }
   }, [selectedTemplate]);
-
-  const updateBillDefault = (key: string, value: string) => {
-    setBillDefaults((prev) => ({
-      ...prev,
-      [key]: { value, name: value },
-    }));
-    setBillDefaultsDirty(true);
-  };
 
   const vendorOptions = useMemo<SelectOption[]>(() =>
     vendors.map((vendor) => ({ value: vendor.Id, label: vendor.DisplayName })),
@@ -556,36 +533,6 @@ export default function MappingView({
       .sort((a, b) => (a.group ?? '').localeCompare(b.group ?? '') || a.label.localeCompare(b.label)),
     [accounts],
   );
-
-  const net30Term = useMemo(() =>
-    terms.find((term) => term.Name.toLowerCase() === 'net 30'),
-    [terms],
-  );
-
-  useEffect(() => {
-    if (selectedTemplate?.transactionType !== 'BILL') return;
-    if (!net30Term) return;
-    if (billDefaults.termsRef?.value) return;
-    setBillDefaults((prev) => ({
-      ...prev,
-      termsRef: prev.termsRef ?? { value: net30Term.Id, name: net30Term.Name },
-    }));
-  }, [selectedTemplate?.transactionType, net30Term, billDefaults.termsRef]);
-
-  const saveBillDefaults = async () => {
-    if (!selectedTemplateId || !jwt) return;
-    setTemplatesLoading(true);
-    try {
-      await api.updateTemplate(jwt, selectedTemplateId, { defaults: billDefaults });
-      await loadTemplates();
-      setBillDefaultsDirty(false);
-      showToast('Bill defaults saved', 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to save bill defaults', 'error');
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
 
   const updateVendorCreditDefault = (key: string, value: string) => {
     setVendorCreditDefaults((prev) => ({
@@ -632,105 +579,6 @@ export default function MappingView({
       setTemplatesLoading(false);
     }
   };
-
-  const renderBillHeader = () => (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
-      <div className="text-xs font-semibold text-gray-900">Bill Defaults</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.vendorRef}</div>
-          <SearchableSelect
-            options={vendorOptions}
-            value={billDefaults.vendorRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = vendors.find((vendor) => vendor.Id === value);
-              setBillDefaults((prev) => ({
-                ...prev,
-                vendorRef: { value, name: selected?.DisplayName ?? '' },
-              }));
-              setBillDefaultsDirty(true);
-            }}
-            placeholder="Select vendor…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.apAccountRef}</div>
-          <SearchableSelect
-            options={accountOptions}
-            value={billDefaults.apAccountRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = accounts.find((account) => account.Id === value);
-              setBillDefaults((prev) => ({
-                ...prev,
-                apAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
-              }));
-              setBillDefaultsDirty(true);
-            }}
-            placeholder="Select AP account…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.dueDate}</div>
-          <input
-            type="date"
-            value={billDefaults.dueDate?.value ?? ''}
-            onChange={(e) => updateBillDefault('dueDate', e.target.value)}
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.termsRef}</div>
-          <select
-            value={billDefaults.termsRef?.value ?? net30Term?.Id ?? ''}
-            onChange={(e) => {
-              const selected = terms.find((term) => term.Id === e.target.value);
-              setBillDefaults((prev) => ({
-                ...prev,
-                termsRef: { value: e.target.value, name: selected?.Name ?? '' },
-              }));
-              setBillDefaultsDirty(true);
-            }}
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="" disabled>Select terms…</option>
-            {termOptions.map((term) => (
-              <option key={term.value} value={term.value}>{term.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.memo}</div>
-          <input
-            type="text"
-            value={billDefaults.memo?.value ?? ''}
-            onChange={(e) => updateBillDefault('memo', e.target.value)}
-            placeholder="Memo"
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{BILL_FIELD_LABELS.docNumber}</div>
-          <input
-            type="text"
-            value={billDefaults.docNumber?.value ?? ''}
-            onChange={(e) => updateBillDefault('docNumber', e.target.value)}
-            placeholder="Bill No."
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={!billDefaultsDirty || templatesLoading}
-          onClick={saveBillDefaults}
-          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
-        >
-          Save Defaults
-        </button>
-      </div>
-    </div>
-  );
 
   const renderVendorCreditHeader = () => (
     <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
@@ -2103,7 +1951,6 @@ export default function MappingView({
         </div>
       )}
 
-      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isBill && renderBillHeader()}
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isVendorCredit && renderVendorCreditHeader()}
       {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isCheque && renderChequeHeader()}
       {isSectionVisible('fieldMapping', activeScanMode, selectedTemplate?.transactionType) && (

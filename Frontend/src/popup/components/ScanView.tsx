@@ -230,19 +230,15 @@ export default function ScanView({
   }, [scanData, scanMode, scanEntries.length]);
 
   useEffect(() => {
-    if (invoicePreviewUrl) {
-      return () => {
-        URL.revokeObjectURL(invoicePreviewUrl);
-      };
+    if (invoiceFile && scanMode === 'image') {
+      const url = URL.createObjectURL(invoiceFile);
+      setInvoicePreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
     }
     return undefined;
-  }, [invoicePreviewUrl]);
+  }, [invoiceFile, scanMode]);
 
   useEffect(() => {
-    if (invoiceFile && scanMode === 'image' && !invoicePreviewUrl) {
-      setInvoicePreviewUrl(URL.createObjectURL(invoiceFile));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

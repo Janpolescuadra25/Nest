@@ -367,10 +367,16 @@ export default function BillPreviewForm({
 
   const apAccountOptions = useMemo(() =>
     accounts
-      .filter((account) => account.Active)
+      .filter((account) => account.Active && (account.AccountType === 'Accounts Payable' || account.AccountSubType === 'AccountsPayable'))
       .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
     [accounts],
   );
+
+  useEffect(() => {
+    if (apAccountOptions.length === 1 && !apAccountRef.value) {
+      setApAccountRef({ value: apAccountOptions[0].value, name: apAccountOptions[0].label });
+    }
+  }, [apAccountOptions, apAccountRef.value]);
 
   const accountOptions = useMemo(() =>
     accounts
@@ -653,14 +659,6 @@ export default function BillPreviewForm({
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="flex flex-col gap-2 px-3 py-3 border-b border-gray-200 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={() => void handleAutoFill()}
-            disabled={!activeScanEntry?.lineItems?.length || !selectedTemplate?.columnMappings}
-            className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
-          >
-            Auto-fill from Scan
-          </button>
           {autoFillSummary ? (
             <div className="text-xs text-gray-600">
               {autoFillSummary.total} items: {autoFillSummary.mapped} mapped, {autoFillSummary.unmapped} unmapped

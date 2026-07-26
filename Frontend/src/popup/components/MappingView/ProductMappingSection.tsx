@@ -10,8 +10,6 @@ interface Props {
   templateId: string;
 }
 
-const POSTING_TYPES = ['Credit', 'Debit'] as const;
-
 export default function ProductMappingSection({ jwt, templateId }: Props) {
   const { accounts, classes } = useQBContext();
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,7 +24,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
     templateId,
     productId: '',
     accountId: '',
-    postingType: 'Credit',
+    postingType: 'Debit',
     classId: undefined,
   });
   const [useRuleEnabled, setUseRuleEnabled] = useState(false);
@@ -135,7 +133,7 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
       templateId,
       productId: '',
       accountId: '',
-      postingType: 'Credit',
+      postingType: 'Debit',
       classId: undefined,
     });
     setUseRuleEnabled(false);
@@ -191,10 +189,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
       setError('Account is required');
       return;
     }
-    if (!formData.postingType) {
-      setError('Posting type is required');
-      return;
-    }
     setSaving(true);
     setError(null);
 
@@ -206,13 +200,13 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
       if (editingMapping) {
         const updated = await api.updateProductMapping(jwt, editingMapping.id, {
           accountId: formData.accountId,
-          postingType: formData.postingType,
+          postingType: 'Debit',
           classId: formData.classId || undefined,
           matchingRule,
         });
         setMappings((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       } else {
-        const created = await api.createProductMapping(jwt, { ...formData, matchingRule });
+        const created = await api.createProductMapping(jwt, { ...formData, postingType: 'Debit', matchingRule });
         setMappings((prev) => [...prev, created].sort((a, b) => a.productName.localeCompare(b.productName)));
       }
       resetForm();
@@ -321,18 +315,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                                 <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </optgroup>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-600">Posting Type</label>
-                        <select
-                          value={formData.postingType}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, postingType: e.target.value as ProductMappingFormData['postingType'] }))}
-                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
-                        >
-                          {POSTING_TYPES.map((option) => (
-                            <option key={option} value={option}>{option}</option>
                           ))}
                         </select>
                       </div>
@@ -466,9 +448,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                           <tr key={mapping.id} className="border-b border-gray-200 hover:bg-gray-50">
                             <td className="px-3 py-3 text-gray-700">{mapping.productName}</td>
                             <td className="px-3 py-3 text-gray-600">{accountLabel(mapping.accountId)}</td>
-                            <td className={`px-3 py-3 ${mapping.postingType === 'Debit' ? 'text-red-600' : 'text-emerald-600'}`}>
-                              {mapping.postingType}
-                            </td>
                             <td className="px-3 py-3 text-gray-600">{classLabel(mapping.classId)}</td>
                             <td className="px-3 py-2">
                               {mapping.matchingRule ? (

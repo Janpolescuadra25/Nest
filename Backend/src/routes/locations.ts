@@ -513,7 +513,7 @@ router.get('/:id/scans', asyncHandler(async(req: AuthRequest, res: Response): Pr
     const rows = await prisma.scanRecord.findMany({
       where: { locationId: id },
       orderBy: { scanDate: 'desc' },
-      include: { syncLogs: true },
+      include: { syncLogs: true, attachments: true },
       skip,
       take,
     });
