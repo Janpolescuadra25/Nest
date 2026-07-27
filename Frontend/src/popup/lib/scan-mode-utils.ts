@@ -61,7 +61,7 @@ export function isSectionVisible(
     case 'productMatching':
       if (mode === 'POS') return false;
       if (mode === 'EXCEL') return !!options?.hasProductNameColumn;
-      return true;
+      return transactionType !== 'CHEQUE';
 
     case 'templateDefaults':
       return ['BILL', 'VENDOR_CREDIT', 'CHEQUE'].includes(transactionType || '');

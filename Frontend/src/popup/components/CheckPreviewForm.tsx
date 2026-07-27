@@ -399,44 +399,6 @@ export default function CheckPreviewForm({
     setRuleTransformedLineItems(null);
   };
 
-  const handleAutoFill = useCallback(async () => {
-    if (!activeScanEntry?.lineItems?.length) {
-      setError('No scan line items available to auto-fill');
-      return;
-    }
-    if (!selectedTemplate?.columnMappings) {
-      setError('Template column mappings are required for auto-fill');
-      return;
-    }
-    if (!selectedTemplate?.id) return;
-
-    setError(null);
-
-    try {
-      const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
-      const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
-      const extracted = extractLineItems({
-        lineItems: itemsToExtract,
-        columnMappings: selectedTemplate.columnMappings,
-        productMappings,
-        defaultPostingType: 'Debit',
-      });
-
-      const checkLines = extracted.map((item) => newLine({
-        accountId: item.accountId,
-        accountName: item.accountName || accounts.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
-        description: item.description,
-        classId: item.classId ?? '',
-        amount: item.amount.toFixed(2),
-      }));
-
-      setLines(checkLines);
-      setAutoFillSummary(getAutoFillSummary(extracted));
-      setUnmatchedItems(extracted.filter((item) => !item.matched).map((item) => ({ productName: item.productName })));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Auto-fill failed');
-    }
-  }, [activeScanEntry, accounts, jwt, selectedTemplate, ruleTransformedLineItems]);
 
   const handleSync = useCallback(async (skipDedupCheck = false) => {
     if (!hasHeader || !allMapped || !hasAmount) return;
@@ -592,14 +554,6 @@ export default function CheckPreviewForm({
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="flex flex-col gap-2 px-3 py-3 border-b border-gray-200 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            onClick={() => void handleAutoFill()}
-            disabled={!activeScanEntry?.lineItems?.length || !selectedTemplate?.columnMappings}
-            className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded px-3 py-1.5"
-          >
-            Auto-fill from Scan
-          </button>
           {autoFillSummary ? (
             <div className="text-xs text-gray-600">
               {autoFillSummary.total} items: {autoFillSummary.mapped} mapped, {autoFillSummary.unmapped} unmapped

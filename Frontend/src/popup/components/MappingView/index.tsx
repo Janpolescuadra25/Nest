@@ -9,7 +9,6 @@ import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
 import TemplateWizard from '../TemplateWizard';
-import SearchableSelect from '../SearchableSelect';
 import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS, CHEQUE_FIELD_LABELS } from '../../../types';
@@ -265,10 +264,6 @@ export default function MappingView({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplate?.id ?? '');
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
-  const [vendorCreditDefaults, setVendorCreditDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
-  const [vendorCreditDefaultsDirty, setVendorCreditDefaultsDirty] = useState(false);
-  const [chequeDefaults, setChequeDefaults] = useState<Record<string, { value: string; name: string } | null>>({});
-  const [chequeDefaultsDirty, setChequeDefaultsDirty] = useState(false);
   const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
   const memoTextareaRef = useRef<HTMLTextAreaElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -491,234 +486,6 @@ export default function MappingView({
     }
     return BILL_FIELD_LABELS[field] ?? (field === 'memo' ? 'Memo' : field === 'docNumber' ? 'Doc Number' : field);
   };
-
-  useEffect(() => {
-    if (selectedTemplate?.transactionType === 'VENDOR_CREDIT') {
-      setVendorCreditDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
-      setVendorCreditDefaultsDirty(false);
-      setChequeDefaults({});
-      setChequeDefaultsDirty(false);
-    } else if (selectedTemplate?.transactionType === 'CHEQUE') {
-      setChequeDefaults((selectedTemplate.defaults as Record<string, { value: string; name: string }> | null) ?? {});
-      setChequeDefaultsDirty(false);
-      setVendorCreditDefaults({});
-      setVendorCreditDefaultsDirty(false);
-    } else {
-      setVendorCreditDefaults({});
-      setVendorCreditDefaultsDirty(false);
-      setChequeDefaults({});
-      setChequeDefaultsDirty(false);
-    }
-  }, [selectedTemplate]);
-
-  const vendorOptions = useMemo<SelectOption[]>(() =>
-    vendors.map((vendor) => ({ value: vendor.Id, label: vendor.DisplayName })),
-    [vendors],
-  );
-
-  const termOptions = useMemo<SelectOption[]>(() =>
-    terms.map((term) => ({ value: term.Id, label: term.Name })),
-    [terms],
-  );
-
-  const bankAccountOptions = useMemo<SelectOption[]>(() =>
-    accounts
-      .filter((account) => account.Active && account.AccountType === 'Bank')
-      .map((account) => ({
-        value: account.Id,
-        label: account.FullyQualifiedName,
-        subtitle: account.AccountSubType,
-        group: account.Classification || account.AccountType,
-      }))
-      .sort((a, b) => (a.group ?? '').localeCompare(b.group ?? '') || a.label.localeCompare(b.label)),
-    [accounts],
-  );
-
-  const updateVendorCreditDefault = (key: string, value: string) => {
-    setVendorCreditDefaults((prev) => ({
-      ...prev,
-      [key]: { value, name: value },
-    }));
-    setVendorCreditDefaultsDirty(true);
-  };
-
-  const saveVendorCreditDefaults = async () => {
-    if (!selectedTemplateId || !jwt) return;
-    setTemplatesLoading(true);
-    try {
-      await api.updateTemplate(jwt, selectedTemplateId, { defaults: vendorCreditDefaults });
-      await loadTemplates();
-      setVendorCreditDefaultsDirty(false);
-      showToast('Vendor Credit defaults saved', 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to save vendor credit defaults', 'error');
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
-
-  const updateChequeDefault = (key: string, value: string) => {
-    setChequeDefaults((prev) => ({
-      ...prev,
-      [key]: { value, name: value },
-    }));
-    setChequeDefaultsDirty(true);
-  };
-
-  const saveChequeDefaults = async () => {
-    if (!selectedTemplateId || !jwt) return;
-    setTemplatesLoading(true);
-    try {
-      await api.updateTemplate(jwt, selectedTemplateId, { defaults: chequeDefaults });
-      await loadTemplates();
-      setChequeDefaultsDirty(false);
-      showToast('Check defaults saved', 'success');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to save check defaults', 'error');
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
-
-  const renderVendorCreditHeader = () => (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
-      <div className="text-xs font-semibold text-gray-900">Vendor Credit Defaults</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{VENDOR_CREDIT_FIELD_LABELS.vendorRef}</div>
-          <SearchableSelect
-            options={vendorOptions}
-            value={vendorCreditDefaults.vendorRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = vendors.find((vendor) => vendor.Id === value);
-              setVendorCreditDefaults((prev) => ({
-                ...prev,
-                vendorRef: { value, name: selected?.DisplayName ?? '' },
-              }));
-              setVendorCreditDefaultsDirty(true);
-            }}
-            placeholder="Select vendor…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{VENDOR_CREDIT_FIELD_LABELS.apAccountRef}</div>
-          <SearchableSelect
-            options={accountOptions}
-            value={vendorCreditDefaults.apAccountRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = accounts.find((account) => account.Id === value);
-              setVendorCreditDefaults((prev) => ({
-                ...prev,
-                apAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
-              }));
-              setVendorCreditDefaultsDirty(true);
-            }}
-            placeholder="Select AP account…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{VENDOR_CREDIT_FIELD_LABELS.memo}</div>
-          <input
-            type="text"
-            value={vendorCreditDefaults.memo?.value ?? ''}
-            onChange={(e) => updateVendorCreditDefault('memo', e.target.value)}
-            placeholder="Memo"
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{VENDOR_CREDIT_FIELD_LABELS.docNumber}</div>
-          <input
-            type="text"
-            value={vendorCreditDefaults.docNumber?.value ?? ''}
-            onChange={(e) => updateVendorCreditDefault('docNumber', e.target.value)}
-            placeholder="e.g. VC-001"
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={!vendorCreditDefaultsDirty || templatesLoading}
-          onClick={saveVendorCreditDefaults}
-          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
-        >
-          Save Defaults
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderChequeHeader = () => (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
-      <div className="text-xs font-semibold text-gray-900">Check Defaults</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{CHEQUE_FIELD_LABELS.bankAccountRef}</div>
-          <SearchableSelect
-            options={bankAccountOptions}
-            value={chequeDefaults.bankAccountRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = accounts.find((account) => account.Id === value);
-              setChequeDefaults((prev) => ({
-                ...prev,
-                bankAccountRef: { value, name: selected?.FullyQualifiedName ?? '' },
-              }));
-              setChequeDefaultsDirty(true);
-            }}
-            placeholder="Select bank account…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{CHEQUE_FIELD_LABELS.payeeRef}</div>
-          <SearchableSelect
-            options={vendorOptions}
-            value={chequeDefaults.payeeRef?.value ?? ''}
-            onChange={(value) => {
-              const selected = vendors.find((vendor) => vendor.Id === value);
-              setChequeDefaults((prev) => ({
-                ...prev,
-                payeeRef: { value, name: selected?.DisplayName ?? '' },
-              }));
-              setChequeDefaultsDirty(true);
-            }}
-            placeholder="Select payee…"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{CHEQUE_FIELD_LABELS.memo}</div>
-          <input
-            type="text"
-            value={chequeDefaults.memo?.value ?? ''}
-            onChange={(e) => updateChequeDefault('memo', e.target.value)}
-            placeholder="Memo"
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        <div>
-          <div className="text-xs text-gray-600 mb-1">{CHEQUE_FIELD_LABELS.docNumber}</div>
-          <input
-            type="text"
-            value={chequeDefaults.docNumber?.value ?? ''}
-            onChange={(e) => updateChequeDefault('docNumber', e.target.value)}
-            placeholder="Check No."
-            className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          disabled={!chequeDefaultsDirty || templatesLoading}
-          onClick={saveChequeDefaults}
-          className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
-        >
-          Save Defaults
-        </button>
-      </div>
-    </div>
-  );
 
   const selectedTemplateHasMappings = useMemo(
     () => selectedTemplateId !== '' && localMappings.some((mapping) => mapping.templateId === selectedTemplateId),
@@ -1951,8 +1718,6 @@ export default function MappingView({
         </div>
       )}
 
-      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isVendorCredit && renderVendorCreditHeader()}
-      {isSectionVisible('templateDefaults', activeScanMode, selectedTemplate?.transactionType) && isCheque && renderChequeHeader()}
       {isSectionVisible('fieldMapping', activeScanMode, selectedTemplate?.transactionType) && (
         loading ? (
           <DashboardSkeleton type="list" rows={3} />
