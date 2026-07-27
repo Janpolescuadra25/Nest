@@ -320,6 +320,19 @@ export default function ScanView({
     ) as ScanData;
   }, [activeScanEntry]);
 
+  const templateMismatch = useMemo(() => {
+    if (!documentClassification || !selectedTemplate) return null;
+    const docType = documentClassification.documentType;
+    const txnType = selectedTemplate.transactionType;
+    if ((docType === 'INVOICE' || docType === 'RECEIPT') && txnType === 'JOURNAL_ENTRY') {
+      return { detected: 'bill/invoice', expected: 'BILL' };
+    }
+    if (docType === 'CHEQUE' && txnType !== 'CHEQUE') {
+      return { detected: 'cheque', expected: 'CHEQUE' };
+    }
+    return null;
+  }, [documentClassification, selectedTemplate]);
+
   useEffect(() => {
     if (activeScanData) {
       onScanData(activeScanData);
@@ -1396,6 +1409,18 @@ export default function ScanView({
                     This document type is not supported for image upload. Try POS scan or Excel import instead.
                   </div>
                 )}
+              </div>
+            )}
+            {templateMismatch && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 flex items-center justify-between gap-3">
+                <span>This looks like a {templateMismatch.detected}. Switch to a {templateMismatch.expected} template for correct line-item mapping.</span>
+                <button
+                  type="button"
+                  onClick={() => onTabChange('mappings')}
+                  className="text-xs font-semibold text-amber-700 underline whitespace-nowrap"
+                >
+                  Go to Mappings →
+                </button>
               </div>
             )}
             <div className="flex flex-wrap gap-2">
