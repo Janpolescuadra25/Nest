@@ -356,7 +356,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                             <option value="EXACT">Exact Match</option>
                             <option value="CONTAINS">Contains</option>
                             <option value="STARTS_WITH">Starts With</option>
-                            <option value="FUZZY">Fuzzy Match</option>
                             <option value="REGEX">Regex</option>
                           </select>
                         </div>
@@ -376,20 +375,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                           </div>
                         )}
 
-                        {ruleType === 'FUZZY' && (
-                          <div>
-                            <label className="text-xs text-gray-600">Threshold ({ruleThreshold.toFixed(2)})</label>
-                            <input
-                              type="range"
-                              min="0.50"
-                              max="1.00"
-                              step="0.05"
-                              value={ruleThreshold}
-                              onChange={(e) => setRuleThreshold(parseFloat(e.target.value))}
-                              className="mt-1 w-full"
-                            />
-                          </div>
-                        )}
 
                         {ruleType === 'REGEX' && (
                           <div>
@@ -453,7 +438,6 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                               {mapping.matchingRule ? (
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                                   mapping.matchingRule.type === 'EXACT' ? 'bg-emerald-50 text-emerald-600' :
-                                  mapping.matchingRule.type === 'FUZZY' ? 'bg-amber-50 text-amber-600' :
                                   mapping.matchingRule.type === 'REGEX' ? 'bg-gray-50 text-gray-600' :
                                   mapping.matchingRule.type === 'CONTAINS' ? 'bg-emerald-50 text-emerald-600' :
                                   mapping.matchingRule.type === 'STARTS_WITH' ? 'bg-emerald-50 text-emerald-600' :

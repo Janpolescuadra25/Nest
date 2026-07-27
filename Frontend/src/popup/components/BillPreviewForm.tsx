@@ -434,45 +434,6 @@ export default function BillPreviewForm({
     setRuleTransformedLineItems(null);
   };
 
-  const handleAutoFill = useCallback(async () => {
-    if (!activeScanEntry?.lineItems?.length) {
-      setError('No scan line items available to auto-fill');
-      return;
-    }
-    if (!selectedTemplate?.columnMappings) {
-      setError('Template column mappings are required for auto-fill');
-      return;
-    }
-    if (!selectedTemplate?.id) return;
-
-    setError(null);
-
-    try {
-      const productMappings = await api.getProductMappings(jwt, selectedTemplate.id);
-      const itemsToExtract = ruleTransformedLineItems ?? activeScanEntry.lineItems ?? [];
-      const extracted = extractLineItems({
-        lineItems: itemsToExtract,
-        columnMappings: selectedTemplate.columnMappings,
-        productMappings,
-        defaultPostingType: 'Credit',
-      });
-
-      const billLines = extracted.map((item) => newLine({
-        accountId: item.accountId,
-        accountName: item.accountName || accounts.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
-        description: item.description,
-        classId: item.classId ?? '',
-        taxCodeId: item.taxCodeId ?? '',
-        amount: item.amount.toFixed(2),
-      }));
-
-      setLines(billLines);
-      setAutoFillSummary(getAutoFillSummary(extracted));
-      setUnmatchedItems(extracted.filter((item) => !item.matched).map((item) => ({ productName: item.productName })));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Auto-fill failed');
-    }
-  }, [activeScanEntry, accounts, jwt, selectedTemplate]);
 
   const handleSync = useCallback(async (skipDedupCheck = false) => {
     if (!hasHeader || !allMapped || !hasAmount) return;

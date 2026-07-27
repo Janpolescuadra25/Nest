@@ -94,8 +94,6 @@ export interface ExtractedLineItem {
   accountName: string;
   postingType: 'Credit' | 'Debit';
   matched: boolean;
-  fuzzyMatched?: boolean;
-  lowConfidence?: boolean;
 }
 
 export interface Product {
@@ -108,7 +106,7 @@ export interface ProductFormData {
   name: string;
 }
 
-export type MatchingRuleType = 'EXACT' | 'CONTAINS' | 'STARTS_WITH' | 'FUZZY' | 'REGEX';
+export type MatchingRuleType = 'EXACT' | 'CONTAINS' | 'STARTS_WITH' | 'REGEX';
 
 export interface MatchingRule {
   type: MatchingRuleType;

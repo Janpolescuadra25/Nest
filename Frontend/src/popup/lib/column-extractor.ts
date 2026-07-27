@@ -1,4 +1,3 @@
-import { fuzzyMatch, FUZZY_LOW_CONFIDENCE_THRESHOLD } from './fuzzy-matcher';
 import type { ProductMapping, ExtractedLineItem, MatchingRule } from '../../types';
 
 function normalizeText(value: string): string {
@@ -17,11 +16,6 @@ export function evaluateProductMatch(
   if (!rule) {
     if (exactMatch) {
       return { matched: true, confidence: 1.0, matchType: 'EXACT' };
-    }
-
-    const fuzzy = fuzzyMatch(inputName, [catalogName]);
-    if (fuzzy && fuzzy.score >= 0.8) {
-      return { matched: true, confidence: fuzzy.score, matchType: 'FUZZY' };
     }
 
     if (normalizedInput.includes(normalizedCatalog)) {
@@ -67,14 +61,6 @@ export function evaluateProductMatch(
       return matches
         ? { matched: true, confidence: 1.0, matchType: 'STARTS_WITH' }
         : { matched: false, confidence: 0, matchType: 'STARTS_WITH' };
-    }
-    case 'FUZZY': {
-      const threshold = rule.threshold ?? 0.8;
-      const result = fuzzyMatch(inputName, [catalogName]);
-      if (result && result.score >= threshold) {
-        return { matched: true, confidence: result.score, matchType: 'FUZZY' };
-      }
-      return { matched: false, confidence: 0, matchType: 'FUZZY' };
     }
     case 'REGEX': {
       if (!rule.pattern) {
@@ -168,7 +154,7 @@ export function extractLineItems(params: {
       if (!best.matched) return current;
       if (current.confidence > best.confidence) return current;
       if (current.confidence === best.confidence) {
-        const precedence = ['EXACT', 'CONTAINS', 'STARTS_WITH', 'REGEX', 'FUZZY', 'SUBSTRING'];
+        const precedence = ['EXACT', 'CONTAINS', 'STARTS_WITH', 'REGEX', 'SUBSTRING'];
         const currentRank = precedence.indexOf(current.matchType);
         const bestRank = precedence.indexOf(best.matchType);
         return currentRank < bestRank ? current : best;
@@ -181,9 +167,6 @@ export function extractLineItems(params: {
     const accountName = '';
     const postingType = matchedMapping?.postingType ?? defaultPostingType;
     const matched = Boolean(matchedMapping);
-    const fuzzyMatched = bestMatch.matchType === 'FUZZY';
-    const lowConfidence = fuzzyMatched ? bestMatch.confidence < FUZZY_LOW_CONFIDENCE_THRESHOLD : false;
-
     acc.push({
       productName,
       amount: amountValue,
@@ -194,8 +177,6 @@ export function extractLineItems(params: {
       accountName,
       postingType,
       matched,
-      fuzzyMatched,
-      lowConfidence: fuzzyMatched ? lowConfidence : undefined,
     });
 
     return acc;
