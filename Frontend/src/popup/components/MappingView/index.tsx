@@ -383,29 +383,6 @@ export default function MappingView({
     }));
   }, [scanData]);
 
-  const scanProductNames = useMemo(() => {
-    try {
-      if (!activeScanEntry || activeScanEntry.lineItems.length === 0) return [];
-
-      const lineItems = activeScanEntry.lineItems;
-      const mapping = selectedTemplate?.columnMappings;
-      const columnMappings = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
-      const productColumn = columnMappings && typeof columnMappings === 'object'
-        ? String((columnMappings as Record<string, unknown>).productColumn ?? '').trim()
-        : '';
-
-      if (productColumn) {
-        return lineItems
-          .map((row) => String(row[productColumn] ?? '').trim())
-          .filter((value) => value !== '');
-      }
-
-      return [];
-    } catch {
-      return [];
-    }
-  }, [activeScanEntry, selectedTemplate?.columnMappings]);
-
   const unmappedCount = useMemo(() => {
     if (!scanData) return 0;
     return Object.keys(scanData).filter(
@@ -437,6 +414,29 @@ export default function MappingView({
       return false;
     }
   }, [selectedTemplate?.columnMappings]);
+
+  const scanProductNames = useMemo(() => {
+    try {
+      if (!activeScanEntry || activeScanEntry.lineItems.length === 0) return [];
+
+      const lineItems = activeScanEntry.lineItems;
+      const mapping = selectedTemplate?.columnMappings;
+      const columnMappings = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
+      const productColumn = columnMappings && typeof columnMappings === 'object'
+        ? String((columnMappings as Record<string, unknown>).productColumn ?? '').trim()
+        : '';
+
+      if (productColumn) {
+        return lineItems
+          .map((row) => String(row[productColumn] ?? '').trim())
+          .filter((value) => value !== '');
+      }
+
+      return [];
+    } catch {
+      return [];
+    }
+  }, [activeScanEntry, selectedTemplate?.columnMappings]);
 
   const chequeBankOptions = useMemo(() =>
     accounts
