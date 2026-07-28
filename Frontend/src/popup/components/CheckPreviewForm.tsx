@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError } from '../lib/api';
-import { extractLineItems, getAutoFillSummary } from '../lib/column-extractor';
+import { extractLineItems, getAutoFillSummary, evaluateProductMatch } from '../lib/column-extractor';
 import { useLocations } from '../hooks/useLocations';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ErrorCard from './shared/ErrorCard';
-import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template } from '../../types';
+import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template, PayeeMapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
@@ -109,6 +109,7 @@ export default function CheckPreviewForm({
   const [txnDate, setTxnDate] = useState(today);
   const [bankAccountRef, setBankAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [payeeRef, setPayeeRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
   const [lines, setLines] = useState<CheckLine[]>([newLine(), newLine()]);
@@ -254,6 +255,13 @@ export default function CheckPreviewForm({
   }, [selectedTemplate]);
 
   useEffect(() => {
+    if (!jwt || !selectedTemplate?.id) return;
+    api.getPayeeMappings(jwt, selectedTemplate.id)
+      .then(setPayeeMappings)
+      .catch(() => {});
+  }, [jwt, selectedTemplate?.id]);
+
+  useEffect(() => {
     if (!activeScanEntry) return;
     if (activeScanEntry.source === 'pos') return;
     const h = activeScanEntry.header;
@@ -263,6 +271,23 @@ export default function CheckPreviewForm({
       if (prev.value) return prev;
       const vendorName = (h.payeeName || h.vendor || '').trim();
       if (!vendorName) return prev;
+
+      if (payeeMappings.length > 0) {
+        let bestMatch: PayeeMapping | null = null;
+        let bestConfidence = 0;
+        for (const mapping of payeeMappings) {
+          const result = evaluateProductMatch(vendorName, mapping.scannedName, mapping.matchingRule);
+          if (result.matched && result.confidence > bestConfidence) {
+            bestMatch = mapping;
+            bestConfidence = result.confidence;
+          }
+        }
+        if (bestMatch) {
+          const vendor = vendors.find((v) => v.Id === bestMatch!.vendorId);
+          if (vendor) return { value: vendor.Id, name: vendor.DisplayName };
+        }
+      }
+
       const lower = vendorName.toLowerCase();
       const match = vendors.find((v) => {
         if (v.DisplayName.toLowerCase() === lower) return true;
@@ -302,7 +327,7 @@ export default function CheckPreviewForm({
       const match = accounts.find((a) => a.FullyQualifiedName.toLowerCase().includes(bankName));
       if (match) setBankAccountRef({ value: match.Id, name: match.FullyQualifiedName });
     }
-  }, [activeScanEntry, vendors, accounts, bankAccountRef.value]);
+  }, [activeScanEntry, vendors, accounts, bankAccountRef.value, payeeMappings]);
 
   useEffect(() => {
     if (!mappingsLoaded) return;

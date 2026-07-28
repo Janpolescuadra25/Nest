@@ -8,6 +8,7 @@ import { ConfirmDialog, ErrorCard, DashboardSkeleton, EmptyState } from '../shar
 import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
+import PayeeMappingSection from './PayeeMappingSection';
 import TemplateWizard from '../TemplateWizard';
 import SearchableSelect from '../SearchableSelect';
 import RuleFormSection from './RuleFormSection';
@@ -1706,6 +1707,13 @@ export default function MappingView({
           locationId={locId}
           templateId={selectedTemplateId}
           fieldOptions={scanFieldOptions}
+        />
+      )}
+
+      {(isCheque || isBill || isVendorCredit) && activeScanMode === 'IMAGE' && selectedTemplateId && (
+        <PayeeMappingSection
+          jwt={jwt}
+          templateId={selectedTemplateId}
         />
       )}
 
