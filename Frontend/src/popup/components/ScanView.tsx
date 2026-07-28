@@ -99,6 +99,8 @@ interface Props {
   activeScanEntry: ScanEntry | null;
   invoiceFile: File | null;
   setInvoiceFile: (file: File | null) => void;
+  scanMode: ScanSource;
+  setScanMode: React.Dispatch<React.SetStateAction<ScanSource>>;
 }
 
 export default function ScanView({
@@ -120,12 +122,13 @@ export default function ScanView({
   activeScanEntry,
   invoiceFile,
   setInvoiceFile,
+  scanMode,
+  setScanMode,
 }: Props) {
   // MIGRATION PLAN: preserve the current POS scan contract while moving toward ScanEntry-driven ingestion.
   // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
   // - New ScanEntry records are stored locally in ScanView for both POS and Excel scan modes.
   // - activeScanEntry.lineItems[0] is converted into numeric `scanData` for legacy mapping bindings.
-  const [scanMode, setScanMode] = useState<ScanSource>('pos');
   const [uploadedExcelFile, setUploadedExcelFile] = useState<File | null>(null);
   const [excelPreviewSheets, setExcelPreviewSheets] = useState<ExcelParseResult['sheets']>([]);
   const [excelPreviewSheetName, setExcelPreviewSheetName] = useState<string>('');
@@ -879,6 +882,7 @@ export default function ScanView({
 
       // AI invoice parsing via backend Gemini endpoint
       const parsed = await api.parseDocumentAI(jwt, invoiceFile);
+      setPendingAttachment(parsed.attachment ?? null);
       setDocumentClassification(parsed.classification);
       setOcrConfidence(null);
       if (parsed.invoiceData) {
@@ -1143,6 +1147,7 @@ export default function ScanView({
         <ScanHistory
           jwt={jwt}
           locationId={locationId}
+          currentScanMode={scanMode}
           onLoadScan={handleLoadHistory}
         />
       )}

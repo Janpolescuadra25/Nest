@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 interface Props {
   jwt: string;
   locationId: string;
+  currentScanMode: string;
   onLoadScan: (scan: {
     id: string;
     rawData: Record<string, number>;
@@ -13,7 +14,7 @@ interface Props {
   }) => void;
 }
 
-export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
+export default function ScanHistory({ jwt, locationId, currentScanMode, onLoadScan }: Props) {
   const [page, setPage] = useState(1);
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -24,7 +25,7 @@ export default function ScanHistory({ jwt, locationId, onLoadScan }: Props) {
     setLoading(true);
     try {
       const result = await api.getScans(jwt, locationId, nextPage, 10);
-      setScans(result.scans ?? []);
+      setScans((result.scans ?? []).filter((s) => (s.source ?? 'pos') === currentScanMode));
       setHasMore(result.hasMore ?? false);
       setPage(nextPage);
     } catch (err) {

@@ -32,7 +32,7 @@ import AdminsTab from './components/AdminsTab';
 import UsersTab from './components/UsersTab';
 import LocationsTab from './components/LocationsTab';
 import ProductCatalogView from './components/ProductCatalogView';
-import type { TabId, ScanData, ScanEntry, Template } from '../types';
+import type { TabId, ScanData, ScanEntry, ScanSource, Template } from '../types';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
 const ROLE_META: Record<string, { icon: string; color: string }> = {
@@ -52,6 +52,7 @@ export default function App() {
   const [scanEntries, setScanEntries] = useState<ScanEntry[]>([]);
   const [activeScanEntryId, setActiveScanEntryId] = useState<string | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [scanMode, setScanMode] = useState<ScanSource>('pos');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
@@ -478,6 +479,8 @@ export default function App() {
               activeScanEntry={activeScanEntry}
               invoiceFile={invoiceFile}
               setInvoiceFile={setInvoiceFile}
+              scanMode={scanMode}
+              setScanMode={setScanMode}
             />
           )}
           {effectiveTab === 'mappings' && (
