@@ -1,4 +1,4 @@
-import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion } from '../../types';
+import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion, ProductMappingSuggestion } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -431,6 +431,10 @@ export const api = {
 
   suggestMappings: (jwt: string, locationId: string, scanFields: string[], transactionType?: string) =>
     post<{ suggestions: MappingSuggestion[] }>('/api/mappings/suggest', { locationId, scanFields, transactionType }, jwt),
+
+  suggestProductMappings: (jwt: string, templateId: string, scanProductNames: string[]) =>
+    post<{ suggestions: ProductMappingSuggestion[] }>('/api/product-mappings/suggest', { templateId, scanProductNames }, jwt)
+      .then(res => res.suggestions ?? []),
 
   // ── Templates ──────────────────────────────────────────────────────────────
   getTemplates: (jwt: string, locationId: string) =>

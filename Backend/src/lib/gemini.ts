@@ -481,6 +481,98 @@ const mappingSuggestionSchema: ArraySchema = {
   },
 };
 
+const productMappingSuggestionSchema: ArraySchema = {
+  type: SchemaType.ARRAY,
+  items: {
+    type: SchemaType.OBJECT,
+    properties: {
+      productName: { type: SchemaType.STRING, description: 'The scanned product name from a line item' },
+      accountHint: { type: SchemaType.STRING, description: 'A useful QuickBooks account hint if an exact match is not available' },
+      accountName: { type: SchemaType.STRING, description: 'The recommended QuickBooks account name if one is likely' },
+      postingType: { type: SchemaType.STRING, description: 'Whether the field should be posted as Debit or Credit' },
+      reason: { type: SchemaType.STRING, description: 'A short explanation of why this mapping was suggested' },
+    },
+    required: ['productName', 'accountHint', 'accountName', 'postingType', 'reason'],
+  },
+};
+
+export async function suggestProductMappings(
+  productNames: string[],
+  accountNames: string[],
+  transactionType?: string,
+  accountTypes?: { name: string; type: string; subType: string }[],
+): Promise<Array<{ productName: string; accountHint: string; accountName: string; postingType: 'Debit' | 'Credit'; reason: string }>> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  await waitForGeminiSlot();
+
+  const ACCOUNT_CAP = 100;
+  const productText = productNames.map((product) => `- ${product}`).join('\n');
+  const accountsText = (accountTypes ?? accountNames.slice(0, ACCOUNT_CAP).map((name) => ({ name, type: '', subType: '' })))
+    .slice(0, ACCOUNT_CAP)
+    .map((account) => `- ${account.name} (${account.type}${account.subType ? ` • ${account.subType}` : ''})`)
+    .join('\n');
+  const transactionText = transactionType ? `Transaction Type: ${transactionType}` : 'Transaction Type: Unknown';
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: productMappingSuggestionSchema,
+    },
+    systemInstruction: `You are an expert accounting assistant. Given a list of scanned product names and a QuickBooks account list, recommend the best account mapping for each product.
+
+RULES:
+- For each product name, choose the most likely QuickBooks account from the list when possible.
+- If you cannot identify an exact account name, provide a helpful account hint instead.
+- Return whether the product should post as Debit or Credit.
+
+ACCOUNTING RULES:
+- DEBIT increases: Asset and Expense accounts
+- CREDIT increases: Liability, Equity, and Income accounts
+- Revenue or product sales should typically post as Credit to Income accounts
+- Payment or cost of goods sold related products may post as Debit to Asset or Expense accounts
+- Tax-related products should post as Credit to Liability accounts when they represent collected tax
+- Discounts or refunds often post as Debit to Expense or Contra-Income accounts
+- Avoid suggesting a posting type that contradicts the account type list
+
+- Return ONLY valid JSON that matches the schema. No extra commentary.`,
+  });
+
+  const prompt = `Scanned Products:
+${productText}
+
+Available QuickBooks Accounts (Type • SubType):
+${accountsText}
+
+${transactionText}`;
+  const result = await model.generateContent([{ text: prompt }]);
+  const text = result.response.text();
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new AppError('AI returned an invalid response format', 502);
+  }
+  if (!parsed) {
+    throw new AppError('AI returned an empty response', 502);
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed.map((item: any) => ({
+    productName: String(item.productName || ''),
+    accountHint: String(item.accountHint || ''),
+    accountName: String(item.accountName || ''),
+    postingType: item.postingType === 'Debit' ? 'Debit' : 'Credit',
+    reason: String(item.reason || ''),
+  }));
+}
+
 export async function suggestMappings(
   scanFields: string[],
   accountNames: string[],

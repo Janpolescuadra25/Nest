@@ -9,10 +9,12 @@ import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
 import TemplateWizard from '../TemplateWizard';
+import SearchableSelect from '../SearchableSelect';
+import RuleFormSection from './RuleFormSection';
 import type { SelectOption } from '../SearchableSelect';
 import { sourceToScanMode, getScanModeDisplay, isSectionVisible } from '../../lib/scan-mode-utils';
 import { BILL_FIELD_LABELS, TRANSACTION_TYPE_LABELS, VENDOR_CREDIT_FIELD_LABELS, CHEQUE_FIELD_LABELS } from '../../../types';
-import type { ColumnMapping, ExcelParseResult, Mapping, MappingCondition, MappingSuggestion, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
+import type { ColumnMapping, ExcelParseResult, Mapping, MappingCondition, MappingSuggestion, Rule, RuleFormData, ScanData, ScanEntry, TabId, ExportTemplate, Template } from '../../../types';
 import type { QBAccount } from '../../types/qb';
 
 /**
@@ -258,6 +260,8 @@ export default function MappingView({
   const [autoMsg, setAutoMsg] = useState<string | null>(null);
   const [memoTemplate, setMemoTemplate] = useState('');
   const [docNumberTemplate, setDocNumberTemplate] = useState('');
+  const [bankDefault, setBankDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [payeeDefault, setPayeeDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [memoOpen, setMemoOpen] = useState(true);
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -379,6 +383,29 @@ export default function MappingView({
     }));
   }, [scanData]);
 
+  const scanProductNames = useMemo(() => {
+    try {
+      if (!activeScanEntry || activeScanEntry.lineItems.length === 0) return [];
+
+      const lineItems = activeScanEntry.lineItems;
+      const mapping = selectedTemplate?.columnMappings;
+      const columnMappings = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
+      const productColumn = columnMappings && typeof columnMappings === 'object'
+        ? String((columnMappings as Record<string, unknown>).productColumn ?? '').trim()
+        : '';
+
+      if (productColumn) {
+        return lineItems
+          .map((row) => String(row[productColumn] ?? '').trim())
+          .filter((value) => value !== '');
+      }
+
+      return [];
+    } catch {
+      return [];
+    }
+  }, [activeScanEntry, selectedTemplate?.columnMappings]);
+
   const unmappedCount = useMemo(() => {
     if (!scanData) return 0;
     return Object.keys(scanData).filter(
@@ -410,6 +437,21 @@ export default function MappingView({
       return false;
     }
   }, [selectedTemplate?.columnMappings]);
+
+  const chequeBankOptions = useMemo(() =>
+    accounts
+      .filter((a) => a.Active && a.AccountType === 'Bank')
+      .map((a) => ({ value: a.Id, label: a.FullyQualifiedName, subtitle: a.AccountSubType ?? undefined })),
+    [accounts],
+  );
+
+  const chequePayeeOptions = useMemo(() =>
+    vendors
+      .filter((v) => v.Active)
+      .map((v) => ({ value: v.Id, label: v.DisplayName, subtitle: v.CompanyName ?? undefined })),
+    [vendors],
+  );
+
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
   const isCheque = selectedTemplate?.transactionType === 'CHEQUE';
@@ -525,6 +567,12 @@ export default function MappingView({
     }
     setMemoTemplate(selectedTemplate.memoTemplate ?? '');
     setDocNumberTemplate(selectedTemplate.docNumberTemplate ?? '');
+
+    // Cheque defaults
+    const chequeDefaults = selectedTemplate.defaults as Record<string, { value: string; name?: string }> | null | undefined;
+    if (chequeDefaults?.bankAccountRef) setBankDefault(chequeDefaults.bankAccountRef);
+    if (chequeDefaults?.payeeRef) setPayeeDefault(chequeDefaults.payeeRef);
+
     templateReadyRef.current = true;
   }, [selectedTemplate]);
 
@@ -1083,6 +1131,28 @@ export default function MappingView({
     }
   }, [jwt, selectedTemplateId, selectedTemplate, localColMap, loadTemplates, showToast]);
 
+  const handleSaveChequeDefaults = useCallback(async () => {
+    try {
+      const existing = (selectedTemplate?.defaults ?? {}) as Record<string, unknown>;
+      const merged = { ...existing };
+      if (bankDefault.value) {
+        merged.bankAccountRef = { value: bankDefault.value, name: bankDefault.name };
+      } else {
+        delete merged.bankAccountRef;
+      }
+      if (payeeDefault.value) {
+        merged.payeeRef = { value: payeeDefault.value, name: payeeDefault.name };
+      } else {
+        delete merged.payeeRef;
+      }
+      await api.updateTemplate(jwt, selectedTemplateId!, { defaults: merged });
+      await loadTemplates();
+      showToast('Cheque defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save cheque defaults', 'error');
+    }
+  }, [jwt, selectedTemplateId, selectedTemplate, bankDefault, payeeDefault, loadTemplates, showToast]);
+
   const getAmountForField = (field: string): number => {
     if (activeScanEntry?.lineItems?.[0]) {
       const raw = activeScanEntry.lineItems[0][field];
@@ -1578,7 +1648,65 @@ export default function MappingView({
       </div>
 
       {isSectionVisible('productMatching', activeScanMode, selectedTemplate?.transactionType, { hasProductNameColumn }) && selectedTemplateId && (
-        <ProductMappingSection jwt={jwt} templateId={selectedTemplateId} />
+        <ProductMappingSection
+          jwt={jwt}
+          templateId={selectedTemplateId}
+          scanProductNames={scanProductNames}
+        />
+      )}
+
+      {/* Cheque Defaults — bank account + payee for CHEQUE templates */}
+      {isCheque && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Cheque Defaults</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                  Set default bank account and payee/vendor for cheques using this template. These are pre-filled when creating a new cheque.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Bank Account</label>
+                      <SearchableSelect
+                          options={chequeBankOptions}
+                          value={bankDefault.value}
+                          onChange={(value) => {
+                              const selected = accounts.find((a) => a.Id === value);
+                              setBankDefault({ value, name: selected?.FullyQualifiedName });
+                          }}
+                          placeholder="Select bank account…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Payee / Vendor</label>
+                      <SearchableSelect
+                          options={chequePayeeOptions}
+                          value={payeeDefault.value}
+                          onChange={(value) => {
+                              const selected = vendors.find((v) => v.Id === value);
+                              setPayeeDefault({ value, name: selected?.DisplayName });
+                          }}
+                          placeholder="Select payee / vendor…"
+                      />
+                  </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                  <button
+                      type="button"
+                      onClick={() => void handleSaveChequeDefaults()}
+                      className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
+                  >
+                      Save Cheque Defaults
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {isSectionVisible('rules', activeScanMode, selectedTemplate?.transactionType) && selectedTemplateId && (
+        <RuleFormSection
+          jwt={jwt}
+          locationId={locId}
+          templateId={selectedTemplateId}
+          fieldOptions={scanFieldOptions}
+        />
       )}
 
       {isSectionVisible('columnMapping', activeScanMode, selectedTemplate?.transactionType) && (

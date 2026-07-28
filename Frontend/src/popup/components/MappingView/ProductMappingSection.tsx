@@ -3,14 +3,15 @@ import { api } from '../../lib/api';
 import { evaluateProductMatch } from '../../lib/column-extractor';
 import { useQBContext } from '../../contexts/QBContext';
 import { ConfirmDialog } from '../shared';
-import type { Product, ProductMapping, ProductMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
+import type { Product, ProductMapping, ProductMappingFormData, ProductMappingSuggestion, MatchingRule, MatchingRuleType } from '../../../types';
 
 interface Props {
   jwt: string;
   templateId: string;
+  scanProductNames?: string[];
 }
 
-export default function ProductMappingSection({ jwt, templateId }: Props) {
+export default function ProductMappingSection({ jwt, templateId, scanProductNames }: Props) {
   const { accounts, classes } = useQBContext();
   const [products, setProducts] = useState<Product[]>([]);
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
@@ -35,6 +36,10 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
   const [testInput, setTestInput] = useState('');
   const [testResults, setTestResults] = useState<{ mappingId: string; productName: string; matched: boolean; confidence: number; matchType: string }[]>([]);
   const [deleteMappingDialog, setDeleteMappingDialog] = useState<{ open: boolean; mapping: ProductMapping | null }>({ open: false, mapping: null });
+  const [mappingSuggestions, setMappingSuggestions] = useState<ProductMappingSuggestion[]>([]);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  const [acceptingSuggestions, setAcceptingSuggestions] = useState<Record<string, boolean>>({});
 
   const handleTestMatch = () => {
     if (!testInput.trim()) return;
@@ -80,6 +85,8 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
     setFormData((prev) => ({ ...prev, templateId }));
     setEditingMapping(null);
     setShowForm(false);
+    setMappingSuggestions([]);
+    setSuggestionError(null);
   }, [templateId]);
 
   const activeAccounts = useMemo(
@@ -142,6 +149,67 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
     setRulePattern('');
     setRuleDirection('either');
     setError(null);
+  };
+
+  const suggestProductMappings = async () => {
+    if (!templateId) {
+      setSuggestionError('Select a template first before requesting suggestions.');
+      return;
+    }
+    if (!scanProductNames || scanProductNames.length === 0) {
+      setSuggestionError('No product names are available from the current scan.');
+      return;
+    }
+
+    setSuggestionError(null);
+    setMappingSuggestions([]);
+    setSuggesting(true);
+
+    try {
+      const suggestions = await api.suggestProductMappings(jwt, templateId, scanProductNames);
+      if (!suggestions.length) {
+        setSuggestionError('AI did not return any product mapping suggestions.');
+        return;
+      }
+      setMappingSuggestions(suggestions);
+    } catch (err) {
+      setSuggestionError(err instanceof Error ? err.message : 'Failed to load AI product mapping suggestions');
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const acceptSuggestion = async (suggestion: ProductMappingSuggestion) => {
+    if (!suggestion.productId) {
+      setSuggestionError(`Product "${suggestion.productName}" is not available in your catalog. Add it first.`);
+      return;
+    }
+    if (!suggestion.accountId) {
+      setSuggestionError(`AI could not resolve a QuickBooks account for "${suggestion.productName}".`);
+      return;
+    }
+
+    const key = `${suggestion.productName}:${suggestion.accountId}`;
+    setAcceptingSuggestions((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const created = await api.createProductMapping(jwt, {
+        templateId,
+        productId: suggestion.productId,
+        accountId: suggestion.accountId,
+        postingType: suggestion.postingType,
+      });
+      setMappings((prev) => [...prev, created].sort((a, b) => a.productName.localeCompare(b.productName)));
+      setMappingSuggestions((prev) => prev.filter((item) => item.productName !== suggestion.productName || item.accountId !== suggestion.accountId));
+    } catch (err) {
+      setSuggestionError(err instanceof Error ? err.message : 'Failed to accept suggestion');
+    } finally {
+      setAcceptingSuggestions((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   const openAdd = () => {
@@ -265,18 +333,85 @@ export default function ProductMappingSection({ jwt, templateId }: Props) {
                 <h2 className="text-sm font-semibold text-gray-900">📦 Product Mappings</h2>
                 <p className="text-xs text-gray-600">Bind catalog products to QB accounts for this template.</p>
               </div>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
-              >
-                + Add Product Mapping
-              </button>
+              <div className="flex gap-2">
+                {scanProductNames && scanProductNames.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void suggestProductMappings()}
+                    disabled={suggesting}
+                    className="text-xs bg-violet-600 hover:bg-violet-500 text-white rounded px-3 py-2 disabled:opacity-50"
+                  >
+                    {suggesting ? 'Thinking...' : 'AI Suggest'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
+                >
+                  + Add Product Mapping
+                </button>
+              </div>
             </div>
 
             {error && (
               <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-3 py-2">
                 {error}
+              </div>
+            )}
+            {suggestionError && (
+              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-3 py-2">
+                {suggestionError}
+              </div>
+            )}
+
+            {mappingSuggestions.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">AI Product Mapping Suggestions</div>
+                    <div className="text-xs text-gray-600">Review and accept suggested product mappings for this template.</div>
+                  </div>
+                </div>
+                <div className="grid gap-3">
+                  {mappingSuggestions.map((suggestion) => {
+                    const acceptKey = `${suggestion.productName}:${suggestion.accountId ?? ''}`;
+                    const isAccepting = Boolean(acceptingSuggestions[acceptKey]);
+                    return (
+                      <div key={acceptKey} className="rounded-lg border border-gray-200 bg-[#F8F9FA] p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{suggestion.productName}</div>
+                            <div className="text-xs text-gray-600">{suggestion.accountName || suggestion.accountHint}</div>
+                          </div>
+                          <span className="text-xs text-gray-600">{suggestion.postingType}</span>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-2">{suggestion.reason}</div>
+                        {suggestion.validationWarning && (
+                          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">
+                            {suggestion.validationWarning}
+                          </div>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void acceptSuggestion(suggestion)}
+                            disabled={isAccepting || !suggestion.productId || !suggestion.accountId}
+                            className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white rounded px-3 py-2"
+                          >
+                            {isAccepting ? 'Adding…' : 'Add Mapping'}
+                          </button>
+                          {!suggestion.productId && (
+                            <span className="text-xs text-gray-600">Product not found in catalog. Add it before accepting.</span>
+                          )}
+                          {!suggestion.accountId && (
+                            <span className="text-xs text-gray-600">Account could not be resolved automatically.</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

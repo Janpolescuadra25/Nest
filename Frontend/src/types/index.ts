@@ -58,6 +58,18 @@ export interface MappingSuggestion {
   reason: string;
 }
 
+export interface ProductMappingSuggestion {
+  productName: string;
+  accountHint: string;
+  accountName: string;
+  accountId?: string;
+  productId?: string;
+  accountType?: string;
+  postingType: 'Debit' | 'Credit';
+  reason: string;
+  validationWarning?: string;
+}
+
 export interface Template {
   id: string;
   locationId: string;

@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
+import { qbService } from '../services/qb.service';
+import { suggestProductMappings } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
 import { AppError, asyncHandler } from '../lib/errors';
 
@@ -130,6 +132,78 @@ router.delete('/:id', requireFeaturePermission('map', 'write'), asyncHandler(asy
 
   await prisma.productMapping.delete({ where: { id } });
   res.json({ success: true });
+}));
+
+router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const { templateId, scanProductNames } = req.body as {
+    templateId?: string;
+    scanProductNames?: string[];
+  };
+
+  if (!templateId || !Array.isArray(scanProductNames) || scanProductNames.length === 0) {
+    throw new AppError('templateId and scanProductNames are required', 400);
+  }
+
+  const template = await getTemplateOrFail(templateId, req.user);
+
+  const products = await prisma.product.findMany({
+    where: { userId: req.user!.userId },
+  });
+  const productMap = new Map(products.map((product) => [product.name.trim().toLowerCase(), product.id]));
+
+  const suggestions = await qbService.callQB(req.user!.userId, async ({ accessToken, realmId }) => {
+    const accounts = await qbService.getAccounts(realmId, accessToken);
+    const accountNames = accounts.map((account) => account.FullyQualifiedName);
+    const accountTypes = accounts.map((account) => ({
+      name: account.FullyQualifiedName,
+      type: account.AccountType,
+      subType: account.AccountSubType || '',
+    }));
+
+    const aiSuggestions = await suggestProductMappings(
+      scanProductNames,
+      accountNames,
+      template.transactionType,
+      accountTypes,
+    );
+
+    return aiSuggestions.map((suggestion) => {
+      const matchedAccount = accounts.find((account) =>
+        account.FullyQualifiedName.toLowerCase() === suggestion.accountName.toLowerCase() ||
+        account.FullyQualifiedName.toLowerCase().includes(suggestion.accountName.toLowerCase()) ||
+        account.FullyQualifiedName.toLowerCase().includes(suggestion.accountHint.toLowerCase())
+      );
+
+      const warnings: string[] = [];
+      if (suggestion.postingType !== 'Debit' && suggestion.postingType !== 'Credit') {
+        warnings.push(`AI suggested invalid posting type "${suggestion.postingType}"`);
+      }
+
+      if (matchedAccount) {
+        const CREDIT_NATURED = new Set([
+          'Revenue', 'Income', 'Other Income',
+          'Liability', 'Other Current Liability', 'Long Term Liability', 'Deferred Revenue',
+          'Equity', 'Non-Posting',
+        ]);
+        const isCreditNatured = CREDIT_NATURED.has(matchedAccount.AccountType);
+        const expectedPosting = isCreditNatured ? 'Credit' : 'Debit';
+
+        if (suggestion.postingType !== expectedPosting) {
+          warnings.push(`Account "${matchedAccount.FullyQualifiedName}" is ${matchedAccount.AccountType} (normally ${expectedPosting}), but AI suggested ${suggestion.postingType}`);
+        }
+      }
+
+      return {
+        ...suggestion,
+        accountId: matchedAccount?.Id,
+        accountType: matchedAccount?.AccountType,
+        productId: productMap.get(suggestion.productName.trim().toLowerCase()),
+        validationWarning: warnings.length > 0 ? warnings.join('; ') : undefined,
+      };
+    });
+  });
+
+  res.json({ suggestions });
 }));
 
 export default router;

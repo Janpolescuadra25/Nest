@@ -44,7 +44,7 @@ export function isTransactionTypeCompatible(
  * based on the current scan mode and template configuration.
  */
 export function isSectionVisible(
-  section: 'fieldMapping' | 'columnMapping' | 'productMatching' | 'templateDefaults',
+  section: 'fieldMapping' | 'columnMapping' | 'productMatching' | 'templateDefaults' | 'rules',
   scanMode: ScanMode | null | undefined,
   transactionType: string | null | undefined,
   options?: { hasProductNameColumn?: boolean }
@@ -65,6 +65,9 @@ export function isSectionVisible(
 
     case 'templateDefaults':
       return ['BILL', 'VENDOR_CREDIT', 'CHEQUE'].includes(transactionType || '');
+
+    case 'rules':
+      return true;
 
     default:
       return false;
