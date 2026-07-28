@@ -1656,7 +1656,7 @@ export default function MappingView({
       )}
 
       {/* Cheque Defaults — bank account + payee for CHEQUE templates */}
-      {isCheque && (
+      {isCheque && activeScanMode === 'IMAGE' && (
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-1">Cheque Defaults</h3>
               <p className="text-xs text-gray-600 mb-3">

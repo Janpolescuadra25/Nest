@@ -60,7 +60,7 @@ const TRANSACTION_TYPE_SCAN_MODE_CONFIG: Record<string, { available: ScanMode[];
   JOURNAL_ENTRY: { available: ['POS', 'EXCEL', 'IMAGE'], defaults: ['POS', 'EXCEL', 'IMAGE'] },
   BILL:          { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE'] },
   VENDOR_CREDIT: { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE'] },
-  CHEQUE:        { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE', 'EXCEL'] },
+  CHEQUE:        { available: ['IMAGE', 'EXCEL'],        defaults: ['IMAGE'] },
 };
 
 export default function TemplateWizard({
@@ -251,6 +251,14 @@ export default function TemplateWizard({
                     key={card.value}
                     type="button"
                     onClick={() => {
+                      if (transactionType === 'CHEQUE') {
+                        setScanModes([card.value]);
+                        if (card.value !== 'POS') {
+                          setPosSystem('');
+                        }
+                        return;
+                      }
+
                       setScanModes((prev) => {
                         if (prev.includes(card.value)) {
                           if (card.value === 'POS') {
