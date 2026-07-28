@@ -149,6 +149,22 @@ export interface ProductMappingFormData {
   matchingRule?: MatchingRule | null;
 }
 
+export interface PayeeMapping {
+  id: string;
+  templateId: string;
+  scannedName: string;
+  vendorId: string;
+  matchingRule: MatchingRule | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayeeMappingFormData {
+  scannedName: string;
+  vendorId: string;
+  matchingRule?: MatchingRule;
+}
+
 export interface ExcelSheetPreview {
   name: string;
   headers: string[];

@@ -1,4 +1,4 @@
-import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion, ProductMappingSuggestion } from '../../types';
+import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, PayeeMapping, PayeeMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion, ProductMappingSuggestion } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -568,6 +568,18 @@ export const api = {
 
   deleteProductMapping: (jwt: string, id: string) =>
     del(`/api/product-mappings/${id}`, jwt),
+
+  getPayeeMappings: (jwt: string, templateId: string) =>
+    get<PayeeMapping[]>(`/api/payee-mappings/${templateId}`, jwt),
+
+  createPayeeMapping: (jwt: string, data: PayeeMappingFormData & { templateId: string }) =>
+    post<PayeeMapping>('/api/payee-mappings', data, jwt),
+
+  updatePayeeMapping: (jwt: string, id: string, data: Partial<PayeeMappingFormData>) =>
+    put<PayeeMapping>(`/api/payee-mappings/${id}`, data, jwt),
+
+  deletePayeeMapping: (jwt: string, id: string) =>
+    del(`/api/payee-mappings/${id}`, jwt),
 
   getScans: (jwt: string, locationId: string, page?: number, limit?: number) => {
     const sp = new URLSearchParams();
