@@ -108,6 +108,23 @@ const LINE_ITEM_COLUMN_ROLES = [
   { key: 'taxCodeColumn', label: 'Tax Code', required: false },
 ] as const;
 
+const JOURNAL_LINE_ITEM_COLUMN_ROLES = [
+  { key: 'accountColumn', label: 'Account', required: true },
+  { key: 'debitColumn', label: 'Debit', required: true },
+  { key: 'creditColumn', label: 'Credit', required: true },
+  { key: 'descriptionColumn', label: 'Description', required: false },
+  { key: 'nameColumn', label: 'Name', required: false },
+  { key: 'classColumn', label: 'Class', required: false },
+  { key: 'taxCodeColumn', label: 'Tax Code', required: false },
+] as const;
+
+const JOURNAL_HEADER_COLUMN_ROLES = [
+  { key: '_header_date', label: 'Date', required: false },
+  { key: '_header_journalNo', label: 'Journal No.', required: false },
+  { key: '_header_adjustingEntry', label: 'Adjusting Entry', required: false },
+  { key: '_header_memo', label: 'Memo', required: false },
+] as const;
+
 interface Props {
   jwt: string;
   selectedLocationId: string;
@@ -476,6 +493,8 @@ export default function MappingView({
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
   const isCheque = selectedTemplate?.transactionType === 'CHEQUE';
   const isJE = selectedTemplate?.transactionType === 'JOURNAL_ENTRY';
+  const isJournalExcel = isJE && activeScanMode === 'EXCEL';
+  const currentLineItemColumnRoles = isJournalExcel ? JOURNAL_LINE_ITEM_COLUMN_ROLES : LINE_ITEM_COLUMN_ROLES;
 
   const getPreviewLabel = () => {
     switch (selectedTemplate?.transactionType) {
@@ -1986,7 +2005,7 @@ export default function MappingView({
             <div className="px-3 pb-3 space-y-3 border-t border-gray-200 pt-3">
               <p className="text-xs text-gray-600">Tell Nest which spreadsheet columns hold product names, amounts, etc.</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                {LINE_ITEM_COLUMN_ROLES.map((role) => (
+                {currentLineItemColumnRoles.map((role) => (
                   <div key={role.key}>
                     <div className="text-xs text-gray-600 mb-1">
                       {role.label}{role.required ? ' *' : ''}
@@ -2004,6 +2023,33 @@ export default function MappingView({
                   </div>
                 ))}
               </div>
+              {isJournalExcel && (
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-600 mb-1">Header Row Mapping</div>
+                    <p className="text-xs text-gray-600">Map spreadsheet header fields to journal metadata fields.</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {JOURNAL_HEADER_COLUMN_ROLES.map((role) => (
+                      <div key={role.key}>
+                        <div className="text-xs text-gray-600 mb-1">
+                          {role.label}{role.required ? ' *' : ''}
+                        </div>
+                        <select
+                          value={localColMap[role.key] ?? ''}
+                          onChange={(e) => setLocalColMap((prev) => ({ ...prev, [role.key]: e.target.value }))}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="">Select column</option>
+                          {lineItemHeaders.map((header) => (
+                            <option key={header} value={header}>{header}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 items-center">
                 <button
                   type="button"
@@ -2021,7 +2067,7 @@ export default function MappingView({
             <div className="px-3 pb-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2">
               {Object.entries(localColMap).filter(([, value]) => value).map(([key, value]) => (
                 <span key={key} className="rounded-full bg-[#F5F5F7] border border-gray-200 text-gray-600 text-[11px] px-2 py-1">
-                  {LINE_ITEM_COLUMN_ROLES.find((role) => role.key === key)?.label ?? key}: {value}
+                  {currentLineItemColumnRoles.find((role) => role.key === key)?.label ?? key}: {value}
                 </span>
               ))}
             </div>
