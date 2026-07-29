@@ -566,6 +566,10 @@ function buildChequePayload(input: CreateChequeInput): object {
       };
     }
 
+    if (line.taxCodeRef?.value) {
+      lineDetail.TaxCodeRef = { value: line.taxCodeRef.value };
+    }
+
     const qbLine: Record<string, unknown> = {
       Amount: line.amount,
       DetailType: 'AccountBasedExpenseLineDetail',

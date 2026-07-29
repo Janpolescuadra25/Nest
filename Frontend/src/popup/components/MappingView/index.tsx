@@ -263,6 +263,11 @@ export default function MappingView({
   const [docNumberTemplate, setDocNumberTemplate] = useState('');
   const [bankDefault, setBankDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [payeeDefault, setPayeeDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [apAccountDefault, setApAccountDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [termsDefault, setTermsDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [taxCodeDefault, setTaxCodeDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [memoDefault, setMemoDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [docNumberDefault, setDocNumberDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [memoOpen, setMemoOpen] = useState(true);
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -453,6 +458,20 @@ export default function MappingView({
     [vendors],
   );
 
+  const apAccountOptions = useMemo(() =>
+    accounts
+      .filter((a) => a.Active && a.AccountType === 'Accounts Payable')
+      .map((a) => ({ value: a.Id, label: a.FullyQualifiedName })),
+    [accounts],
+  );
+
+  const termsOptions = useMemo(() =>
+    terms
+      .filter((t) => t.Active !== false)
+      .map((t) => ({ value: t.Id, label: t.Name, subtitle: t.DueDays ? `Net ${t.DueDays}` : undefined })),
+    [terms],
+  );
+
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
   const isCheque = selectedTemplate?.transactionType === 'CHEQUE';
@@ -573,6 +592,11 @@ export default function MappingView({
     const chequeDefaults = selectedTemplate.defaults as Record<string, { value: string; name?: string }> | null | undefined;
     if (chequeDefaults?.bankAccountRef) setBankDefault(chequeDefaults.bankAccountRef);
     if (chequeDefaults?.payeeRef) setPayeeDefault(chequeDefaults.payeeRef);
+    if (chequeDefaults?.apAccountRef) setApAccountDefault(chequeDefaults.apAccountRef);
+    if (chequeDefaults?.termsRef) setTermsDefault(chequeDefaults.termsRef);
+    if (chequeDefaults?.taxCodeRef) setTaxCodeDefault(chequeDefaults.taxCodeRef);
+    if (chequeDefaults?.memo) setMemoDefault(chequeDefaults.memo);
+    if (chequeDefaults?.docNumber) setDocNumberDefault(chequeDefaults.docNumber);
 
     templateReadyRef.current = true;
   }, [selectedTemplate]);
@@ -1122,15 +1146,89 @@ export default function MappingView({
         ...(selectedTemplate.columnMappings ?? {}),
         ...localColMap,
       };
+      if (taxCodeDefault.value) {
+        merged.taxCodeRef = { value: taxCodeDefault.value, name: taxCodeDefault.name };
+      } else {
+        delete merged.taxCodeRef;
+      }
       await api.updateTemplate(jwt, selectedTemplateId, {
         columnMappings: merged,
       });
       await loadTemplates();
       showToast('Line item column roles saved', 'success');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to save line item mappings', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to save line item column roles', 'error');
     }
   }, [jwt, selectedTemplateId, selectedTemplate, localColMap, loadTemplates, showToast]);
+
+  const handleSaveBillDefaults = useCallback(async () => {
+    try {
+      const existing = (selectedTemplate?.defaults ?? {}) as Record<string, unknown>;
+      const merged = { ...existing };
+      if (apAccountDefault.value) {
+        merged.apAccountRef = { value: apAccountDefault.value, name: apAccountDefault.name };
+      } else {
+        delete merged.apAccountRef;
+      }
+      if (termsDefault.value) {
+        merged.termsRef = { value: termsDefault.value, name: termsDefault.name };
+      } else {
+        delete merged.termsRef;
+      }
+      if (taxCodeDefault.value) {
+        merged.taxCodeRef = { value: taxCodeDefault.value, name: taxCodeDefault.name };
+      } else {
+        delete merged.taxCodeRef;
+      }
+      if (memoDefault.value) {
+        merged.memo = { value: memoDefault.value };
+      } else {
+        delete merged.memo;
+      }
+      if (docNumberDefault.value) {
+        merged.docNumber = { value: docNumberDefault.value };
+      } else {
+        delete merged.docNumber;
+      }
+      await api.updateTemplate(jwt, selectedTemplateId!, { defaults: merged });
+      await loadTemplates();
+      showToast('Bill defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save bill defaults', 'error');
+    }
+  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, termsDefault, taxCodeDefault, memoDefault, docNumberDefault, loadTemplates, showToast]);
+
+  const handleSaveVendorCreditDefaults = useCallback(async () => {
+    try {
+      const existing = (selectedTemplate?.defaults ?? {}) as Record<string, unknown>;
+      const merged = { ...existing };
+      if (apAccountDefault.value) {
+        merged.apAccountRef = { value: apAccountDefault.value, name: apAccountDefault.name };
+      } else {
+        delete merged.apAccountRef;
+      }
+      if (taxCodeDefault.value) {
+        merged.taxCodeRef = { value: taxCodeDefault.value, name: taxCodeDefault.name };
+      } else {
+        delete merged.taxCodeRef;
+      }
+      if (memoDefault.value) {
+        merged.memo = { value: memoDefault.value };
+      } else {
+        delete merged.memo;
+      }
+      if (docNumberDefault.value) {
+        merged.docNumber = { value: docNumberDefault.value };
+      } else {
+        delete merged.docNumber;
+      }
+      await api.updateTemplate(jwt, selectedTemplateId!, { defaults: merged });
+      await loadTemplates();
+      showToast('Vendor credit defaults saved', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to save vendor credit defaults', 'error');
+    }
+  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, taxCodeDefault, memoDefault, docNumberDefault, loadTemplates, showToast]);
 
   const handleSaveChequeDefaults = useCallback(async () => {
     try {
@@ -1146,13 +1244,18 @@ export default function MappingView({
       } else {
         delete merged.payeeRef;
       }
+      if (taxCodeDefault.value) {
+        merged.taxCodeRef = { value: taxCodeDefault.value, name: taxCodeDefault.name };
+      } else {
+        delete merged.taxCodeRef;
+      }
       await api.updateTemplate(jwt, selectedTemplateId!, { defaults: merged });
       await loadTemplates();
       showToast('Cheque defaults saved', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save cheque defaults', 'error');
     }
-  }, [jwt, selectedTemplateId, selectedTemplate, bankDefault, payeeDefault, loadTemplates, showToast]);
+  }, [jwt, selectedTemplateId, selectedTemplate, bankDefault, payeeDefault, taxCodeDefault, loadTemplates, showToast]);
 
   const getAmountForField = (field: string): number => {
     if (activeScanEntry?.lineItems?.[0]) {
@@ -1661,9 +1764,9 @@ export default function MappingView({
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-1">Cheque Defaults</h3>
               <p className="text-xs text-gray-600 mb-3">
-                  Set default bank account and payee/vendor for cheques using this template. These are pre-filled when creating a new cheque.
+                  Set default bank account, payee/vendor, and tax code for cheques using this template. These are pre-filled when creating a new cheque.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                       <label className="block text-xs text-gray-600 mb-1">Default Bank Account</label>
                       <SearchableSelect
@@ -1688,6 +1791,18 @@ export default function MappingView({
                           placeholder="Select payee / vendor…"
                       />
                   </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Tax Code</label>
+                      <SearchableSelect
+                          options={taxCodeOptions}
+                          value={taxCodeDefault.value}
+                          onChange={(value) => {
+                              const selected = taxCodes.find((t) => t.Id === value);
+                              setTaxCodeDefault({ value, name: selected?.Name });
+                          }}
+                          placeholder="Select tax code…"
+                      />
+                  </div>
               </div>
               <div className="mt-3 flex items-center gap-2">
                   <button
@@ -1696,6 +1811,146 @@ export default function MappingView({
                       className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
                   >
                       Save Cheque Defaults
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {isBill && activeScanMode === 'IMAGE' && selectedTemplateId && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Bill Defaults</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                  Set defaults for new bills created from this template. Defaults will be applied during bill creation.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default AP Account</label>
+                      <SearchableSelect
+                          options={apAccountOptions}
+                          value={apAccountDefault.value}
+                          onChange={(value) => {
+                              const selected = accounts.find((a) => a.Id === value);
+                              setApAccountDefault({ value, name: selected?.FullyQualifiedName });
+                          }}
+                          placeholder="Select AP account…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Terms</label>
+                      <SearchableSelect
+                          options={termsOptions}
+                          value={termsDefault.value}
+                          onChange={(value) => {
+                              const selected = terms.find((t) => t.Id === value);
+                              setTermsDefault({ value, name: selected?.Name });
+                          }}
+                          placeholder="Select terms…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Tax Code</label>
+                      <SearchableSelect
+                          options={taxCodeOptions}
+                          value={taxCodeDefault.value}
+                          onChange={(value) => {
+                              const selected = taxCodes.find((t) => t.Id === value);
+                              setTaxCodeDefault({ value, name: selected?.Name });
+                          }}
+                          placeholder="Select tax code…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Memo</label>
+                      <input
+                          type="text"
+                          value={memoDefault.value}
+                          onChange={(e) => setMemoDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Enter default memo"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Doc #</label>
+                      <input
+                          type="text"
+                          value={docNumberDefault.value}
+                          onChange={(e) => setDocNumberDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Enter default doc number"
+                      />
+                  </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                  <button
+                      type="button"
+                      onClick={() => void handleSaveBillDefaults()}
+                      className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
+                  >
+                      Save Bill Defaults
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {isVendorCredit && activeScanMode === 'IMAGE' && selectedTemplateId && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Vendor Credit Defaults</h3>
+              <p className="text-xs text-gray-600 mb-3">
+                  Set defaults for new vendor credits created from this template. Defaults will be applied during vendor credit creation.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default AP Account</label>
+                      <SearchableSelect
+                          options={apAccountOptions}
+                          value={apAccountDefault.value}
+                          onChange={(value) => {
+                              const selected = accounts.find((a) => a.Id === value);
+                              setApAccountDefault({ value, name: selected?.FullyQualifiedName });
+                          }}
+                          placeholder="Select AP account…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Tax Code</label>
+                      <SearchableSelect
+                          options={taxCodeOptions}
+                          value={taxCodeDefault.value}
+                          onChange={(value) => {
+                              const selected = taxCodes.find((t) => t.Id === value);
+                              setTaxCodeDefault({ value, name: selected?.Name });
+                          }}
+                          placeholder="Select tax code…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Memo</label>
+                      <input
+                          type="text"
+                          value={memoDefault.value}
+                          onChange={(e) => setMemoDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Enter default memo"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Default Doc #</label>
+                      <input
+                          type="text"
+                          value={docNumberDefault.value}
+                          onChange={(e) => setDocNumberDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Enter default doc number"
+                      />
+                  </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                  <button
+                      type="button"
+                      onClick={() => void handleSaveVendorCreditDefaults()}
+                      className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
+                  >
+                      Save Vendor Credit Defaults
                   </button>
               </div>
           </div>

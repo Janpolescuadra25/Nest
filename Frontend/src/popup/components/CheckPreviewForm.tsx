@@ -20,6 +20,7 @@ interface CheckLine {
   accountName: string;
   description: string;
   classId: string;
+  taxCodeId: string;
   amount: string;
 }
 
@@ -30,6 +31,7 @@ function newLine(overrides?: Partial<CheckLine>): CheckLine {
     accountName: '',
     description: '',
     classId: '',
+    taxCodeId: '',
     amount: '',
     ...overrides,
   };
@@ -99,6 +101,7 @@ export default function CheckPreviewForm({
     accounts,
     classes,
     vendors,
+    taxCodes,
     listsLoaded,
     listsLoading,
     listsError,
@@ -386,7 +389,10 @@ export default function CheckPreviewForm({
     classes.filter((item) => item.Active).map((item) => ({ value: item.Id, label: item.FullyQualifiedName })),
     [classes],
   );
-
+  const taxCodeOptions = useMemo(() =>
+    taxCodes.filter((item) => item.Active).map((item) => ({ value: item.Id, label: item.Name, subtitle: item.Description })),
+    [taxCodes],
+  );
   const updateLine = (localId: string, patch: Partial<CheckLine>) => {
     userHasEditedLinesRef.current = true;
     setLines((prev) => prev.map((line) => (line.localId === localId ? { ...line, ...patch } : line)));
@@ -440,6 +446,7 @@ export default function CheckPreviewForm({
           accountRef: { value: line.accountId, name: line.accountName || undefined },
           description: line.description || undefined,
           classRef: line.classId ? { value: line.classId } : undefined,
+          taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
         }));
 
       const result = await api.createCheque(
@@ -605,6 +612,7 @@ export default function CheckPreviewForm({
                 <th className="text-left px-3 py-3 min-w-[180px]">Account</th>
                 <th className="text-left px-3 py-3 min-w-[160px]">Description</th>
                 <th className="text-left px-3 py-3 min-w-[120px]">Class</th>
+                <th className="text-left px-3 py-3 min-w-[140px]">Tax</th>
                 <th className="text-right px-3 py-3 w-24">Amount</th>
                 <th className="text-center px-3 py-3 w-8"></th>
               </tr>
@@ -639,6 +647,14 @@ export default function CheckPreviewForm({
                       value={line.classId}
                       onChange={(value) => updateLine(line.localId, { classId: value })}
                       placeholder="Class…"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <SearchableSelect
+                      options={taxCodeOptions}
+                      value={line.taxCodeId}
+                      onChange={(value) => updateLine(line.localId, { taxCodeId: value })}
+                      placeholder="Tax Code…"
                     />
                   </td>
                   <td className="px-3 py-2 text-right w-24">

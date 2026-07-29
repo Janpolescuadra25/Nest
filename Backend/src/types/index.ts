@@ -61,6 +61,7 @@ export interface QBChequeLineItem {
   accountRef: { value: string; name?: string };
   description?: string;
   classRef?: { value: string; name?: string };
+  taxCodeRef?: { value: string; name?: string };
 }
 
 export interface MappingSuggestion {
