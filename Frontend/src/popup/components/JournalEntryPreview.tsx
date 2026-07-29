@@ -234,6 +234,17 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     if (!activeScanEntry || activeScanEntry.source === 'pos' || !mappingsLoaded) return;
     if (autoPopulatedForRef.current === activeScanEntry.id) return;
 
+    const firstItem = activeScanEntry?.lineItems?.[0];
+    const isMode2 = firstItem && 'accountColumn' in firstItem;
+    if (isMode2 && activeScanEntry.header) {
+      if (activeScanEntry.header.date) setTxnDate(activeScanEntry.header.date);
+      if (activeScanEntry.header.journalNo) setDocNumber(activeScanEntry.header.journalNo);
+      if (activeScanEntry.header.memo) setPrivateNote(activeScanEntry.header.memo);
+      if (String(activeScanEntry.header.adjustingEntry).toLowerCase() === 'true') setIsAdjusting(true);
+      autoPopulatedForRef.current = activeScanEntry.id;
+      return;
+    }
+
     const header = activeScanEntry.header;
     if (!header || Object.keys(header).length === 0) return;
 
@@ -281,6 +292,68 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   // Build lines from the current active scan entry when available
   useEffect(() => {
     if (!activeScanEntry || !mappingsLoaded) return;
+    const firstItem = activeScanEntry.lineItems?.[0];
+    const isMode2 = firstItem && 'accountColumn' in firstItem;
+    if (isMode2) {
+      const lines = (activeScanEntry.lineItems ?? [])
+        .filter((row) => (row.accountColumn ?? '').trim())
+        .map((row) => {
+          const accountName = row.accountColumn ?? '';
+          const acct = accountsRef.current.find(
+            (a) => a.FullyQualifiedName === accountName ||
+              a.FullyQualifiedName.toLowerCase().includes(accountName.toLowerCase()) ||
+              accountName.toLowerCase().includes(a.FullyQualifiedName.toLowerCase()),
+          );
+
+          let entityVal = '';
+          const nameVal = (row.nameColumn ?? '').trim();
+          if (nameVal) {
+            const cust = customers.find(
+              (c) => c.DisplayName === nameVal || c.CompanyName === nameVal,
+            );
+            if (cust) entityVal = `customer:${cust.Id}`;
+            else {
+              const vend = vendors.find(
+                (v) => v.DisplayName === nameVal || v.CompanyName === nameVal,
+              );
+              if (vend) entityVal = `vendor:${vend.Id}`;
+            }
+          }
+
+          let classId = '';
+          const className = (row.classColumn ?? '').trim();
+          if (className) {
+            const cls = classes.find(
+              (c) => c.FullyQualifiedName === className ||
+                c.FullyQualifiedName.toLowerCase().includes(className.toLowerCase()),
+            );
+            if (cls) classId = cls.Id;
+          }
+
+          let taxCodeId = '';
+          const tcName = (row.taxCodeColumn ?? '').trim();
+          if (tcName) {
+            const tc = taxCodes.find(
+              (t) => t.Name === tcName || t.Name.toLowerCase().includes(tcName.toLowerCase()),
+            );
+            if (tc) taxCodeId = tc.Id;
+          }
+
+          return newLine({
+            accountId: acct?.Id ?? '',
+            accountName: acct?.FullyQualifiedName ?? accountName,
+            debit: row.debitColumn ?? '',
+            credit: row.creditColumn ?? '',
+            description: row.descriptionColumn ?? '',
+            classId,
+            taxCodeId,
+            entityVal,
+          });
+        });
+      if (lines.length > 0) setLines(lines);
+      return;
+    }
+
     const decoded = savedMappings.map(decodeMapping);
     const currentLineItem = (ruleTransformedLineItems?.[0] ?? activeScanEntry.lineItems?.[0]) ?? {};
     const scanFields: ScanData = Object.fromEntries(
