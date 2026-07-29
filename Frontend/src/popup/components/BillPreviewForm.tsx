@@ -117,6 +117,7 @@ export default function BillPreviewForm({
   const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [apAccountRef, setApAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [termsRef, setTermsRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [defaultTaxCodeId, setDefaultTaxCodeId] = useState('');
   const [dueDate, setDueDate] = useState(today);
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
@@ -272,6 +273,7 @@ export default function BillPreviewForm({
     if (defaults.dueDate?.value) setDueDate(defaults.dueDate.value);
     if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
+    if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);
 
   useEffect(() => {
@@ -432,7 +434,7 @@ export default function BillPreviewForm({
 
   const addLine = () => {
     userHasEditedLinesRef.current = true;
-    setLines((prev) => [...prev, newLine()]);
+    setLines((prev) => [...prev, newLine({ taxCodeId: defaultTaxCodeId })]);
   };
 
   const effectiveLines = lines;

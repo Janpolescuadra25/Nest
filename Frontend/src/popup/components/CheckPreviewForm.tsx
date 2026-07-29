@@ -115,6 +115,7 @@ export default function CheckPreviewForm({
   const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
+  const [defaultTaxCodeId, setDefaultTaxCodeId] = useState('');
   const [lines, setLines] = useState<CheckLine[]>([newLine(), newLine()]);
   const [savedMappings, setSavedMappings] = useState<Mapping[]>([]);
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
@@ -255,6 +256,7 @@ export default function CheckPreviewForm({
     if (defaults.payeeRef) setPayeeRef(defaults.payeeRef);
     if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
+    if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);
 
   useEffect(() => {
@@ -405,7 +407,7 @@ export default function CheckPreviewForm({
 
   const addLine = () => {
     userHasEditedLinesRef.current = true;
-    setLines((prev) => [...prev, newLine()]);
+    setLines((prev) => [...prev, newLine({ taxCodeId: defaultTaxCodeId })]);
   };
 
   const effectiveLines = lines;

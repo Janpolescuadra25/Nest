@@ -113,6 +113,7 @@ export default function VendorCreditPreviewForm({
   const [vendorRef, setVendorRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [apAccountRef, setApAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [defaultTaxCodeId, setDefaultTaxCodeId] = useState('');
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
   const [lines, setLines] = useState<CreditLine[]>([newLine(), newLine()]);
@@ -256,6 +257,7 @@ export default function VendorCreditPreviewForm({
     if (defaults.apAccountRef) setApAccountRef(defaults.apAccountRef);
     if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
+    if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);
 
   useEffect(() => {
@@ -402,7 +404,7 @@ export default function VendorCreditPreviewForm({
 
   const addLine = () => {
     userHasEditedLinesRef.current = true;
-    setLines((prev) => [...prev, newLine()]);
+    setLines((prev) => [...prev, newLine({ taxCodeId: defaultTaxCodeId })]);
   };
 
   const effectiveLines = lines;
