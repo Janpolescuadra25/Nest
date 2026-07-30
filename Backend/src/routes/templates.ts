@@ -225,9 +225,11 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   }
 
   const columnMappings = template.columnMappings as Record<string, unknown> | null;
-  if (!columnMappings || typeof columnMappings !== 'object' || Array.isArray(columnMappings) || Object.keys(columnMappings).length === 0) {
-    res.status(400).json({ error: 'Template has no column mapping configured.' });
-    return;
+  if (template.transactionType !== 'JOURNAL_ENTRY') {
+    if (!columnMappings || typeof columnMappings !== 'object' || Array.isArray(columnMappings) || Object.keys(columnMappings).length === 0) {
+      res.status(400).json({ error: 'Template has no column mapping configured.' });
+      return;
+    }
   }
 
   let workbook: Excel.Workbook;
@@ -251,6 +253,102 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new AppError('Excel sheet contains no data rows', 400);
   }
+
+  if (template.transactionType === 'JOURNAL_ENTRY') {
+    const dateVal = rows[0]?.[1];
+    const journalNoVal = rows[1]?.[1];
+    const adjustingVal = rows[2]?.[1];
+    const memoVal = rows[3]?.[1];
+
+    let parsedDate = '';
+    if (dateVal != null && String(dateVal).trim() !== '') {
+      const d = new Date(String(dateVal));
+      if (!isNaN(d.getTime())) {
+        parsedDate = d.toISOString().split('T')[0];
+      }
+    }
+
+    const isAdjusting = String(adjustingVal || '').toLowerCase() === 'true';
+
+    const headerRow = (rows[4] || []).map((h: unknown) => String(h ?? '').trim().toLowerCase());
+    const colIndex = (name: string) => headerRow.indexOf(name.toLowerCase());
+
+    const accountCol = colIndex('account');
+    const debitCol = colIndex('debit');
+    const creditCol = colIndex('credit');
+    const descriptionCol = colIndex('description');
+    const nameCol = colIndex('name');
+    const classCol = colIndex('class');
+    const taxCol = colIndex('tax');
+
+    if (accountCol === -1) {
+      res.status(400).json({ error: 'Row 5 must contain an "Account" column header.' });
+      return;
+    }
+
+    const lineItems: Array<Record<string, unknown>> = [];
+    let skippedRows = 0;
+    const totalDataRows = Math.max(0, rows.length - 5);
+
+    for (let i = 5; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) { skippedRows++; continue; }
+
+      const accountVal = accountCol >= 0 ? String(row[accountCol] ?? '').trim() : '';
+      if (!accountVal) { skippedRows++; continue; }
+
+      const item: Record<string, unknown> = { accountColumn: accountVal };
+      if (debitCol >= 0 && row[debitCol] != null && String(row[debitCol]).trim() !== '') {
+        const dv = Number(row[debitCol]);
+        if (!isNaN(dv)) item.debitColumn = dv;
+      }
+      if (creditCol >= 0 && row[creditCol] != null && String(row[creditCol]).trim() !== '') {
+        const cv = Number(row[creditCol]);
+        if (!isNaN(cv)) item.creditColumn = cv;
+      }
+      if (descriptionCol >= 0 && row[descriptionCol] != null) {
+        item.descriptionColumn = String(row[descriptionCol]).trim();
+      }
+      if (nameCol >= 0 && row[nameCol] != null) {
+        item.nameColumn = String(row[nameCol]).trim();
+      }
+      if (classCol >= 0 && row[classCol] != null) {
+        item.classColumn = String(row[classCol]).trim();
+      }
+      if (taxCol >= 0 && row[taxCol] != null) {
+        item.taxCodeColumn = String(row[taxCol]).trim();
+      }
+
+      lineItems.push(item);
+    }
+
+    if (lineItems.length === 0) {
+      res.status(400).json({ error: 'No valid line items found in the Excel data.' });
+      return;
+    }
+
+    res.json({
+      transactions: [{
+        type: template.transactionType,
+        header: {
+          date: parsedDate,
+          journalNo: journalNoVal != null ? String(journalNoVal).trim() : '',
+          adjustingEntry: isAdjusting,
+          memo: memoVal != null ? String(memoVal).trim() : '',
+        },
+        lineItems,
+      }],
+      totalRows: totalDataRows,
+      skippedRows,
+    });
+    return;
+  }
+
+  if (!columnMappings) {
+    res.status(400).json({ error: 'Template has no column mapping configured.' });
+    return;
+  }
+
   const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
   const headers = rawHeaders.map((header, index) => header || `Column ${index + 1}`);
   const headerLookup = new Map<string, number>();
