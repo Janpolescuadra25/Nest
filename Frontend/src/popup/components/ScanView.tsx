@@ -1188,7 +1188,7 @@ export default function ScanView({
               <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700">
                 Select a template in the Mappings tab before parsing Excel data.
               </div>
-            ) : !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 ? (
+            ) : selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0) ? (
               <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700 space-y-2">
                 <div>⚠️ This template has no column mapping configured. Configure it first.</div>
                 <button
@@ -1207,7 +1207,7 @@ export default function ScanView({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!uploadedExcelFile || !selectedTemplate || !selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0 || excelParseLoading}
+                disabled={!uploadedExcelFile || !selectedTemplate || (selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0)) || excelParseLoading}
                 onClick={handleParseExcelData}
                 className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
