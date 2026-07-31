@@ -366,8 +366,8 @@ export default function MappingView({
       return Array.from(fieldMap.entries()).map(([key, value]) => ({
         value: key,
         label: key,
-        subtitle: isNaN(Number(value)) || value.trim() === ''
-          ? value
+        subtitle: isNaN(Number(value)) || String(value).trim() === ''
+          ? String(value)
           : `$${Number(value).toFixed(2)}`,
       }));
     }
