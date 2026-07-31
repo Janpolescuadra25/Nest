@@ -76,6 +76,7 @@ export default function TemplateWizard({
   const [scanModes, setScanModes] = useState<ScanMode[]>([]);
   const [posSystem, setPosSystem] = useState('');
   const [transactionType, setTransactionType] = useState<TransactionType | ''>('');
+  const [excelSubMode, setExcelSubMode] = useState<'journal' | 'pos'>('journal');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +97,7 @@ export default function TemplateWizard({
       const config = TRANSACTION_TYPE_SCAN_MODE_CONFIG[transactionType];
       if (config) {
         setScanModes(config.defaults);
+        setExcelSubMode('journal');
         if (!config.defaults.includes('POS')) {
           setPosSystem('');
         }
@@ -135,6 +137,7 @@ export default function TemplateWizard({
         transactionType: string;
         scanModes: ScanMode[];
         posSystem?: string;
+        defaults?: Record<string, unknown> | null;
       } = {
         name: name.trim(),
         transactionType,
@@ -143,6 +146,10 @@ export default function TemplateWizard({
 
       if (scanModes.includes('POS')) {
         data.posSystem = posSystem;
+      }
+
+      if (transactionType === 'JOURNAL_ENTRY' && scanModes.includes('EXCEL')) {
+        data.defaults = { excelSubMode };
       }
 
       const created = await api.createTemplate(jwt, locationId, data);
@@ -269,6 +276,42 @@ export default function TemplateWizard({
                   </button>
                 ))}
               </div>
+
+              {transactionType === 'JOURNAL_ENTRY' && scanModes.includes('EXCEL') && (
+                <div className="mt-3 ml-6">
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Excel Format</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="excelSubMode"
+                        value="journal"
+                        checked={excelSubMode === 'journal'}
+                        onChange={() => setExcelSubMode('journal')}
+                        className="accent-emerald-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Excel (JE mode)</span>
+                        <p className="text-xs text-gray-400">Fixed row format — Date, Journal No., Adjusting, Memo, then data rows</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="excelSubMode"
+                        value="pos"
+                        checked={excelSubMode === 'pos'}
+                        onChange={() => setExcelSubMode('pos')}
+                        className="accent-emerald-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Excel (POS mode)</span>
+                        <p className="text-xs text-gray-400">Two-column layout (Label + Amount pairs, like POS extraction)</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {scanModes.includes('POS') && (
                 <div>

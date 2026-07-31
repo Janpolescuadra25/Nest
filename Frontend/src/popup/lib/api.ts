@@ -443,7 +443,7 @@ export const api = {
   getTemplate: (jwt: string, id: string) =>
     get<Template>(`/api/templates/${id}`, jwt),
 
-  createTemplate: (jwt: string, locationId: string, data: { name: string; transactionType?: string; scanModes?: ScanMode[]; posSystem?: string | null; memoTemplate?: string; docNumberTemplate?: string }) =>
+  createTemplate: (jwt: string, locationId: string, data: { name: string; transactionType?: string; scanModes?: ScanMode[]; posSystem?: string | null; memoTemplate?: string; docNumberTemplate?: string; defaults?: Record<string, unknown> | null }) =>
     post<Template>(`/api/locations/${locationId}/templates`, data, jwt),
 
   updateTemplate: (jwt: string, id: string, data: Partial<Template>) =>
