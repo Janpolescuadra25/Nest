@@ -52,6 +52,7 @@ export default function App() {
   const [scanEntries, setScanEntries] = useState<ScanEntry[]>([]);
   const [activeScanEntryId, setActiveScanEntryId] = useState<string | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [uploadedExcelFile, setUploadedExcelFile] = useState<File | null>(null);
   const [scanMode, setScanMode] = useState<ScanSource>('pos');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
@@ -479,6 +480,8 @@ export default function App() {
               activeScanEntry={activeScanEntry}
               invoiceFile={invoiceFile}
               setInvoiceFile={setInvoiceFile}
+              uploadedExcelFile={uploadedExcelFile}
+              setUploadedExcelFile={setUploadedExcelFile}
               scanMode={scanMode}
               setScanMode={setScanMode}
             />

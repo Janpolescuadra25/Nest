@@ -300,11 +300,11 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
       const item: Record<string, unknown> = { accountColumn: accountVal };
       if (debitCol >= 0 && row[debitCol] != null && String(row[debitCol]).trim() !== '') {
         const dv = Number(row[debitCol]);
-        if (!isNaN(dv)) item.debitColumn = dv;
+        if (!isNaN(dv)) item.debitColumn = String(dv);
       }
       if (creditCol >= 0 && row[creditCol] != null && String(row[creditCol]).trim() !== '') {
         const cv = Number(row[creditCol]);
-        if (!isNaN(cv)) item.creditColumn = cv;
+        if (!isNaN(cv)) item.creditColumn = String(cv);
       }
       if (descriptionCol >= 0 && row[descriptionCol] != null) {
         item.descriptionColumn = String(row[descriptionCol]).trim();

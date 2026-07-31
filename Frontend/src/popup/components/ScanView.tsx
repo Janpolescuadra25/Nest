@@ -99,6 +99,8 @@ interface Props {
   activeScanEntry: ScanEntry | null;
   invoiceFile: File | null;
   setInvoiceFile: (file: File | null) => void;
+  uploadedExcelFile: File | null;
+  setUploadedExcelFile: (file: File | null) => void;
   scanMode: ScanSource;
   setScanMode: React.Dispatch<React.SetStateAction<ScanSource>>;
 }
@@ -122,6 +124,8 @@ export default function ScanView({
   activeScanEntry,
   invoiceFile,
   setInvoiceFile,
+  uploadedExcelFile,
+  setUploadedExcelFile,
   scanMode,
   setScanMode,
 }: Props) {
@@ -129,7 +133,6 @@ export default function ScanView({
   // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
   // - New ScanEntry records are stored locally in ScanView for both POS and Excel scan modes.
   // - activeScanEntry.lineItems[0] is converted into numeric `scanData` for legacy mapping bindings.
-  const [uploadedExcelFile, setUploadedExcelFile] = useState<File | null>(null);
   const [excelPreviewSheets, setExcelPreviewSheets] = useState<ExcelParseResult['sheets']>([]);
   const [excelPreviewSheetName, setExcelPreviewSheetName] = useState<string>('');
   const [excelParseError, setExcelParseError] = useState<string | null>(null);
@@ -1016,7 +1019,7 @@ export default function ScanView({
       const parsedEntries: ScanEntry[] = result.transactions.flatMap((transaction) => {
         const txnType = selectedTemplate?.transactionType ?? 'JOURNAL_ENTRY';
 
-        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT') {
+        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT' || txnType === 'JOURNAL_ENTRY') {
           return [{
             id: generateId(),
             source: 'excel',
