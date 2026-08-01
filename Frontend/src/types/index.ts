@@ -126,6 +126,7 @@ export interface MatchingRule {
   threshold?: number;
   direction?: 'input_contains_catalog' | 'catalog_contains_input' | 'either';
   isActive: boolean;
+  combine?: boolean;
 }
 
 export interface ProductMapping {

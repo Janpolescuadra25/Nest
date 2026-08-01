@@ -38,6 +38,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
   const [ruleThreshold, setRuleThreshold] = useState(0.8);
   const [rulePattern, setRulePattern] = useState('');
   const [ruleDirection, setRuleDirection] = useState<'input_contains_catalog' | 'catalog_contains_input' | 'either'>('either');
+  const [ruleCombine, setRuleCombine] = useState(false);
   const [testInput, setTestInput] = useState('');
   const [testResults, setTestResults] = useState<{ mappingId: string; scannedText: string; matched: boolean; confidence: number; matchType: string }[]>([]);
   const [deleteMappingDialog, setDeleteMappingDialog] = useState<{ open: boolean; mapping: ValueMapping | null }>({ open: false, mapping: null });
@@ -124,6 +125,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
     setRuleThreshold(0.8);
     setRulePattern('');
     setRuleDirection('either');
+    setRuleCombine(false);
     setError(null);
   };
 
@@ -146,6 +148,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
       setRuleThreshold(mapping.matchingRule.threshold ?? 0.8);
       setRulePattern(mapping.matchingRule.pattern ?? '');
       setRuleDirection(mapping.matchingRule.direction ?? 'either');
+      setRuleCombine(mapping.matchingRule.combine ?? false);
     } else {
       setUseRuleEnabled(false);
       setRuleType('EXACT');
@@ -182,6 +185,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
           pattern: rulePattern || undefined,
           direction: ruleDirection,
           isActive: true,
+          combine: ruleCombine || undefined,
         }
       : null;
 
@@ -420,6 +424,16 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
                             />
                           </div>
                         )}
+
+                        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer mt-2">
+                          <input
+                            type="checkbox"
+                            checked={ruleCombine}
+                            onChange={(e) => setRuleCombine(e.target.checked)}
+                            className="rounded border-gray-300"
+                          />
+                          Combine matching line items into one
+                        </label>
                       </div>
                     )}
 

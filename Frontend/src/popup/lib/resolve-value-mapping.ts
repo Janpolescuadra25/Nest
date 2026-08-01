@@ -6,6 +6,7 @@ export interface ValueMappingResult {
   entityId: string;
   entityName: string;
   confidence: number;
+  matchedMappingId?: string;
 }
 
 /**
@@ -50,5 +51,6 @@ export function resolveValueMapping(
     entityId: bestMatch.entityId,
     entityName,
     confidence: bestConfidence,
+    matchedMappingId: bestMatch.id,
   };
 }

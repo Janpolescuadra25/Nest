@@ -176,7 +176,9 @@ export default function BillPreviewForm({
         if (cancelled) return;
 
         // ── D6-4b: Resolve unresolved fields via ValueMapping ──
-        const processedExtracted = extracted.map((item) => {
+        const accountMappingMatches = new Map<number, string>();
+
+        const processedExtracted = extracted.map((item, index) => {
           let { accountId, accountName, classId, taxCodeId } = item;
 
           if (!accountId && item.productName) {
@@ -189,6 +191,9 @@ export default function BillPreviewForm({
             if (vmResult.matched) {
               accountId = vmResult.entityId;
               accountName = vmResult.entityName;
+              if (vmResult.matchedMappingId) {
+                accountMappingMatches.set(index, vmResult.matchedMappingId);
+              }
             }
           }
 
@@ -225,7 +230,37 @@ export default function BillPreviewForm({
           return { ...item, accountId, accountName, classId, taxCodeId };
         });
 
-        setLines(processedExtracted.map((item) => newLine({
+        const finalExtracted: typeof processedExtracted = [];
+        const combineGroups = new Map<string, number[]>();
+        processedExtracted.forEach((item, idx) => {
+          const mappingId = accountMappingMatches.get(idx);
+          if (mappingId) {
+            const mapping = valueMappings.find((vm) => vm.id === mappingId);
+            if (mapping?.matchingRule?.combine) {
+              if (!combineGroups.has(mappingId)) combineGroups.set(mappingId, []);
+              combineGroups.get(mappingId)!.push(idx);
+              return;
+            }
+          }
+          finalExtracted.push(item);
+        });
+
+        for (const [mappingId, indices] of combineGroups) {
+          const items = indices.map((idx) => processedExtracted[idx]);
+          if (items.length === 1) {
+            finalExtracted.push(items[0]);
+          } else {
+            const descriptions = items.map((i) => i.description || i.productName).filter(Boolean);
+            finalExtracted.push({
+              ...items[0],
+              amount: items.reduce((sum, i) => sum + i.amount, 0),
+              description: descriptions.join(' & '),
+              matched: true,
+            });
+          }
+        }
+
+        setLines(finalExtracted.map((item) => newLine({
           accountId: item.accountId,
           accountName: item.accountName || accountsRef.current.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
           description: item.description,
