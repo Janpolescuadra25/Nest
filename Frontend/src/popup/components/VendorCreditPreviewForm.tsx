@@ -392,19 +392,25 @@ export default function VendorCreditPreviewForm({
     [vendors],
   );
 
-  const apAccountOptions = useMemo(() =>
-    accounts
-      .filter((account) => account.Active)
-      .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
-    [accounts],
-  );
-
   const accountOptions = useMemo(() =>
     accounts
       .filter((account) => account.Active)
       .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType, group: account.Classification || account.AccountType })),
     [accounts],
   );
+
+  const apAccountOptions = useMemo(() =>
+    accounts
+      .filter((account) => account.Active && (account.AccountType === 'Accounts Payable' || account.AccountSubType === 'AccountsPayable'))
+      .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
+    [accounts],
+  );
+
+  useEffect(() => {
+    if (apAccountOptions.length >= 1 && !apAccountRef.value) {
+      setApAccountRef({ value: apAccountOptions[0].value, name: apAccountOptions[0].label });
+    }
+  }, [apAccountOptions, apAccountRef.value]);
 
   const classOptions = useMemo(() =>
     classes.filter((item) => item.Active).map((item) => ({ value: item.Id, label: item.FullyQualifiedName })),
@@ -603,18 +609,6 @@ export default function VendorCreditPreviewForm({
               setVendorRef({ value, name: selected?.DisplayName });
             }}
             placeholder="Select vendor…"
-          />
-        </div>
-        <div>
-          <div className="text-sm font-medium text-gray-700 mb-1">AP Account</div>
-          <SearchableSelect
-            options={apAccountOptions}
-            value={apAccountRef.value}
-            onChange={(value) => {
-              const selected = accounts.find((a) => a.Id === value);
-              setApAccountRef({ value, name: selected?.FullyQualifiedName });
-            }}
-            placeholder="Select AP account…"
           />
         </div>
         <div className="col-span-2">

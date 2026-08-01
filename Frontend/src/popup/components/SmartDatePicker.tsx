@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface Props {
   value: string; // YYYY-MM-DD
@@ -12,10 +12,46 @@ function toYMD(d: Date): string {
   return d.toISOString().split('T')[0]!;
 }
 
+function getWeekStart(date: Date): string {
+  const copy = new Date(date);
+  const day = copy.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setDate(copy.getDate() + diff);
+  return toYMD(copy);
+}
+
 export default function SmartDatePicker({ value, onChange, scanDate }: Props) {
   const [mode, setMode] = useState<QuickOption>('today');
+  const isInternalChange = useRef(false);
+
+  useEffect(() => {
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+
+    const today = toYMD(new Date());
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = toYMD(yesterdayDate);
+    const weekstart = getWeekStart(new Date());
+    const monthstart = toYMD(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
+    if (value === today) {
+      setMode('today');
+    } else if (value === yesterday) {
+      setMode('yesterday');
+    } else if (value === weekstart) {
+      setMode('weekstart');
+    } else if (value === monthstart) {
+      setMode('monthstart');
+    } else {
+      setMode('custom');
+    }
+  }, [value]);
 
   const handleQuick = (opt: QuickOption) => {
+    isInternalChange.current = true;
     setMode(opt);
     const now = new Date();
     if (opt === 'today') {

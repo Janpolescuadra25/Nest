@@ -424,7 +424,7 @@ export default function BillPreviewForm({
   );
 
   useEffect(() => {
-    if (apAccountOptions.length === 1 && !apAccountRef.value) {
+    if (apAccountOptions.length >= 1 && !apAccountRef.value) {
       setApAccountRef({ value: apAccountOptions[0].value, name: apAccountOptions[0].label });
     }
   }, [apAccountOptions, apAccountRef.value]);
@@ -637,18 +637,6 @@ export default function BillPreviewForm({
               setVendorRef({ value, name: selected?.DisplayName });
             }}
             placeholder="Select vendor…"
-          />
-        </div>
-        <div>
-          <div className="text-sm font-medium text-gray-700 mb-1">AP Account</div>
-          <SearchableSelect
-            options={apAccountOptions}
-            value={apAccountRef.value}
-            onChange={(value) => {
-              const selected = accounts.find((a) => a.Id === value);
-              setApAccountRef({ value, name: selected?.FullyQualifiedName });
-            }}
-            placeholder="Accounts Payable"
           />
         </div>
         <div>
