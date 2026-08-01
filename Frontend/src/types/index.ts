@@ -162,7 +162,25 @@ export interface PayeeMapping {
 export interface PayeeMappingFormData {
   scannedName: string;
   vendorId: string;
-  matchingRule?: MatchingRule;
+  matchingRule?: MatchingRule | null;
+}
+
+export interface ValueMapping {
+  id: string;
+  templateId: string;
+  fieldType: 'account' | 'name' | 'class' | 'taxCode';
+  scannedText: string;
+  entityId: string;
+  matchingRule: MatchingRule | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ValueMappingFormData {
+  fieldType: 'account' | 'name' | 'class' | 'taxCode';
+  scannedText: string;
+  entityId: string;
+  matchingRule?: MatchingRule | null;
 }
 
 export interface ExcelSheetPreview {

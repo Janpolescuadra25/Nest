@@ -565,6 +565,7 @@ export default function App() {
                 scanRecordId={scanRecordId}
                 userRole={user?.role}
                 attachments={scanAttachments}
+                templateId={selectedTemplateForScan?.id}
               />
             )
           )}

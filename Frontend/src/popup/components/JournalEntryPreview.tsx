@@ -7,12 +7,13 @@ import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ConfirmDialog from './shared/ConfirmDialog';
 import ErrorCard from './shared/ErrorCard';
-import type { ScanData, ScanEntry, Mapping } from '../../types';
+import type { ScanData, ScanEntry, Mapping, ValueMapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { guessPostingType, decodeMapping } from '../lib/je-builder';
 import { resolveMapping } from '../lib/mapping-conditions';
 import { parseNumericValue } from '../lib/parse-numeric-value';
+import { evaluateProductMatch } from '../lib/column-extractor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,9 +101,10 @@ interface Props {
   scanRecordId?: string | null;
   userRole?: string;
   attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
+  templateId?: string;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole, attachments }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole, attachments, templateId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -130,6 +132,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const [mappingsLoaded, setMappingsLoaded] = useState(false);
   const [ruleTransformedData, setRuleTransformedData] = useState<Record<string, number> | null>(null);
   const [ruleTransformedLineItems, setRuleTransformedLineItems] = useState<Record<string, string>[] | null>(null);
+  const [valueMappings, setValueMappings] = useState<ValueMapping[]>([]);
   const [previewTipVisible, setPreviewTipVisible] = useState(true);
   const previewTipKey = 'tip_dismissed_preview';
 
@@ -183,6 +186,13 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     if (loc.memoTemplate) setPrivateNote(resolveMemoTemplate(loc.memoTemplate, scanData));
     if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
   }, [scanData, locId, locations]);
+
+  useEffect(() => {
+    if (!jwt || !templateId) return;
+    api.getValueMappings(jwt, templateId)
+      .then(setValueMappings)
+      .catch(() => {});
+  }, [jwt, templateId]);
 
   useEffect(() => {
     rulesAppliedRef.current = false;
@@ -287,7 +297,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
     }
 
     autoPopulatedForRef.current = activeScanEntry.id;
-  }, [activeScanEntry, savedMappings, mappingsLoaded, txnDate, privateNote, docNumber, today]);
+  }, [activeScanEntry, savedMappings, mappingsLoaded, txnDate, privateNote, docNumber, today, valueMappings]);
 
   // Build lines from the current active scan entry when available
   useEffect(() => {
@@ -298,50 +308,111 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       const lines = (activeScanEntry.lineItems ?? [])
         .filter((row) => (row.accountColumn ?? '').trim())
         .map((row) => {
+          // ── Account resolution: value mapping first, fuzzy fallback ──
           const accountName = row.accountColumn ?? '';
-          const acct = accountsRef.current.find(
-            (a) => a.FullyQualifiedName === accountName ||
-              a.FullyQualifiedName.toLowerCase().includes(accountName.toLowerCase()) ||
-              accountName.toLowerCase().includes(a.FullyQualifiedName.toLowerCase()),
-          );
+          let accountId = '';
+          let resolvedAccountName = accountName;
+          const accountMappings = valueMappings.filter((m) => m.fieldType === 'account');
+          if (accountMappings.length > 0 && accountName) {
+            let bestMatch: ValueMapping | null = null;
+            let bestConfidence = 0;
+            for (const vm of accountMappings) {
+              const result = evaluateProductMatch(accountName, vm.scannedText, vm.matchingRule);
+              if (result.matched && result.confidence > bestConfidence) {
+                bestMatch = vm;
+                bestConfidence = result.confidence;
+              }
+            }
+            if (bestMatch) {
+              const acct = accountsRef.current.find((a) => a.Id === bestMatch.entityId);
+              if (acct) { accountId = acct.Id; resolvedAccountName = acct.FullyQualifiedName; }
+            }
+          }
+          if (!accountId) {
+            const acct = accountsRef.current.find(
+              (a) => a.FullyQualifiedName === accountName ||
+                a.FullyQualifiedName.toLowerCase().includes(accountName.toLowerCase()) ||
+                accountName.toLowerCase().includes(a.FullyQualifiedName.toLowerCase()),
+            );
+            if (acct) { accountId = acct.Id; resolvedAccountName = acct.FullyQualifiedName; }
+          }
 
+          // ── Entity/Name resolution: value mapping first, exact fallback ──
           let entityVal = '';
           const nameVal = (row.nameColumn ?? '').trim();
           if (nameVal) {
-            const cust = customers.find(
-              (c) => c.DisplayName === nameVal || c.CompanyName === nameVal,
-            );
-            if (cust) entityVal = `customer:${cust.Id}`;
-            else {
-              const vend = vendors.find(
-                (v) => v.DisplayName === nameVal || v.CompanyName === nameVal,
-              );
-              if (vend) entityVal = `vendor:${vend.Id}`;
+            const nameMappings = valueMappings.filter((m) => m.fieldType === 'name');
+            if (nameMappings.length > 0) {
+              let bestMatch: ValueMapping | null = null;
+              let bestConfidence = 0;
+              for (const vm of nameMappings) {
+                const result = evaluateProductMatch(nameVal, vm.scannedText, vm.matchingRule);
+                if (result.matched && result.confidence > bestConfidence) {
+                  bestMatch = vm;
+                  bestConfidence = result.confidence;
+                }
+              }
+              if (bestMatch) entityVal = bestMatch.entityId;
+            }
+            if (!entityVal) {
+              const cust = customers.find((c) => c.DisplayName === nameVal || c.CompanyName === nameVal);
+              if (cust) entityVal = `customer:${cust.Id}`;
+              else {
+                const vend = vendors.find((v) => v.DisplayName === nameVal || v.CompanyName === nameVal);
+                if (vend) entityVal = `vendor:${vend.Id}`;
+              }
             }
           }
 
+          // ── Class resolution: value mapping first, fuzzy fallback ──
           let classId = '';
           const className = (row.classColumn ?? '').trim();
           if (className) {
-            const cls = classes.find(
-              (c) => c.FullyQualifiedName === className ||
-                c.FullyQualifiedName.toLowerCase().includes(className.toLowerCase()),
-            );
-            if (cls) classId = cls.Id;
+            const classMappings = valueMappings.filter((m) => m.fieldType === 'class');
+            if (classMappings.length > 0) {
+              let bestMatch: ValueMapping | null = null;
+              let bestConfidence = 0;
+              for (const vm of classMappings) {
+                const result = evaluateProductMatch(className, vm.scannedText, vm.matchingRule);
+                if (result.matched && result.confidence > bestConfidence) {
+                  bestMatch = vm;
+                  bestConfidence = result.confidence;
+                }
+              }
+              if (bestMatch) classId = bestMatch.entityId;
+            }
+            if (!classId) {
+              const cls = classes.find((c) => c.FullyQualifiedName === className || c.FullyQualifiedName.toLowerCase().includes(className.toLowerCase()));
+              if (cls) classId = cls.Id;
+            }
           }
 
+          // ── Tax code resolution: value mapping first, fuzzy fallback ──
           let taxCodeId = '';
           const tcName = (row.taxCodeColumn ?? '').trim();
           if (tcName) {
-            const tc = taxCodes.find(
-              (t) => t.Name === tcName || t.Name.toLowerCase().includes(tcName.toLowerCase()),
-            );
-            if (tc) taxCodeId = tc.Id;
+            const tcMappings = valueMappings.filter((m) => m.fieldType === 'taxCode');
+            if (tcMappings.length > 0) {
+              let bestMatch: ValueMapping | null = null;
+              let bestConfidence = 0;
+              for (const vm of tcMappings) {
+                const result = evaluateProductMatch(tcName, vm.scannedText, vm.matchingRule);
+                if (result.matched && result.confidence > bestConfidence) {
+                  bestMatch = vm;
+                  bestConfidence = result.confidence;
+                }
+              }
+              if (bestMatch) taxCodeId = bestMatch.entityId;
+            }
+            if (!taxCodeId) {
+              const tc = taxCodes.find((t) => t.Name === tcName || t.Name.toLowerCase().includes(tcName.toLowerCase()));
+              if (tc) taxCodeId = tc.Id;
+            }
           }
 
           return newLine({
-            accountId: acct?.Id ?? '',
-            accountName: acct?.FullyQualifiedName ?? accountName,
+            accountId,
+            accountName: resolvedAccountName,
             debit: row.debitColumn ?? '',
             credit: row.creditColumn ?? '',
             description: row.descriptionColumn ?? '',

@@ -9,6 +9,7 @@ import MappingFilters from './MappingFilters';
 import MappingTable from './MappingTable';
 import ProductMappingSection from './ProductMappingSection';
 import PayeeMappingSection from './PayeeMappingSection';
+import ValueMappingSection from './ValueMappingSection';
 import TemplateWizard from '../TemplateWizard';
 import SearchableSelect from '../SearchableSelect';
 import RuleFormSection from './RuleFormSection';
@@ -1967,6 +1968,13 @@ export default function MappingView({
 
       {(isCheque || isBill || isVendorCredit) && activeScanMode === 'IMAGE' && selectedTemplateId && (
         <PayeeMappingSection
+          jwt={jwt}
+          templateId={selectedTemplateId}
+        />
+      )}
+
+      {isJE && activeScanMode === 'EXCEL' && selectedTemplateId && (
+        <ValueMappingSection
           jwt={jwt}
           templateId={selectedTemplateId}
         />
