@@ -73,6 +73,7 @@ export const billSchema = z.object({
   }).optional(),
   dueDate: z.string().optional(),
   memo: z.string().optional(),
+  privateNote: z.string().optional(),
   docNumber: z.string().optional(),
   lines: z.array(z.object({
     amount: z.number().positive('Amount must be positive'),
@@ -134,6 +135,7 @@ export const vendorCreditSchema = z.object({
     name: z.string().optional(),
   }),
   memo: z.string().optional(),
+  privateNote: z.string().optional(),
   docNumber: z.string().optional(),
   lines: z.array(z.object({
     amount: z.number().positive('Amount must be positive'),

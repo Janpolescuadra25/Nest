@@ -110,6 +110,7 @@ export interface CreateBillInput {
   termsRef?: { value: string; name?: string };
   dueDate?: string;
   memo?: string;
+  privateNote?: string;
   lines: QBBillLineItem[];
   realmId: string;
   accessToken: string;
@@ -121,6 +122,7 @@ export interface CreateVendorCreditInput {
   vendorRef: { value: string; name?: string };
   apAccountRef: { value: string; name?: string };
   memo?: string;
+  privateNote?: string;
   lines: QBBillLineItem[];
   realmId: string;
   accessToken: string;

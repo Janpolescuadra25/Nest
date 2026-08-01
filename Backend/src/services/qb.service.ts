@@ -429,7 +429,7 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
 }
 
 function buildBillPayload(input: CreateBillInput): object {
-  const { txnDate, docNumber, vendorRef, apAccountRef, termsRef, dueDate, memo, lines } = input;
+  const { txnDate, docNumber, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, lines } = input;
 
   const qbLines = lines.map((line: QBBillLineItem) => {
     const lineDetail: Record<string, unknown> = {
@@ -460,7 +460,10 @@ function buildBillPayload(input: CreateBillInput): object {
   if (docNumber) payload.DocNumber = docNumber;
   if (termsRef) payload.TermsRef = termsRef;
   if (dueDate) payload.DueDate = dueDate;
-  if (memo) payload.PrivateNote = memo;
+  payload.PrivateNote = privateNote || memo;
+  if (privateNote !== undefined) {
+    payload.Memo = memo;
+  }
 
   if (process.env.NODE_ENV !== 'production') {
     console.log('[QB Service] Bill payload:');
@@ -511,7 +514,7 @@ async function createBill(input: CreateBillInput): Promise<JournalEntryResponse>
 }
 
 function buildVendorCreditPayload(input: CreateVendorCreditInput): object {
-  const { txnDate, docNumber, vendorRef, apAccountRef, memo, lines } = input;
+  const { txnDate, docNumber, vendorRef, apAccountRef, memo, privateNote, lines } = input;
 
   const qbLines = lines.map((line: QBBillLineItem) => {
     const lineDetail: Record<string, unknown> = {
@@ -540,7 +543,10 @@ function buildVendorCreditPayload(input: CreateVendorCreditInput): object {
   };
 
   if (docNumber) payload.DocNumber = docNumber;
-  if (memo) payload.PrivateNote = memo;
+  payload.PrivateNote = privateNote || memo;
+  if (privateNote !== undefined) {
+    payload.Memo = memo;
+  }
 
   if (process.env.NODE_ENV !== 'production') {
     console.log('[QB Service] Vendor Credit payload:');

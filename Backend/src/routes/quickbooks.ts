@@ -347,6 +347,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       termsRef,
       dueDate,
       memo,
+      privateNote,
       docNumber,
       lines,
       scanRecordId,
@@ -357,6 +358,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       termsRef?: { value: string; name?: string };
       dueDate?: string;
       memo?: string;
+      privateNote?: string;
       docNumber?: string;
       lines?: QBBillLineItem[];
       scanRecordId?: string;
@@ -404,6 +406,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
       termsRef,
       dueDate,
       memo,
+      privateNote,
       lines,
       docNumber,
       Boolean(req.body.skipDedupCheck),
@@ -471,6 +474,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       lines,
       scanRecordId,
       memo,
+      privateNote,
       docNumber,
     } = req.body as {
       vendorRef?: { value: string; name?: string };
@@ -479,6 +483,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       lines?: QBBillLineItem[];
       scanRecordId?: string;
       memo?: string;
+      privateNote?: string;
       docNumber?: string;
     };
 
@@ -522,6 +527,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
       vendorRef,
       apAccountRef,
       memo,
+      privateNote,
       lines,
       docNumber,
       Boolean(req.body.skipDedupCheck),
@@ -861,12 +867,13 @@ async function syncSingleVendorCredit(
   vendorRef: { value: string; name?: string },
   apAccountRef: { value: string; name?: string },
   memo: string | undefined,
+  privateNote: string | undefined,
   lines: QBBillLineItem[],
   docNumber?: string,
   skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
   const syncType = SyncType.VENDOR_CREDIT;
-  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, memo, lines, docNumber });
+  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, memo, privateNote, lines, docNumber });
 
   const attemptCount = scanRecordId
     ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
@@ -907,6 +914,7 @@ async function syncSingleVendorCredit(
         vendorRef,
         apAccountRef,
         memo,
+        privateNote,
         lines,
         realmId,
         accessToken,
@@ -922,7 +930,7 @@ async function syncSingleVendorCredit(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, memo, privateNote, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
@@ -1155,12 +1163,13 @@ async function syncSingleBill(
   termsRef: { value: string; name?: string } | undefined,
   dueDate: string | undefined,
   memo: string | undefined,
+  privateNote: string | undefined,
   lines: QBBillLineItem[],
   docNumber?: string,
   skipDedupCheck = false,
 ): Promise<SyncSingleResult> {
   const syncType = SyncType.BILL;
-  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, lines, docNumber });
+  const requestHash = hashSyncRequest(syncType, { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, lines, docNumber });
 
   const attemptCount = scanRecordId
     ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
@@ -1203,6 +1212,7 @@ async function syncSingleBill(
         termsRef,
         dueDate,
         memo,
+        privateNote,
         lines,
         realmId,
         accessToken,
@@ -1218,7 +1228,7 @@ async function syncSingleBill(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
@@ -1575,6 +1585,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
             item.vendorRef,
             item.apAccountRef,
             item.memo,
+            item.privateNote,
             item.lines as QBBillLineItem[],
             item.docNumber,
           );
@@ -1628,6 +1639,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
             item.termsRef,
             item.dueDate,
             item.memo,
+            item.privateNote,
             item.lines as QBBillLineItem[],
             item.docNumber,
           );
@@ -1943,10 +1955,11 @@ async function retrySyncFromLog(
         vendorRef: { value: string; name?: string };
         apAccountRef: { value: string; name?: string };
         memo?: string;
+        privateNote?: string;
         lines: QBBillLineItem[];
         docNumber?: string;
       };
-      return syncSingleVendorCredit(userId, scanRecordId, p.txnDate, p.vendorRef, p.apAccountRef, p.memo, p.lines, p.docNumber, true);
+      return syncSingleVendorCredit(userId, scanRecordId, p.txnDate, p.vendorRef, p.apAccountRef, p.memo, p.privateNote, p.lines, p.docNumber, true);
     }
 
     case 'CHEQUE': {
@@ -1970,10 +1983,11 @@ async function retrySyncFromLog(
         termsRef?: { value: string; name?: string };
         dueDate?: string;
         memo?: string;
+        privateNote?: string;
         lines: QBBillLineItem[];
         docNumber?: string;
       };
-      return syncSingleBill(userId, scanRecordId, p.txnDate, p.vendorRef, p.apAccountRef, p.termsRef, p.dueDate, p.memo, p.lines, p.docNumber, true);
+      return syncSingleBill(userId, scanRecordId, p.txnDate, p.vendorRef, p.apAccountRef, p.termsRef, p.dueDate, p.memo, p.privateNote, p.lines, p.docNumber, true);
     }
 
     case 'BILL_PAYMENT':
