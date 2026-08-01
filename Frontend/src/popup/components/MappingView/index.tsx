@@ -382,13 +382,26 @@ export default function MappingView({
     }));
   }, [activeScanEntry, scanData]);
 
+  const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
+
   const scanFieldChips = useMemo(() => {
-    if (!scanData) return [];
-    return Object.keys(scanData).map((field) => ({
-      original: field,
-      normalized: field.toLowerCase().replace(/\s+/g, '_'),
-    }));
-  }, [scanData]);
+    const chips: Array<{ original: string; normalized: string }> = [];
+    if (scanData) {
+      chips.push(...Object.keys(scanData).map((field) => ({
+        original: field,
+        normalized: field.toLowerCase().replace(/\s+/g, '_'),
+      })));
+    }
+    if (activeScanEntry?.header && selectedTemplate?.transactionType !== 'JOURNAL_ENTRY') {
+      Object.keys(activeScanEntry.header).forEach((field) => {
+        const normalized = field.toLowerCase().replace(/\s+/g, '_');
+        if (!chips.some((c) => c.normalized === normalized)) {
+          chips.push({ original: field, normalized });
+        }
+      });
+    }
+    return chips;
+  }, [scanData, activeScanEntry, selectedTemplate?.transactionType]);
 
   const unmappedCount = useMemo(() => {
     if (!scanData) return 0;
@@ -399,7 +412,6 @@ export default function MappingView({
 
   const memoPreview = useMemo(() => resolveMemoTemplate(memoTemplate, scanData), [memoTemplate, scanData]);
   const docPreview = useMemo(() => resolveMemoTemplate(docNumberTemplate, scanData), [docNumberTemplate, scanData]);
-  const selectedTemplate = useMemo(() => templates.find((t) => t.id === selectedTemplateId) ?? null, [templates, selectedTemplateId]);
   const activeScanMode = useMemo(() => {
     if (activeScanEntry?.source) return sourceToScanMode(activeScanEntry.source);
     if (selectedTemplate?.scanModes?.[0]) return selectedTemplate.scanModes[0];
@@ -1664,7 +1676,12 @@ export default function MappingView({
           className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 transition-colors"
         >
           <span className="text-xs font-semibold text-gray-600">
-            📝 Memo Template <span className="text-gray-600 font-normal">(auto-fills Private Note on journal entry)</span>
+            📝 Memo Template <span className="text-gray-600 font-normal">{
+              selectedTemplate?.transactionType === 'JOURNAL_ENTRY' ? '(auto-fills Private Note on journal entry)' :
+              selectedTemplate?.transactionType === 'CHEQUE' ? '(auto-fills Memo on cheque)' :
+              selectedTemplate?.transactionType === 'VENDOR_CREDIT' ? '(auto-fills Memo on vendor credit)' :
+              '(auto-fills Private Note on bill)'
+            }</span>
           </span>
           <span className="text-gray-600 text-xs">{memoOpen ? '▲' : '▼'}</span>
         </button>
@@ -1691,14 +1708,23 @@ export default function MappingView({
 
             <div>
               <div className="text-xs text-gray-600 mb-1">
-                Doc Number <span className="text-gray-600">(leave blank for QB auto-generate)</span>
+                {selectedTemplate?.transactionType === 'JOURNAL_ENTRY' ? 'Doc Number' :
+                  selectedTemplate?.transactionType === 'CHEQUE' ? 'Check No.' :
+                  selectedTemplate?.transactionType === 'VENDOR_CREDIT' ? 'Credit No.' :
+                  'Bill No.'}
+                <span className="text-gray-600">(leave blank for QB auto-generate)</span>
               </div>
               <input
                 ref={docInputRef}
                 className="w-full bg-[#F5F5F7] border border-gray-200 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
                 value={docNumberTemplate}
                 onChange={(e) => setDocNumberTemplate(e.target.value)}
-                placeholder="e.g. JE-{location}-{report_date}"
+                placeholder={
+                  selectedTemplate?.transactionType === 'JOURNAL_ENTRY' ? 'e.g. JE-{location}-{report_date}' :
+                  selectedTemplate?.transactionType === 'CHEQUE' ? 'e.g. CHK-{payee}-{date}' :
+                  selectedTemplate?.transactionType === 'VENDOR_CREDIT' ? 'e.g. VC-{vendor}-{date}' :
+                  'e.g. BILL-{vendor}-{date}'
+                }
               />
               {docPreview && (
                 <p className="text-xs text-gray-600 italic mt-1 truncate">Preview: {docPreview}</p>
@@ -1746,7 +1772,11 @@ export default function MappingView({
                 )}
               </div>
             ) : (
-              <p className="text-xs text-gray-600">Scan a Toast report first to see available field chips.</p>
+              <p className="text-xs text-gray-600">
+              {selectedTemplate?.transactionType === 'JOURNAL_ENTRY'
+                ? 'Scan a Toast report first to see available field chips.'
+                : 'Scan a document first to see available field chips.'}
+            </p>
             )}
           </div>
         )}
