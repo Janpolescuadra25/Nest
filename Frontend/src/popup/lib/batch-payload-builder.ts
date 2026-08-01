@@ -1,7 +1,8 @@
 import { parseNumericValue } from './parse-numeric-value';
 import { decodeMapping } from './je-builder';
 import { resolveMapping } from './mapping-conditions';
-import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem } from '../../types';
+import { resolveValueMapping } from './resolve-value-mapping';
+import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem, ValueMapping } from '../../types';
 import type { QBAccount } from '../types/qb';
 
 type TemplateDefaults = Record<string, { value: string; name?: string } | null>;
@@ -15,8 +16,9 @@ export function buildBillLikePayload(params: {
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
+  valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, transactionType, scanData, mappings, accounts, txnDate, defaults, scanEntry } = params;
+  const { scanRecordId, transactionType, scanData, mappings, accounts, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   const scanFields: ScanData = scanEntry
@@ -31,7 +33,18 @@ export function buildBillLikePayload(params: {
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
       const mapping = resolveMapping(decoded, field, scanFields);
-      const accountId = mapping?.accountId ?? '';
+      let accountId = mapping?.accountId ?? '';
+      if (!accountId) {
+        const vmResult = resolveValueMapping(
+          field,
+          'account',
+          valueMappings,
+          (id) => accounts.find((a) => a.Id === id),
+        );
+        if (vmResult.matched) {
+          accountId = vmResult.entityId;
+        }
+      }
       const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
       const description = mapping?.description ?? field;
       const classId = mapping?.classId;
@@ -68,8 +81,9 @@ export function buildChequePayload(params: {
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
+  valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, scanData, mappings, accounts, txnDate, defaults, scanEntry } = params;
+  const { scanRecordId, scanData, mappings, accounts, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   const scanFields: ScanData = scanEntry
@@ -84,7 +98,18 @@ export function buildChequePayload(params: {
     .filter(([, amount]) => amount !== 0)
     .map(([field, amount]) => {
       const mapping = resolveMapping(decoded, field, scanFields);
-      const accountId = mapping?.accountId ?? '';
+      let accountId = mapping?.accountId ?? '';
+      if (!accountId) {
+        const vmResult = resolveValueMapping(
+          field,
+          'account',
+          valueMappings,
+          (id) => accounts.find((a) => a.Id === id),
+        );
+        if (vmResult.matched) {
+          accountId = vmResult.entityId;
+        }
+      }
       const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
       const description = mapping?.description ?? field;
       const classId = mapping?.classId;

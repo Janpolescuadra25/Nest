@@ -1,6 +1,7 @@
 import { parseNumericValue } from './parse-numeric-value';
 import { resolveMapping } from './mapping-conditions';
-import type { Mapping, MappingCondition, ScanData, ScanEntry, QBJournalLineItem } from '../../types';
+import { resolveValueMapping } from './resolve-value-mapping';
+import type { Mapping, MappingCondition, ScanData, ScanEntry, QBJournalLineItem, ValueMapping } from '../../types';
 import type { QBAccount } from '../types/qb';
 
 // ── Decoded mapping ───────────────────────────────────────────────────────────
@@ -122,8 +123,9 @@ export function buildJEPayload(params: {
   privateNote?: string;
   docNumber?: string;
   scanEntry?: ScanEntry;
+  valueMappings: ValueMapping[];
 }): JEPayload {
-  const { scanRecordId, scanData, mappings, accounts, txnDate, privateNote, docNumber, scanEntry } = params;
+  const { scanRecordId, scanData, mappings, accounts, txnDate, privateNote, docNumber, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   const scanFields: ScanData = scanEntry
@@ -145,7 +147,18 @@ export function buildJEPayload(params: {
       const side = amount < 0
         ? (rawSide === 'debit' ? 'credit' : 'debit')
         : rawSide;
-      const accountId = mapping?.accountId ?? '';
+      let accountId = mapping?.accountId ?? '';
+      if (!accountId) {
+        const vmResult = resolveValueMapping(
+          field,
+          'account',
+          valueMappings,
+          (id) => accounts.find((a) => a.Id === id),
+        );
+        if (vmResult.matched) {
+          accountId = vmResult.entityId;
+        }
+      }
       const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
       const description = mapping?.description ?? field;
       const classId = mapping?.classId;

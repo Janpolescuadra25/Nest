@@ -7,7 +7,7 @@ import { useToast } from './Toast';
 import ConfirmDialog from './shared/ConfirmDialog';
 import { buildJEPayload } from '../lib/je-builder';
 import { buildBillLikePayload, buildChequePayload } from '../lib/batch-payload-builder';
-import type { BatchSyncItem, ScanRecord, ScanEntry } from '../../types';
+import type { BatchSyncItem, ScanRecord, ScanEntry, ValueMapping } from '../../types';
 import { TRANSACTION_TYPE_LABELS } from '../../types';
 
 const STATUS_FILTER_OPTIONS = [
@@ -203,6 +203,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
 
       const mappings = await api.getMappings(jwt, locationId);
       const templates = await api.getTemplates(jwt, locationId);
+      const valueMappingsByTemplate = new Map<string, ValueMapping[]>();
+      await Promise.all(
+        templates.map(async (template) => {
+          const valueMappings = await api.getValueMappings(jwt, template.id);
+          valueMappingsByTemplate.set(template.id, valueMappings ?? []);
+        }),
+      );
+      const journalEntryTemplate = templates.find((t) => t.transactionType === 'JOURNAL_ENTRY' && t.isActive);
 
       const billPaymentCount = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') === 'BILL_PAYMENT').length;
       const syncableScans = allPending.filter((s) => (s.transactionType ?? 'JOURNAL_ENTRY') !== 'BILL_PAYMENT');
@@ -227,6 +235,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             accounts,
             txnDate: scan.scanDate.slice(0, 10),
             scanEntry: sharedScanEntry,
+            valueMappings: journalEntryTemplate ? valueMappingsByTemplate.get(journalEntryTemplate.id) ?? [] : [],
           });
 
           if (payload.lines.length > 0) {
@@ -263,6 +272,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             txnDate: scan.scanDate.slice(0, 10),
             defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
             scanEntry: sharedScanEntry,
+            valueMappings: valueMappingsByTemplate.get(template.id) ?? [],
           });
 
           if (payload) {
@@ -292,6 +302,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             txnDate: scan.scanDate.slice(0, 10),
             defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
             scanEntry: sharedScanEntry,
+            valueMappings: valueMappingsByTemplate.get(template.id) ?? [],
           });
 
           if (payload) {
