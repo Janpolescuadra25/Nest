@@ -175,7 +175,7 @@ router.post('/parse-excel', requireFeaturePermission('templates', 'read'), uploa
     const rows = sheetToArrays(worksheet);
     const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
     const headers = rawHeaders.map((header, index) => header || `Column ${index + 1}`);
-    const previewRows = rows.slice(1, 4).map((row) => {
+    const previewRows = rows.slice(1, 501).map((row) => {
       const rowData: Record<string, string> = {};
       headers.forEach((header, index) => {
         rowData[header] = String(row?.[index] ?? '');

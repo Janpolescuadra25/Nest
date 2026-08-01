@@ -1266,13 +1266,13 @@ export default function ScanView({
                 )}
               </div>
               <div className="text-xs text-gray-600">
-                {excelPreviewLoading ? 'Loading preview…' : 'This preview shows the first parsed transaction row from Excel.'}
+                {excelPreviewLoading ? 'Loading preview…' : `Showing all rows from ${excelPreviewSheetName || 'sheet'}.`}
               </div>
               {(() => {
                 const previewSheet = excelPreviewSheets.find((sheet) => sheet.name === excelPreviewSheetName) ?? excelPreviewSheets[0];
                 if (!previewSheet) return null;
                 return (
-                  <div className="overflow-x-auto border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="overflow-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
                     <table className="min-w-full text-left text-xs text-gray-700">
                       <thead>
                         <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
