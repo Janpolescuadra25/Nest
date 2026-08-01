@@ -175,7 +175,57 @@ export default function BillPreviewForm({
         });
         if (cancelled) return;
 
-        setLines(extracted.map((item) => newLine({
+        // ── D6-4b: Resolve unresolved fields via ValueMapping ──
+        const processedExtracted = extracted.map((item) => {
+          let { accountId, accountName, classId, taxCodeId } = item;
+
+          if (!accountId && item.productName) {
+            const vmResult = resolveValueMapping(
+              item.productName,
+              'account',
+              valueMappings,
+              (id) => accountsRef.current.find((a) => a.Id === id),
+            );
+            if (vmResult.matched) {
+              accountId = vmResult.entityId;
+              accountName = vmResult.entityName;
+            }
+          }
+
+          if (classId) {
+            const isAlreadyQbId = classes.some((c) => c.Id === classId);
+            if (!isAlreadyQbId) {
+              const vmResult = resolveValueMapping(
+                classId,
+                'class',
+                valueMappings,
+                (id) => classes.find((c) => c.Id === id),
+              );
+              if (vmResult.matched) {
+                classId = vmResult.entityId;
+              }
+            }
+          }
+
+          if (taxCodeId) {
+            const isAlreadyQbId = taxCodes.some((t) => t.Id === taxCodeId);
+            if (!isAlreadyQbId) {
+              const vmResult = resolveValueMapping(
+                taxCodeId,
+                'taxCode',
+                valueMappings,
+                (id) => taxCodes.find((t) => t.Id === id),
+              );
+              if (vmResult.matched) {
+                taxCodeId = vmResult.entityId;
+              }
+            }
+          }
+
+          return { ...item, accountId, accountName, classId, taxCodeId };
+        });
+
+        setLines(processedExtracted.map((item) => newLine({
           accountId: item.accountId,
           accountName: item.accountName || accountsRef.current.find((a) => a.Id === item.accountId)?.FullyQualifiedName || '',
           description: item.description,
@@ -192,7 +242,7 @@ export default function BillPreviewForm({
     })();
 
     return () => { cancelled = true; };
-  }, [activeScanEntry, selectedTemplate, jwt, locId, ruleTransformedLineItems]);
+  }, [activeScanEntry, selectedTemplate, jwt, locId, ruleTransformedLineItems, valueMappings]);
 
   useEffect(() => {
     if (!listsLoaded && !listsLoading && !listsError) {
