@@ -103,6 +103,34 @@ interface Props {
   setUploadedExcelFile: (file: File | null) => void;
   scanMode: ScanSource;
   setScanMode: React.Dispatch<React.SetStateAction<ScanSource>>;
+  showInvoiceReview: boolean;
+  setShowInvoiceReview: React.Dispatch<React.SetStateAction<boolean>>;
+  documentClassification: { documentType: string; confidence: number; reasoning: string } | null;
+  setDocumentClassification: React.Dispatch<React.SetStateAction<{ documentType: string; confidence: number; reasoning: string } | null>>;
+  parsedCheckData: {
+    checkNumber: string;
+    payeeName: string;
+    amount: string;
+    date: string;
+    memo: string;
+    bankName: string;
+    lineItems: { description: string; amount: string }[];
+  } | null;
+  setParsedCheckData: React.Dispatch<React.SetStateAction<{
+    checkNumber: string;
+    payeeName: string;
+    amount: string;
+    date: string;
+    memo: string;
+    bankName: string;
+    lineItems: { description: string; amount: string }[];
+  } | null>>;
+  showCheckReview: boolean;
+  setShowCheckReview: React.Dispatch<React.SetStateAction<boolean>>;
+  parsedInvoiceHeader: Record<string, string>;
+  setParsedInvoiceHeader: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  parsedInvoiceLineItems: Record<string, string>[];
+  setParsedInvoiceLineItems: React.Dispatch<React.SetStateAction<Record<string, string>[]>>;
 }
 
 export default function ScanView({
@@ -128,6 +156,18 @@ export default function ScanView({
   setUploadedExcelFile,
   scanMode,
   setScanMode,
+  showInvoiceReview,
+  setShowInvoiceReview,
+  documentClassification,
+  setDocumentClassification,
+  parsedCheckData,
+  setParsedCheckData,
+  showCheckReview,
+  setShowCheckReview,
+  parsedInvoiceHeader,
+  setParsedInvoiceHeader,
+  parsedInvoiceLineItems,
+  setParsedInvoiceLineItems,
 }: Props) {
   // MIGRATION PLAN: preserve the current POS scan contract while moving toward ScanEntry-driven ingestion.
   // - Existing POS scan data remains available as `scanData: Record<string, number>` for MappingView compatibility.
@@ -145,27 +185,9 @@ export default function ScanView({
   const [invoiceUploadError, setInvoiceUploadError] = useState<string | null>(null);
   const [blurWarning, setBlurWarning] = useState(false);
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
-  const [showInvoiceReview, setShowInvoiceReview] = useState(false);
   const { showToast } = useToast();
-  const [documentClassification, setDocumentClassification] = useState<{
-    documentType: string;
-    confidence: number;
-    reasoning: string;
-  } | null>(null);
-  const [parsedCheckData, setParsedCheckData] = useState<{
-    checkNumber: string;
-    payeeName: string;
-    amount: string;
-    date: string;
-    memo: string;
-    bankName: string;
-    lineItems: { description: string; amount: string }[];
-  } | null>(null);
-  const [showCheckReview, setShowCheckReview] = useState(false);
   const [invoiceConfirmSuccess, setInvoiceConfirmSuccess] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
-  const [parsedInvoiceLineItems, setParsedInvoiceLineItems] = useState<Record<string, string>[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isScanLimit, setIsScanLimit] = useState(false);

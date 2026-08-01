@@ -66,14 +66,14 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
   const nameOptions = useMemo<SelectOption[]>(() => {
     const items: SelectOption[] = [];
     vendors
-      .filter((vendor) => vendor.Active)
-      .forEach((vendor) => items.push({ value: vendor.Id, label: vendor.DisplayName, subtitle: 'Vendor' }));
+      .filter((v) => v.Active)
+      .forEach((v) => items.push({ value: `vendor:${v.Id}`, label: v.DisplayName, subtitle: 'Vendor' }));
     customers
-      .filter((customer) => customer.Active)
-      .forEach((customer) => items.push({ value: customer.Id, label: customer.DisplayName, subtitle: 'Customer' }));
+      .filter((c) => c.Active)
+      .forEach((c) => items.push({ value: `customer:${c.Id}`, label: c.DisplayName, subtitle: 'Customer' }));
     employees
-      .filter((employee) => employee.Active)
-      .forEach((employee) => items.push({ value: employee.Id, label: employee.DisplayName, subtitle: 'Employee' }));
+      .filter((e) => e.Active)
+      .forEach((e) => items.push({ value: `employee:${e.Id}`, label: e.DisplayName, subtitle: 'Employee' }));
     return items.sort((a, b) => a.label.localeCompare(b.label));
   }, [vendors, customers, employees]);
 
@@ -248,12 +248,25 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
   };
 
   const getEntityLabel = (value: string) => {
+    if (value.startsWith('customer:')) {
+        const cId = value.replace('customer:', '');
+        return customers.find((item) => item.Id === cId)?.DisplayName || value;
+    }
+    if (value.startsWith('vendor:')) {
+        const vId = value.replace('vendor:', '');
+        return vendors.find((item) => item.Id === vId)?.DisplayName || value;
+    }
+    if (value.startsWith('employee:')) {
+        const eId = value.replace('employee:', '');
+        return employees.find((item) => item.Id === eId)?.DisplayName || value;
+    }
     const account = accounts.find((item) => item.Id === value);
     if (account) return account.FullyQualifiedName;
     const klass = classes.find((item) => item.Id === value);
     if (klass) return klass.FullyQualifiedName;
     const taxCode = taxCodes.find((item) => item.Id === value);
     if (taxCode) return taxCode.Name;
+    // Backward compatibility: existing name mappings may have raw unprefixed IDs
     const vendor = vendors.find((item) => item.Id === value);
     if (vendor) return vendor.DisplayName;
     const customer = customers.find((item) => item.Id === value);

@@ -56,6 +56,20 @@ export default function App() {
   const [scanMode, setScanMode] = useState<ScanSource>('pos');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [selectedTemplateForScan, setSelectedTemplateForScan] = useState<Template | null>(null);
+  const [showInvoiceReview, setShowInvoiceReview] = useState(false);
+  const [documentClassification, setDocumentClassification] = useState<{ documentType: string; confidence: number; reasoning: string } | null>(null);
+  const [parsedCheckData, setParsedCheckData] = useState<{
+    checkNumber: string;
+    payeeName: string;
+    amount: string;
+    date: string;
+    memo: string;
+    bankName: string;
+    lineItems: { description: string; amount: string }[];
+  } | null>(null);
+  const [showCheckReview, setShowCheckReview] = useState(false);
+  const [parsedInvoiceHeader, setParsedInvoiceHeader] = useState<Record<string, string>>({});
+  const [parsedInvoiceLineItems, setParsedInvoiceLineItems] = useState<Record<string, string>[]>([]);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
   const [scanAttachments, setScanAttachments] = useState<Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>>([]);
   const [showHelp, setShowHelp] = useState(false);
@@ -484,6 +498,18 @@ export default function App() {
               setUploadedExcelFile={setUploadedExcelFile}
               scanMode={scanMode}
               setScanMode={setScanMode}
+              showInvoiceReview={showInvoiceReview}
+              setShowInvoiceReview={setShowInvoiceReview}
+              documentClassification={documentClassification}
+              setDocumentClassification={setDocumentClassification}
+              parsedCheckData={parsedCheckData}
+              setParsedCheckData={setParsedCheckData}
+              showCheckReview={showCheckReview}
+              setShowCheckReview={setShowCheckReview}
+              parsedInvoiceHeader={parsedInvoiceHeader}
+              setParsedInvoiceHeader={setParsedInvoiceHeader}
+              parsedInvoiceLineItems={parsedInvoiceLineItems}
+              setParsedInvoiceLineItems={setParsedInvoiceLineItems}
             />
           )}
           {effectiveTab === 'mappings' && (
