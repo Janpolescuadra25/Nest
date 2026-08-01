@@ -441,6 +441,30 @@ export default function CheckPreviewForm({
   const allMapped = unmappedCount === 0 && hasAmount;
   const hasHeader = Boolean(bankAccountRef.value && payeeRef.value);
 
+  const inactiveWarnings: string[] = [];
+  effectiveLines.forEach((line, i) => {
+    if (line.accountId) {
+      const account = accounts.find((a) => a.Id === line.accountId);
+      if (account && !account.Active) {
+        inactiveWarnings.push(`Line ${i + 1}: Account "${account.FullyQualifiedName}" is inactive`);
+      }
+    }
+  });
+  effectiveLines.forEach((line, i) => {
+    if (line.classId) {
+      const cls = classes.find((c) => c.Id === line.classId);
+      if (cls && !cls.Active) {
+        inactiveWarnings.push(`Line ${i + 1}: Class "${cls.FullyQualifiedName}" is inactive`);
+      }
+    }
+  });
+  if (payeeRef.value) {
+    const payee = vendors.find((v) => v.Id === payeeRef.value);
+    if (payee && !payee.Active) {
+      inactiveWarnings.push(`Vendor "${payee.DisplayName}" is inactive`);
+    }
+  }
+
   const handleClearAll = () => {
     setTxnDate(today);
     setBankAccountRef({ value: '' });
@@ -732,6 +756,12 @@ export default function CheckPreviewForm({
           onDismiss={() => setDuplicateWarning(null)}
           onRetry={handleForceSync}
         />
+      )}
+      {inactiveWarnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2 space-y-1">
+          <div className="font-medium">⚠️ Inactive entity warnings:</div>
+          {inactiveWarnings.map((w, i) => <div key={i}>{w}</div>)}
+        </div>
       )}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">

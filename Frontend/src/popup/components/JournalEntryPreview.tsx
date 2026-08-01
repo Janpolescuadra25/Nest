@@ -622,6 +622,24 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const unmappedCount = effectiveDisplayLines.filter((l) => !l.accountId).length;
   const allMapped = unmappedCount === 0;
 
+  const inactiveWarnings: string[] = [];
+  effectiveDisplayLines.forEach((line, i) => {
+    if (line.accountId) {
+      const account = accounts.find((a) => a.Id === line.accountId);
+      if (account && !account.Active) {
+        inactiveWarnings.push(`Line ${i + 1}: Account "${account.FullyQualifiedName}" is inactive`);
+      }
+    }
+  });
+  effectiveDisplayLines.forEach((line, i) => {
+    if (line.classId) {
+      const cls = classes.find((c) => c.Id === line.classId);
+      if (cls && !cls.Active) {
+        inactiveWarnings.push(`Line ${i + 1}: Class "${cls.FullyQualifiedName}" is inactive`);
+      }
+    }
+  });
+
   const handleClearAll = () => {
     setLines([newLine(), newLine()]);
     setDocNumber('');
@@ -1015,6 +1033,12 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           onDismiss={() => setDuplicateWarning(null)}
           onRetry={handleForceSync}
         />
+      )}
+      {inactiveWarnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2 space-y-1">
+          <div className="font-medium">⚠️ Inactive entity warnings:</div>
+          {inactiveWarnings.map((w, i) => <div key={i}>{w}</div>)}
+        </div>
       )}
       {autoBalancePending && (
         <ErrorCard
