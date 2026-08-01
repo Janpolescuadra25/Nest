@@ -465,6 +465,13 @@ export default function CheckPreviewForm({
     }
   }
 
+  const scannedAmount = activeScanEntry?.header?.amount
+    ? parseFloat(String(activeScanEntry.header.amount).replace(/[^0-9.\-]/g, ''))
+    : null;
+  const totalMismatch = scannedAmount !== null && totalAmount > 0 && Math.abs(totalAmount - scannedAmount) > 0.01
+    ? Math.abs(totalAmount - scannedAmount)
+    : null;
+
   const handleClearAll = () => {
     setTxnDate(today);
     setBankAccountRef({ value: '' });
@@ -761,6 +768,11 @@ export default function CheckPreviewForm({
         <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2 space-y-1">
           <div className="font-medium">⚠️ Inactive entity warnings:</div>
           {inactiveWarnings.map((w, i) => <div key={i}>{w}</div>)}
+        </div>
+      )}
+      {totalMismatch !== null && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+          ⚠️ Line items total ({totalAmount.toFixed(2)}) does not match scanned amount ({scannedAmount!.toFixed(2)}). Difference: {totalMismatch.toFixed(2)}
         </div>
       )}
       {error && (
