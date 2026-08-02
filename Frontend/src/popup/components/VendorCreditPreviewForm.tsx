@@ -116,6 +116,7 @@ export default function VendorCreditPreviewForm({
   const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [apAccountRef, setApAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [defaultTaxCodeId, setDefaultTaxCodeId] = useState('');
+  const [privateNote, setPrivateNote] = useState('');
   const [memo, setMemo] = useState('');
   const [docNumber, setDocNumber] = useState('');
   const [lines, setLines] = useState<CreditLine[]>([newLine(), newLine()]);
@@ -341,7 +342,7 @@ export default function VendorCreditPreviewForm({
 
     if (defaults.vendorRef) setVendorRef(defaults.vendorRef);
     if (defaults.apAccountRef) setApAccountRef(defaults.apAccountRef);
-    if (defaults.memo?.value) setMemo(defaults.memo.value);
+    if (defaults.memo?.value) setPrivateNote(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
     if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);
@@ -430,7 +431,7 @@ export default function VendorCreditPreviewForm({
     }
 
     if (h.total) {
-      setMemo((prev) => {
+      setPrivateNote((prev) => {
         if (prev) return prev;
         return `Invoice total: ${h.total}`;
       });
@@ -563,6 +564,7 @@ export default function VendorCreditPreviewForm({
     setTxnDate(today);
     setVendorRef({ value: '' });
     setApAccountRef({ value: '' });
+    setPrivateNote('');
     setMemo('');
     setDocNumber('');
     setLines([newLine(), newLine()]);
@@ -601,6 +603,7 @@ export default function VendorCreditPreviewForm({
         creditLines,
         scanRecordId ?? undefined,
         memo || undefined,
+        privateNote || undefined,
         docNumber || undefined,
         skipDedupCheck,
       ) as { vendorCreditId?: string; qbJournalEntryId?: string; txnDate?: string; docNumber?: string; skipped?: boolean };
@@ -615,7 +618,7 @@ export default function VendorCreditPreviewForm({
     } finally {
       setSyncing(false);
     }
-  }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, txnDate, vendorRef]);
+  }, [allMapped, apAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, privateNote, scanRecordId, txnDate, vendorRef]);
 
   const handleSubmitForApproval = useCallback(async () => {
     if (!scanRecordId) {
@@ -696,12 +699,21 @@ export default function VendorCreditPreviewForm({
           />
         </div>
         <div className="col-span-2">
-          <div className="text-sm font-medium text-gray-700 mb-1">Memo / Private Note</div>
+          <div className="text-sm font-medium text-gray-700 mb-1">Memo</div>
           <input
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
-            placeholder={`Nest sync — ${txnDate}`}
+            placeholder="Visible to QuickBooks"
+          />
+        </div>
+        <div className="col-span-2">
+          <div className="text-sm font-medium text-gray-700 mb-1">Private Note</div>
+          <input
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
+            value={privateNote}
+            onChange={(e) => setPrivateNote(e.target.value)}
+            placeholder="Nest internal note"
           />
         </div>
         <div className="col-span-2">

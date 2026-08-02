@@ -634,12 +634,13 @@ export const api = {
     termsRef: { value: string; name?: string } | undefined,
     dueDate: string | undefined,
     memo: string | undefined,
+    privateNote: string | undefined,
     docNumber: string | undefined,
     lines: unknown[],
     scanRecordId?: string,
     skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/bill', { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines, scanRecordId, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
+    post('/api/quickbooks/bill', { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber, lines, scanRecordId, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   createVendorCredit: (
     jwt: string,
@@ -649,10 +650,11 @@ export const api = {
     lines: unknown[],
     scanRecordId?: string,
     memo?: string,
+    privateNote?: string,
     docNumber?: string,
     skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
+    post('/api/quickbooks/vendorcredit', { vendorRef, txnDate, apAccountRef, lines, scanRecordId, memo, privateNote, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   createCheque: (
     jwt: string,

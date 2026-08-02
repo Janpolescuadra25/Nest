@@ -68,7 +68,7 @@ export function buildBillLikePayload(params: {
     apAccountRef: defaults.apAccountRef ?? undefined,
     termsRef: defaults.termsRef ?? undefined,
     dueDate: defaults.dueDate?.value,
-    memo: defaults.memo?.value,
+    privateNote: defaults.memo?.value,
     docNumber: defaults.docNumber?.value,
   };
 }
