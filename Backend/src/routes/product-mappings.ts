@@ -62,7 +62,7 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
 
   const template = await getTemplateOrFail(templateId, req.user);
   const product = await prisma.product.findFirst({
-    where: { id: productId, userId: req.user!.userId },
+    where: { id: productId, locationId: template.locationId },
   });
   if (!product) {
     throw new AppError('Product not found', 404);
@@ -147,7 +147,7 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
   const template = await getTemplateOrFail(templateId, req.user);
 
   const products = await prisma.product.findMany({
-    where: { userId: req.user!.userId },
+    where: { locationId: template.locationId },
   });
   const productMap = new Map(products.map((product) => [product.name.trim().toLowerCase(), product.id]));
 
