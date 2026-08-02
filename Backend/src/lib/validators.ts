@@ -252,12 +252,11 @@ export const teamAllocationSchema = z.object({
 
 export const locationCreateSchema = z.object({
   name: z.string().min(1).max(200),
-  posUrl: z.string().max(500).optional(),
 }).strict();
 
 export const locationUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  posUrl: z.string().max(500).optional(),
+  description: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
   memoTemplate: z.string().max(1000).optional(),
   docNumberTemplate: z.string().max(200).optional(),

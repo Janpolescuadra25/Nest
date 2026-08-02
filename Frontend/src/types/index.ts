@@ -4,7 +4,7 @@ export interface Location {
   id: string;
   userId: string;
   name: string;
-  posUrl: string;
+  description?: string;
   isActive: boolean;
   memoTemplate?: string;
   docNumberTemplate?: string;

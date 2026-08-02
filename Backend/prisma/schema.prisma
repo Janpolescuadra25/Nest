@@ -163,7 +163,7 @@ model Location {
   userId             String
   adminId            String?
   name               String
-  posUrl             String              @default("")
+  description        String?
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt

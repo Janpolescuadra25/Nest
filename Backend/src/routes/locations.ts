@@ -58,7 +58,7 @@ router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<voi
 // ── POST /api/locations ───────────────────────────────────────────────────────
 router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity('location'), validate(locationCreateSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, posUrl = '' } = req.body as { name?: string; posUrl?: string };
+    const { name } = req.body as { name?: string };
 
     if (!name) {
       throw new AppError('name is required', 400);
@@ -71,7 +71,7 @@ router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity
       : user.adminId ?? null;
 
     const location = await prisma.location.create({
-      data: { userId: user.userId, adminId, name, posUrl },
+      data: { userId: user.userId, adminId, name },
     });
 
     res.status(201).json(location);
@@ -117,8 +117,8 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), validate(loca
       return;
     }
 
-    const { name, posUrl, isActive, memoTemplate, docNumberTemplate } = req.body as {
-      name?: string; posUrl?: string; isActive?: boolean;
+    const { name, isActive, description, memoTemplate, docNumberTemplate } = req.body as {
+      name?: string; isActive?: boolean; description?: string;
       memoTemplate?: string; docNumberTemplate?: string;
     };
 
@@ -126,8 +126,8 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), validate(loca
       where: { id },
       data: {
         ...(name !== undefined && { name }),
-        ...(posUrl !== undefined && { posUrl }),
         ...(isActive !== undefined && { isActive }),
+        ...(description !== undefined && { description: description || null }),
         ...(memoTemplate !== undefined && { memoTemplate }),
         ...(docNumberTemplate !== undefined && { docNumberTemplate }),
       },

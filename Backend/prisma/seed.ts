@@ -109,7 +109,6 @@ async function main(): Promise<void> {
         userId: user.id,
         adminId: ownerUser.id,
         name: 'Acme Downtown',
-        posUrl: 'https://www.toasttab.com/acme-downtown/v3',
         isActive: true,
       },
     });
@@ -122,7 +121,6 @@ async function main(): Promise<void> {
         userId: user.id,
         adminId: ownerUser.id,
         name: 'Acme Uptown',
-        posUrl: 'https://www.toasttab.com/acme-uptown/v3',
         isActive: true,
       },
     });

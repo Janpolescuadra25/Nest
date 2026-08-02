@@ -10,7 +10,7 @@ interface Props {
   onUpgrade?: () => void;
 }
 
-const EMPTY_FORM = { name: '', posUrl: '' };
+const EMPTY_FORM = { name: '' };
 
 export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Props) {
   const { showToast } = useToast();
@@ -56,7 +56,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
     }
     setAddLoading(true);
     try {
-      await api.createLocation(jwt, addForm.name.trim(), addForm.posUrl.trim());
+      await api.createLocation(jwt, addForm.name.trim());
       showToast('Location created', 'success');
       setShowUpgrade(false);
       setUpgradeMessage('');
@@ -85,7 +85,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
       ...p,
       [loc.id]: {
         name: loc.name,
-        posUrl: loc.posUrl,
+        description: loc.description || '',
         isActive: loc.isActive,
         memoTemplate: loc.memoTemplate ?? '',
         docNumberTemplate: loc.docNumberTemplate ?? '',
@@ -109,7 +109,7 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
     try {
       await api.updateLocation(jwt, loc.id, {
         name: String(form.name).trim(),
-        posUrl: String(form.posUrl).trim(),
+        description: String(form.description ?? '').trim() || undefined,
         isActive: form.isActive,
         memoTemplate: String(form.memoTemplate ?? '').trim() || undefined,
         docNumberTemplate: String(form.docNumberTemplate ?? '').trim() || undefined,
@@ -177,16 +177,6 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
               className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
             />
           </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-0.5">POS URL (optional)</label>
-            <input
-              type="url"
-              value={addForm.posUrl}
-              onChange={e => setAddForm(p => ({ ...p, posUrl: e.target.value }))}
-              placeholder="https://pos.example.com"
-              className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-            />
-          </div>
           <button
             type="submit"
             disabled={addLoading}
@@ -221,7 +211,9 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{loc.name}</div>
-                  <div className="text-xs text-gray-600 truncate">{loc.posUrl}</div>
+                  {loc.description && (
+                    <div className="text-xs text-gray-500 truncate">{loc.description}</div>
+                  )}
                   <div className="mt-1">
                     {loc.isActive
                       ? <span className="text-xs px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">Active</span>
@@ -248,13 +240,13 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-0.5">POS URL (optional)</label>
-                    <input
-                      type="url"
-                      aria-label="POS URL"
-                      value={String(form.posUrl ?? '')}
-                      onChange={e => handleEditChange(loc.id, 'posUrl', e.target.value)}
-                      className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+                    <label className="block text-xs text-gray-600 mb-0.5">Description</label>
+                    <textarea
+                      value={String(form.description ?? '')}
+                      onChange={e => handleEditChange(loc.id, 'description', e.target.value)}
+                      placeholder="Optional description for this location"
+                      rows={3}
+                      className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 resize-y"
                     />
                   </div>
                   <div>
