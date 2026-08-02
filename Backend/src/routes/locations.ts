@@ -117,9 +117,8 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), validate(loca
       return;
     }
 
-    const { name, isActive, description, memoTemplate, docNumberTemplate } = req.body as {
+    const { name, isActive, description } = req.body as {
       name?: string; isActive?: boolean; description?: string;
-      memoTemplate?: string; docNumberTemplate?: string;
     };
 
     const updated = await prisma.location.update({
@@ -128,8 +127,6 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), validate(loca
         ...(name !== undefined && { name }),
         ...(isActive !== undefined && { isActive }),
         ...(description !== undefined && { description: description || null }),
-        ...(memoTemplate !== undefined && { memoTemplate }),
-        ...(docNumberTemplate !== undefined && { docNumberTemplate }),
       },
     });
 
@@ -197,7 +194,13 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), va
     }
 
     if (!body.mappings?.length && !body.rules?.length && body.memoTemplate === undefined && body.docNumberTemplate === undefined) {
-      throw new AppError('No template data provided', 400);
+      if (!body.templateId) {
+        throw new AppError('No template data provided', 400);
+        return;
+      }
+    }
+    if ((body.memoTemplate !== undefined || body.docNumberTemplate !== undefined) && !body.templateId) {
+      throw new AppError('templateId is required when updating template memo/doc fields', 400);
       return;
     }
     if (body.mappings && !Array.isArray(body.mappings)) {
@@ -271,9 +274,9 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), va
         await tx.rule.deleteMany({ where: { locationId: id } });
       }
 
-      if (body.memoTemplate !== undefined || body.docNumberTemplate !== undefined) {
-        await tx.location.update({
-          where: { id },
+      if ((body.memoTemplate !== undefined || body.docNumberTemplate !== undefined) && body.templateId) {
+        await tx.template.update({
+          where: { id: body.templateId },
           data: {
             ...(body.memoTemplate !== undefined && { memoTemplate: body.memoTemplate || null }),
             ...(body.docNumberTemplate !== undefined && { docNumberTemplate: body.docNumberTemplate || null }),

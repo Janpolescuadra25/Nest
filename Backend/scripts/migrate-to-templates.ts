@@ -19,8 +19,6 @@ async function main() {
         locationId: location.id,
         name: 'Default mapping template',
         description: 'Auto-created template for existing mappings',
-        memoTemplate: location.memoTemplate ?? null,
-        docNumberTemplate: location.docNumberTemplate ?? null,
       },
     });
 

@@ -167,8 +167,6 @@ model Location {
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  docNumberTemplate  String?
-  memoTemplate       String?
   admin              User?               @relation("AdminLocations", fields: [adminId], references: [id])
   user               User                @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
   mappingPreferences MappingPreference[]

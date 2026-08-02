@@ -318,10 +318,9 @@ export default function VendorCreditPreviewForm({
 
   useEffect(() => {
     if (!scanData || !locId) return;
-    const loc = locations.find((location) => location.id === locId);
-    if (!loc) return;
-    const memoTemplate = loc.memoTemplate;
-    const docNumberTemplate = loc.docNumberTemplate;
+    if (!selectedTemplate) return;
+    const memoTemplate = selectedTemplate.memoTemplate;
+    const docNumberTemplate = selectedTemplate.docNumberTemplate;
 
     if (memoTemplate) {
       setMemo((prev) => prev || memoTemplate.replace(/\{(\w+)\}/g, (match, field: string) => {
@@ -336,7 +335,7 @@ export default function VendorCreditPreviewForm({
         return key !== undefined ? String(scanData[key]) : match;
       }));
     }
-  }, [scanData, locId, locations]);
+  }, [scanData, locId, selectedTemplate]);
 
   useEffect(() => {
     if (!selectedTemplate || selectedTemplate.transactionType !== 'VENDOR_CREDIT') return;

@@ -1125,21 +1125,19 @@ export default function MappingView({
         memoTemplate: pendingImport.memoTemplate,
         docNumberTemplate: pendingImport.docNumberTemplate,
         mode: importMode,
+        templateId: selectedTemplateId,
       });
       showToast(`Imported ${result.createdMappings} mappings + ${result.createdRules} rules${result.templatesUpdated ? ' + templates' : ''}`, 'success');
       void loadMappings();
-      const loc = locations.find((l) => l.id === locId);
-      if (loc) {
-        setMemoTemplate(pendingImport.memoTemplate ?? loc.memoTemplate ?? '');
-        setDocNumberTemplate(pendingImport.docNumberTemplate ?? loc.docNumberTemplate ?? '');
-      }
+      setMemoTemplate(pendingImport.memoTemplate ?? selectedTemplate?.memoTemplate ?? '');
+      setDocNumberTemplate(pendingImport.docNumberTemplate ?? selectedTemplate?.docNumberTemplate ?? '');
       setShowImportConfirm(false);
       setPendingImport(null);
       setImportWarning(null);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Import failed', 'error');
     }
-  }, [pendingImport, locId, jwt, importMode, showToast, loadMappings, locations]);
+  }, [pendingImport, locId, jwt, importMode, showToast, loadMappings, selectedTemplateId, selectedTemplate]);
 
   const saveExcelColumnMappings = useCallback(async () => {
     if (!selectedTemplateId || !jwt) return;

@@ -6,8 +6,6 @@ export interface Location {
   name: string;
   description?: string;
   isActive: boolean;
-  memoTemplate?: string;
-  docNumberTemplate?: string;
   createdAt: string;
   updatedAt: string;
 }

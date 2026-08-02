@@ -104,10 +104,11 @@ interface Props {
   scanRecordId?: string | null;
   userRole?: string;
   attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
+  selectedTemplate?: { id: string; memoTemplate?: string; docNumberTemplate?: string } | null;
   templateId?: string;
 }
 
-export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole, attachments, templateId }: Props) {
+export default function JournalEntryPreview({ jwt, scanData, scanEntries, activeScanEntry, activeScanEntryId, onActiveScanEntryIdChange, selectedLocationId, scanRecordId, userRole, attachments, selectedTemplate, templateId }: Props) {
   const { status, connect } = useQuickBooks(jwt);
   const { locations } = useLocations(jwt);
   const {
@@ -183,12 +184,10 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
 
   // Apply memo/docNumber templates from location data when scan data loads
   useEffect(() => {
-    if (!scanData || !locId) return;
-    const loc = locations.find(l => l.id === locId);
-    if (!loc) return;
-    if (loc.memoTemplate) setPrivateNote(resolveMemoTemplate(loc.memoTemplate, scanData));
-    if (loc.docNumberTemplate) setDocNumber(resolveMemoTemplate(loc.docNumberTemplate, scanData));
-  }, [scanData, locId, locations]);
+    if (!scanData || !locId || !selectedTemplate) return;
+    if (selectedTemplate.memoTemplate) setPrivateNote(resolveMemoTemplate(selectedTemplate.memoTemplate, scanData));
+    if (selectedTemplate.docNumberTemplate) setDocNumber(resolveMemoTemplate(selectedTemplate.docNumberTemplate, scanData));
+  }, [scanData, locId, selectedTemplate]);
 
   useEffect(() => {
     if (!jwt || !templateId) return;

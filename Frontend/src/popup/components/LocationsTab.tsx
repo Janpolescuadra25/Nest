@@ -87,8 +87,6 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
         name: loc.name,
         description: loc.description || '',
         isActive: loc.isActive,
-        memoTemplate: loc.memoTemplate ?? '',
-        docNumberTemplate: loc.docNumberTemplate ?? '',
       },
     }));
     setConfirmDelete(null);
@@ -111,8 +109,6 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
         name: String(form.name).trim(),
         description: String(form.description ?? '').trim() || undefined,
         isActive: form.isActive,
-        memoTemplate: String(form.memoTemplate ?? '').trim() || undefined,
-        docNumberTemplate: String(form.docNumberTemplate ?? '').trim() || undefined,
       });
       showToast('Location updated', 'success');
       setExpandedId(null);
@@ -247,26 +243,6 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
                       placeholder="Optional description for this location"
                       rows={3}
                       className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500 resize-y"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-0.5">Memo template</label>
-                    <input
-                      type="text"
-                      value={String(form.memoTemplate ?? '')}
-                      onChange={e => handleEditChange(loc.id, 'memoTemplate', e.target.value)}
-                      placeholder="e.g. {date} {location}"
-                      className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-0.5">Doc number template</label>
-                    <input
-                      type="text"
-                      value={String(form.docNumberTemplate ?? '')}
-                      onChange={e => handleEditChange(loc.id, 'docNumberTemplate', e.target.value)}
-                      placeholder="e.g. JE-{date}"
-                      className="w-full px-2 py-1.5 bg-gray-200 border border-gray-300 rounded text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div className="flex items-center justify-between">

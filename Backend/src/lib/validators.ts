@@ -258,8 +258,6 @@ export const locationUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
-  memoTemplate: z.string().max(1000).optional(),
-  docNumberTemplate: z.string().max(200).optional(),
 }).strict();
 
 export const importTemplateSchema = z.object({

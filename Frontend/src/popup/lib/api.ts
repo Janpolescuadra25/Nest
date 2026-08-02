@@ -501,7 +501,7 @@ export const api = {
   deleteRule: (jwt: string, id: string) => del(`/api/rules/${id}`, jwt),
 
   // ── Template Import ────────────────────────────────────────────────────────
-  importTemplate: (jwt: string, locationId: string, data: Omit<ExportTemplate, 'version' | 'exportedAt' | 'sourceLocationName' | 'sourceRealmId'> & { mode: 'replace' | 'merge' }) =>
+  importTemplate: (jwt: string, locationId: string, data: Omit<ExportTemplate, 'version' | 'exportedAt' | 'sourceLocationName' | 'sourceRealmId'> & { mode: 'replace' | 'merge'; templateId?: string }) =>
     post<ImportResult>(`/api/locations/${locationId}/import-template`, data, jwt),
 
   // ── Scans ──────────────────────────────────────────────────────────────────
