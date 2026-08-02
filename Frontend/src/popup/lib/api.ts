@@ -1,4 +1,4 @@
-import type { Location, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, PayeeMapping, PayeeMappingFormData, ValueMapping, ValueMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion, ProductMappingSuggestion, DuplicateCheckResult } from '../../types';
+import type { Location, LocationAttachment, Mapping, ScanMode, Template, Rule, RuleFormData, ScanData, ScanRecord, ScanEntry, Product, ProductFormData, ProductMapping, ProductMappingFormData, PayeeMapping, PayeeMappingFormData, ValueMapping, ValueMappingFormData, QBStatus, ScanHealth, AuditLogEntry, OwnerAuditLogEntry, ExportTemplate, ImportResult, InviteLink, TeamMember, BatchSyncItem, BatchSyncResult, BatchSyncSummary, RetryBatchResult, RetryBatchSummary, ExcelParseResult, ExcelDataParseResult, OutstandingBill, VendorCreditItem, BillPaymentLineItem, QBTerm, MappingSuggestion, ProductMappingSuggestion, DuplicateCheckResult } from '../../types';
 import type { QBAccount, QBClass, QBEmployee, QBVendor, QBCustomer, QBTaxCode } from '../types/qb';
 import { BACKEND_URL as BASE_URL } from '../../lib/config';
 
@@ -85,12 +85,12 @@ async function patch<T>(path: string, body: unknown, jwt?: string | null): Promi
   return parseResponse<T>(res, path);
 }
 
-async function del(path: string, jwt?: string | null): Promise<void> {
+async function del<T = void>(path: string, jwt?: string | null): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'DELETE',
     headers: await headers(jwt),
   });
-  return parseResponse<void>(res, path);
+  return parseResponse<T>(res, path);
 }
 
 export interface Plan {
@@ -416,6 +416,18 @@ export const api = {
     put<Location>(`/api/locations/${id}`, data, jwt),
 
   deleteLocation: (jwt: string, id: string) => del(`/api/locations/${id}`, jwt),
+
+  uploadLocationAttachment: (jwt: string, locationId: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm<LocationAttachment>(`/api/locations/${locationId}/attachments`, form, jwt);
+  },
+
+  getLocationAttachments: (jwt: string, locationId: string) =>
+    get<LocationAttachment[]>(`/api/locations/${locationId}/attachments`, jwt),
+
+  deleteLocationAttachment: (jwt: string, locationId: string, attachmentId: string) =>
+    del<void>(`/api/locations/${locationId}/attachments/${attachmentId}`, jwt),
 
   // ── Mappings ───────────────────────────────────────────────────────────────
   getMappings: (jwt: string, locationId: string) =>

@@ -75,6 +75,7 @@ model User {
   inviteLinks             InviteLink[]             @relation("InviteCreator")
   managedLocations        Location[]               @relation("AdminLocations")
   locations               Location[]               @relation("UserLocations")
+  locationAttachments     LocationAttachment[]
   oauthStates             OAuthState[]
   passwordResetTokens     PasswordResetToken[]
   products                Product[]
@@ -175,10 +176,27 @@ model Location {
   scanRecords        ScanRecord[]
   templates          Template[]
   products           Product[]
+  attachments        LocationAttachment[]
 
   @@index([userId])
   @@index([adminId])
   @@map("locations")
+}
+
+model LocationAttachment {
+  id          String   @id @default(cuid())
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  fileName    String
+  storageKey  String   @unique
+  fileSize    Int
+  mimeType    String
+  uploadedBy  String
+  uploader    User     @relation(fields: [uploadedBy], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([locationId])
+  @@map("location_attachments")
 }
 
 model Template {

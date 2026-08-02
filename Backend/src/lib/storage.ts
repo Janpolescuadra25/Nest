@@ -59,6 +59,26 @@ export async function uploadAgreementDoc(
   return { storageKey, fileName: originalName, fileSize: buffer.length, mimeType };
 }
 
+export async function uploadLocationAttachment(
+  buffer: Buffer,
+  originalName: string,
+  mimeType: string,
+  locationId: string,
+): Promise<UploadedFile> {
+  const sanitized = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const timestamp = Date.now();
+  const storageKey = `locations/${locationId}/${timestamp}-${sanitized}`;
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: storageKey,
+    Body: buffer,
+    ContentType: mimeType,
+  }));
+
+  return { storageKey, fileName: originalName, fileSize: buffer.length, mimeType };
+}
+
 export async function getPresignedUrl(storageKey: string, expirySeconds = 3600): Promise<string> {
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: storageKey });
   return getSignedUrl(s3Client, command, { expiresIn: expirySeconds });

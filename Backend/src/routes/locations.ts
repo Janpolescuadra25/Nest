@@ -1,6 +1,9 @@
 import { Router, Response } from 'express';
 import { AppError, asyncHandler } from '../lib/errors';
+import multer from 'multer';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
+import { uploadLocationAttachment, getPresignedUrl, deleteFile } from '../lib/storage';
+import { logAction } from '../middleware/audit';
 import { requireCapacity } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
@@ -12,6 +15,29 @@ import { validate } from '../middleware/validate';
 import { locationCreateSchema, locationUpdateSchema, importTemplateSchema, mappingCreateSchema, ruleCreateSchema } from '../lib/validators';
 
 const router = Router();
+
+const attachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'text/plain',
+    ];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Allowed: PDF, Word, Excel, images, text.'));
+    }
+  },
+});
 
 // All location routes require authentication + effective role enforcement
 router.use(authenticate, enforceEffectiveRole);
@@ -414,7 +440,110 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), validate(
   }
 }))
 
-// ── GET /api/locations/:id/rules ──────────────────────────────────────────────
+router.post('/:id/attachments',
+  requireFeaturePermission('locations', 'write'),
+  attachmentUpload.single('file'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const locationId = String(req.params['id']);
+    const location = await prisma.location.findFirst({
+      where: { id: locationId, ...locationFilter(req.user!) },
+      select: { id: true },
+    });
+    if (!location) throw new AppError('Location not found', 404);
+    if (!req.file) throw new AppError('No file uploaded', 400);
+
+    const uploaded = await uploadLocationAttachment(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      locationId,
+    );
+
+    const attachment = await prisma.locationAttachment.create({
+      data: {
+        locationId,
+        fileName: uploaded.fileName,
+        storageKey: uploaded.storageKey,
+        fileSize: uploaded.fileSize,
+        mimeType: uploaded.mimeType,
+        uploadedBy: req.user!.userId,
+      },
+    });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'ATTACHMENT_UPLOADED',
+      details: { fileName: uploaded.fileName, fileSize: uploaded.fileSize, locationId },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.status(201).json(attachment);
+  })
+);
+
+router.get('/:id/attachments', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const locationId = String(req.params['id']);
+  const location = await prisma.location.findFirst({
+    where: { id: locationId, ...locationFilter(req.user!) },
+    select: { id: true },
+  });
+  if (!location) throw new AppError('Location not found', 404);
+
+  const attachments = await prisma.locationAttachment.findMany({
+    where: { locationId },
+    orderBy: { createdAt: 'desc' },
+    include: { uploader: { select: { name: true } } },
+  });
+
+  const withUrls = await Promise.all(attachments.map(async (a) => ({
+    id: a.id,
+    locationId: a.locationId,
+    fileName: a.fileName,
+    fileSize: a.fileSize,
+    mimeType: a.mimeType,
+    uploadedBy: a.uploadedBy,
+    uploaderName: a.uploader.name,
+    createdAt: a.createdAt.toISOString(),
+    url: await getPresignedUrl(a.storageKey),
+  })));
+
+  res.json(withUrls);
+}));
+
+router.delete('/:id/attachments/:attachmentId',
+  requireFeaturePermission('locations', 'write'),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
+    const attachmentId = String(req.params['attachmentId']);
+    const locationId = String(req.params['id']);
+
+    const attachment = await prisma.locationAttachment.findFirst({
+      where: { id: attachmentId, locationId },
+    });
+    if (!attachment) throw new AppError('Attachment not found', 404);
+
+    const location = await prisma.location.findFirst({
+      where: { id: locationId, ...locationFilter(req.user!) },
+      select: { id: true },
+    });
+    if (!location) throw new AppError('Location not found', 404);
+
+    await deleteFile(attachment.storageKey);
+    await prisma.locationAttachment.delete({ where: { id: attachmentId } });
+
+    await logAction({
+      actorId: req.user!.userId,
+      action: 'LOCATION_ATTACHMENT_DELETED',
+      details: { fileName: attachment.fileName, locationId },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json({ success: true });
+  })
+);
+
+// ── Templates subrouter ─────────────────────────────────────────────────────
 router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);

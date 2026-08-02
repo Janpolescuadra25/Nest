@@ -10,6 +10,18 @@ export interface Location {
   updatedAt: string;
 }
 
+export interface LocationAttachment {
+  id: string;
+  locationId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  uploaderName: string;
+  createdAt: string;
+  url: string;
+}
+
 export interface Mapping {
   id: string;
   locationId: string;

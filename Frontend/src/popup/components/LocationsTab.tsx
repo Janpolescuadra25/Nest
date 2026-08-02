@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api, ApiError } from '../lib/api';
 import { useToast } from './Toast';
 import UpgradePrompt from './UpgradePrompt';
-import type { Location } from '../../types';
+import type { Location, LocationAttachment } from '../../types';
 
 interface Props {
   jwt: string;
@@ -11,6 +11,12 @@ interface Props {
 }
 
 const EMPTY_FORM = { name: '' };
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Props) {
   const { showToast } = useToast();
@@ -31,6 +37,9 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
   const [editLoading, setEditLoading] = useState<Record<string, boolean>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
+  const [attachments, setAttachments] = useState<LocationAttachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
 
   const fetchLocations = useCallback(async () => {
     setLoading(true);
@@ -46,6 +55,14 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
   }, [jwt]);
 
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
+
+  useEffect(() => {
+    if (expandedId && jwt) {
+      api.getLocationAttachments(jwt, expandedId).then(setAttachments).catch(() => setAttachments([]));
+    } else {
+      setAttachments([]);
+    }
+  }, [expandedId, jwt]);
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleAdd = async (e: React.FormEvent) => {
@@ -133,6 +150,37 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
       showToast(err.message || 'Failed to delete location', 'error');
     } finally {
       setDeleteLoading(p => ({ ...p, [id]: false }));
+    }
+  };
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !expandedId || !jwt) return;
+    setUploadingAttachment(true);
+    try {
+      await api.uploadLocationAttachment(jwt, expandedId, file);
+      const updated = await api.getLocationAttachments(jwt, expandedId);
+      setAttachments(updated);
+      showToast('Attachment uploaded', 'success');
+    } catch {
+      showToast('Failed to upload attachment', 'error');
+    } finally {
+      setUploadingAttachment(false);
+      if (e.target) (e.target as HTMLInputElement).value = '';
+    }
+  };
+
+  const handleAttachmentDelete = async (attachmentId: string) => {
+    if (!expandedId || !jwt) return;
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await api.deleteLocationAttachment(jwt, expandedId, attachmentId);
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      showToast('Attachment deleted', 'success');
+    } catch {
+      showToast('Failed to delete attachment', 'error');
+    } finally {
+      setDeletingAttachmentId(null);
     }
   };
 
@@ -254,6 +302,45 @@ export default function LocationsTab({ jwt, onboardingStep = 0, onUpgrade }: Pro
                     >
                       {form.isActive ? 'Yes' : 'No'}
                     </button>
+                  </div>
+                  {/* Attachments */}
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-0.5">Attachments</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp,.txt"
+                      onChange={handleAttachmentUpload}
+                      disabled={uploadingAttachment}
+                      className="block w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-medium file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 disabled:opacity-50"
+                    />
+                    {uploadingAttachment && <p className="text-xs text-gray-400 mt-1">Uploading...</p>}
+                    {attachments.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {attachments.map((att) => (
+                          <div key={att.id} className="flex items-center justify-between text-xs bg-gray-100 rounded px-2 py-1.5">
+                            <div className="flex-1 min-w-0">
+                              <a
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline truncate block"
+                                title={att.fileName}
+                              >
+                                {att.fileName}
+                              </a>
+                              <span className="text-gray-400">{formatFileSize(att.fileSize)}</span>
+                            </div>
+                            <button
+                              onClick={() => handleAttachmentDelete(att.id)}
+                              disabled={deletingAttachmentId === att.id}
+                              className="text-red-500 hover:text-red-700 ml-2 shrink-0 disabled:opacity-50"
+                            >
+                              {deletingAttachmentId === att.id ? '...' : '✕'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={() => handleSave(loc)}
