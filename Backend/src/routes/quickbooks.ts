@@ -338,6 +338,42 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
 }));
 
 // ── POST /api/quickbooks/bill ───────────────────────────────────────────────
+router.post(
+  '/check-duplicate',
+  authenticate,
+  enforceEffectiveRole,
+  requireFeaturePermission('sync', 'execute'),
+  asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    const { syncType, payload } = req.body as {
+      syncType?: string;
+      payload?: unknown;
+    };
+
+    if (!syncType || !payload) {
+      throw new AppError('syncType and payload are required', 400);
+    }
+
+    const requestHash = hashSyncRequest(syncType as any, payload);
+    const existing = await findDuplicateSync(
+      req.user!.userId,
+      syncType as any,
+      requestHash,
+    );
+
+    if (existing) {
+      res.json({
+        isDuplicate: true,
+        existingId: existing.qbJournalEntryId ?? undefined,
+        syncedAt: existing.syncedAt.toISOString(),
+        docNumber: existing.docNumber ?? undefined,
+      });
+      return;
+    }
+
+    res.json({ isDuplicate: false });
+  }),
+);
+
 router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermission('sync', 'execute'), restrictSkipDedup, validate(billSchema), asyncHandler(async(req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {

@@ -225,6 +225,13 @@ export interface ExcelDataParseResult {
   skippedRows: number;
 }
 
+export interface DuplicateCheckResult {
+  isDuplicate: boolean;
+  existingId?: string;
+  syncedAt?: string;
+  docNumber?: string;
+}
+
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
   JOURNAL_ENTRY: 'Journal Entry',
   BILL: 'Bill',

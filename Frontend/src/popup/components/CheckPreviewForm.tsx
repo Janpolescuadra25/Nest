@@ -9,8 +9,9 @@ import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ErrorCard from './shared/ErrorCard';
 import { PreSyncChecklist } from './shared';
+import { useDuplicateCheck } from '../hooks/useDuplicateCheck';
 import type { PreSyncCheck } from './shared/PreSyncChecklist';
-import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template, PayeeMapping, ValueMapping } from '../../types';
+import type { DuplicateCheckResult, ExtractedLineItem, ScanData, ScanEntry, Mapping, Template, PayeeMapping, ValueMapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { decodeMapping } from '../lib/je-builder';
@@ -559,6 +560,30 @@ export default function CheckPreviewForm({
     ? Math.abs(totalAmount - scannedAmount)
     : null;
 
+  const dedupPayload = useMemo(() => {
+    if (!bankAccountRef.value || !payeeRef.value) return null;
+    const checkLines = effectiveLines
+      .filter((line) => parseFloat(line.amount) > 0)
+      .map((line) => ({
+        amount: parseFloat(line.amount),
+        accountRef: { value: line.accountId, name: line.accountName || undefined },
+        description: line.description || undefined,
+        classRef: line.classId ? { value: line.classId } : undefined,
+        taxCodeRef: line.taxCodeId ? { value: line.taxCodeId } : undefined,
+      }));
+    return {
+      txnDate,
+      bankAccountRef,
+      payeeRef,
+      amount: totalAmount,
+      memo: memo || undefined,
+      lines: checkLines,
+      docNumber: docNumber || undefined,
+    };
+  }, [bankAccountRef, payeeRef, txnDate, totalAmount, memo, effectiveLines, docNumber]);
+
+  const duplicateCheck = useDuplicateCheck(jwt, 'CHEQUE', dedupPayload);
+
   const preSyncChecks: PreSyncCheck[] = [
     {
       passed: hasHeader,
@@ -590,6 +615,17 @@ export default function CheckPreviewForm({
           ? `Off by $${totalMismatch!.toFixed(2)}`
           : undefined,
     },
+    ...(duplicateCheck
+      ? [
+          {
+            passed: !duplicateCheck.isDuplicate,
+            label: 'No duplicates detected',
+            detail: duplicateCheck.isDuplicate
+              ? `Duplicate of ${duplicateCheck.docNumber || 'transaction'} synced on ${new Date(duplicateCheck.syncedAt!).toLocaleDateString()}`
+              : undefined,
+          },
+        ]
+      : []),
   ];
 
   const handleClearAll = () => {

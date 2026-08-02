@@ -7,7 +7,10 @@ import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ConfirmDialog from './shared/ConfirmDialog';
 import ErrorCard from './shared/ErrorCard';
-import type { ScanData, ScanEntry, Mapping, ValueMapping } from '../../types';
+import { PreSyncChecklist } from './shared';
+import { useDuplicateCheck } from '../hooks/useDuplicateCheck';
+import type { DuplicateCheckResult, ScanData, ScanEntry, Mapping, ValueMapping } from '../../types';
+import type { PreSyncCheck } from './shared/PreSyncChecklist';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
 import { guessPostingType, decodeMapping } from '../lib/je-builder';
@@ -615,9 +618,6 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   const totalCredits = effectiveDisplayLines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0);
   const diff = totalDebits - totalCredits;
   const isBalanced = Math.abs(diff) < 0.01;
-  const imbalanceWarning = !isBalanced && Math.abs(diff) >= 0.02
-    ? `Unbalanced — Debits: $${totalDebits.toFixed(2)}, Credits: $${totalCredits.toFixed(2)}, Difference: $${Math.abs(diff).toFixed(2)}`
-    : null;
 
   const unmappedCount = effectiveDisplayLines.filter((l) => !l.accountId).length;
   const allMapped = unmappedCount === 0;
@@ -639,6 +639,94 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       }
     }
   });
+
+  const dedupPayload = useMemo(() => {
+    if (!txnDate) return null;
+    const jeLines = effectiveDisplayLines
+      .filter((l) => parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0)
+      .flatMap((l) => {
+        const debitAmt = parseFloat(l.debit) || 0;
+        const creditAmt = parseFloat(l.credit) || 0;
+        let entityRef: { value: string; name?: string; type?: string } | undefined;
+        if (l.entityVal) {
+          const parts = l.entityVal.split(':');
+          const eType = parts[0];
+          const eId = parts[1];
+          const opt = entityOptions.find((o) => o.value === l.entityVal);
+          if (eId) entityRef = {
+            value: eId,
+            name: opt?.label,
+            type: eType === 'vendor' ? 'Vendor' : eType === 'employee' ? 'Employee' : 'Customer',
+          };
+        }
+        const items = [];
+        if (debitAmt > 0) {
+          items.push({
+            amount: debitAmt,
+            postingType: 'Debit',
+            accountRef: { value: l.accountId, name: l.accountName },
+            description: l.description || undefined,
+            classRef: l.classId ? { value: l.classId } : undefined,
+            entityRef,
+          });
+        }
+        if (creditAmt > 0) {
+          items.push({
+            amount: creditAmt,
+            postingType: 'Credit',
+            accountRef: { value: l.accountId, name: l.accountName },
+            description: l.description || undefined,
+            classRef: l.classId ? { value: l.classId } : undefined,
+            entityRef,
+          });
+        }
+        return items;
+      });
+
+    return {
+      txnDate,
+      lines: jeLines,
+      privateNote:
+        privateNote ||
+        `Nest sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
+      docNumber: docNumber || undefined,
+    };
+  }, [txnDate, effectiveDisplayLines, privateNote, locations, locId, docNumber, entityOptions]);
+
+  const duplicateCheck = useDuplicateCheck(jwt, 'JOURNAL_ENTRY', dedupPayload);
+
+  const preSyncChecks: PreSyncCheck[] = [
+    {
+      passed: allMapped,
+      label: allMapped
+        ? `All ${effectiveDisplayLines.length} lines have QB accounts`
+        : `${unmappedCount} of ${effectiveDisplayLines.length} lines unmapped`,
+    },
+    {
+      passed: isBalanced,
+      label: 'Debits and credits balanced',
+      detail: !isBalanced ? `Off by $${Math.abs(diff).toFixed(2)}` : undefined,
+    },
+    {
+      passed: inactiveWarnings.length === 0,
+      label: 'All referenced entities active',
+      detail:
+        inactiveWarnings.length > 0
+          ? `${inactiveWarnings.length} inactive`
+          : undefined,
+    },
+    ...(duplicateCheck
+      ? [
+          {
+            passed: !duplicateCheck.isDuplicate,
+            label: 'No duplicates detected',
+            detail: duplicateCheck.isDuplicate
+              ? `Duplicate of ${duplicateCheck.docNumber || 'transaction'} synced on ${new Date(duplicateCheck.syncedAt!).toLocaleDateString()}`
+              : undefined,
+          },
+        ]
+      : []),
+  ];
 
   const handleClearAll = () => {
     setLines([newLine(), newLine()]);
@@ -918,13 +1006,6 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           )}
         </div>
       </div>
-      {unmappedCount > 0 && (
-        <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-700 text-amber-600">
-          <span>⚠️ {unmappedCount} unmapped line{unmappedCount !== 1 ? 's' : ''}</span>
-          <span className="text-amber-500">— assign QB accounts before syncing</span>
-        </div>
-      )}
-
       {consolidate && rawDisplayLines.length < lines.length && (
         <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-400">
           <span>🔗 Consolidated {lines.length} lines → {rawDisplayLines.length} lines</span>
@@ -1034,12 +1115,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           onRetry={handleForceSync}
         />
       )}
-      {inactiveWarnings.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2 space-y-1">
-          <div className="font-medium">⚠️ Inactive entity warnings:</div>
-          {inactiveWarnings.map((w, i) => <div key={i}>{w}</div>)}
-        </div>
-      )}
+      <PreSyncChecklist checks={preSyncChecks} />
       {autoBalancePending && (
         <ErrorCard
           variant="warning"
@@ -1127,11 +1203,6 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
           onConfirm={() => { setShowSyncConfirm(false); void handleSync(); }}
           onCancel={() => setShowSyncConfirm(false)}
         />
-      )}
-      {imbalanceWarning && (
-        <div className="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
-          ⚠️ {imbalanceWarning}
-        </div>
       )}
     </div>
   );
