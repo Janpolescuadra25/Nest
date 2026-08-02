@@ -531,7 +531,7 @@ export default function App() {
             />
           )}
           {effectiveTab === 'products' && (
-            <ProductCatalogView jwt={jwt!} />
+            <ProductCatalogView jwt={jwt!} locationId={selectedLocationId} />
           )}
           {effectiveTab === 'preview' && (
             noScanData || !selectedTemplateForScan ? (

@@ -1786,6 +1786,7 @@ export default function MappingView({
         <ProductMappingSection
           jwt={jwt}
           templateId={selectedTemplateId}
+          locationId={locId}
           scanProductNames={scanProductNames}
         />
       )}

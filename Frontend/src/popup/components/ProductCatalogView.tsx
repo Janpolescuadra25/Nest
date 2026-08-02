@@ -5,11 +5,12 @@ import type { Product, ProductFormData } from '../../types';
 
 interface Props {
   jwt: string;
+  locationId: string;
 }
 
 const sortByName = (items: Product[]) => [...items].sort((a, b) => a.name.localeCompare(b.name));
 
-export default function ProductCatalogView({ jwt }: Props) {
+export default function ProductCatalogView({ jwt, locationId }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -24,7 +25,7 @@ export default function ProductCatalogView({ jwt }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const data = await api.getProducts(jwt);
+        const data = await api.getProducts(jwt, locationId);
         setProducts(sortByName(data));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
@@ -33,7 +34,7 @@ export default function ProductCatalogView({ jwt }: Props) {
       }
     };
     void load();
-  }, [jwt]);
+  }, [jwt, locationId]);
 
   const openAdd = () => {
     setEditingProduct(null);
@@ -67,7 +68,7 @@ export default function ProductCatalogView({ jwt }: Props) {
         const updated = await api.updateProduct(jwt, editingProduct.id, formData);
         setProducts((prev) => sortByName(prev.map((item) => (item.id === updated.id ? updated : item))));
       } else {
-        const created = await api.createProduct(jwt, formData);
+        const created = await api.createProduct(jwt, locationId, formData);
         setProducts((prev) => sortByName([...prev, created]));
       }
       closeModal();

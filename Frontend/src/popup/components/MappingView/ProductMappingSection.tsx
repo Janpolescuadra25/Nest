@@ -8,10 +8,11 @@ import type { Product, ProductMapping, ProductMappingFormData, ProductMappingSug
 interface Props {
   jwt: string;
   templateId: string;
+  locationId: string;
   scanProductNames?: string[];
 }
 
-export default function ProductMappingSection({ jwt, templateId, scanProductNames }: Props) {
+export default function ProductMappingSection({ jwt, templateId, locationId, scanProductNames }: Props) {
   const { accounts, classes } = useQBContext();
   const [products, setProducts] = useState<Product[]>([]);
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
@@ -66,7 +67,7 @@ export default function ProductMappingSection({ jwt, templateId, scanProductName
       setError(null);
       try {
         const [productsData, mappingsData] = await Promise.all([
-          api.getProducts(jwt),
+          api.getProducts(jwt, locationId),
           api.getProductMappings(jwt, templateId),
         ]);
         setProducts(productsData.sort((a, b) => a.name.localeCompare(b.name)));
@@ -79,7 +80,7 @@ export default function ProductMappingSection({ jwt, templateId, scanProductName
     };
 
     load();
-  }, [jwt, templateId]);
+  }, [jwt, templateId, locationId]);
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, templateId }));

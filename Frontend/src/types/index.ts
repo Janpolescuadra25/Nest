@@ -111,6 +111,7 @@ export interface ExtractedLineItem {
 export interface Product {
   id: string;
   name: string;
+  locationId: string;
   createdAt: string;
 }
 

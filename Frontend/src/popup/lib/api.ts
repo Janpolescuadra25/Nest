@@ -544,11 +544,11 @@ export const api = {
   },
 
   // ── Products ─────────────────────────────────────────────────────────────────
-  getProducts: (jwt: string) =>
-    get<Product[]>('/api/products', jwt),
+  getProducts: (jwt: string, locationId: string) =>
+    get<Product[]>(`/api/products?locationId=${locationId}`, jwt),
 
-  createProduct: (jwt: string, data: ProductFormData) =>
-    post<Product>('/api/products', data, jwt),
+  createProduct: (jwt: string, locationId: string, data: ProductFormData) =>
+    post<Product>('/api/products', { ...data, locationId }, jwt),
 
   updateProduct: (jwt: string, id: string, data: ProductFormData) =>
     put<Product>(`/api/products/${id}`, data, jwt),
