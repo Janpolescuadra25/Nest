@@ -530,7 +530,7 @@ export default function App() {
               setShowExcelImportModal={setShowExcelImportModal}
             />
           )}
-          {effectiveTab === 'products' && (
+          {effectiveTab === 'products' && selectedLocationId && (
             <ProductCatalogView jwt={jwt!} locationId={selectedLocationId} />
           )}
           {effectiveTab === 'preview' && (
