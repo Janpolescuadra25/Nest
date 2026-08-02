@@ -436,6 +436,13 @@ export default function VendorCreditPreviewForm({
         return `Invoice total: ${h.total}`;
       });
     }
+
+    if (h.memo) {
+      setMemo((prev) => {
+        if (prev) return prev;
+        return String(h.memo);
+      });
+    }
   }, [activeScanEntry, vendors, payeeMappings, valueMappings]);
 
   useEffect(() => {

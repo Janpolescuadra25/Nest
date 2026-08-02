@@ -461,6 +461,13 @@ export default function BillPreviewForm({
         return `Invoice total: ${h.total}`;
       });
     }
+
+    if (h.memo) {
+      setMemo((prev) => {
+        if (prev) return prev;
+        return String(h.memo);
+      });
+    }
   }, [activeScanEntry, vendors, payeeMappings, valueMappings]);
 
   useEffect(() => {
