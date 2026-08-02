@@ -267,7 +267,8 @@ export default function MappingView({
   const [apAccountDefault, setApAccountDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [termsDefault, setTermsDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [taxCodeDefault, setTaxCodeDefault] = useState<{ value: string; name?: string }>({ value: '' });
-  const [memoDefault, setMemoDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [privateNoteDefault, setPrivateNoteDefault] = useState<{ value: string; name?: string }>({ value: '' });
+  const [qbMemoDefault, setQbMemoDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [docNumberDefault, setDocNumberDefault] = useState<{ value: string; name?: string }>({ value: '' });
   const [memoOpen, setMemoOpen] = useState(true);
   const [fieldsExpanded, setFieldsExpanded] = useState(false);
@@ -608,7 +609,9 @@ export default function MappingView({
     if (chequeDefaults?.apAccountRef) setApAccountDefault(chequeDefaults.apAccountRef);
     if (chequeDefaults?.termsRef) setTermsDefault(chequeDefaults.termsRef);
     if (chequeDefaults?.taxCodeRef) setTaxCodeDefault(chequeDefaults.taxCodeRef);
-    if (chequeDefaults?.memo) setMemoDefault(chequeDefaults.memo);
+    if (chequeDefaults?.privateNote) setPrivateNoteDefault(chequeDefaults.privateNote);
+    else if (chequeDefaults?.memo) setPrivateNoteDefault(chequeDefaults.memo);
+    if (chequeDefaults?.qbMemo) setQbMemoDefault(chequeDefaults.qbMemo);
     if (chequeDefaults?.docNumber) setDocNumberDefault(chequeDefaults.docNumber);
 
     templateReadyRef.current = true;
@@ -1193,10 +1196,15 @@ export default function MappingView({
       } else {
         delete merged.taxCodeRef;
       }
-      if (memoDefault.value) {
-        merged.memo = { value: memoDefault.value };
+      if (privateNoteDefault.value) {
+        merged.privateNote = { value: privateNoteDefault.value };
       } else {
-        delete merged.memo;
+        delete merged.privateNote;
+      }
+      if (qbMemoDefault.value) {
+        merged.qbMemo = { value: qbMemoDefault.value };
+      } else {
+        delete merged.qbMemo;
       }
       if (docNumberDefault.value) {
         merged.docNumber = { value: docNumberDefault.value };
@@ -1209,7 +1217,7 @@ export default function MappingView({
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save bill defaults', 'error');
     }
-  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, termsDefault, taxCodeDefault, memoDefault, docNumberDefault, loadTemplates, showToast]);
+  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, termsDefault, taxCodeDefault, privateNoteDefault, qbMemoDefault, docNumberDefault, loadTemplates, showToast]);
 
   const handleSaveVendorCreditDefaults = useCallback(async () => {
     try {
@@ -1225,10 +1233,15 @@ export default function MappingView({
       } else {
         delete merged.taxCodeRef;
       }
-      if (memoDefault.value) {
-        merged.memo = { value: memoDefault.value };
+      if (privateNoteDefault.value) {
+        merged.privateNote = { value: privateNoteDefault.value };
       } else {
-        delete merged.memo;
+        delete merged.privateNote;
+      }
+      if (qbMemoDefault.value) {
+        merged.qbMemo = { value: qbMemoDefault.value };
+      } else {
+        delete merged.qbMemo;
       }
       if (docNumberDefault.value) {
         merged.docNumber = { value: docNumberDefault.value };
@@ -1241,7 +1254,7 @@ export default function MappingView({
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save vendor credit defaults', 'error');
     }
-  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, taxCodeDefault, memoDefault, docNumberDefault, loadTemplates, showToast]);
+  }, [jwt, selectedTemplateId, selectedTemplate, apAccountDefault, taxCodeDefault, privateNoteDefault, qbMemoDefault, docNumberDefault, loadTemplates, showToast]);
 
   const handleSaveChequeDefaults = useCallback(async () => {
     try {
@@ -1892,13 +1905,23 @@ export default function MappingView({
                       />
                   </div>
                   <div>
-                      <label className="block text-xs text-gray-600 mb-1">Default Memo</label>
+                      <label className="block text-xs text-gray-600 mb-1">Private Note</label>
                       <input
                           type="text"
-                          value={memoDefault.value}
-                          onChange={(e) => setMemoDefault({ value: e.target.value })}
+                          value={privateNoteDefault.value}
+                          onChange={(e) => setPrivateNoteDefault({ value: e.target.value })}
                           className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
-                          placeholder="Enter default memo"
+                          placeholder="Internal note (not sent to QuickBooks)"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">QB Memo</label>
+                      <input
+                          type="text"
+                          value={qbMemoDefault.value}
+                          onChange={(e) => setQbMemoDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Visible on the transaction in QuickBooks"
                       />
                   </div>
                   <div>
@@ -1956,13 +1979,23 @@ export default function MappingView({
                       />
                   </div>
                   <div>
-                      <label className="block text-xs text-gray-600 mb-1">Default Memo</label>
+                      <label className="block text-xs text-gray-600 mb-1">Private Note</label>
                       <input
                           type="text"
-                          value={memoDefault.value}
-                          onChange={(e) => setMemoDefault({ value: e.target.value })}
+                          value={privateNoteDefault.value}
+                          onChange={(e) => setPrivateNoteDefault({ value: e.target.value })}
                           className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
-                          placeholder="Enter default memo"
+                          placeholder="Internal note (not sent to QuickBooks)"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">QB Memo</label>
+                      <input
+                          type="text"
+                          value={qbMemoDefault.value}
+                          onChange={(e) => setQbMemoDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Visible on the transaction in QuickBooks"
                       />
                   </div>
                   <div>

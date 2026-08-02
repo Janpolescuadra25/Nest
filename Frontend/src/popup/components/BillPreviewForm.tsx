@@ -362,7 +362,9 @@ export default function BillPreviewForm({
     if (defaults.apAccountRef) setApAccountRef(defaults.apAccountRef);
     if (defaults.termsRef) setTermsRef(defaults.termsRef);
     if (defaults.dueDate?.value) setDueDate(defaults.dueDate.value);
-    if (defaults.memo?.value) setPrivateNote(defaults.memo.value);
+    if (defaults.privateNote?.value) setPrivateNote(defaults.privateNote.value);
+    else if (defaults.memo?.value) setPrivateNote(defaults.memo.value);
+    if (defaults.qbMemo?.value) setMemo(defaults.qbMemo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
     if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);

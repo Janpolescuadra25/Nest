@@ -68,7 +68,8 @@ export function buildBillLikePayload(params: {
     apAccountRef: defaults.apAccountRef ?? undefined,
     termsRef: defaults.termsRef ?? undefined,
     dueDate: defaults.dueDate?.value,
-    privateNote: defaults.memo?.value,
+    privateNote: defaults.privateNote?.value || defaults.memo?.value,
+    memo: defaults.qbMemo?.value,
     docNumber: defaults.docNumber?.value,
   };
 }
@@ -134,7 +135,7 @@ export function buildChequePayload(params: {
     bankAccountRef: defaults.bankAccountRef ?? undefined,
     payeeRef: defaults.payeeRef ?? undefined,
     amount,
-    memo: defaults.memo?.value,
+    memo: defaults.qbMemo?.value || defaults.memo?.value,
     docNumber: defaults.docNumber?.value,
   };
 }

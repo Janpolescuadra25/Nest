@@ -344,7 +344,8 @@ export default function CheckPreviewForm({
 
     if (defaults.bankAccountRef) setBankAccountRef(defaults.bankAccountRef);
     if (defaults.payeeRef) setPayeeRef(defaults.payeeRef);
-    if (defaults.memo?.value) setMemo(defaults.memo.value);
+    if (defaults.qbMemo?.value) setMemo(defaults.qbMemo.value);
+    else if (defaults.memo?.value) setMemo(defaults.memo.value);
     if (defaults.docNumber?.value) setDocNumber(defaults.docNumber.value);
     if (defaults.taxCodeRef?.value) setDefaultTaxCodeId(defaults.taxCodeRef.value);
   }, [selectedTemplate]);
