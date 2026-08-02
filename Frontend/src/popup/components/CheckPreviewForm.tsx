@@ -8,6 +8,8 @@ import { useQBContext } from '../contexts/QBContext';
 import SearchableSelect from './SearchableSelect';
 import SmartDatePicker from './SmartDatePicker';
 import ErrorCard from './shared/ErrorCard';
+import { PreSyncChecklist } from './shared';
+import type { PreSyncCheck } from './shared/PreSyncChecklist';
 import type { ExtractedLineItem, ScanData, ScanEntry, Mapping, Template, PayeeMapping, ValueMapping } from '../../types';
 import type { SelectOption } from './SearchableSelect';
 import type { QBAccount } from '../types/qb';
@@ -557,6 +559,39 @@ export default function CheckPreviewForm({
     ? Math.abs(totalAmount - scannedAmount)
     : null;
 
+  const preSyncChecks: PreSyncCheck[] = [
+    {
+      passed: hasHeader,
+      label: 'Bank account & payee selected',
+    },
+    {
+      passed: hasAmount,
+      label: 'Has check amount',
+    },
+    {
+      passed: allMapped,
+      label: allMapped
+        ? `All ${effectiveLines.length} items mapped`
+        : `${unmappedCount} of ${effectiveLines.length} items unmapped`,
+    },
+    {
+      passed: inactiveWarnings.length === 0,
+      label: 'All referenced entities active',
+      detail:
+        inactiveWarnings.length > 0
+          ? `${inactiveWarnings.length} inactive`
+          : undefined,
+    },
+    {
+      passed: totalMismatch === null,
+      label: 'Amount matches scanned check',
+      detail:
+        totalMismatch !== null
+          ? `Off by $${totalMismatch!.toFixed(2)}`
+          : undefined,
+    },
+  ];
+
   const handleClearAll = () => {
     setTxnDate(today);
     setBankAccountRef({ value: '' });
@@ -849,17 +884,7 @@ export default function CheckPreviewForm({
           onRetry={handleForceSync}
         />
       )}
-      {inactiveWarnings.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2 space-y-1">
-          <div className="font-medium">⚠️ Inactive entity warnings:</div>
-          {inactiveWarnings.map((w, i) => <div key={i}>{w}</div>)}
-        </div>
-      )}
-      {totalMismatch !== null && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
-          ⚠️ Line items total ({totalAmount.toFixed(2)}) does not match scanned amount ({scannedAmount!.toFixed(2)}). Difference: {totalMismatch.toFixed(2)}
-        </div>
-      )}
+      <PreSyncChecklist checks={preSyncChecks} />
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2">
           {error}
