@@ -533,6 +533,13 @@ export default function App() {
           {effectiveTab === 'products' && selectedLocationId && (
             <ProductCatalogView jwt={jwt!} locationId={selectedLocationId} />
           )}
+          {effectiveTab === 'products' && !selectedLocationId && (
+            <div className="flex h-full w-full items-center justify-center bg-[#F5F5F7] p-4">
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center">
+                <div className="text-sm font-semibold text-gray-900">Select a location first to manage products.</div>
+              </div>
+            </div>
+          )}
           {effectiveTab === 'preview' && (
             noScanData || !selectedTemplateForScan ? (
               <div className="p-6 rounded-lg border border-orange-200 bg-orange-50 text-orange-700 text-sm">
