@@ -54,10 +54,6 @@ export async function processTrialExpiry(prisma: PrismaClient): Promise<number> 
     where: { id: { in: expiredUsers.map((user) => user.id) } },
     data: {
       status: 'EXPIRED',
-      canScan: false,
-      canMap: false,
-      canSync: false,
-      canManageLocs: false,
     },
   });
 

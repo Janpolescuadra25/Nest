@@ -15,7 +15,7 @@ async function main() {
   // Step 1: Show all top-level users (no adminId) to find the OWNER
   const topLevel = await prisma.user.findMany({
     where: { adminId: null },
-    select: { id: true, email: true, role: true, status: true, canScan: true, canMap: true, canSync: true, canManageLocs: true, createdAt: true },
+    select: { id: true, email: true, role: true, status: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
     take: 5,
   });
@@ -37,13 +37,9 @@ async function main() {
     where: { email: ownerEmail },
     data: {
       role: 'OWNER',
-      canScan: true,
-      canMap: true,
-      canSync: true,
-      canManageLocs: true,
       status: 'ACTIVE',
     },
-    select: { id: true, email: true, role: true, status: true, canScan: true, canMap: true, canSync: true, canManageLocs: true },
+    select: { id: true, email: true, role: true, status: true },
   });
 
   console.log('\n--- Updated user ---');
