@@ -1052,6 +1052,52 @@ export default function ScanView({
           }];
         }
 
+        if (txnType === 'CHEQUE') {
+          const groups = new Map<string, ScanEntry[]>();
+          const slots: Array<{ kind: 'group'; key: string } | { kind: 'single'; entry: ScanEntry }> = [];
+
+          transaction.lineItems.forEach((lineItem, rowIndex) => {
+            const header = transaction.header;
+            const payee = header.payeeRef || header.payeeName || header.payee || '';
+            const checkNo = header.docNumber || header.checkNumber || header.check || '';
+            const date = header.date || header.checkDate || '';
+            const groupKey = `${payee}|||${checkNo}|||${date}`;
+            const entry: ScanEntry = {
+              id: generateId(),
+              source: 'excel',
+              fileName: uploadedExcelFile.name,
+              rowNumber: rowIndex + 1,
+              header,
+              lineItems: [lineItem],
+            };
+
+            if (payee && checkNo && date) {
+              if (!groups.has(groupKey)) {
+                groups.set(groupKey, []);
+                slots.push({ kind: 'group', key: groupKey });
+              }
+              groups.get(groupKey)!.push(entry);
+            } else {
+              slots.push({ kind: 'single', entry });
+            }
+          });
+
+          return slots.map((slot) => {
+            if (slot.kind === 'single') {
+              return slot.entry;
+            }
+
+            const groupItems = groups.get(slot.key)!;
+            const firstRow = groupItems[0];
+
+            return {
+              ...firstRow,
+              lineItems: groupItems.flatMap((row) => row.lineItems ?? []),
+              rowNumber: firstRow.rowNumber,
+            };
+          });
+        }
+
         return transaction.lineItems.map((lineItem, rowIndex) => ({
           id: generateId(),
           source: 'excel',

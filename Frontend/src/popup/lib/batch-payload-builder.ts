@@ -87,41 +87,50 @@ export function buildChequePayload(params: {
   const { scanRecordId, scanData, mappings, accounts, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
-  const scanFields: ScanData = scanEntry
-    ? Object.fromEntries(
-        Object.entries(scanEntry.lineItems?.[0] ?? {})
+  const buildLines = (fields: ScanData): QBChequeLineItem[] =>
+    Object.entries(fields)
+      .filter(([, amount]) => amount !== 0)
+      .map(([field, amount]) => {
+        const mapping = resolveMapping(decoded, field, fields);
+        let accountId = mapping?.accountId ?? '';
+        if (!accountId) {
+          const vmResult = resolveValueMapping(
+            field,
+            'account',
+            valueMappings,
+            (id) => accounts.find((a) => a.Id === id),
+          );
+          if (vmResult.matched) {
+            accountId = vmResult.entityId;
+          }
+        }
+        const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
+        const description = mapping?.description ?? field;
+        const classId = mapping?.classId;
+
+        return {
+          amount: Math.abs(amount),
+          accountRef: { value: accountId, name: accountName || undefined },
+          description: description || undefined,
+          classRef: classId ? { value: classId } : undefined,
+        };
+      });
+
+  const lines: QBChequeLineItem[] = [];
+
+  if (scanEntry?.lineItems?.length) {
+    for (const lineItem of scanEntry.lineItems) {
+      const itemFields = Object.fromEntries(
+        Object.entries(lineItem)
           .map(([key, value]) => [key, parseNumericValue(value)])
           .filter(([, value]) => !Number.isNaN(value)),
-      ) as ScanData
-    : scanData;
+      ) as ScanData;
 
-  const lines: QBChequeLineItem[] = Object.entries(scanFields)
-    .filter(([, amount]) => amount !== 0)
-    .map(([field, amount]) => {
-      const mapping = resolveMapping(decoded, field, scanFields);
-      let accountId = mapping?.accountId ?? '';
-      if (!accountId) {
-        const vmResult = resolveValueMapping(
-          field,
-          'account',
-          valueMappings,
-          (id) => accounts.find((a) => a.Id === id),
-        );
-        if (vmResult.matched) {
-          accountId = vmResult.entityId;
-        }
-      }
-      const accountName = accounts.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
-      const description = mapping?.description ?? field;
-      const classId = mapping?.classId;
-
-      return {
-        amount: Math.abs(amount),
-        accountRef: { value: accountId, name: accountName || undefined },
-        description: description || undefined,
-        classRef: classId ? { value: classId } : undefined,
-      };
-    });
+      lines.push(...buildLines(itemFields));
+    }
+  } else {
+    lines.push(...buildLines(scanData));
+  }
 
   if (lines.length === 0) return null;
 
