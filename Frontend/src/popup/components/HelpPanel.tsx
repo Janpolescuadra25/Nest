@@ -67,19 +67,19 @@ const SECTIONS: Section[] = [
     icon: '🚀',
     content: (
       <div className="space-y-3">
-        <p className="text-gray-600 text-xs font-medium">Welcome to Nest! Here's how to go from zero to your first sync:</p>
+        <p className="text-gray-600 text-xs font-medium">Welcome to AutoBooks! Here's how to go from zero to your first sync:</p>
         <div className="space-y-2.5">
           <Step num={1} title="Log In">
-            Open the Nest extension and sign in with your email and password. If you don't have an account yet, click <span className="text-emerald-400">"Request Access"</span> and an admin will approve you.
+            Open the AutoBooks extension and sign in with your email and password. If you don't have an account yet, click <span className="text-emerald-400">"Request Access"</span> and an admin will approve you.
           </Step>
           <Step num={2} title="Connect QuickBooks">
-            Go to the <span className="text-emerald-400">Settings</span> tab and click <span className="text-emerald-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize Nest to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
+            Go to the <span className="text-emerald-400">Settings</span> tab and click <span className="text-emerald-400">"Connect to QuickBooks"</span>. This opens an Intuit login page — authorize AutoBooks to access your QuickBooks company. You'll see a green "✅ QB Connected" banner when it's done.
           </Step>
           <Step num={3} title="Set Up a Location">
             In Settings, add a <span className="text-emerald-400">Location</span> (e.g., "Downtown Store"). This links your scan data to a specific business location. You can have multiple locations.
           </Step>
           <Step num={4} title="Scan a POS Report">
-            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/check image or Excel file. Then click the <span className="text-emerald-400">Scan</span> tab and scan. Nest extracts the data automatically.
+            Navigate to a POS report page (Toast, SALIDO, or Oracle) in your browser, or upload a vendor invoice/check image or Excel file. Then click the <span className="text-emerald-400">Scan</span> tab and scan. AutoBooks extracts the data automatically.
           </Step>
           <Step num={5} title="Map Your Fields">
             Go to the <span className="text-emerald-400">Mapping</span> tab. Each field (like "Food Sales" or "Credit Card Payments") needs to be linked to a QuickBooks account. Click <span className="text-emerald-400">"Auto-Detect"</span> for smart suggestions, or map them manually. Choose Debit or Credit for each field.
@@ -100,7 +100,7 @@ const SECTIONS: Section[] = [
           Scans POS reports, vendor invoices, checks, or Excel files. Shows a summary of all extracted fields and values.
         </TabInfo>
         <TabInfo icon="🗺️" name="Mapping">
-          Links each scan field to a QuickBooks account. This is where you tell Nest which account each field belongs to.
+          Links each scan field to a QuickBooks account. This is where you tell AutoBooks which account each field belongs to.
         </TabInfo>
         <TabInfo icon="📊" name="Preview">
           Shows the final journal entry before syncing. You can edit amounts, change accounts, add entities (Customer/Vendor/Employee), assign classes, and toggle consolidation. The entry must balance before syncing.
@@ -122,7 +122,7 @@ const SECTIONS: Section[] = [
     icon: '🗺️',
     content: (
       <div className="space-y-3">
-        <p className="text-gray-600 text-xs font-medium">Mappings tell Nest which QuickBooks account each POS field belongs to.</p>
+<p className="text-gray-600 text-xs font-medium">Mappings tell AutoBooks which QuickBooks account each POS field belongs to.</p>
 
         <SubHeading>How Mapping Works</SubHeading>
         <p className="text-[11px] text-gray-600">
@@ -131,7 +131,7 @@ const SECTIONS: Section[] = [
 
         <SubHeading>Quick Tips</SubHeading>
         <ul className="space-y-1.5">
-          <Bullet>Click <span className="text-emerald-400">"Auto-Detect"</span> to let Nest suggest mappings based on field names and your QB account list</Bullet>
+          <Bullet>Click <span className="text-emerald-400">"Auto-Detect"</span> to let AutoBooks suggest mappings based on field names and your QB account list</Bullet>
           <Bullet>Use <span className="text-emerald-400">templates</span> (Standard Daily, Full Service, Quick Service) as a starting point — you can customize after applying</Bullet>
           <Bullet>Each mapping can optionally include a <span className="text-emerald-400">Class</span> (for QB class tracking) and a <span className="text-emerald-400">Description</span> (shown on the journal entry line)</Bullet>
           <Bullet>Check <span className="text-emerald-400">"Keep Separate"</span> if a line should not be consolidated with others on the same account (e.g., you want to see each payment method individually)</Bullet>
@@ -196,7 +196,7 @@ const SECTIONS: Section[] = [
 
         <SubHeading>What If It Doesn't Balance?</SubHeading>
         <p className="text-[11px] text-gray-600">
-          Nest shows a red <span className="text-red-600">imbalance warning</span> at the bottom of the Preview tab. Common causes: unmapped fields, rounding differences, or missing offset entries. Nest can auto-fix rounding differences up to $0.02.
+          AutoBooks shows a red <span className="text-red-600">imbalance warning</span> at the bottom of the Preview tab. Common causes: unmapped fields, rounding differences, or missing offset entries. AutoBooks can auto-fix rounding differences up to $0.02.
         </p>
       </div>
     ),
@@ -211,8 +211,8 @@ const SECTIONS: Section[] = [
         <SubHeading>Header Fields</SubHeading>
         <ul className="space-y-1.5">
           <Bullet><span className="text-emerald-400">Date:</span> The transaction date for the journal entry. Defaults to today. Change it to match the report date.</Bullet>
-          <Bullet><span className="text-emerald-400">Doc #:</span> Optional reference number (e.g., "NEST-001"). Shows as DocNumber in QuickBooks.</Bullet>
-          <Bullet><span className="text-emerald-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "Nest sync — {'{date}'} — Downtown").</Bullet>
+          <Bullet><span className="text-emerald-400">Doc #:</span> Optional reference number (e.g., "AB-001"). Shows as DocNumber in QuickBooks.</Bullet>
+          <Bullet><span className="text-emerald-400">Memo:</span> Private note attached to the entry. You can set a template in Settings per location (e.g., "AutoBooks sync — {'{date}'} — Downtown").</Bullet>
         </ul>
 
         <SubHeading>Line Items</SubHeading>
@@ -276,11 +276,11 @@ const SECTIONS: Section[] = [
         <div className="space-y-2">
           <TroubleshootItem problem="Scan returns no data" solution="Make sure you're on a supported POS report page (Toast Sales Summary, SALIDO Accounting Summary, or Oracle Daily Operations). Wait for the page to fully load before scanning." />
           <TroubleshootItem problem="QB not connected" solution='Go to Settings and click "Connect to QuickBooks". Complete the Intuit authorization flow. If it fails, try again — the auth link expires after 15 minutes.' />
-          <TroubleshootItem problem="Unbalanced entry" solution="Check that all fields are mapped. Unmapped fields won't have accounts assigned. Look for the red imbalance warning at the bottom of Preview. Nest auto-fixes rounding up to $0.02." />
+          <TroubleshootItem problem="Unbalanced entry" solution="Check that all fields are mapped. Unmapped fields won't have accounts assigned. Look for the red imbalance warning at the bottom of Preview. AutoBooks auto-fixes rounding up to $0.02." />
           <TroubleshootItem problem="Account not found in dropdown" solution='Click the ↻ refresh button next to the account dropdown to re-fetch QB lists. You can also search by partial name or account number.' />
           <TroubleshootItem problem="Sync fails with QB error" solution="Common causes: invalid account ID, token expired, or QB requires a field you didn't fill. Check the error message — it usually tells you exactly what's wrong. Try reconnecting QB in Settings." />
-          <TroubleshootItem problem="Token expired" solution='Go to Settings and reconnect QuickBooks. Tokens expire periodically — Nest auto-refreshes them, but if the refresh token itself expires, you need to re-authorize.' />
-          <TroubleshootItem problem="Negative amounts showing" solution="Nest automatically flips the posting side for negative amounts (a negative Credit becomes a Debit, and vice versa). This is correct behavior — check that your mapping's Debit/Credit setting is right for the positive case." />
+          <TroubleshootItem problem="Token expired" solution='Go to Settings and reconnect QuickBooks. Tokens expire periodically — AutoBooks auto-refreshes them, but if the refresh token itself expires, you need to re-authorize.' />
+          <TroubleshootItem problem="Negative amounts showing" solution="AutoBooks automatically flips the posting side for negative amounts (a negative Credit becomes a Debit, and vice versa). This is correct behavior — check that your mapping's Debit/Credit setting is right for the positive case." />
         </div>
       </div>
     ),
@@ -291,7 +291,7 @@ const SECTIONS: Section[] = [
     content: (
       <div className="space-y-2">
         <div className="bg-gray-100 rounded-lg p-2 space-y-1.5">
-          <Shortcut keys="Ctrl+Shift+N" description="Open Nest floating window (click extension icon)" />
+          <Shortcut keys="Ctrl+Shift+N" description="Open AutoBooks floating window (click extension icon)" />
           <Shortcut keys="Tab" description="Move between fields in the Preview table" />
           <Shortcut keys="Esc" description="Close this help panel" />
         </div>
@@ -304,12 +304,12 @@ const SECTIONS: Section[] = [
     icon: '💬',
     content: (
       <div className="space-y-2.5">
-        <FAQItem q="Does Nest modify my POS data?" a="No. Nest only reads data from the POS page. It never writes, modifies, or deletes anything in your POS." />
-        <FAQItem q="Can I undo a sync?" a="Nest doesn't have an undo button, but you can delete the journal entry directly in QuickBooks Online. Find it by the DocNumber or date." />
+        <FAQItem q="Does AutoBooks modify my POS data?" a="No. AutoBooks only reads data from the POS page. It never writes, modifies, or deletes anything in your POS." />
+        <FAQItem q="Can I undo a sync?" a="AutoBooks doesn't have an undo button, but you can delete the journal entry directly in QuickBooks Online. Find it by the DocNumber or date." />
         <FAQItem q="How often should I sync?" a="Typically once per day — after your POS report is finalized. Some businesses sync weekly. It's up to your accounting workflow." />
         <FAQItem q="Can I sync multiple locations?" a="Yes! Add each location in Settings, select the active location, and sync separately for each. Mappings are per-location." />
         <FAQItem q="What QB plan do I need?" a="Any QuickBooks Online plan that supports Journal Entries (Plus, Advanced). Simple Start and Essentials don't support journal entries." />
-        <FAQItem q="Is my data secure?" a="Nest uses JWT authentication, encrypted OAuth tokens, and never stores your QuickBooks credentials. All API calls use HTTPS. Tokens are stored in your PostgreSQL database." />
+        <FAQItem q="Is my data secure?" a="AutoBooks uses JWT authentication, encrypted OAuth tokens, and never stores your QuickBooks credentials. All API calls use HTTPS. Tokens are stored in your PostgreSQL database." />
       </div>
     ),
   },
@@ -323,13 +323,13 @@ const SECTIONS: Section[] = [
           <div className="flex items-center gap-2">
             <span>✉️</span>
             <a
-              href="mailto:support@nestsync.fyi"
+              href="mailto:support@autobooks.cloud"
               className="text-emerald-400 hover:text-emerald-600 text-xs transition-colors"
             >
-              support@nestsync.fyi
+              support@autobooks.cloud
             </a>
           </div>
-          <p className="text-[11px] text-gray-600">Include your browser version, Nest version (1.0.0), and steps to reproduce the issue.</p>
+          <p className="text-[11px] text-gray-600">Include your browser version, AutoBooks version (1.0.0), and steps to reproduce the issue.</p>
         </div>
         <div className="text-center pt-2 border-t border-gray-200/50">
           <p className="text-xs text-gray-600">Created by <span className="text-gray-600">John Paul O. Escuadra</span></p>
@@ -439,7 +439,7 @@ export default function HelpPanel({ onClose }: Props) {
       {/* Footer */}
       <div className="px-4 py-2 border-t border-gray-200 text-center flex-shrink-0">
         <p className="text-[10px] text-gray-600">
-          Nest — Financial Automation
+          AutoBooks — Financial Automation
         </p>
         <p className="text-[10px] text-gray-700">
           Created by John Paul O. Escuadra

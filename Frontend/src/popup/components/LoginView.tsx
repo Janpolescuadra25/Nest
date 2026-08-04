@@ -99,8 +99,8 @@ export default function LoginView({ onLogin }: LoginViewProps) {
         <div className="animate-fadeIn rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/40">
 
           <div className="mb-6 flex flex-col items-center">
-            <img src="/public/icons/nest-logo.png" alt="Nest" className="h-12 w-12" />
-            <p className="mt-2 text-base font-semibold text-gray-900">Nest</p>
+            <img src="/public/icons/autobooks-logo.png" alt="AutoBooks" className="h-12 w-12" />
+            <p className="mt-2 text-base font-semibold text-gray-900">AutoBooks</p>
             <p className="text-xs text-gray-400">Bookkeeping, simplified.</p>
           </div>
           {renderTabs()}
@@ -154,7 +154,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
           ) : view === 'sign-up' ? (
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">Create your account</h2>
-              <p className="mt-2 text-sm text-gray-500">Get started with Nest in minutes.</p>
+              <p className="mt-2 text-sm text-gray-500">Get started with AutoBooks in minutes.</p>
               <form onSubmit={handleSignUp} className="mt-6 space-y-4">
                 <input
                   type="text"
@@ -228,7 +228,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
           ) : (
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">Sign In</h2>
-              <p className="mt-2 text-sm text-gray-500">Sign in to your Nest account.</p>
+              <p className="mt-2 text-sm text-gray-500">Sign in to your AutoBooks account.</p>
               <form onSubmit={handleSignIn} className="mt-6 space-y-4">
                 <input
                   type="email"

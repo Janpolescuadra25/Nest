@@ -72,7 +72,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
   return (
     <div
       className={`flex items-center gap-2 bg-slate-700 ${BORDER_COLOR[toast.type]} rounded-r px-3 py-2 shadow-lg`}
-      style={{ animation: 'nest-toast-in 0.2s ease-out' }}
+      style={{ animation: 'autobooks-toast-in 0.2s ease-out' }}
     >
       <p className="flex-1 text-sm text-white leading-snug">{toast.message}</p>
       <button
@@ -96,7 +96,7 @@ export function ToastContainer() {
   return (
     <>
       <style>{`
-        @keyframes nest-toast-in {
+        @keyframes autobooks-toast-in {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0);   }
         }

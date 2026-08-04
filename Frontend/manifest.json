@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Nest — Financial Automation",
+  "name": "AutoBooks — Financial Automation",
   "version": "1.0.0",
-  "description": "Nest — Scan POS reports and invoices, extract transactions with AI, and sync to QuickBooks Online.",
+  "description": "AutoBooks — Scan POS reports and invoices, extract transactions with AI, and sync to QuickBooks Online.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "windows"],
   "host_permissions": [
     "<all_urls>",
@@ -18,7 +18,7 @@
       "48": "public/icons/icon48.png",
       "128": "public/icons/icon128.png"
     },
-    "default_title": "Nest"
+    "default_title": "AutoBooks"
   },
   "background": {
     "service_worker": "background/service-worker.js",

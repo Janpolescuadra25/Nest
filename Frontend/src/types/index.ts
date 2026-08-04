@@ -1,4 +1,4 @@
-// Shared TypeScript types for the Nest Chrome Extension
+// Shared TypeScript types for the AutoBooks Chrome Extension
 
 export interface Location {
   id: string;

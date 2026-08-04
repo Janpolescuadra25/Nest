@@ -88,8 +88,8 @@ export default function WelcomeOverlay({ user, jwt, onDismiss }: WelcomeOverlayP
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4">
-          <div className="text-emerald-600 font-bold text-sm uppercase tracking-wide">Nest</div>
-          <h1 className="mt-3 text-2xl font-semibold text-gray-900">Welcome to Nest!</h1>
+          <div className="text-emerald-600 font-bold text-sm uppercase tracking-wide">AutoBooks</div>
+          <h1 className="mt-3 text-2xl font-semibold text-gray-900">Welcome to AutoBooks!</h1>
           <p className="mt-2 text-sm text-gray-500">
             Scan POS reports and sync them to QuickBooks Online in seconds.
           </p>

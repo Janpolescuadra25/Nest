@@ -45,12 +45,20 @@ const ALL_COLUMNS: { key: ColKey; label: string }[] = [
   { key: 'credit', label: 'Credit' },
 ];
 
-const LS_COL_KEY = 'nest_je_col_vis';
+const LS_COL_KEY = 'autobooks_je_col_vis';
+const LEGACY_LS_COL_KEY = 'nest_je_col_vis';
 
 function loadColVis(): Record<ColKey, boolean> {
   try {
-    const raw = localStorage.getItem(LS_COL_KEY);
-    if (raw) return JSON.parse(raw) as Record<ColKey, boolean>;
+    const raw = localStorage.getItem(LS_COL_KEY) ?? localStorage.getItem(LEGACY_LS_COL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<ColKey, boolean>;
+      if (parsed && typeof parsed === 'object') {
+        localStorage.setItem(LS_COL_KEY, JSON.stringify(parsed));
+        localStorage.removeItem(LEGACY_LS_COL_KEY);
+        return parsed;
+      }
+    }
   } catch { /* ignore */ }
   return { account: true, name: true, description: true, class: true, taxCode: true, debit: true, credit: true };
 }
@@ -687,7 +695,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       lines: jeLines,
       privateNote:
         privateNote ||
-        `Nest sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
+        `AutoBooks sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
       docNumber: docNumber || undefined,
     };
   }, [txnDate, effectiveDisplayLines, privateNote, locations, locId, docNumber, entityOptions]);
@@ -789,7 +797,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         txnDate,
         jeLines,
         scanRecordId ?? undefined,
-        privateNote || `Nest sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
+        privateNote || `AutoBooks sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
         docNumber || undefined,
         skipDedupCheck,
       ) as { journalEntryId?: string; qbJournalEntryId?: string; txnDate?: string; skipped?: boolean; docNumber?: string };
@@ -937,7 +945,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
             value={privateNote}
             onChange={(e) => setPrivateNote(e.target.value)}
-            placeholder={`Nest sync — ${txnDate}`}
+            placeholder={`AutoBooks sync — ${txnDate}`}
           />
         </div>
         <div className="flex items-center gap-2">
