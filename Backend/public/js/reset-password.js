@@ -16,7 +16,7 @@
   } else {
     content.innerHTML = `
           <h2 class="form-title">Reset your password</h2>
-          <p class="form-sub">Enter a new password for your Nest account.</p>
+          <p class="form-sub">Enter a new password for your AutoBooks account.</p>
           <div id="err" class="error-box"></div>
           <div id="success" class="success-box"></div>
           <form id="reset-form">

@@ -90,10 +90,10 @@ async function main(): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
     // ── 2. Create test user (VIEWER, no permissions) ───────────────────────────
     const user = await prisma.user.upsert({
-      where: { email: 'test@nest.app' },
+      where: { email: 'test@autobooks.cloud' },
       update: {},
       create: {
-        email: 'test@nest.app',
+        email: 'test@autobooks.cloud',
         role: 'VIEWER',
         status: 'ACTIVE',
       },
@@ -214,3 +214,4 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+

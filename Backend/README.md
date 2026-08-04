@@ -1,15 +1,15 @@
 # Name
-### nest-backend
+### autobooks-backend
 
 # Synopsis
-Nest Backend - Toast POS to QuickBooks Journal Entry sync
+AutoBooks Backend - Toast POS to QuickBooks Journal Entry sync
 
 # Description
 
 # Example
 
 # Install:
-`npm install nest-backend`
+`npm install autobooks-backend`
 
 # Test:
 `npm test`

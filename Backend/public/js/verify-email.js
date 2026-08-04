@@ -6,19 +6,19 @@ const pages = {
   success: {
     icon: '✅',
     title: 'Email verified!',
-    body: 'Your email address has been successfully verified. You can close this tab and return to Nest.',
+    body: 'Your email address has been successfully verified. You can close this tab and return to AutoBooks.',
     statusClass: 'status-success',
   },
   expired: {
     icon: '⏰',
     title: 'Verification link expired',
-    body: 'This verification link has expired. Request a new one from your Nest settings page.',
+    body: 'This verification link has expired. Request a new one from your AutoBooks settings page.',
     statusClass: 'status-warning',
   },
   invalid: {
     icon: '❌',
     title: 'Invalid verification link',
-    body: 'This link is not valid. Request a new verification email from your Nest settings page.',
+    body: 'This link is not valid. Request a new verification email from your AutoBooks settings page.',
     statusClass: 'status-error',
   },
 };

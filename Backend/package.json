@@ -1,7 +1,7 @@
 {
-  "name": "nest-backend",
+  "name": "autobooks-backend",
   "version": "1.0.0",
-  "description": "Nest Backend - Toast POS to QuickBooks Journal Entry sync",
+  "description": "AutoBooks Backend - Toast POS to QuickBooks Journal Entry sync",
   "main": "dist/index.js",
   "scripts": {
     "build": "prisma generate && tsc",

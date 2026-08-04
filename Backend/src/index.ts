@@ -100,10 +100,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.get('/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', service: 'nest-backend', database: 'connected', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', service: 'autobooks-backend', database: 'connected', timestamp: new Date().toISOString() });
   } catch (err) {
     console.error('[Health] Database check failed:', err);
-    res.status(503).json({ status: 'error', service: 'nest-backend', database: 'disconnected', timestamp: new Date().toISOString() });
+    res.status(503).json({ status: 'error', service: 'autobooks-backend', database: 'disconnected', timestamp: new Date().toISOString() });
   }
 });
 
@@ -172,21 +172,21 @@ startSyncFailureAlertCron(prisma);
 startScanCleanupCron(prisma);
 resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
 const server = app.listen(PORT, () => {
-  console.log(`[Nest] Server running on http://localhost:${PORT}`);
-  console.log(`[Nest] Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  console.log(`[AutoBooks] Server running on http://localhost:${PORT}`);
+  console.log(`[AutoBooks] Environment: ${process.env.NODE_ENV ?? 'development'}`);
 });
 
 function gracefulShutdown(signal: string) {
-  console.log(`[Nest] ${signal} received. Shutting down gracefully...`);
+  console.log(`[AutoBooks] ${signal} received. Shutting down gracefully...`);
   server.close(() => {
-    console.log('[Nest] HTTP server closed.');
+    console.log('[AutoBooks] HTTP server closed.');
     prisma.$disconnect().then(() => {
-      console.log('[Nest] Database disconnected.');
+      console.log('[AutoBooks] Database disconnected.');
       process.exit(0);
     });
   });
   setTimeout(() => {
-    console.error('[Nest] Forced shutdown after timeout.');
+    console.error('[AutoBooks] Forced shutdown after timeout.');
     process.exit(1);
   }, 10_000);
 }

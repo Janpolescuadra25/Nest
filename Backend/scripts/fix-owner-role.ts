@@ -5,7 +5,7 @@
  * Usage:
  *   DATABASE_URL="postgresql://..." npx tsx scripts/fix-owner-role.ts
  *
- * Get DATABASE_URL from Render dashboard → nest-backend → Environment.
+ * Get DATABASE_URL from Render dashboard → autobooks-backend → Environment.
  */
 import { PrismaClient } from '@prisma/client';
 
