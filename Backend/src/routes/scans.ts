@@ -260,6 +260,116 @@ router.get('/recent', asyncHandler(async (req: AuthRequest, res: Response): Prom
   }
 }));
 
+router.post('/bulk-approve', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const scanIds = Array.isArray(req.body?.scanIds) ? req.body.scanIds.map(String) : [];
+  const uniqueScanIds = Array.from(new Set(scanIds)).slice(0, 50);
+
+  if (!uniqueScanIds.length) {
+    throw new AppError('scanIds must be a non-empty array', 400);
+  }
+
+  const scans = await prisma.scanRecord.findMany({
+    where: {
+      id: { in: uniqueScanIds },
+      location: { ...locationFilter(req.user!) },
+    },
+    select: { id: true, status: true, submittedById: true, locationId: true },
+  });
+
+  const approvableScans = scans.filter((scan) => scan.status === 'PENDING_APPROVAL' && scan.submittedById !== userId);
+  const approvedIds = approvableScans.map((scan) => scan.id);
+
+  if (approvedIds.length) {
+    await prisma.$transaction(approvedIds.map((id) => prisma.scanRecord.update({
+      where: { id },
+      data: {
+        status: 'APPROVED',
+        approvedById: userId,
+        approvedAt: new Date(),
+      },
+    })));
+
+    await Promise.all(approvableScans.map((scan) => logAction({
+      actorId: userId,
+      action: 'DRAFT_APPROVED',
+      details: { scanRecordId: scan.id, locationId: scan.locationId },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    })));
+  }
+
+  res.json({ approved: approvedIds.length, skipped: uniqueScanIds.length - approvedIds.length });
+}));
+
+router.delete('/:id', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params['id']);
+  const scan = await prisma.scanRecord.findFirst({
+    where: {
+      id,
+      location: { ...locationFilter(req.user!) },
+    },
+    select: { id: true, status: true, locationId: true },
+  });
+
+  if (!scan) {
+    throw new AppError('Scan record not found', 404);
+  }
+  if (scan.status === 'SYNCED') {
+    throw new AppError('Cannot delete a synced scan record', 400);
+  }
+
+  await prisma.scanRecord.delete({ where: { id } });
+
+  await logAction({
+    actorId: req.user!.userId,
+    action: 'SCAN_DELETED',
+    details: { scanRecordId: id, locationId: scan.locationId },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ success: true, deletedId: id });
+}));
+
+router.post('/bulk-delete', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  const scanIds = Array.isArray(req.body?.scanIds) ? req.body.scanIds.map(String) : [];
+  const uniqueScanIds = Array.from(new Set(scanIds)).slice(0, 50);
+
+  if (!uniqueScanIds.length) {
+    throw new AppError('scanIds must be a non-empty array', 400);
+  }
+
+  const scans = await prisma.scanRecord.findMany({
+    where: {
+      id: { in: uniqueScanIds },
+      location: { ...locationFilter(req.user!) },
+    },
+    select: { id: true, status: true, locationId: true },
+  });
+
+  const deletableIds = scans.filter((scan) => scan.status !== 'SYNCED').map((scan) => scan.id);
+  const skipped = uniqueScanIds.length - deletableIds.length;
+
+  let deletedCount = 0;
+  if (deletableIds.length) {
+    const result = await prisma.$transaction([
+      prisma.scanRecord.deleteMany({ where: { id: { in: deletableIds } } }),
+    ]);
+    deletedCount = result[0].count;
+
+    await Promise.all(deletableIds.map((id) => logAction({
+      actorId: req.user!.userId,
+      action: 'SCAN_DELETED',
+      details: { scanRecordId: id },
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    })));
+  }
+
+  res.json({ deleted: deletedCount, skipped });
+}));
+
 // ── GET /api/scans/:id ────────────────────────────────────────────────────────
 router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {

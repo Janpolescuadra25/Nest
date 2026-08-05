@@ -80,7 +80,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Set<PermissionKey>> = {
     'rules:read', 'rules:write',
     'preview:read', 'preview:write',
     'sync:read',
-    'sync:execute',
     'templates:read', 'templates:write',
     'sopUpload:write',
     'sopView:read',
