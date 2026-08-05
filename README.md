@@ -247,7 +247,7 @@ Nest/
 
 ## Deployment
 
-Nest is configured for deployment on [Render.com](https://render.com):
+AutoBooks is configured for deployment on [Render.com](https://render.com):
 
 1. Create a new Web Service on Render
 2. Connect your GitHub repository
