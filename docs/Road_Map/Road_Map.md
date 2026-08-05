@@ -3,10 +3,11 @@
 - **R-1: Rebrand Backend** — Commit `c392366`. 20 files rebranded (Nest → AutoBooks, nestsync.fyi → autobooks.cloud, NEST- → AB-). All 7 sync-batch tests pass.
 - **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
 - **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `autobooks-backend` and `noreply@autobooks.cloud`. All web pages now use AutoBooks branding.
+- **L-1: Remove Partner Section** — Commit `0626652`. Removed "Become a Partner" CTA, nav links, partner section, and partner form JS from `web/index.html`. Signup form and `setMessage` helper preserved.
 
 ## 🗺️ AutoBooks Roadmap — Cypra v3 (Complete)
 
-### Repo State (`ddcf28e`, clean, pushed)
+### Repo State (`0626652`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -41,18 +42,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 7. **Test:** Signup, email verification, password reset, OAuth — all with new domain
 
 **Expected output:** `autobooks.cloud` resolves. Emails send from `noreply@autobooks.cloud`. OAuth works. Landing page loads.
-
----
-
-### Phase L: Landing Page Update
-
-#### L-1: Remove Partner Section (1 prompt)
-
-**Scoping needed first:** Hydra reads `Backend/public/landing/index.html` and `Backend/public/js/landing.js` to identify the exact partner section HTML boundaries and any JS references.
-
-**What:** Remove the "Become a Nest Partner" / white-label partner CTA section entirely. Remove any partner-related navigation links or JavaScript. Keep: hero, features, pricing plans (including free tier), footer.
-
-**Expected output:** Landing page has zero partner references. Direct registration with plan selection remains. Branded as AutoBooks.
 
 ---
 
