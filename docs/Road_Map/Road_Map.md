@@ -4,10 +4,13 @@
 - **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
 - **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `autobooks-backend` and `noreply@autobooks.cloud`. All web pages now use AutoBooks branding.
 - **L-1: Remove Partner Section** — Commit `0626652`. Removed "Become a Partner" CTA, nav links, partner section, and partner form JS from `web/index.html`. Signup form and `setMessage` helper preserved.
+- **W-2: Database Schema** — SKIPPED. `PENDING_APPROVAL` already serves as "For Review", `PENDING` serves as "Drafted". No schema change needed.
+- **W-3: Role-Based Permissions Update** — Commit `b1a7170`. Removed `sync:execute` from ACCOUNTANT role (kept `sync:read`).
+- **W-5: Backend Workflow API Endpoints** — Commit `b1a7170`. Added `POST /bulk-approve`, `DELETE /:id`, `POST /bulk-delete` to `scans.ts`.
 
 ## 🗺️ AutoBooks Roadmap — Cypra v3 (Complete)
 
-### Repo State (`0626652`, clean, pushed)
+### Repo State (`b1a7170`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -133,57 +136,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 8. Search for `DRAFTED`, `FOR_REVIEW`, `APPROVED` status values — do they already exist?
 
 **Purpose:** Map the current flow end-to-end and determine what schema changes, API changes, and UI changes are needed.
-
----
-
-#### W-2: Database Schema — Add New Statuses (1 prompt)
-
-**What:** Add `DRAFTED` and `FOR_REVIEW` status values to the scan record lifecycle.
-
-**Current flow:** `PENDING` → `MAPPED` → `PENDING_APPROVAL` → `APPROVED` → `SYNCED` / `FAILED` / `REJECTED`
-
-**New flow:**
-```
-Scan created → DRAFTED
-  Staff: can only draft (scan → DRAFTED, cannot modify mapping)
-  Accountant: can draft + modify mapping (DRAFTED → DRAFTED with changes)
-  Accountant/Staff: submit for review → FOR_REVIEW
-  Manager: can view FOR_REVIEW, modify mapping/entry, approve → APPROVED
-  Admin: same power as Manager (modify + approve)
-  Manager/Admin: direct sync from APPROVED → SYNCED
-  All APPROVED entries appear in Sync tab as "pending sync"
-  After sync → status becomes SYNCED
-```
-
-**Scoping note:** `PENDING_APPROVAL` may already serve as `FOR_REVIEW`. W-1 audit will confirm. If so, no schema change needed — just rename/repurpose.
-
-**Expected output:** Prisma migration adding/updating status enum. All existing statuses preserved.
-
----
-
-#### W-3: Role-Based Permissions Update (1 prompt)
-
-**What:** Update the permission system to enforce the draft/approve/sync workflow.
-
-**Role permissions:**
-
-| Action | Staff | Accountant | Manager | Admin | Owner |
-|---|---|---|---|---|---|
-| Scan (create) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Draft entry | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Modify mapping | ❌ | ✅ | ✅ | ✅ | ✅ |
-| Submit for review | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View "For Review" tab | Own only | Own only | All | All | All |
-| Modify entry in review | ❌ | Own only | All | All | All |
-| Approve entry | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Direct sync to QB | ❌ | ❌ | ✅ | ✅ | ✅ |
-| View "Approved" tab | ❌ | ❌ | ✅ | ✅ | ✅ |
-| View "Sync" tab | ❌ | ❌ | ✅ | ✅ | ✅ |
-| Hard delete scans | ❌ | ❌ | ✅ | ✅ | ✅ |
-
-**Scoping needed:** W-1 audit determines what permission checks already exist and what needs to be added.
-
-**Expected output:** Backend enforces role-based workflow. Staff cannot modify mapping. Accountant cannot sync. Only Manager+ can approve and sync.
 
 ---
 
