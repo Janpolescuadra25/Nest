@@ -34,7 +34,6 @@
         <nav class="hidden items-center gap-8 md:flex">
           <a href="#features" class="text-sm font-medium text-slate-600 hover:text-slate-900">Features</a>
           <a href="#pricing" class="text-sm font-medium text-slate-600 hover:text-slate-900">Pricing</a>
-          <a href="#partners" class="text-sm font-medium text-slate-600 hover:text-slate-900">Partners</a>
         </nav>
         <div class="hidden md:block">
           <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-emerald-500/10 hover:bg-emerald-700" target="_blank" rel="noopener">Get Started</a>
@@ -48,7 +47,6 @@
         <div class="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <a href="#features" class="text-sm font-medium text-slate-700">Features</a>
           <a href="#pricing" class="text-sm font-medium text-slate-700">Pricing</a>
-          <a href="#partners" class="text-sm font-medium text-slate-700">Partners</a>
           <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white text-center" target="_blank" rel="noopener">Get Started</a>
         </div>
       </div>
@@ -63,9 +61,8 @@
                 <p class="mb-4 inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">POS + QuickBooks</p>
                 <h1 class="text-4xl font-bold tracking-tight sm:text-5xl text-slate-900">Automate Your POS-to-QuickBooks Reconciliation</h1>
                 <p class="mt-6 max-w-xl text-base leading-8 text-slate-600">Scan POS reports, invoices, vendor credits, checks, and bill payments — from any POS system, Excel, or image. AI extracts the data, maps it to QuickBooks, and syncs automatically.</p>
-                <div class="mt-10 flex flex-col gap-3 sm:flex-row">
+                <div class="mt-10">
                   <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-emerald-500/20 transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started Free</a>
-                  <a href="#partners" class="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white px-6 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Become a Partner</a>
                 </div>
               </div>
               <div class="rounded-[1.5rem] bg-emerald-50 p-8 ring-1 ring-emerald-100 sm:p-10">
@@ -270,39 +267,6 @@
         </div>
       </section>
 
-      <section id="partners" class="bg-gray-50 py-20">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="mx-auto max-w-3xl text-center">
-            <p class="text-sm uppercase tracking-[0.25em] text-emerald-600">Become an AutoBooks Partner</p>
-            <h2 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Become an AutoBooks Partner</h2>
-            <p class="mt-3 text-sm leading-7 text-slate-600">Join our partner program and offer AutoBooks to your clients. As a partner, you get your own team with full admin access to manage multiple client accounts.</p>
-          </div>
-          <div class="mt-12 flex flex-col gap-10 lg:flex-row lg:justify-center">
-            <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-              <form id="partner-form" class="space-y-5">
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700">Full name</label>
-                  <input id="partner-name" type="text" required class="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700">Email</label>
-                  <input id="partner-email" type="email" required class="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700">Company name</label>
-                  <input id="partner-company" type="text" required class="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-700">Message</label>
-                  <textarea id="partner-message" rows="4" required class="mt-2 w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="Tell us about your business (min 10 characters)"></textarea>
-                </div>
-                <button id="partner-submit" type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">Submit Application</button>
-                <div id="partner-message-box" class="min-h-[1.5rem] text-sm"></div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
 
     <footer class="border-t border-slate-200 bg-slate-900 py-8 text-white">
@@ -383,50 +347,6 @@
       } finally {
         signupSubmit.disabled = false;
         signupSubmit.textContent = 'Create Account';
-      }
-    });
-
-    const partnerForm = document.getElementById('partner-form');
-    const partnerMessageBox = document.getElementById('partner-message-box');
-    const partnerSubmit = document.getElementById('partner-submit');
-
-    partnerForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      partnerMessageBox.textContent = '';
-      partnerSubmit.disabled = true;
-      partnerSubmit.textContent = 'Submitting...';
-
-      const name = document.getElementById('partner-name').value.trim();
-      const email = document.getElementById('partner-email').value.trim();
-      const company = document.getElementById('partner-company').value.trim();
-      const description = document.getElementById('partner-message').value.trim();
-
-      if (description.length < 10) {
-        setMessage(partnerMessageBox, 'Please provide at least 10 characters describing your business.', 'error');
-        partnerSubmit.disabled = false;
-        partnerSubmit.textContent = 'Submit Application';
-        return;
-      }
-
-      try {
-        const response = await fetch(API_BASE + '/api/admin-requests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, company, description }),
-        });
-        const data = await response.json();
-
-        if (response.ok) {
-          partnerForm.reset();
-          setMessage(partnerMessageBox, 'Application submitted! Our team will review your request and get back to you within 24 hours.', 'success');
-        } else {
-          setMessage(partnerMessageBox, data.error || 'Something went wrong. Please try again.', 'error');
-        }
-      } catch (error) {
-        setMessage(partnerMessageBox, 'Something went wrong. Please try again.', 'error');
-      } finally {
-        partnerSubmit.disabled = false;
-        partnerSubmit.textContent = 'Submit Application';
       }
     });
   </script>
