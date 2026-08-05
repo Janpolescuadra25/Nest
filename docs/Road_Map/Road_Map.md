@@ -2,6 +2,7 @@
 
 - **R-1: Rebrand Backend** — Commit `c392366`. 20 files rebranded (Nest → AutoBooks, nestsync.fyi → autobooks.cloud, NEST- → AB-). All 7 sync-batch tests pass.
 - **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
+- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `autobooks-backend` and `noreply@autobooks.cloud`. All web pages now use AutoBooks branding.
 
 ## 🗺️ AutoBooks Roadmap — Cypra v3 (Complete)
 
@@ -27,20 +28,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 ---
 
-#### R-3: Rebrand Web, Root Configs, Render Config (1 prompt)
-
-**Files (~12):** `README.md`, `CODELY.md`, `render.yaml`, `web/index.html`, `web/billing-cancel.html`, `web/privacy.html`, `web/terms.html`, `Frontend/src/popup/lib/__tests__/batch-payload-builder.test.ts`
-
-**Rules:**
-- `render.yaml` L72: `RESEND_FROM_ADDRESS: "noreply@autobooks.cloud"`
-- `web/index.html`: OG metadata "AutoBooks — Bookkeeping, Automated", URL `https://autobooks.cloud`
-- `web/billing-cancel.html`: `https://autobooks.cloud/#pricing`
-- `web/privacy.html`, `web/terms.html`: `support@autobooks.cloud`
-- Test fixture: "Internal note for AutoBooks"
-
-**Expected output:** All web pages, root configs, CI/CD configs rebranded.
-
----
 
 #### R-4: Domain Migration (Manual — JP only)
 
