@@ -1,8 +1,8 @@
-# Nest
+# AutoBooks
 
 > Seamless POS to QuickBooks sync, right from your browser.
 
-Nest is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
+AutoBooks is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
 
 ## Features
 
@@ -54,7 +54,7 @@ Nest is a Chrome extension that bridges point-of-sale systems with QuickBooks On
                              |
                              v
               +------------------------------+
-              |    Nest Chrome Extension     |
+              |    AutoBooks Chrome Extension     |
               |                              |
               |  Scan Modes:                 |
               |    - POS text scraping        |
@@ -75,7 +75,7 @@ Nest is a Chrome extension that bridges point-of-sale systems with QuickBooks On
                              |
                              v
               +------------------------------+
-              |       Nest Backend API       |
+              |       AutoBooks Backend API       |
               |     (Express + Prisma)       |
               |                              |
               |  Transaction Types:          |
