@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: autobooks-backend
+    name: solyra-backend
     runtime: node
     region: oregon
     plan: free
@@ -69,7 +69,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_ADDRESS
-        value: "noreply@autobooks.cloud"
+        value: "noreply@solyra.cloud"
       - key: FRONTEND_URL
         sync: false
       - key: ALLOWED_EXTENSION_ID
