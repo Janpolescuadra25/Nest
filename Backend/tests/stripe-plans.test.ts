@@ -1,56 +1,56 @@
-import { PLANS, getPlanLimits, isSoloPlan } from '../src/lib/stripe';
+import { PLANS, getPlanLimits, type PlanKey } from '../src/lib/stripe';
 
 describe('Stripe plan utilities', () => {
-  it('returns the correct limits for all plans', () => {
-    expect(getPlanLimits('solo')).toEqual({ maxUsers: 1, maxLocations: 10 });
-    expect(getPlanLimits('starter')).toEqual({ maxUsers: 5, maxLocations: 30 });
-    expect(getPlanLimits('growth')).toEqual({ maxUsers: 20, maxLocations: 100 });
-    expect(getPlanLimits('enterprise')).toEqual({ maxUsers: 50, maxLocations: 500 });
+  const allTiers: PlanKey[] = ['free', 'starter', 'professional', 'premium', 'enterprise'];
+
+  it('has all 5 expected plan tiers', () => {
+    for (const key of allTiers) {
+      expect(PLANS[key]).toBeDefined();
+      expect(PLANS[key].name).toBeTruthy();
+    }
   });
 
-  it('does not expose sync limits because syncs are unlimited', () => {
-    const limits = getPlanLimits('starter') as Record<string, unknown>;
-    expect(limits.maxUsers).toBe(5);
-    expect(limits.maxLocations).toBe(30);
-    expect(limits.maxSyncsPerMonth).toBeUndefined();
+  it('exposes the correct numeric limits for each tier', () => {
+    expect(getPlanLimits('free')).toEqual({
+      maxUsers: 1, maxLocations: 1, maxScans: 7,
+      maxTemplates: 3, scanHistoryDays: 7,
+    });
+    expect(getPlanLimits('starter')).toEqual({
+      maxUsers: 2, maxLocations: 5, maxScans: 50,
+      maxTemplates: 10, scanHistoryDays: 30,
+    });
+    expect(getPlanLimits('professional')).toEqual({
+      maxUsers: 5, maxLocations: 20, maxScans: 250,
+      maxTemplates: 25, scanHistoryDays: 90,
+    });
+    expect(getPlanLimits('premium')).toEqual({
+      maxUsers: 12, maxLocations: 75, maxScans: 1250,
+      maxTemplates: 75, scanHistoryDays: 365,
+    });
+    expect(getPlanLimits('enterprise')).toEqual({
+      maxUsers: 20, maxLocations: 250, maxScans: 5000,
+      maxTemplates: 200, scanHistoryDays: 730,
+    });
   });
 
-  it('correctly identifies the solo plan only for solo', () => {
-    expect(isSoloPlan('solo')).toBe(true);
-    expect(isSoloPlan('starter')).toBe(false);
-    expect(isSoloPlan('growth')).toBe(false);
-    expect(isSoloPlan('enterprise')).toBe(false);
-    expect(isSoloPlan('random-plan')).toBe(false);
+  it('stores monthly and annual pricing on each tier', () => {
+    expect(PLANS.free.monthlyPrice).toBe(0);
+    expect(PLANS.free.annualPrice).toBe(0);
+    expect(PLANS.starter.monthlyPrice).toBe(19);
+    expect(PLANS.starter.annualPrice).toBe(15);
+    expect(PLANS.professional.monthlyPrice).toBe(39);
+    expect(PLANS.professional.annualPrice).toBe(31);
+    expect(PLANS.premium.monthlyPrice).toBe(79);
+    expect(PLANS.premium.annualPrice).toBe(63);
+    expect(PLANS.enterprise.monthlyPrice).toBe(149);
+    expect(PLANS.enterprise.annualPrice).toBe(119);
   });
 
-  it('contains all 4 locked Stripe plans with the expected metadata', () => {
-    expect(PLANS).toHaveProperty('solo');
-    expect(PLANS).toHaveProperty('starter');
-    expect(PLANS).toHaveProperty('growth');
-    expect(PLANS).toHaveProperty('enterprise');
-
-    expect(PLANS.solo.pricePhp).toBe(499);
-    expect(PLANS.solo.priceUsd).toBe(9);
-    expect(PLANS.solo.users).toBe(1);
-    expect(PLANS.solo.locations).toBe(10);
-    expect(PLANS.solo.features).toContain('Unlimited syncs');
-
-    expect(PLANS.starter.pricePhp).toBe(1999);
-    expect(PLANS.starter.priceUsd).toBe(35);
-    expect(PLANS.starter.users).toBe(5);
-    expect(PLANS.starter.locations).toBe(30);
-    expect(PLANS.starter.features).toContain('Unlimited syncs');
-
-    expect(PLANS.growth.pricePhp).toBe(5999);
-    expect(PLANS.growth.priceUsd).toBe(107);
-    expect(PLANS.growth.users).toBe(20);
-    expect(PLANS.growth.locations).toBe(100);
-    expect(PLANS.growth.features).toContain('Unlimited syncs');
-
-    expect(PLANS.enterprise.pricePhp).toBe(9999);
-    expect(PLANS.enterprise.priceUsd).toBe(178);
-    expect(PLANS.enterprise.users).toBe(50);
-    expect(PLANS.enterprise.locations).toBe(500);
-    expect(PLANS.enterprise.features).toContain('Unlimited syncs');
+  it('marks only professional+ as priority support', () => {
+    expect(PLANS.free.prioritySupport).toBe(false);
+    expect(PLANS.starter.prioritySupport).toBe(false);
+    expect(PLANS.professional.prioritySupport).toBe(true);
+    expect(PLANS.premium.prioritySupport).toBe(true);
+    expect(PLANS.enterprise.prioritySupport).toBe(true);
   });
 });
