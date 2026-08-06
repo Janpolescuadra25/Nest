@@ -14,7 +14,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
   { value: 'PENDING', label: 'Pending' },
   { value: 'MAPPED', label: 'Mapped' },
-  { value: 'PENDING_APPROVAL', label: 'Pending Approval' },
+  { value: 'PENDING_APPROVAL', label: 'For Review' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'SYNCED', label: 'Synced' },
   { value: 'FAILED', label: 'Failed' },
@@ -30,6 +30,7 @@ interface Props {
   onboardingStep?: number;
   onHasSynced?: () => void;
   userRole: string;
+  mode?: 'review' | 'approved' | 'sync-history';
 }
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -42,7 +43,7 @@ const STATUS_CLASSES: Record<string, string> = {
   REJECTED: 'text-red-500 bg-red-50 border-red-200',
 };
 
-export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced, userRole }: Props) {
+export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced, userRole, mode }: Props) {
   const { locations } = useLocations(jwt);
   const { status } = useQuickBooks(jwt);
   const { accounts } = useQBContext();
@@ -61,6 +62,18 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode === 'review') {
+      setStatusFilter('PENDING_APPROVAL');
+    } else if (mode === 'approved') {
+      setStatusFilter('APPROVED');
+    } else if (mode === 'sync-history') {
+      setStatusFilter('SYNCED');
+    } else {
+      setStatusFilter('ALL');
+    }
+  }, [mode]);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
 
@@ -150,6 +163,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       setApprovingId(null);
     }
   };
+
+  const showApprovalActions = mode === undefined || mode === 'review';
 
   const handleReject = async (scanId: string) => {
     setRejectingId(scanId);
@@ -647,7 +662,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                               {isRetryingId === scan.id ? '⏳ Retrying...' : '↻ Retry'}
                             </button>
                           )}
-                          {scan.status === 'PENDING_APPROVAL' &&
+                          {scan.status === 'PENDING_APPROVAL' && showApprovalActions &&
                             (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (
                             <div className="flex gap-1">
                               <button

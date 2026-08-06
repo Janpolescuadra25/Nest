@@ -715,6 +715,15 @@ export const api = {
   rejectScan: (jwt: string, scanId: string, notes?: string) =>
     post<{ id: string; status: string }>(`/api/scans/${scanId}/reject`, notes ? { notes } : {}, jwt),
 
+  bulkApproveScans: (jwt: string, scanIds: string[]) =>
+    post<{ approved: number; skipped: number }>('/api/scans/bulk-approve', { scanIds }, jwt),
+
+  deleteScan: (jwt: string, scanId: string) =>
+    del<void>(`/api/scans/${scanId}`, jwt),
+
+  bulkDeleteScans: (jwt: string, scanIds: string[]) =>
+    post<{ deleted: number; skipped: number }>('/api/scans/bulk-delete', { scanIds }, jwt),
+
   getQBAccounts: (jwt: string) => get<{ accounts: QBAccount[] }>('/api/quickbooks/accounts', jwt),
   getOutstandingBills: (jwt: string, vendorId?: string) =>
     get<{ bills: OutstandingBill[] }>(`/api/quickbooks/bills${vendorId ? `?vendorId=${vendorId}` : ''}`, jwt),

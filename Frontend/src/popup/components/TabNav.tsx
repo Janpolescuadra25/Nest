@@ -10,7 +10,9 @@ const ALL_TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'preview', label: 'Preview', icon: '📋' },
   { id: 'payments', label: 'Payments', icon: '💳' },
   { id: 'data', label: 'Data', icon: '📊' },
-  { id: 'sync', label: 'Sync', icon: '⚡' },
+  { id: 'review', label: 'Review', icon: '📋' },
+  { id: 'approved', label: 'Approved', icon: '✅' },
+  { id: 'sync-history', label: 'Sync', icon: '⚡' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
   { id: 'my-team', label: 'Team', icon: '👥' },
   { id: 'clients', label: 'Clients', icon: '🤝' },
@@ -28,7 +30,7 @@ interface Props {
 export default function TabNav({ currentTab, onTabChange, visibleTabs }: Props) {
   const tabs = visibleTabs
     ? ALL_TABS.filter(t => visibleTabs.includes(t.id))
-    : ALL_TABS.filter(t => ['scan', 'mappings', 'preview', 'data', 'sync', 'settings'].includes(t.id));
+    : ALL_TABS.filter(t => ['scan', 'mappings', 'preview', 'data', 'review', 'approved', 'sync-history', 'settings'].includes(t.id));
 
   return (
     <div className="flex border-b border-gray-200 bg-white flex-shrink-0 overflow-x-auto">

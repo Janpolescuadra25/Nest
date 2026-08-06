@@ -323,19 +323,19 @@ export default function App() {
   const visibleTabs: TabId[] = [];
 
   if (role === 'OWNER') {
-    visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'sync', 'payments', 'clients', 'users', 'locations', 'activity', 'settings');
+    visibleTabs.push('dashboard', 'scan', 'mappings', 'products', 'rules', 'preview', 'data', 'review', 'approved', 'sync-history', 'payments', 'clients', 'users', 'locations', 'activity', 'settings');
   } else if (role === 'ADMIN' || role === 'MANAGER') {
     visibleTabs.push('dashboard', 'my-team');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
     if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'products', 'rules', 'preview');
-    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync', 'payments');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'review', 'approved', 'sync-history', 'payments');
     if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   } else {
     visibleTabs.push('dashboard');
     if (hasPerm(user, 'scan', 'write')) visibleTabs.push('scan');
     if (hasPerm(user, 'map', 'write')) visibleTabs.push('mappings', 'products', 'rules', 'preview');
-    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'sync', 'payments');
+    if (hasPerm(user, 'sync', 'execute')) visibleTabs.push('data', 'review', 'approved', 'sync-history', 'payments');
     if (hasPerm(user, 'locations', 'write')) visibleTabs.push('locations');
     visibleTabs.push('settings');
   }
@@ -448,7 +448,7 @@ export default function App() {
             { id: 'mappings', label: '② Map' },
             { id: 'rules', label: '③ Rules' },
             { id: 'preview', label: '④ Preview' },
-            { id: 'sync', label: '⑤ Sync' },
+            { id: 'sync-history', label: '⑤ Sync' },
           ];
           const currentIdx = steps.findIndex((s) => s.id === effectiveTab);
           return (
@@ -612,7 +612,7 @@ export default function App() {
           {effectiveTab === 'data' && (
             <QBDataView />
           )}
-          {effectiveTab === 'sync' && (
+          {['review', 'approved', 'sync-history'].includes(effectiveTab) && (
             <SyncView
               jwt={jwt!}
               selectedLocationId={selectedLocationId}
@@ -622,6 +622,7 @@ export default function App() {
               onboardingStep={onboardingState.step}
               onHasSynced={handleHasSynced}
               userRole={user?.role ?? 'VIEWER'}
+              mode={effectiveTab as 'review' | 'approved' | 'sync-history'}
             />
           )}
           {effectiveTab === 'settings' && (
