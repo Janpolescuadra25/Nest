@@ -1,8 +1,8 @@
-# AutoBooks
+# Solyra
 
 > Seamless POS to QuickBooks sync, right from your browser.
 
-AutoBooks is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
+Solyra is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
 
 ## Features
 
@@ -54,7 +54,7 @@ AutoBooks is a Chrome extension that bridges point-of-sale systems with QuickBoo
                              |
                              v
               +------------------------------+
-              |    AutoBooks Chrome Extension     |
+              |    Solyra Chrome Extension     |
               |                              |
               |  Scan Modes:                 |
               |    - POS text scraping        |
@@ -75,7 +75,7 @@ AutoBooks is a Chrome extension that bridges point-of-sale systems with QuickBoo
                              |
                              v
               +------------------------------+
-              |       AutoBooks Backend API       |
+              |       Solyra Backend API       |
               |     (Express + Prisma)       |
               |                              |
               |  Transaction Types:          |
@@ -247,7 +247,7 @@ Nest/
 
 ## Deployment
 
-AutoBooks is configured for deployment on [Render.com](https://render.com):
+Solyra is configured for deployment on [Render.com](https://render.com):
 
 1. Create a new Web Service on Render
 2. Connect your GitHub repository
@@ -259,3 +259,4 @@ The backend automatically runs `prisma migrate deploy` on each deploy to keep th
 ## License
 
 Private repository. All rights reserved.
+

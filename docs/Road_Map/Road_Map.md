@@ -2,7 +2,10 @@
 
 - **R-1: Rebrand Backend** — Commit `c392366`. 20 files rebranded (Nest → AutoBooks, nestsync.fyi → autobooks.cloud, NEST- → AB-). All 7 sync-batch tests pass.
 - **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
-- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `autobooks-backend` and `noreply@autobooks.cloud`. All web pages now use AutoBooks branding.
+- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `solyra-backend` and `noreply@solyra.cloud`. All web pages now use Solyra branding.
+- **S-1a: Rebrand Backend** — `d5f399d`. AutoBooks → Solyra across Backend/ (~65 references, 16 files). DocNumber prefix `AB-` → `S-`.
+- **S-1b: Rebrand Frontend** — `2df16b6`. AutoBooks → Solyra across Frontend/ (~75 references, 16 files). Legacy migration chains updated (nest → autobooks → solyra). New Solyra icons integrated.
+- **S-1c: Rebrand Web + Root Configs** — `eacf637`. AutoBooks → Solyra across web/ and root configs (~55 references, 7 files). Case-sensitive `-creplace` used throughout.
 - **L-1: Remove Partner Section** — Commit `0626652`. Removed "Become a Partner" CTA, nav links, partner section, and partner form JS from `web/index.html`. Signup form and `setMessage` helper preserved.
 - **W-2: Database Schema** — SKIPPED. `PENDING_APPROVAL` already serves as "For Review", `PENDING` serves as "Drafted". No schema change needed.
 - **W-3: Role-Based Permissions Update** — Commit `b1a7170`. Removed `sync:execute` from ACCOUNTANT role (kept `sync:read`).
@@ -10,9 +13,9 @@
 - **W-1: Workflow Scoping Audit** — Scoping audit completed. Output drove W-2 (skipped), W-3, W-4, W-5.
 - **W-4: Frontend Tab Restructure** — Commit `6b490d9`. Split Sync tab into Review / Approved / Sync-History. Added `mode` prop to SyncView + 3 API methods (`bulkApproveScans`, `deleteScan`, `bulkDeleteScans`). 78 tests pass.
 
-## 🗺️ AutoBooks Roadmap — Cypra v3 (Complete)
+## 🗺️ Solyra Roadmap — Cypra v4 (Complete)
 
-### Repo State (`6b490d9`, clean, pushed)
+### Repo State (`eacf637`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -116,20 +119,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 - "Sync All Pending" button still works unchanged for syncing everything
 
 **Expected output:** Users can selectively sync or delete individual scans. No backend changes needed.
-
----
-
-### Phase S — Solyra Rebrand (AutoBooks → Solyra)
-
-#### S-1: Rebrand Codebase
-Rebrand all AutoBooks references to Solyra across Backend, Frontend, and Web. Same scope as R-1/R-2/R-3 but with new target strings:
-- `AutoBooks` → `Solyra`
-- `autobooks` → `solyra`
-- `AUTOBOOKS` → `SOLYRA`
-- `AB-` → `S-` (prefixes)
-- `autobooks_` → `solyra_` (variable names)
-- `autobooks.cloud` → `solyra.cloud` (URLs)
-- `nestsync.fyi` → `solyra.cloud` (any remaining)
 
 ---
 
