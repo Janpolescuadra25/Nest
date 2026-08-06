@@ -247,9 +247,3 @@ Pure text/metadata changes. No logic changes. ~42 files.
 | 8 | E-4 | Cheque Preview | E-2, E-3 | — |
 | 9 | A-1 | Admin Distribution Scoping | — | R-1 |
 | 10 | A-2 | Admin Distribution Logic | A-1 | — |
-| 11 | S-1 | Rebrand Codebase | — | R-1, R-2, R-3 |
-
-**Recommended first moves (parallel-safe):**
-- **R-1** (rebrand backend) — start immediately
-- **A-1** (admin distribution scoping) — start immediately, determines A-2 scope
-- **W-1** (workflow scoping) — start immediately, determines W phases scope
