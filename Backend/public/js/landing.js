@@ -50,7 +50,7 @@ signupForm.addEventListener('submit', async (event) => {
 
     if (response.ok) {
       signupForm.reset();
-      setMessage(signupMessage, 'Account created! Check your email to verify your account, then install the AutoBooks extension to get started.', 'success');
+      setMessage(signupMessage, 'Account created! Check your email to verify your account, then install the Solyra extension to get started.', 'success');
     } else {
       setMessage(signupMessage, data.error || 'Something went wrong. Please try again.', 'error');
     }

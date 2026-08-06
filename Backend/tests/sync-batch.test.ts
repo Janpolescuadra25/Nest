@@ -40,7 +40,7 @@ jest.mock('../src/services/qb.service', () => ({
     ),
     createBill: jest.fn().mockResolvedValue({
       id: 'qb-bill-123',
-      DocNumber: 'AB-001',
+      DocNumber: 'S-001',
     }),
   },
 }));
@@ -253,4 +253,5 @@ describe('POST /quickbooks/sync-batch', () => {
     expect(qbService.createBill).not.toHaveBeenCalled();
   });
 });
+
 

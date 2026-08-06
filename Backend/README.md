@@ -1,18 +1,19 @@
 # Name
-### autobooks-backend
+### solyra-backend
 
 # Synopsis
-AutoBooks Backend - Toast POS to QuickBooks Journal Entry sync
+Solyra Backend - Toast POS to QuickBooks Journal Entry sync
 
 # Description
 
 # Example
 
 # Install:
-`npm install autobooks-backend`
+`npm install solyra-backend`
 
 # Test:
 `npm test`
 
 #License:
+
 

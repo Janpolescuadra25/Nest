@@ -1,7 +1,7 @@
 {
-  "name": "autobooks-backend",
+  "name": "solyra-backend",
   "version": "1.0.0",
-  "description": "AutoBooks Backend - Toast POS to QuickBooks Journal Entry sync",
+  "description": "Solyra Backend - Toast POS to QuickBooks Journal Entry sync",
   "main": "dist/index.js",
   "scripts": {
     "build": "prisma generate && tsc",
@@ -55,3 +55,4 @@
     "seed": "tsx prisma/seed.ts"
   }
 }
+

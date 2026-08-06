@@ -1,6 +1,6 @@
 import { UserRole, UserStatus } from '@prisma/client';
 
-// Central type definitions for the AutoBooks backend
+// Central type definitions for the Solyra backend
 
 export interface AuthPayload {
   /** Primary identifier — same value as userId (kept for backward compat) */
@@ -215,3 +215,4 @@ export interface ParsePOSTabResponse {
   data: POSReportData | null;
   attachment?: { fileName: string; storageKey: string; fileSize: number; mimeType: string } | null;
 }
+

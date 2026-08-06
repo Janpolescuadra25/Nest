@@ -100,10 +100,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.get('/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', service: 'autobooks-backend', database: 'connected', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', service: 'solyra-backend', database: 'connected', timestamp: new Date().toISOString() });
   } catch (err) {
     console.error('[Health] Database check failed:', err);
-    res.status(503).json({ status: 'error', service: 'autobooks-backend', database: 'disconnected', timestamp: new Date().toISOString() });
+    res.status(503).json({ status: 'error', service: 'solyra-backend', database: 'disconnected', timestamp: new Date().toISOString() });
   }
 });
 
@@ -172,21 +172,21 @@ startSyncFailureAlertCron(prisma);
 startScanCleanupCron(prisma);
 resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
 const server = app.listen(PORT, () => {
-  console.log(`[AutoBooks] Server running on http://localhost:${PORT}`);
-  console.log(`[AutoBooks] Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  console.log(`[Solyra] Server running on http://localhost:${PORT}`);
+  console.log(`[Solyra] Environment: ${process.env.NODE_ENV ?? 'development'}`);
 });
 
 function gracefulShutdown(signal: string) {
-  console.log(`[AutoBooks] ${signal} received. Shutting down gracefully...`);
+  console.log(`[Solyra] ${signal} received. Shutting down gracefully...`);
   server.close(() => {
-    console.log('[AutoBooks] HTTP server closed.');
+    console.log('[Solyra] HTTP server closed.');
     prisma.$disconnect().then(() => {
-      console.log('[AutoBooks] Database disconnected.');
+      console.log('[Solyra] Database disconnected.');
       process.exit(0);
     });
   });
   setTimeout(() => {
-    console.error('[AutoBooks] Forced shutdown after timeout.');
+    console.error('[Solyra] Forced shutdown after timeout.');
     process.exit(1);
   }, 10_000);
 }
@@ -195,3 +195,4 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;
+

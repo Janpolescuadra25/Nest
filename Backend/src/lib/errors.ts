@@ -43,7 +43,7 @@ export function createErrorHandler(): ErrorRequestHandler {
     const error = err as { message?: string; status?: number; statusCode?: number; fields?: Record<string, string>; category?: string };
 
     // QB auth failures return 401 internally but should be 403 to the client
-    // to avoid triggering the frontend AutoBooks JWT auto-logout interceptor
+    // to avoid triggering the frontend Solyra JWT auto-logout interceptor
     if (error.category === 'AUTH') {
       const qbMessage = error.message ?? 'QuickBooks connection expired';
       res.status(403).json({ error: qbMessage, errorType: 'AUTH' });
@@ -71,3 +71,4 @@ export function createErrorHandler(): ErrorRequestHandler {
     res.status(status).json(payload);
   };
 }
+
