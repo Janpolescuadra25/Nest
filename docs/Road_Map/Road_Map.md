@@ -7,10 +7,12 @@
 - **W-2: Database Schema** — SKIPPED. `PENDING_APPROVAL` already serves as "For Review", `PENDING` serves as "Drafted". No schema change needed.
 - **W-3: Role-Based Permissions Update** — Commit `b1a7170`. Removed `sync:execute` from ACCOUNTANT role (kept `sync:read`).
 - **W-5: Backend Workflow API Endpoints** — Commit `b1a7170`. Added `POST /bulk-approve`, `DELETE /:id`, `POST /bulk-delete` to `scans.ts`.
+- **W-1: Workflow Scoping Audit** — Scoping audit completed. Output drove W-2 (skipped), W-3, W-4, W-5.
+- **W-4: Frontend Tab Restructure** — Commit `6b490d9`. Split Sync tab into Review / Approved / Sync-History. Added `mode` prop to SyncView + 3 API methods (`bulkApproveScans`, `deleteScan`, `bulkDeleteScans`). 78 tests pass.
 
 ## 🗺️ AutoBooks Roadmap — Cypra v3 (Complete)
 
-### Repo State (`b1a7170`, clean, pushed)
+### Repo State (`6b490d9`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -36,15 +38,15 @@ Pure text/metadata changes. No logic changes. ~42 files.
 #### R-4: Domain Migration (Manual — JP only)
 
 **JP's steps:**
-1. **Porkbun DNS:** Point `autobooks.cloud` A/CNAME records to Render's hostname
+1. **Porkbun DNS:** Point `solyra.cloud` A/CNAME records to Render's hostname
 2. **Render env vars:** `RESEND_FROM_ADDRESS`, `QB_REDIRECT_URI`, `APP_URL`, `FRONTEND_URL`, `LANDING_PAGE_URL`
-3. **Resend:** Add `autobooks.cloud` as verified sending domain. Configure SPF/DKIM/DMARC DNS records on Porkbun per Resend's instructions
+3. **Resend:** Add `solyra.cloud` as verified sending domain. Configure SPF/DKIM/DMARC DNS records on Porkbun per Resend's instructions
 4. **Intuit Developer Portal:** Update OAuth redirect URI if domain changes
-5. **Vercel:** Update custom domain from `nestsync.fyi` to `autobooks.cloud` for `web/` directory
+5. **Vercel:** Update custom domain from `nestsync.fyi` to `solyra.cloud` for `web/` directory
 6. **Chrome Web Store:** Update listing name, description, support URL
 7. **Test:** Signup, email verification, password reset, OAuth — all with new domain
 
-**Expected output:** `autobooks.cloud` resolves. Emails send from `noreply@autobooks.cloud`. OAuth works. Landing page loads.
+**Expected output:** `solyra.cloud` resolves. Emails send from `noreply@solyra.cloud`. OAuth works. Landing page loads.
 
 ---
 
@@ -117,74 +119,17 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 ---
 
-### Phase W: Workflow Restructure (For Review / Approved / Sync Tabs)
+### Phase S — Solyra Rebrand (AutoBooks → Solyra)
 
-**What:** Split the current single SyncView into three tabs with a role-based draft/approve/sync workflow.
-
-**This is the largest feature.** It changes the fundamental user flow from "scan → sync" to "scan → draft → review → approve → sync."
-
-#### W-1: Scoping Audit (1 Hydra audit)
-
-**What Hydra needs to read:**
-1. `Frontend/src/popup/components/SyncView.tsx` — full component structure, how scans are fetched, filtered, and displayed
-2. `Frontend/src/popup/components/ScanView.tsx` — how scans transition from scanning to the sync queue
-3. `Frontend/src/popup/components/BillPreviewForm.tsx` — the preview/edit flow
-4. `Frontend/src/popup/App.tsx` — how views/tabs are routed
-5. `Backend/src/routes/scans.ts` — scan status transitions, what status values exist
-6. `Backend/src/middleware/permissions.ts` — current role permissions (especially `sync:execute`, `approveUsers`, `setPermissions`)
-7. `Backend/src/middleware/capacity.ts` — how capacity is checked per role
-8. Search for `DRAFTED`, `FOR_REVIEW`, `APPROVED` status values — do they already exist?
-
-**Purpose:** Map the current flow end-to-end and determine what schema changes, API changes, and UI changes are needed.
-
----
-
-#### W-4: Frontend — Tab Restructure (2-3 prompts)
-
-**What:** Replace the current single SyncView with three tabs: "For Review", "Approved", "Sync".
-
-**Scoping needed:** W-1 audit determines the current component structure.
-
-**Expected UI:**
-
-**Tab 1: "For Review"**
-- Shows all entries with status `DRAFTED` or `FOR_REVIEW` (filtered by role: staff/accountant see own; manager/admin see all)
-- Accountant can edit their own entries (modify mapping, change fields)
-- Manager/Admin can edit any entry
-- "Submit for Review" button (moves entry to `FOR_REVIEW` status)
-- "Approve" button (Manager/Admin only — moves to `APPROVED`)
-
-**Tab 2: "Approved"**
-- Shows all entries with status `APPROVED`
-- Manager/Admin can still modify before syncing
-- "Sync to QuickBooks" button (Manager/Admin only)
-- "Sync All Approved" bulk action
-- After sync, entry moves to Sync tab with `SYNCED` status
-
-**Tab 3: "Sync"**
-- Shows all entries with status `SYNCED`, `FAILED`, and `PENDING` (approved but not yet synced)
-- This is the current sync queue
-- Only shows entries that have been approved and are awaiting sync or already synced
-- "Sync All Pending" button (for approved entries not yet synced)
-- Row selection + "Sync Selected" (from F-2)
-
-**Expected output:** Three-tab workflow. Role-based visibility and actions. Clear separation between drafting, reviewing, and syncing.
-
----
-
-#### W-5: Backend — Workflow API Endpoints (1-2 prompts)
-
-**What:** Add/modify endpoints to support the workflow.
-
-**Likely endpoints needed:**
-- `PATCH /scans/:id/status` — transition status (DRAFTED → FOR_REVIEW → APPROVED)
-- `POST /scans/bulk-approve` — approve multiple entries at once
-- `POST /scans/bulk-sync` — sync multiple approved entries (may already exist as sync-batch)
-- `DELETE /scans/bulk` — hard delete selected scans (with role check)
-
-**Scoping:** W-1 audit confirms which endpoints already exist and which are new.
-
-**Expected output:** Backend supports all status transitions. Role-based access control enforced.
+#### S-1: Rebrand Codebase
+Rebrand all AutoBooks references to Solyra across Backend, Frontend, and Web. Same scope as R-1/R-2/R-3 but with new target strings:
+- `AutoBooks` → `Solyra`
+- `autobooks` → `solyra`
+- `AUTOBOOKS` → `SOLYRA`
+- `AB-` → `S-` (prefixes)
+- `autobooks_` → `solyra_` (variable names)
+- `autobooks.cloud` → `solyra.cloud` (URLs)
+- `nestsync.fyi` → `solyra.cloud` (any remaining)
 
 ---
 
@@ -303,25 +248,17 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
-| 1 | R-1 | Rebrand Backend | — | R-2, R-3, A-1, T-be-fix |
-| 2 | R-2 | Rebrand Frontend | — | R-1, R-3 |
-| 3 | R-3 | Rebrand Web + Configs | — | R-1, R-2 |
-| 4 | L-1 | Remove Partner Section | — | R-1 |
-| 5 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 | — |
-| 6 | T-be-fix | Fix 4 broken test suites | — | R-1 |
-| 7 | F-1 | Default Memo Auto-Fill | — | F-2 |
-| 8 | F-2 | Row Selection | — | F-1 |
+| 1 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 | — |
+| 2 | T-be-fix | Fix 4 broken test suites | — | R-1 |
+| 3 | F-1 | Default Memo Auto-Fill | — | F-2 |
+| 4 | F-2 | Row Selection | — | F-1 |
+| 5 | E-1 | Cheque Excel Scoping | — | R-1 |
+| 6 | E-2 | Cheque Excel Format + Parser | E-1 | — |
+| 7 | E-3 | Cheque Mapping | E-2 | — |
+| 8 | E-4 | Cheque Preview | E-2, E-3 | — |
 | 9 | A-1 | Admin Distribution Scoping | — | R-1 |
-| 10 | W-1 | Workflow Scoping Audit | — | R-1, F-2 |
-| 11 | E-1 | Cheque Excel Scoping | — | R-1 |
-| 12 | W-2 | Schema + Status Updates | W-1 | — |
-| 13 | W-3 | Role Permissions Update | W-1, W-2 | — |
-| 14 | E-2 | Cheque Excel Format + Parser | E-1 | — |
-| 15 | W-4 | Frontend Tab Restructure | W-1, W-2, W-3 | — |
-| 16 | E-3 | Cheque Mapping | E-2 | — |
-| 17 | W-5 | Workflow API Endpoints | W-2, W-3 | W-4 |
-| 18 | E-4 | Cheque Preview | E-2, E-3 | — |
-| 19 | A-2 | Admin Distribution Logic | A-1 | — |
+| 10 | A-2 | Admin Distribution Logic | A-1 | — |
+| 11 | S-1 | Rebrand Codebase | — | R-1, R-2, R-3 |
 
 **Recommended first moves (parallel-safe):**
 - **R-1** (rebrand backend) — start immediately
