@@ -1,5 +1,5 @@
 /**
- * AutoBooks Extension — Build Script
+ * Solyra Extension — Build Script
  * Uses esbuild for JS/TS/TSX bundling + tailwindcss CLI for CSS
  */
 const esbuild = require('esbuild');
@@ -58,14 +58,7 @@ const sharedConfig = {
   sourcemap: false,
   define: {
     'process.env.NODE_ENV': isWatch ? '"development"' : '"production"',
-    'process.env.BACKEND_URL': JSON.stringify(process.env.BACKEND_URL ?? 'https://autobooks-backend-mddn.onrender.com'),
-  },
-};
-
-async function build() {
-  // ── Popup (React app) ────────────────────────────────────────────────────
-  await esbuild.build({
-    ...sharedConfig,
+      'process.env.BACKEND_URL': JSON.stringify(process.env.BACKEND_URL ?? 'https://solyra-backend-mddn.onrender.com'),
     entryPoints: [path.join(ROOT, 'src', 'popup', 'Popup.tsx')],
     outfile: path.join(DIST, 'popup', 'popup.js'),
     jsx: 'automatic',

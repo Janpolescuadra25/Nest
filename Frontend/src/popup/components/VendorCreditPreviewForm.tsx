@@ -792,7 +792,7 @@ export default function VendorCreditPreviewForm({
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-900 focus:border-emerald-500 focus:outline-none"
             value={privateNote}
             onChange={(e) => setPrivateNote(e.target.value)}
-            placeholder="AutoBooks internal note"
+            placeholder="Solyra internal note"
           />
         </div>
         <div className="col-span-2">

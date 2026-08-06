@@ -287,7 +287,7 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
         >
           <div className="text-2xl mb-1">🎉</div>
           <p className="text-emerald-600 text-sm font-medium">You're all set!</p>
-          <p className="text-emerald-600 text-xs mt-1">AutoBooks is now syncing your data automatically.</p>
+          <p className="text-emerald-600 text-xs mt-1">Solyra is now syncing your data automatically.</p>
         </div>
       )}
 

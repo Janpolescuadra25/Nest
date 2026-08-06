@@ -45,17 +45,21 @@ const ALL_COLUMNS: { key: ColKey; label: string }[] = [
   { key: 'credit', label: 'Credit' },
 ];
 
-const LS_COL_KEY = 'autobooks_je_col_vis';
+const LS_COL_KEY = 'solyra_je_col_vis';
 const LEGACY_LS_COL_KEY = 'nest_je_col_vis';
+const DEPRECATED_LS_COL_KEY = 'autobooks_je_col_vis';
 
 function loadColVis(): Record<ColKey, boolean> {
   try {
-    const raw = localStorage.getItem(LS_COL_KEY) ?? localStorage.getItem(LEGACY_LS_COL_KEY);
+    const raw = localStorage.getItem(LS_COL_KEY)
+      ?? localStorage.getItem(LEGACY_LS_COL_KEY)
+      ?? localStorage.getItem(DEPRECATED_LS_COL_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Record<ColKey, boolean>;
       if (parsed && typeof parsed === 'object') {
         localStorage.setItem(LS_COL_KEY, JSON.stringify(parsed));
         localStorage.removeItem(LEGACY_LS_COL_KEY);
+        localStorage.removeItem(DEPRECATED_LS_COL_KEY);
         return parsed;
       }
     }
@@ -695,7 +699,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
       lines: jeLines,
       privateNote:
         privateNote ||
-        `AutoBooks sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
+        `Solyra sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
       docNumber: docNumber || undefined,
     };
   }, [txnDate, effectiveDisplayLines, privateNote, locations, locId, docNumber, entityOptions]);
@@ -797,7 +801,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
         txnDate,
         jeLines,
         scanRecordId ?? undefined,
-        privateNote || `AutoBooks sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
+        privateNote || `Solyra sync — ${txnDate} — ${locations.find((l) => l.id === locId)?.name ?? ''}`,
         docNumber || undefined,
         skipDedupCheck,
       ) as { journalEntryId?: string; qbJournalEntryId?: string; txnDate?: string; skipped?: boolean; docNumber?: string };
@@ -945,7 +949,7 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
             className="w-full bg-[#F5F5F7] border border-gray-300 text-gray-900 text-xs rounded px-2 py-1.5 focus:border-emerald-500 focus:outline-none"
             value={privateNote}
             onChange={(e) => setPrivateNote(e.target.value)}
-            placeholder={`AutoBooks sync — ${txnDate}`}
+            placeholder={`Solyra sync — ${txnDate}`}
           />
         </div>
         <div className="flex items-center gap-2">

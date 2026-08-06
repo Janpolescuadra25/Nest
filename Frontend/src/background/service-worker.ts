@@ -3,25 +3,31 @@
 const WINDOW_WIDTH = 950;
 const WINDOW_HEIGHT = 750;
 
-if (process.env.NODE_ENV !== 'production') console.log('[AutoBooks BG] Service worker loaded');
+if (process.env.NODE_ENV !== 'production') console.log('[Solyra BG] Service worker loaded');
 
 // ── Floating window ───────────────────────────────────────────────────────────
 chrome.action.onClicked.addListener(async () => {
-  if (process.env.NODE_ENV !== 'production') console.log('[AutoBooks BG] Extension icon clicked — opening floating window');
-  const storage = await chrome.storage.session.get(['autobooksWindowId', 'nestWindowId']) as { autobooksWindowId?: number; nestWindowId?: number };
-  let autobooksWindowId = storage.autobooksWindowId;
-  if (autobooksWindowId === undefined && storage.nestWindowId !== undefined) {
-    autobooksWindowId = storage.nestWindowId;
-    await chrome.storage.session.set({ autobooksWindowId });
+  if (process.env.NODE_ENV !== 'production') console.log('[Solyra BG] Extension icon clicked — opening floating window');
+  const storage = await chrome.storage.session.get(['solyraWindowId', 'autobooksWindowId', 'nestWindowId']) as { solyraWindowId?: number; autobooksWindowId?: number; nestWindowId?: number };
+  let solyraWindowId = storage.solyraWindowId;
+  if (solyraWindowId === undefined && storage.autobooksWindowId !== undefined) {
+    solyraWindowId = storage.autobooksWindowId;
+    await chrome.storage.session.set({ solyraWindowId });
+    await chrome.storage.session.remove('autobooksWindowId');
+  }
+  if (solyraWindowId === undefined && storage.nestWindowId !== undefined) {
+    solyraWindowId = storage.nestWindowId;
+    await chrome.storage.session.set({ solyraWindowId });
     await chrome.storage.session.remove('nestWindowId');
   }
 
-  if (autobooksWindowId !== undefined) {
+  if (solyraWindowId !== undefined) {
     try {
-      await chrome.windows.get(autobooksWindowId);
-      await chrome.windows.update(autobooksWindowId, { focused: true });
+      await chrome.windows.get(solyraWindowId);
+      await chrome.windows.update(solyraWindowId, { focused: true });
       return;
     } catch {
+      await chrome.storage.session.remove('solyraWindowId');
       await chrome.storage.session.remove('autobooksWindowId');
       await chrome.storage.session.remove('nestWindowId');
     }
@@ -37,17 +43,17 @@ chrome.action.onClicked.addListener(async () => {
       focused: true,
     });
     if (win?.id !== undefined) {
-      await chrome.storage.session.set({ autobooksWindowId: win.id });
+      await chrome.storage.session.set({ solyraWindowId: win.id });
     }
   } catch (err) {
-    if (process.env.NODE_ENV !== 'production') console.error('[AutoBooks] Failed to open floating window:', err);
+    if (process.env.NODE_ENV !== 'production') console.error('[Solyra] Failed to open floating window:', err);
   }
 });
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
-  const { autobooksWindowId } = await chrome.storage.session.get('autobooksWindowId') as { autobooksWindowId?: number };
-  if (windowId === autobooksWindowId) {
-    await chrome.storage.session.remove('autobooksWindowId');
+  const { solyraWindowId } = await chrome.storage.session.get('solyraWindowId') as { solyraWindowId?: number };
+  if (windowId === solyraWindowId) {
+    await chrome.storage.session.remove('solyraWindowId');
   }
 });
 

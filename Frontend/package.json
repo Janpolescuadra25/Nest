@@ -1,8 +1,8 @@
 {
-  "name": "autobooks-extension",
+  "name": "solyra-extension",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoBooks Chrome Extension — Toast POS to QuickBooks sync",
+  "description": "Solyra Chrome Extension — Toast POS to QuickBooks sync",
   "scripts": {
     "build": "node scripts/generate-icons.js && node scripts/build.js",
     "build:watch": "node scripts/build.js --watch",

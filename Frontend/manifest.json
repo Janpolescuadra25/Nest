@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AutoBooks — Financial Automation",
+  "name": "Solyra — Financial Automation",
   "version": "1.0.0",
-  "description": "AutoBooks — Scan POS reports and invoices, extract transactions with AI, and sync to QuickBooks Online.",
+  "description": "Solyra — Scan POS reports and invoices, extract transactions with AI, and sync to QuickBooks Online.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "windows"],
   "host_permissions": [
     "<all_urls>",
@@ -14,11 +14,11 @@
   ],
   "action": {
     "default_icon": {
-      "16": "public/icons/icon16.png",
-      "48": "public/icons/icon48.png",
-      "128": "public/icons/icon128.png"
+      "16": "public/icons/icon16_solyra.png",
+      "48": "public/icons/icon48_solyra.png",
+      "128": "public/icons/icon128_solyra.png"
     },
-    "default_title": "AutoBooks"
+    "default_title": "Solyra"
   },
   "background": {
     "service_worker": "background/service-worker.js",
