@@ -25,7 +25,7 @@
 
     showContent(`
           <h2 class="form-title">Create your account</h2>
-          <p class="form-sub">You've been invited to join Solyra.</p>
+          <p class="form-sub">You've been invited to join Qyra.</p>
           <div class="invite-meta">
             <p>${creator} &nbsp;·&nbsp; Role: <strong>${role}</strong> &nbsp;·&nbsp; Expires: <strong>${expiresAt}</strong></p>
           </div>

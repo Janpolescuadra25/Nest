@@ -1,15 +1,15 @@
 # Name
-### solyra-backend
+### qyra-backend
 
 # Synopsis
-Solyra Backend - Toast POS to QuickBooks Journal Entry sync
+Qyra Backend - Toast POS to QuickBooks Journal Entry sync
 
 # Description
 
 # Example
 
 # Install:
-`npm install solyra-backend`
+`npm install qyra-backend`
 
 # Test:
 `npm test`

@@ -40,7 +40,7 @@ jest.mock('../src/services/qb.service', () => ({
     ),
     createBill: jest.fn().mockResolvedValue({
       id: 'qb-bill-123',
-      DocNumber: 'S-001',
+      DocNumber: 'Q-001',
     }),
   },
 }));

@@ -1,6 +1,6 @@
 import { UserRole, UserStatus } from '@prisma/client';
 
-// Central type definitions for the Solyra backend
+// Central type definitions for the Qyra backend
 
 export interface AuthPayload {
   /** Primary identifier — same value as userId (kept for backward compat) */

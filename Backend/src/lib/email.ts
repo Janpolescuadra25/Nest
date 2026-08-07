@@ -37,13 +37,13 @@ function emailWrapper(body: string): string {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f8fafc;margin:0;padding:40px 20px;">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
     <div style="background:#0f172a;padding:24px 32px;">
-      <span style="color:#22d3ee;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Solyra</span>
+      <span style="color:#22d3ee;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Qyra</span>
     </div>
     <div style="padding:32px;">
       ${body}
     </div>
     <div style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
-      <p style="color:#94a3b8;font-size:12px;margin:0;">This message was sent automatically by Solyra. If you didn't expect this email, you can safely ignore it.</p>
+      <p style="color:#94a3b8;font-size:12px;margin:0;">This message was sent automatically by Qyra. If you didn't expect this email, you can safely ignore it.</p>
     </div>
   </div>
 </body>
@@ -76,7 +76,7 @@ export async function sendWelcomeEmail({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        Your Solyra account has been created. You can log in with the email address this was sent to.
+        Your Qyra account has been created. You can log in with the email address this was sent to.
       </p>
       <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;">
         <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;font-weight:600;">Temporary Password</p>
@@ -90,18 +90,18 @@ export async function sendWelcomeEmail({
       </p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 12px;">To get started:</p>
       <ol style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;padding-left:20px;">
-        <li>Install the Solyra extension from the Chrome Web Store</li>
+        <li>Install the Qyra extension from the Chrome Web Store</li>
         <li>Log in with your email and the password above</li>
         <li>Connect your QuickBooks Online account</li>
         <li>Invite your team members</li>
       </ol>
-      <p style="margin:0 0 24px;"><a href="https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc" style="color:#22d3ee;text-decoration:none;">Install Solyra from the Chrome Web Store</a></p>
+      <p style="margin:0 0 24px;"><a href="https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc" style="color:#22d3ee;text-decoration:none;">Install Qyra from the Chrome Web Store</a></p>
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Welcome to Solyra',
+      subject: 'Welcome to Qyra',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -135,7 +135,7 @@ export async function sendVerificationEmail({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        Thanks for signing up for Solyra. Please verify your email address by clicking the button below.
+        Thanks for signing up for Qyra. Please verify your email address by clicking the button below.
       </p>
       <div style="text-align:center;margin:0 0 24px;">
         <a href="${verificationLink}"
@@ -144,14 +144,14 @@ export async function sendVerificationEmail({
         </a>
       </div>
       <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0;">
-        If you did not sign up for Solyra, you can safely ignore this email.
+        If you did not sign up for Qyra, you can safely ignore this email.
       </p>
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Verify your Solyra email',
+      subject: 'Verify your Qyra email',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -188,7 +188,7 @@ export async function sendTrialWarning({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
-        Your Solyra trial access will expire on <strong style="color:#0f172a;">${formattedDate}</strong>.
+        Your Qyra trial access will expire on <strong style="color:#0f172a;">${formattedDate}</strong>.
         After expiry, your permissions will be revoked — scan, map, sync, and location management.
       </p>
       ${customMessageBlock(customExpiryMessage)}
@@ -198,9 +198,9 @@ export async function sendTrialWarning({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: `Your Solyra trial expires in ${daysRemaining} ${dayLabel}`,
+      subject: `Your Qyra trial expires in ${daysRemaining} ${dayLabel}`,
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -240,7 +240,7 @@ export async function sendSyncFailureAlert({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
-        There are <strong style="color:#0f172a;">${total}</strong> scan${total !== 1 ? 's' : ''} that need attention in Solyra.
+        There are <strong style="color:#0f172a;">${total}</strong> scan${total !== 1 ? 's' : ''} that need attention in Qyra.
         This includes data that is stale or sync failures requiring a manual review.
       </p>
       <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;">
@@ -264,7 +264,7 @@ export async function sendSyncFailureAlert({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
       subject: `Action needed: ${total} scan${total !== 1 ? 's' : ''} need${total === 1 ? 's' : ''} attention`,
       html,
@@ -300,7 +300,7 @@ export async function sendTrialExpired({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
-        Your Solyra trial access expired on <strong style="color:#0f172a;">${formattedDate}</strong>.
+        Your Qyra trial access expired on <strong style="color:#0f172a;">${formattedDate}</strong>.
         Your permissions have been revoked. Your role is unchanged — contact your administrator to regain access.
       </p>
       ${customMessageBlock(customExpiryMessage)}
@@ -310,9 +310,9 @@ export async function sendTrialExpired({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Your Solyra trial has expired',
+      subject: 'Your Qyra trial has expired',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -346,7 +346,7 @@ export async function sendTrialRenewed({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
-        Your Solyra trial has been renewed by your administrator.
+        Your Qyra trial has been renewed by your administrator.
         Your new access expiry date is <strong style="color:#0f172a;">${formattedDate}</strong>.
       </p>
       ${customMessageBlock(customExpiryMessage)}
@@ -356,9 +356,9 @@ export async function sendTrialRenewed({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Your Solyra trial has been renewed',
+      subject: 'Your Qyra trial has been renewed',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -392,7 +392,7 @@ export async function sendPasswordResetEmail({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        We received a request to reset your Solyra password. Click the link below to set a new password.
+        We received a request to reset your Qyra password. Click the link below to set a new password.
       </p>
       <div style="text-align:center;margin:0 0 24px;">
         <a href="${resetLink}"
@@ -406,9 +406,9 @@ export async function sendPasswordResetEmail({
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Reset your Solyra password',
+      subject: 'Reset your Qyra password',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
@@ -437,7 +437,7 @@ export async function sendRejectionEmail({
     const html = emailWrapper(`
       <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(displayName)},</p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        Thank you for your interest in becoming an Solyra partner.
+        Thank you for your interest in becoming an Qyra partner.
       </p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
         After careful review, we are unable to approve your application at this time. This decision does not reflect on your qualifications — we are currently managing capacity to ensure the best experience for our existing partners.
@@ -446,18 +446,18 @@ export async function sendRejectionEmail({
         You are welcome to submit a new application in the future.
       </p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        If you have questions, reach out to us at <a href="mailto:support@solyra.cloud" style="color:#22d3ee;text-decoration:none;">support@solyra.cloud</a>.
+        If you have questions, reach out to us at <a href="mailto:support@qyra.space" style="color:#22d3ee;text-decoration:none;">support@qyra.space</a>.
       </p>
       <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        Reapply anytime by visiting the Solyra website: <a href="https://solyra.cloud" style="color:#22d3ee;text-decoration:none;">https://solyra.cloud</a>
+        Reapply anytime by visiting the Qyra website: <a href="https://qyra.space" style="color:#22d3ee;text-decoration:none;">https://qyra.space</a>
       </p>
-      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">Best regards,<br/>The Solyra Team</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">Best regards,<br/>The Qyra Team</p>
     `);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@solyra.cloud',
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
       to,
-      subject: 'Update on Your Solyra Partner Application',
+      subject: 'Update on Your Qyra Partner Application',
       html,
     });
     if (process.env.NODE_ENV !== 'production') {

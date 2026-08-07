@@ -100,10 +100,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.get('/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', service: 'solyra-backend', database: 'connected', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', service: 'qyra-backend', database: 'connected', timestamp: new Date().toISOString() });
   } catch (err) {
     console.error('[Health] Database check failed:', err);
-    res.status(503).json({ status: 'error', service: 'solyra-backend', database: 'disconnected', timestamp: new Date().toISOString() });
+    res.status(503).json({ status: 'error', service: 'qyra-backend', database: 'disconnected', timestamp: new Date().toISOString() });
   }
 });
 
@@ -172,21 +172,21 @@ startSyncFailureAlertCron(prisma);
 startScanCleanupCron(prisma);
 resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
 const server = app.listen(PORT, () => {
-  console.log(`[Solyra] Server running on http://localhost:${PORT}`);
-  console.log(`[Solyra] Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  console.log(`[Qyra] Server running on http://localhost:${PORT}`);
+  console.log(`[Qyra] Environment: ${process.env.NODE_ENV ?? 'development'}`);
 });
 
 function gracefulShutdown(signal: string) {
-  console.log(`[Solyra] ${signal} received. Shutting down gracefully...`);
+  console.log(`[Qyra] ${signal} received. Shutting down gracefully...`);
   server.close(() => {
-    console.log('[Solyra] HTTP server closed.');
+    console.log('[Qyra] HTTP server closed.');
     prisma.$disconnect().then(() => {
-      console.log('[Solyra] Database disconnected.');
+      console.log('[Qyra] Database disconnected.');
       process.exit(0);
     });
   });
   setTimeout(() => {
-    console.error('[Solyra] Forced shutdown after timeout.');
+    console.error('[Qyra] Forced shutdown after timeout.');
     process.exit(1);
   }, 10_000);
 }

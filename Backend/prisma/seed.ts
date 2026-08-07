@@ -90,10 +90,10 @@ async function main(): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
     // ── 2. Create test user (VIEWER, no permissions) ───────────────────────────
     const user = await prisma.user.upsert({
-      where: { email: 'test@solyra.cloud' },
+      where: { email: 'test@qyra.space' },
       update: {},
       create: {
-        email: 'test@solyra.cloud',
+        email: 'test@qyra.space',
         role: 'VIEWER',
         status: 'ACTIVE',
       },

@@ -796,7 +796,7 @@ async function syncSingleScan(
     }
   }
 
-  const finalDocNumber = docNumber || (scanRecordId ? `S-${scanRecordId.substring(0, 8)}` : `S-${randomBytes(4).toString('hex')}`);
+  const finalDocNumber = docNumber || (scanRecordId ? `Q-${scanRecordId.substring(0, 8)}` : `Q-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -940,7 +940,7 @@ async function syncSingleVendorCredit(
     }
   }
 
-  const finalDocNumber = docNumber || (scanRecordId ? `S-${scanRecordId.substring(0, 8)}` : `S-${randomBytes(4).toString('hex')}`);
+  const finalDocNumber = docNumber || (scanRecordId ? `Q-${scanRecordId.substring(0, 8)}` : `Q-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -1087,7 +1087,7 @@ async function syncSingleCheque(
     }
   }
 
-  const finalDocNumber = docNumber || (scanRecordId ? `S-${scanRecordId.substring(0, 8)}` : `S-${randomBytes(4).toString('hex')}`);
+  const finalDocNumber = docNumber || (scanRecordId ? `Q-${scanRecordId.substring(0, 8)}` : `Q-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -1236,7 +1236,7 @@ async function syncSingleBill(
     }
   }
 
-  const finalDocNumber = docNumber || (scanRecordId ? `S-${scanRecordId.substring(0, 8)}` : `S-${randomBytes(4).toString('hex')}`);
+  const finalDocNumber = docNumber || (scanRecordId ? `Q-${scanRecordId.substring(0, 8)}` : `Q-${randomBytes(4).toString('hex')}`);
 
   try {
     const result = await qbService.callQB(userId, ({ accessToken, realmId }) =>
@@ -2299,7 +2299,7 @@ function successPage(realmId: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Solyra — QuickBooks Connected</title>
+  <title>Qyra — QuickBooks Connected</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            background: #0f172a; color: #e2e8f0; display: flex;
@@ -2318,7 +2318,7 @@ function successPage(realmId: string): string {
     <div style="font-size:56px">✅</div>
     <h1>QuickBooks Connected!</h1>
     <p class="realm">Company ID: ${realmId}</p>
-    <p class="hint">You can close this tab and return to the Solyra extension.</p>
+    <p class="hint">You can close this tab and return to the Qyra extension.</p>
   </div>
 </body>
 </html>`;
@@ -2330,7 +2330,7 @@ function errorPage(message: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Solyra — QuickBooks Error</title>
+  <title>Qyra — QuickBooks Error</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
            background: #0f172a; color: #e2e8f0; display: flex;
@@ -2349,7 +2349,7 @@ function errorPage(message: string): string {
     <div style="font-size:56px">❌</div>
     <h1>Authorization Failed</h1>
     <p class="msg">${safe}</p>
-    <p class="hint">Close this tab and try again from the Solyra extension.</p>
+    <p class="hint">Close this tab and try again from the Qyra extension.</p>
   </div>
 </body>
 </html>`;

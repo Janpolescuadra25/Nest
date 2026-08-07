@@ -1,7 +1,7 @@
 {
-  "name": "solyra-backend",
+  "name": "qyra-backend",
   "version": "1.0.0",
-  "description": "Solyra Backend - Toast POS to QuickBooks Journal Entry sync",
+  "description": "Qyra Backend - Toast POS to QuickBooks Journal Entry sync",
   "main": "dist/index.js",
   "scripts": {
     "build": "prisma generate && tsc",
