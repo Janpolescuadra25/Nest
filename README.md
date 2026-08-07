@@ -1,8 +1,8 @@
-# Solyra
+# Qyra
 
 > Seamless POS to QuickBooks sync, right from your browser.
 
-Solyra is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
+Qyra is a Chrome extension that bridges point-of-sale systems with QuickBooks Online. Scan receipts, invoices, and spreadsheets — map them to the right QuickBooks fields using configurable templates — and sync transactions in seconds.
 
 ## Features
 
@@ -54,7 +54,7 @@ Solyra is a Chrome extension that bridges point-of-sale systems with QuickBooks 
                              |
                              v
               +------------------------------+
-              |    Solyra Chrome Extension     |
+              |    Qyra Chrome Extension     |
               |                              |
               |  Scan Modes:                 |
               |    - POS text scraping        |
@@ -75,7 +75,7 @@ Solyra is a Chrome extension that bridges point-of-sale systems with QuickBooks 
                              |
                              v
               +------------------------------+
-              |       Solyra Backend API       |
+              |       Qyra Backend API       |
               |     (Express + Prisma)       |
               |                              |
               |  Transaction Types:          |
@@ -247,7 +247,7 @@ Nest/
 
 ## Deployment
 
-Solyra is configured for deployment on [Render.com](https://render.com):
+Qyra is configured for deployment on [Render.com](https://render.com):
 
 1. Create a new Web Service on Render
 2. Connect your GitHub repository

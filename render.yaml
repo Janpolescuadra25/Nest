@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: solyra-backend
+    name: qyra-backend
     runtime: node
     region: oregon
     plan: free
@@ -69,7 +69,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_ADDRESS
-        value: "noreply@solyra.cloud"
+        value: "noreply@qyra.space"
       - key: FRONTEND_URL
         sync: false
       - key: ALLOWED_EXTENSION_ID
