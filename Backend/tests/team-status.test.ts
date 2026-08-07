@@ -73,7 +73,7 @@ describe('team-status lib', () => {
         findMany: jest.fn().mockResolvedValue(expiredUsers),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      auditLog: { create: jest.fn().mockResolvedValue({}) },
+      auditLog: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
     } as unknown as PrismaClient;
 
     const count = await processTrialExpiry(prisma);
