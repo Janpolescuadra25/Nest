@@ -6,6 +6,9 @@
 - **S-1a: Rebrand Backend** — `d5f399d`. AutoBooks → Solyra across Backend/ (~65 references, 16 files). DocNumber prefix `AB-` → `S-`.
 - **S-1b: Rebrand Frontend** — `2df16b6`. AutoBooks → Solyra across Frontend/ (~75 references, 16 files). Legacy migration chains updated (nest → autobooks → solyra). New Solyra icons integrated.
 - **S-1c: Rebrand Web + Root Configs** — `eacf637`. AutoBooks → Solyra across web/ and root configs (~55 references, 7 files). Case-sensitive `-creplace` used throughout.
+- **S-2a: Backend Qyra Rebrand** — `ece5767`.
+- **S-2b: Frontend Qyra Rebrand** — `9c3f524`.
+- **S-2c: Web + Configs Qyra Rebrand** — `05f7a82`.
 - **L-1: Remove Partner Section** — Commit `0626652`. Removed "Become a Partner" CTA, nav links, partner section, and partner form JS from `web/index.html`. Signup form and `setMessage` helper preserved.
 - **W-2: Database Schema** — SKIPPED. `PENDING_APPROVAL` already serves as "For Review", `PENDING` serves as "Drafted". No schema change needed.
 - **W-3: Role-Based Permissions Update** — Commit `b1a7170`. Removed `sync:execute` from ACCOUNTANT role (kept `sync:read`).
@@ -13,9 +16,9 @@
 - **W-1: Workflow Scoping Audit** — Scoping audit completed. Output drove W-2 (skipped), W-3, W-4, W-5.
 - **W-4: Frontend Tab Restructure** — Commit `6b490d9`. Split Sync tab into Review / Approved / Sync-History. Added `mode` prop to SyncView + 3 API methods (`bulkApproveScans`, `deleteScan`, `bulkDeleteScans`). 78 tests pass.
 
-## 🗺️ Solyra Roadmap — Cypra v4 (Complete)
+## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`eacf637`, clean, pushed)
+### Repo State (`05f7a82`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -41,15 +44,15 @@ Pure text/metadata changes. No logic changes. ~42 files.
 #### R-4: Domain Migration (Manual — JP only)
 
 **JP's steps:**
-1. **Porkbun DNS:** Point `solyra.cloud` A/CNAME records to Render's hostname
+1. **Porkbun DNS:** Point `qyra.space` A/CNAME records to Render's hostname
 2. **Render env vars:** `RESEND_FROM_ADDRESS`, `QB_REDIRECT_URI`, `APP_URL`, `FRONTEND_URL`, `LANDING_PAGE_URL`
-3. **Resend:** Add `solyra.cloud` as verified sending domain. Configure SPF/DKIM/DMARC DNS records on Porkbun per Resend's instructions
+3. **Resend:** Add `qyra.space` as verified sending domain. Configure SPF/DKIM/DMARC DNS records on Porkbun per Resend's instructions
 4. **Intuit Developer Portal:** Update OAuth redirect URI if domain changes
-5. **Vercel:** Update custom domain from `nestsync.fyi` to `solyra.cloud` for `web/` directory
+5. **Vercel:** Update custom domain from `nestsync.fyi` to `qyra.space` for `web/` directory
 6. **Chrome Web Store:** Update listing name, description, support URL
 7. **Test:** Signup, email verification, password reset, OAuth — all with new domain
 
-**Expected output:** `solyra.cloud` resolves. Emails send from `noreply@solyra.cloud`. OAuth works. Landing page loads.
+**Expected output:** `qyra.space` resolves. Emails send from `noreply@qyra.space`. OAuth works. Landing page loads.
 
 ---
 
