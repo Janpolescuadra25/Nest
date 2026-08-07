@@ -92,7 +92,7 @@ describe('capacity middleware', () => {
     mockedPrisma.user.findUnique.mockResolvedValue({
       id: 'team-1',
       subscriptionSource: 'stripe',
-      currentPlan: 'solo',
+      currentPlan: 'starter',
       maxUsers: 1,
       maxLocations: 10,
     });
@@ -104,7 +104,7 @@ describe('capacity middleware', () => {
       .send({})
       .expect(403)
       .expect((res) => {
-        expect(res.body.error).toContain('Solo plan is limited to 1 user');
+        expect(res.body.error).toContain('USER_LIMIT_REACHED');
       });
   });
 
@@ -112,7 +112,7 @@ describe('capacity middleware', () => {
     mockedPrisma.user.findUnique.mockResolvedValue({
       id: 'team-1',
       subscriptionSource: 'stripe',
-      currentPlan: 'solo',
+      currentPlan: 'starter',
       maxUsers: 1,
       maxLocations: 10,
     });
@@ -138,7 +138,7 @@ describe('capacity middleware', () => {
       .send({})
       .expect(403)
       .expect((res) => {
-        expect(res.body.error).toContain('Location limit reached');
+        expect(res.body.error).toContain('LOCATION_LIMIT_REACHED');
       });
   });
 
