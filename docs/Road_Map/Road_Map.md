@@ -2,7 +2,7 @@
 
 - **R-1: Rebrand Backend** — Commit `c392366`. 20 files rebranded (Nest → AutoBooks, nestsync.fyi → autobooks.cloud, NEST- → AB-). All 7 sync-batch tests pass.
 - **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
-- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `solyra-backend` and `noreply@solyra.cloud`. All web pages now use Solyra branding.
+- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `qyra-backend` and `noreply@qyra.space`. All web pages now use Qyra branding.
 - **S-1a: Rebrand Backend** — `d5f399d`. AutoBooks → Solyra across Backend/ (~65 references, 16 files). DocNumber prefix `AB-` → `S-`.
 - **S-1b: Rebrand Frontend** — `2df16b6`. AutoBooks → Solyra across Frontend/ (~75 references, 16 files). Legacy migration chains updated (nest → autobooks → solyra). New Solyra icons integrated.
 - **S-1c: Rebrand Web + Root Configs** — `eacf637`. AutoBooks → Solyra across web/ and root configs (~55 references, 7 files). Case-sensitive `-creplace` used throughout.
@@ -15,15 +15,19 @@
 - **W-5: Backend Workflow API Endpoints** — Commit `b1a7170`. Added `POST /bulk-approve`, `DELETE /:id`, `POST /bulk-delete` to `scans.ts`.
 - **W-1: Workflow Scoping Audit** — Scoping audit completed. Output drove W-2 (skipped), W-3, W-4, W-5.
 - **W-4: Frontend Tab Restructure** — Commit `6b490d9`. Split Sync tab into Review / Approved / Sync-History. Added `mode` prop to SyncView + 3 API methods (`bulkApproveScans`, `deleteScan`, `bulkDeleteScans`). 78 tests pass.
+- **T-be-fix-1a: Fix stripe-plans.test.ts** — Commit `3f44041`. Full rewrite — updated PLANS shape assertions (tier existence, numeric limits, pricing, priority support).
+- **T-be-fix-1b: Fix webhooks.test.ts** — Commit `9f482fc`. Added Prisma `stripeEvent` mocks, `PLANS`/`getPlanLimits`/`getScanPack` to stripe mock, fixed `MockPrisma` type, corrected env vars + assertions. 44/44 pass.
+- **T-be-fix-1c: Fix capacity-middleware.test.ts** — Commit `a008cab`. Corrected plan key (`solo` → `starter`), fixed error code assertions to match current middleware output (`USER_LIMIT_REACHED`, `LOCATION_LIMIT_REACHED`).
+- **T-be-fix-1d: Fix team-status.test.ts** — Commit `95e6cca`. Added missing `auditLog.createMany` mock method.
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`05f7a82`, clean, pushed)
+### Repo State (`9f482fc`, clean, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 78/78 ✅ |
-| Backend tests | 30/40 (10 pre-existing failures in 4 suites) |
+| Backend tests | 44/44 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -53,34 +57,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 7. **Test:** Signup, email verification, password reset, OAuth — all with new domain
 
 **Expected output:** `qyra.space` resolves. Emails send from `noreply@qyra.space`. OAuth works. Landing page loads.
-
----
-
-### Phase T-be-fix: Fix Pre-Existing Backend Test Failures
-
-**What:** Fix 4 broken test suites unmasked by the ts-jest config fix.
-
-#### T-be-fix-1a: `stripe-plans.test.ts` (1 scoping + 1 fix prompt)
-
-**Scoping:** Hydra reads `stripe-plans` source + test. Documents current `PLANS` shape vs test expectations.
-**Fix:** Update test assertions to match current `PLANS` type (remove `features` reference).
-
-#### T-be-fix-1b: `webhooks.test.ts` (1 scoping + 1-2 fix prompts)
-
-**Scoping:** Hydra reads `webhooks.ts` route + test. Documents each failing test's mock vs actual Prisma call shapes.
-**Fix:** Update 7 failing tests' mock return values and assertion fields.
-
-#### T-be-fix-1c: `capacity-middleware.test.ts` (1 scoping + 1 fix prompt)
-
-**Scoping:** Hydra reads `capacity.middleware.ts` + test. Documents `permissions` JSON structure vs old boolean fields.
-**Fix:** Update 2 tests to use `permissions: { scan: true, ... }` instead of `canScan: true`.
-
-#### T-be-fix-1d: `team-status.test.ts` (1 scoping + 1 fix prompt)
-
-**Scoping:** Hydra reads `team-status.ts` + test. Documents what test expects vs current behavior.
-**Fix:** Remove assertions on deprecated field writes.
-
-**Expected output:** `npx jest` passes 40/40. Backend test suite is fully green.
 
 ---
 
@@ -241,7 +217,7 @@ Pure text/metadata changes. No logic changes. ~42 files.
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
 | 1 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 | — |
-| 2 | T-be-fix | Fix 4 broken test suites | — | R-1 |
+| 2 | T-be-fix (done) | Fix 4 broken test suites | — | R-1 |
 | 3 | F-1 | Default Memo Auto-Fill | — | F-2 |
 | 4 | F-2 | Row Selection | — | F-1 |
 | 5 | E-1 | Cheque Excel Scoping | — | R-1 |
