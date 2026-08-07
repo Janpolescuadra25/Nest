@@ -9,7 +9,7 @@ const icons = [
   { src: 'icon-16.png', dest: 'icon16.png' },
   { src: 'icon-48.png', dest: 'icon48.png' },
   { src: 'icon-128.png', dest: 'icon128.png' },
-  { src: 'Nest_logo.png', dest: 'solyra-logo.png' },
+  { src: 'Nest_logo.png', dest: 'qyra-logo.png' },
 ];
 
 for (const { src, dest } of icons) {

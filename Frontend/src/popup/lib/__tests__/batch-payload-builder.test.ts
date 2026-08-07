@@ -163,7 +163,7 @@ describe('buildBillLikePayload', () => {
     const billDefaults = {
       vendorRef: { value: 'vendor-1', name: 'ACME Corp' },
       apAccountRef: { value: 'acc-ap', name: 'Accounts Payable' },
-      privateNote: { value: 'Internal note for Solyra' },
+      privateNote: { value: 'Internal note for Qyra' },
       qbMemo: { value: 'Visible in QuickBooks' },
       docNumber: { value: 'BILL-001' },
     };
@@ -188,7 +188,7 @@ describe('buildBillLikePayload', () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result!.privateNote).toBe('Internal note for Solyra');
+    expect(result!.privateNote).toBe('Internal note for Qyra');
     expect(result!.memo).toBe('Visible in QuickBooks');
     expect(result!.privateNote).not.toBe(result!.memo);
   });

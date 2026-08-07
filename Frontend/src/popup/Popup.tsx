@@ -29,7 +29,7 @@ class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { ha
           <div className="text-4xl mb-4">⚠</div>
           <h1 className="text-xl font-semibold mb-2">Something went wrong</h1>
           <p className="text-sm text-gray-600 mb-4 text-center max-w-sm">
-            An unexpected error occurred while loading Solyra. Refresh the popup to try again.
+            An unexpected error occurred while loading Qyra. Refresh the popup to try again.
           </p>
           <div className="flex gap-2">
             <button
@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { ha
             </button>
             <button
               type="button"
-              onClick={() => { window.location.href = 'mailto:support@solyra.cloud'; }}
+              onClick={() => { window.location.href = 'mailto:support@qyra.space'; }}
               className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded text-sm text-gray-900"
             >
               Get help

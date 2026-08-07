@@ -1,4 +1,4 @@
-// Shared TypeScript types for the Solyra Chrome Extension
+// Shared TypeScript types for the Qyra Chrome Extension
 
 export interface Location {
   id: string;

@@ -54,7 +54,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
     return (
       <div className="p-4 text-center">
         <div className="text-sm text-emerald-600 font-semibold">Platform Owner — Unlimited Access</div>
-        <div className="mt-2 text-xs text-gray-600">You have full access to all Solyra features.</div>
+        <div className="mt-2 text-xs text-gray-600">You have full access to all Qyra features.</div>
         <button
           type="button"
           onClick={onClose}

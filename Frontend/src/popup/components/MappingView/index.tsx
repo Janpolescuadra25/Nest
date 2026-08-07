@@ -1074,7 +1074,7 @@ export default function MappingView({
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `solyra-template-${(loc?.name ?? 'location').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.download = `qyra-template-${(loc?.name ?? 'location').replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -2067,7 +2067,7 @@ Row 6+: (data rows with values matching column headers)`}
             </button>
             {lineItemMappingOpen ? (
               <div className="px-3 pb-3 space-y-3 border-t border-gray-200 pt-3">
-                <p className="text-xs text-gray-600">Tell Solyra which spreadsheet columns hold product names, amounts, etc.</p>
+                <p className="text-xs text-gray-600">Tell Qyra which spreadsheet columns hold product names, amounts, etc.</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {LINE_ITEM_COLUMN_ROLES.map((role) => (
                     <div key={role.key}>

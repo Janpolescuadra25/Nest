@@ -379,7 +379,7 @@ if ((globalThis as unknown as Record<string, boolean>).__toastScannerLoaded) {
       waitForElement('tbody[data-testid="revenue-summary-table-body"]', 5000)
         .then((el) => {
           if (!el) {
-            if (process.env.NODE_ENV !== 'production') console.error('[Solyra Scanner] Timed out waiting for Sales Summary page to load');
+            if (process.env.NODE_ENV !== 'production') console.error('[Qyra Scanner] Timed out waiting for Sales Summary page to load');
             sendResponse({ data: null });
             return;
           }
@@ -387,13 +387,13 @@ if ((globalThis as unknown as Record<string, boolean>).__toastScannerLoaded) {
           try {
             const scanData = scanSalesSummary();
             if (Object.keys(scanData).length === 0) {
-              if (process.env.NODE_ENV !== 'production') console.error('[Solyra Scanner] Page loaded but no data extracted — selectors may be outdated');
+              if (process.env.NODE_ENV !== 'production') console.error('[Qyra Scanner] Page loaded but no data extracted — selectors may be outdated');
               sendResponse({ data: null });
               return;
             }
             sendResponse({ data: scanData });
           } catch (err) {
-            if (process.env.NODE_ENV !== 'production') console.error('[Solyra Scanner] Scan failed:', err);
+            if (process.env.NODE_ENV !== 'production') console.error('[Qyra Scanner] Scan failed:', err);
             sendResponse({ data: null });
           }
         });

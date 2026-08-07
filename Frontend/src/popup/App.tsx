@@ -235,7 +235,7 @@ export default function App() {
       <ToastProvider>
         <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-            <span className="text-sm font-semibold text-gray-900">Solyra</span>
+            <span className="text-sm font-semibold text-gray-900">Qyra</span>
           </div>
           <LoginView onLogin={login} />
           <ToastContainer />
@@ -266,7 +266,7 @@ export default function App() {
       <ToastProvider>
         <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-            <span className="text-sm font-semibold text-gray-900">Solyra</span>
+            <span className="text-sm font-semibold text-gray-900">Qyra</span>
             <button onClick={logout} className="text-xs text-gray-600 hover:text-gray-900">Sign Out</button>
           </div>
           <ChangePasswordView jwt={jwt!} onDone={handlePasswordChanged} />
@@ -281,14 +281,14 @@ export default function App() {
       <ToastProvider>
         <div className="flex flex-col bg-[#F5F5F7] text-gray-900" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
-            <span className="text-sm font-semibold text-gray-900">Solyra</span>
+            <span className="text-sm font-semibold text-gray-900">Qyra</span>
             <button onClick={logout} className="text-xs text-gray-600 hover:text-gray-900">Sign Out</button>
           </div>
           <div className="flex flex-col items-center justify-center flex-1 px-6 py-10 text-center">
             <div className="max-w-md w-full rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
               <div className="text-base font-semibold text-gray-900 mb-3">Verify your email address</div>
               <div className="text-sm text-gray-600 mb-6">
-                Please verify your email to continue using Solyra. A verification link was sent to <span className="font-medium text-gray-900">{user.email}</span>.
+                Please verify your email to continue using Qyra. A verification link was sent to <span className="font-medium text-gray-900">{user.email}</span>.
               </div>
               {resendMessage && (
                 <div className={`mb-4 text-xs ${resendStatus === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -384,7 +384,7 @@ export default function App() {
             <span className="text-[9px] text-gray-600 truncate max-w-[90px]">{user.email}</span>
           </div>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-emerald-400 font-bold text-base tracking-tight">🪹 Solyra</span>
+            <span className="text-emerald-400 font-bold text-base tracking-tight">🪹 Qyra</span>
             <span className="text-gray-600 text-xs">Financial Automation</span>
             <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
             {user.bonusScans ? (

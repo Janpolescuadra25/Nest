@@ -1,5 +1,5 @@
 /**
- * Solyra Extension — Build Script
+ * Qyra Extension — Build Script
  * Uses esbuild for JS/TS/TSX bundling + tailwindcss CLI for CSS
  */
 const esbuild = require('esbuild');

@@ -309,7 +309,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             ) : user.subscriptionSource === 'partner' ? (
               <button
                 type="button"
-                onClick={() => { window.location.href = 'mailto:support@solyra.cloud?subject=Solyra Billing Inquiry'; }}
+                onClick={() => { window.location.href = 'mailto:support@qyra.space?subject=Qyra Billing Inquiry'; }}
                 className="w-full rounded-lg border border-gray-200 bg-[#F5F5F7] text-gray-600 py-2 text-xs font-semibold hover:bg-gray-50"
               >
                 Contact owner for billing
@@ -325,7 +325,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
             )}
             <button
               type="button"
-              onClick={() => { window.location.href = 'mailto:support@solyra.cloud?subject=Solyra Billing Help'; }}
+              onClick={() => { window.location.href = 'mailto:support@qyra.space?subject=Qyra Billing Help'; }}
               className="w-full rounded-lg border border-gray-200 bg-[#F5F5F7] text-gray-600 py-2 text-xs font-semibold hover:bg-gray-50"
             >
               Billing help
@@ -386,7 +386,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
 
       {/* About */}
       <div>
-        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">About {user.brandName || 'Solyra'}</div>
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">About {user.brandName || 'Qyra'}</div>
 
         {/* Branding card */}
         <div
@@ -394,12 +394,12 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           style={{ borderColor: user.brandColor || undefined }}
         >
           {user.logoUrl ? (
-            <img src={user.logoUrl} alt={user.brandName || 'Solyra'} className="h-10 w-10 rounded object-contain" />
+            <img src={user.logoUrl} alt={user.brandName || 'Qyra'} className="h-10 w-10 rounded object-contain" />
           ) : (
             <span className="text-3xl leading-none">🪹</span>
           )}
           <div>
-            <div className="text-gray-900 font-bold text-sm">{user.brandName || 'Solyra'}</div>
+            <div className="text-gray-900 font-bold text-sm">{user.brandName || 'Qyra'}</div>
             <div className="text-gray-600 text-xs">Version 1.0.0</div>
             <div className="text-gray-600 text-xs mt-0.5">Financial Automation</div>
           </div>
@@ -411,7 +411,7 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <div className="text-gray-900 text-sm font-medium">John Paul O. Escuadra</div>
           <div className="text-gray-600 text-xs mt-1 leading-relaxed">
             John Paul is a full-stack developer specializing in financial technology and financial integrations.
-            Solyra was built to solve the real-world challenge of bridging POS sales data with QuickBooks accounting,
+            Qyra was built to solve the real-world challenge of bridging POS sales data with QuickBooks accounting,
             making daily bookkeeping effortless for business teams.
           </div>
         </div>
@@ -420,21 +420,21 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
         <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Need Help?</div>
           <a
-            href="mailto:support@solyra.cloud"
+            href="mailto:support@qyra.space"
             className="flex items-center gap-2 text-emerald-400 hover:text-emerald-600 text-xs transition-colors mb-2"
           >
             <span>✉️</span>
-            <span>support@solyra.cloud</span>
+            <span>support@qyra.space</span>
           </a>
           <div className="flex gap-2">
             <a
-              href="mailto:support@solyra.cloud?subject=Solyra%20Bug%20Report"
+              href="mailto:support@qyra.space?subject=Qyra%20Bug%20Report"
               className="flex-1 text-center text-xs bg-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900 py-1.5 rounded transition-colors"
             >
               🐛 Report a Bug
             </a>
             <a
-              href="mailto:support@solyra.cloud?subject=Solyra%20Feature%20Request"
+              href="mailto:support@qyra.space?subject=Qyra%20Feature%20Request"
               className="flex-1 text-center text-xs bg-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900 py-1.5 rounded transition-colors"
             >
               💡 Feature Request

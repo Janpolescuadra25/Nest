@@ -302,7 +302,7 @@ export default function ScanView({
         setScanPacks(result.scanPacks);
       } catch (err) {
         if (!active) return;
-        console.error('[Solyra Popup] Failed to load scan packs:', err);
+        console.error('[Qyra Popup] Failed to load scan packs:', err);
       }
     };
 
@@ -374,7 +374,7 @@ export default function ScanView({
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('[Solyra Popup] Scan timed out for tab', tabId);
+          console.warn('[Qyra Popup] Scan timed out for tab', tabId);
         }
         resolve(null);
       }, 30000);
@@ -383,7 +383,7 @@ export default function ScanView({
         clearTimeout(timeout);
         if (chrome.runtime.lastError) {
           if (process.env.NODE_ENV !== 'production') {
-            console.warn('[Solyra Popup] sendMessage error:', chrome.runtime.lastError.message);
+            console.warn('[Qyra Popup] sendMessage error:', chrome.runtime.lastError.message);
           }
           resolve(null);
         } else {
@@ -409,7 +409,7 @@ export default function ScanView({
       setAllTabs(tabs);
       return tabs;
     } catch (err) {
-      console.error('[Solyra Popup] Failed to load tabs:', err);
+      console.error('[Qyra Popup] Failed to load tabs:', err);
       setAiScanError('Unable to load browser tabs. Please refresh the extension and try again.');
       return [] as chrome.tabs.Tab[];
     }
@@ -443,7 +443,7 @@ export default function ScanView({
           await new Promise((r) => setTimeout(r, 1500));
           response = await sendScanMessage(tab.id!);
         } catch (injectErr) {
-          console.error('[Solyra Popup] Failed to inject content script:', injectErr);
+          console.error('[Qyra Popup] Failed to inject content script:', injectErr);
           throw new Error('Could not inject scanner into tab — try refreshing the page');
         }
       }
@@ -474,7 +474,7 @@ export default function ScanView({
               onScanRecordId(scanRecord.id);
             }
           } catch (saveErr) {
-            console.error('[Solyra] Failed to save scan to backend:', saveErr);
+            console.error('[Qyra] Failed to save scan to backend:', saveErr);
           }
         }
       } else {
@@ -485,7 +485,7 @@ export default function ScanView({
         setIsScanLimit(true);
         return;
       }
-      console.error('[Solyra Popup] Scan error:', err);
+      console.error('[Qyra Popup] Scan error:', err);
       setError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
       setScanning(false);
@@ -557,7 +557,7 @@ export default function ScanView({
             onScanRecordId(scanRecord.id);
           }
         } catch (saveErr) {
-          console.error('[Solyra] Failed to save AI scan to backend:', saveErr);
+          console.error('[Qyra] Failed to save AI scan to backend:', saveErr);
         }
       }
     } catch (err: any) {
@@ -565,7 +565,7 @@ export default function ScanView({
         setIsScanLimit(true);
         return;
       }
-      console.error('[Solyra Popup] AI scan error:', err);
+      console.error('[Qyra Popup] AI scan error:', err);
       setAiScanError(err instanceof Error ? err.message : 'AI tab scan failed');
     } finally {
       setAiScanning(false);
@@ -739,7 +739,7 @@ export default function ScanView({
             }
             response = await sendScanMessage(tab.id);
           } catch (injectErr) {
-            console.error('[Solyra Popup] Failed to inject content script:', injectErr);
+            console.error('[Qyra Popup] Failed to inject content script:', injectErr);
             throw new Error('Could not inject scanner into tab — try refreshing the page');
           }
         }
@@ -772,7 +772,7 @@ export default function ScanView({
                 onScanRecordId(scanRecord.id);
               }
             } catch (saveErr) {
-              console.error('[Solyra] Failed to save scan to backend:', saveErr);
+              console.error('[Qyra] Failed to save scan to backend:', saveErr);
               // Don't block the UI — scan still worked locally
             }
           }
@@ -785,7 +785,7 @@ export default function ScanView({
         throw new Error('No POS tab found. Click "Any POS (AI)" to scan any POS system.');
       }
     } catch (err) {
-      console.error('[Solyra Popup] Scan error:', err);
+      console.error('[Qyra Popup] Scan error:', err);
       setError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
       setScanning(false);
@@ -1128,7 +1128,7 @@ export default function ScanView({
             );
             savedCount++;
           } catch (saveErr) {
-            console.error(`[Solyra] Failed to save Excel entry ${entry.id} (row ${entry.rowNumber ?? '?'}) :`, saveErr);
+            console.error(`[Qyra] Failed to save Excel entry ${entry.id} (row ${entry.rowNumber ?? '?'}) :`, saveErr);
             failCount++;
           }
         }
@@ -1634,7 +1634,7 @@ export default function ScanView({
                 </div>
               ) : (
                 <div className="space-y-1 text-xs text-gray-600">
-                  <div>Pick a tab above to scan it with Solyra.</div>
+                  <div>Pick a tab above to scan it with Qyra.</div>
                   <div className="text-gray-500">Use "Any POS (AI)" to scan any POS system.</div>
                 </div>
               )}
