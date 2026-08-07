@@ -11,20 +11,25 @@ jest.mock('../src/lib/stripe', () => {
   return {
     __esModule: true,
     stripe: {
-      webhooks: {
-        constructEvent: mockConstructEvent,
-      },
-      subscriptions: {
-        retrieve: mockRetrieveSubscription,
-      },
+      webhooks: { constructEvent: mockConstructEvent },
+      subscriptions: { retrieve: mockRetrieveSubscription },
     },
-    getPlanLimits: jest.fn((planKey: string) => {
-      if (planKey === 'starter') return { maxUsers: 5, maxLocations: 30 };
-      if (planKey === 'growth') return { maxUsers: 20, maxLocations: 100 };
-      if (planKey === 'enterprise') return { maxUsers: 50, maxLocations: 500 };
-      return { maxUsers: 1, maxLocations: 10 };
-    }),
     isStripeConfigured: true,
+    getPlanLimits: jest.fn((planKey: string) => {
+      if (planKey === 'starter') return { maxUsers: 2, maxLocations: 5, maxScans: 50, maxTemplates: 10, scanHistoryDays: 30 };
+      if (planKey === 'professional') return { maxUsers: 5, maxLocations: 20, maxScans: 250, maxTemplates: 25, scanHistoryDays: 90 };
+      if (planKey === 'premium') return { maxUsers: 12, maxLocations: 75, maxScans: 1250, maxTemplates: 75, scanHistoryDays: 365 };
+      if (planKey === 'enterprise') return { maxUsers: 20, maxLocations: 250, maxScans: 5000, maxTemplates: 200, scanHistoryDays: 730 };
+      return { maxUsers: 1, maxLocations: 1, maxScans: 7, maxTemplates: 3, scanHistoryDays: 7 };
+    }),
+    getScanPack: jest.fn().mockReturnValue(undefined),
+    PLANS: {
+      free: { prioritySupport: false },
+      starter: { prioritySupport: false },
+      professional: { prioritySupport: true },
+      premium: { prioritySupport: true },
+      enterprise: { prioritySupport: true },
+    },
     __stripeMocks: {
       mockConstructEvent,
       mockRetrieveSubscription,
@@ -35,17 +40,26 @@ jest.mock('../src/lib/stripe', () => {
 jest.mock('../src/lib/prisma', () => {
   const mockUserUpdate = jest.fn();
   const mockUserUpdateMany = jest.fn();
+  const mockUserFindMany = jest.fn().mockResolvedValue([]);
+  const mockStripeEventFindUnique = jest.fn().mockResolvedValue(null);
+  const mockStripeEventCreate = jest.fn().mockResolvedValue({});
 
   return {
     prisma: {
       user: {
         update: mockUserUpdate,
         updateMany: mockUserUpdateMany,
+        findMany: mockUserFindMany,
+      },
+      stripeEvent: {
+        findUnique: mockStripeEventFindUnique,
+        create: mockStripeEventCreate,
       },
     },
     __prismaMocks: {
       mockUserUpdate,
       mockUserUpdateMany,
+      mockUserFindMany,
     },
   };
 });
@@ -56,19 +70,25 @@ const mockRetrieveSubscription = __stripeMocks.mockRetrieveSubscription as jest.
 const { __prismaMocks } = jest.requireMock('../src/lib/prisma') as any;
 const mockUserUpdate = __prismaMocks.mockUserUpdate as jest.Mock;
 const mockUserUpdateMany = __prismaMocks.mockUserUpdateMany as jest.Mock;
+const mockUserFindMany = __prismaMocks.mockUserFindMany as jest.Mock;
 
 beforeAll(() => {
-  process.env.STRIPE_SOLO_PRICE_ID = 'price_solo';
-  process.env.STRIPE_STARTER_PRICE_ID = 'price_starter';
-  process.env.STRIPE_GROWTH_PRICE_ID = 'price_growth';
-  process.env.STRIPE_ENTERPRISE_PRICE_ID = 'price_enterprise';
   process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+  process.env.STRIPE_STARTER_MONTHLY_PRICE_ID = 'price_starter_monthly';
+  process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID = 'price_professional_monthly';
+  process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID = 'price_premium_monthly';
+  process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID = 'price_enterprise_monthly';
 });
 
 type MockPrisma = {
   user: {
     update: jest.Mock;
     updateMany: jest.Mock;
+    findMany: jest.Mock;
+  };
+  stripeEvent: {
+    findUnique: jest.Mock;
+    create: jest.Mock;
   };
 };
 
@@ -123,8 +143,8 @@ describe('Stripe webhook route', () => {
           paymentIssue: false,
           status: 'ACTIVE',
           trialExpiresAt: null,
-          maxUsers: 5,
-          maxLocations: 30,
+          maxUsers: 2,
+          maxLocations: 5,
           currentPeriodEnd: expect.any(Date),
         }),
       })
@@ -164,7 +184,7 @@ describe('Stripe webhook route', () => {
           current_period_end: 1700000000,
           cancel_at_period_end: true,
           items: {
-            data: [{ price: { id: 'price_growth' } }],
+            data: [{ price: { id: 'price_professional_monthly' } }],
           },
         },
       },
@@ -182,9 +202,9 @@ describe('Stripe webhook route', () => {
       expect.objectContaining({
         where: { stripeSubscriptionId: 'sub_1' },
         data: expect.objectContaining({
-          currentPlan: 'growth',
-          maxUsers: 20,
-          maxLocations: 100,
+          currentPlan: 'professional',
+          maxUsers: 5,
+          maxLocations: 20,
           status: 'ACTIVE',
           cancelAtPeriodEnd: true,
           currentPeriodEnd: expect.any(Date),
