@@ -13,7 +13,7 @@
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`b02a173`, clean, pushed)
+### Repo State (`2923c8b`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -122,7 +122,7 @@
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
-| 1 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 (done) | — |
+| 1 | R-4 | Domain Migration (partial — GitHub repo renamed to Qyra, Render URL updated. Remaining: DNS, Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
 | 2 | F-1 | Default Memo Auto-Fill | — | F-2 |
 | 3 | F-2 | Row Selection | — | F-1 |
 | 4 | E-3 | Customer Mapping + Merge Option | E-2 (done) | — |
