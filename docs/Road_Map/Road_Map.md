@@ -204,24 +204,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 ---
 
-**What:** Implement the owner→admin→member resource distribution.
-
-**Flow:**
-1. Owner invites admin with limits: `allocatedScans: 100`, `allocatedLocations: 10`, `allocatedTemplates: 20`, `maxMembers: 3`, `timeBombAt: <date>`
-2. Admin registers → User record gets these values. `poolScans = allocatedScans` (initially full).
-3. Admin invites member and assigns: `allocatedScans: 20`, `allocatedLocations: 3`, `allocatedTemplates: 5`
-4. Admin's pools reduce: `poolScans = 100 - 20 = 80`, `poolLocations = 10 - 3 = 7`, `poolTemplates = 20 - 5 = 15`
-5. Admin invites 2 more members (each 20 scans) → `poolScans = 80 - 20 - 20 = 40`
-6. Capacity enforcement: member's scans count against their `allocatedScans`. Admin's remaining scans count against `poolScans`.
-
-**Two registration paths:**
-- Via owner's invite link → Admin role, resource-limited, no subscription plan
-- Direct registration (landing page) → Subscriber role, plan-based limits (Stripe), no owner relationship
-
-**Expected output:** Full distribution system. Owner controls admin limits. Admin distributes to members. Counts reduce correctly. Capacity enforced at every level.
-
----
-
 ### Execution Order
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
