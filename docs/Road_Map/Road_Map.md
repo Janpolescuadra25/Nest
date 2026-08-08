@@ -20,10 +20,11 @@
 - **T-be-fix-1c: Fix capacity-middleware.test.ts** — Commit `a008cab`. Corrected plan key (`solo` → `starter`), fixed error code assertions to match current middleware output (`USER_LIMIT_REACHED`, `LOCATION_LIMIT_REACHED`).
 - **T-be-fix-1d: Fix team-status.test.ts** — Commit `95e6cca`. Added missing `auditLog.createMany` mock method.
 - **A-1: Admin Distribution Scoping** — Repo state `fdb3315`. Hydra audit confirmed ~80% of owner→admin→member distribution is built. Identified 5 gaps (4 to fix, 1 optional): `poolTemplates` missing from 2 write paths + 2 GET endpoints, `maxMembers` unenforced, `managedById` not set in direct invite, frontend missing `poolTemplates`/`allocatedTemplates` inputs, `MANAGER` role excluded from allocation UI (deferred).
+- **A-2: Admin Resource Distribution** — Closed 4 gaps in owner→admin→member resource system: added `poolTemplates` to 2 backend write paths + 2 GET endpoints (which also expose `allocatedTemplates` per member and compute `remainingTemplates`), enforced `maxMembers` in capacity middleware (with null guard), set `managedById` in direct invite creation (enables direct-invite members to appear in allocation management endpoints), added `poolTemplates`/`allocatedTemplates`/`remainingTemplates` to frontend types, state, and UI. Commit `472bf7f`. All tests green (44/44 backend, 78/78 frontend, tsc clean).
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`fdb3315`, clean, pushed)
+### Repo State (`472bf7f`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -178,32 +179,6 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 ---
 
-### Phase A: Owner Invite Link + Admin Resource Distribution
-
-#### A-2: Admin Resource Distribution — Close 4 Gaps (1 prompt)
-
-**What:** Fix 4 gaps identified by A-1 scoping audit. All gaps are small, pattern-repeatable fixes in existing code.
-
-**Gap 1: Add `poolTemplates` to 2 backend write paths**
-- `Backend/src/routes/adminRequests.ts` — admin approval (`POST /:id/approve`): add `poolTemplates` to the body destructuring alongside existing `poolScans`/`poolLocations`/`maxMembers`, add `poolTemplates: poolTemplates ?? 25` to the `prisma.user.create` call
-- `Backend/src/routes/owner.ts` — `PUT /admins/:id/pool`: add `poolTemplates` to body destructuring and `prisma.user.update` call, add `poolTemplates` and `previousPoolTemplates` to the `logAction` details for audit consistency
-
-**Gap 2: Enforce `maxMembers` in capacity middleware**
-- `Backend/src/middleware/capacity.ts` — in the admin pool branch (the `if (team.poolScans != null || team.poolLocations != null)` block): before the final `return next()`, add a member count check when `requireCapacity` is called with `'user'` action. Guard with `if (team.maxMembers != null)` — only enforce when the field is explicitly set (it can be null if the admin's pool was updated without specifying `maxMembers`). When enforced, query `prisma.user.count({ where: { adminId: team.id, status: { not: 'DISABLED' } } })` and compare against `team.maxMembers`. Return a 403 response with `{ error: 'USER_LIMIT_REACHED', currentUsage: memberCount, limit: team.maxMembers, message: '...' }` matching the existing plan-based `user` action response shape at capacity.ts. Match the existing plan-based `user` action pattern exactly (same query shape, same status filter, same error code, same response format).
-
-**Gap 3: Set `managedById` in direct invite creation**
-- `Backend/src/routes/admin.ts` — in the `prisma.user.create` call inside `POST /team/invite`: add `managedById: req.user!.userId` alongside existing `adminId: req.user!.userId`. This ensures direct-invite members appear in allocation management endpoints (`PATCH /team/:id/allocation`, `GET /admins/:id/members`, `PUT /admins/:id/members/:userId/allocation`), which all query by `managedById` to find members. No capacity middleware changes needed — the middleware resolves `teamId` from `req.user!.adminId` (the admin's ID), so setting `managedById` on the member record has no effect on enforcement behavior.
-
-**Gap 4: Add `poolTemplates` + `allocatedTemplates` to 2 backend GET endpoints + frontend**
-- `Backend/src/routes/owner.ts` — `GET /admins/pools`: add `poolTemplates: true` to the admin `select`
-- `Backend/src/routes/owner.ts` — `GET /admins/:id/members`: add `allocatedTemplates: true` to the member `select`, add `poolTemplates: admin.poolTemplates` to the admin response object, add `remainingTemplates` calculation (poolTemplates minus sum of all members' allocatedTemplates) alongside existing `remainingScans`/`remainingLocations`
-- `Frontend/src/popup/components/AdminsTab.tsx` — add `poolTemplates` input to pool editor and approval form, add `allocatedTemplates` input to member allocation editor, add `remainingTemplates` to pool stats display
-- `Frontend/src/popup/lib/api.ts` — add `poolTemplates` to `updateOwnerAdminPool` and `approveAdminRequest` payload types, add `allocatedTemplates` to `updateOwnerMemberAllocation` payload type. Update `OwnerAdminPool` response interface to include `poolTemplates: number | null`. Update `OwnerAdminMember` response interface to include `allocatedTemplates: number | null`.
-
-**Expected output:** All 4 gaps closed. `poolTemplates` flows end-to-end (owner sets → admin pool → member allocation → capacity enforcement → frontend display). `maxMembers` blocks invites when limit reached (with null guard for admins without `maxMembers` set). Direct-invite members get `managedById` set and appear in allocation management endpoints. Frontend shows all 3 resource types in pool/member editors. Backend tests: 44/44 still pass. Frontend tests: 78/78 still pass.
-
----
-
 ### Execution Order
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
@@ -217,4 +192,4 @@ Pure text/metadata changes. No logic changes. ~42 files.
 | 7 | E-3 | Cheque Mapping | E-2 | — |
 | 8 | E-4 | Cheque Preview | E-2, E-3 | — |
 | 9 | A-1 (done) | Admin Distribution Scoping | — | R-1 |
-| 10 | A-2 | Admin Resource Distribution Logic | A-1 | — |
+| 10 | A-2 (done) | Admin Resource Distribution Logic | A-1 | — |
