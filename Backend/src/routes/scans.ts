@@ -262,7 +262,9 @@ router.get('/recent', asyncHandler(async (req: AuthRequest, res: Response): Prom
 
 router.post('/bulk-approve', requireFeaturePermission('drafts', 'execute'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.user!.userId;
-  const scanIds = Array.isArray(req.body?.scanIds) ? req.body.scanIds.map(String) : [];
+  const scanIds: string[] = Array.isArray(req.body?.scanIds)
+    ? (req.body.scanIds as unknown[]).map((id: unknown) => String(id))
+    : [];
   const uniqueScanIds = Array.from(new Set(scanIds)).slice(0, 50);
 
   if (!uniqueScanIds.length) {
@@ -333,7 +335,9 @@ router.delete('/:id', requireFeaturePermission('scan', 'write'), asyncHandler(as
 }));
 
 router.post('/bulk-delete', requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const scanIds = Array.isArray(req.body?.scanIds) ? req.body.scanIds.map(String) : [];
+  const scanIds: string[] = Array.isArray(req.body?.scanIds)
+    ? (req.body.scanIds as unknown[]).map((id: unknown) => String(id))
+    : [];
   const uniqueScanIds = Array.from(new Set(scanIds)).slice(0, 50);
 
   if (!uniqueScanIds.length) {

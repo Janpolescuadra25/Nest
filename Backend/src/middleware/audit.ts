@@ -40,7 +40,8 @@ type AuditAction =
   | 'ATTACHMENT_FAILED'
   | 'LOCATION_ATTACHMENT_DELETED'
   | 'BRANDING_UPDATED'
-  | 'AGREEMENT_UPDATED';
+  | 'AGREEMENT_UPDATED'
+  | 'SCAN_DELETED';
 
 export async function logAction(params: {
   actorId: string;
