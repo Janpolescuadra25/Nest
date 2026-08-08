@@ -71,7 +71,16 @@ async function build() {
     jsx: 'automatic',
     jsxImportSource: 'react',
   });
+  console.log('[Build] popup/popup.js');
+
+  // ── Content script ───────────────────────────────────────────────────────
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: [path.join(ROOT, 'src', 'content', 'scanner.ts')],
+    outfile: path.join(DIST, 'content', 'scanner.js'),
+  });
   console.log('[Build] content/scanner.js');
+
   // ── SALIDO content script ───────────────────────────────────────────────────
   await esbuild.build({
     ...sharedConfig,
