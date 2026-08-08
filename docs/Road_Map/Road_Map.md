@@ -21,10 +21,11 @@
 - **T-be-fix-1d: Fix team-status.test.ts** — Commit `95e6cca`. Added missing `auditLog.createMany` mock method.
 - **A-1: Admin Distribution Scoping** — Repo state `fdb3315`. Hydra audit confirmed ~80% of owner→admin→member distribution is built. Identified 5 gaps (4 to fix, 1 optional): `poolTemplates` missing from 2 write paths + 2 GET endpoints, `maxMembers` unenforced, `managedById` not set in direct invite, frontend missing `poolTemplates`/`allocatedTemplates` inputs, `MANAGER` role excluded from allocation UI (deferred).
 - **A-2: Admin Resource Distribution** — Closed 4 gaps in owner→admin→member resource system: added `poolTemplates` to 2 backend write paths + 2 GET endpoints (which also expose `allocatedTemplates` per member and compute `remainingTemplates`), enforced `maxMembers` in capacity middleware (with null guard), set `managedById` in direct invite creation (enables direct-invite members to appear in allocation management endpoints), added `poolTemplates`/`allocatedTemplates`/`remainingTemplates` to frontend types, state, and UI. Commit `472bf7f`. All tests green (44/44 backend, 78/78 frontend, tsc clean).
+- **E-1: Cheque Excel Scoping Audit** — Audited 6 areas (parser, ScanView, MappingView, preview, scans routes, Prisma schema). Found 11/11 pipeline stages already built: Excel parsing via exceljs with template-driven columnMappings, CHEQUE as valid transactionType, payee+checkNo+date merge grouping in ScanView, CheckPreviewForm with multi-line items, PayeeMapping + ValueMapping (account/class/tax), frontend+backend buildChequePayload, QB Purchase API sync, ScanRecord with transactionType:CHEQUE. JP confirmed fixed 11-column format (replacing flexible mappings for CHEQUE). Remaining: E-2 fixed format implementation, E-3 customer mapping refinement + merge-same-category option, E-4 already implemented. Repo state `76f1f53` at audit time.
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`472bf7f`, clean, pushed)
+### Repo State (`76f1f53`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -107,75 +108,59 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 **What:** A new scan type for uploading Excel files containing cheque data. Each row = one cheque in QuickBooks (unless payee + check no. + payment date match, then merge into one cheque with multiple line items).
 
-#### E-1: Scoping Audit (1 Hydra audit)
+#### E-1: Cheque Excel Scoping Audit (done)
 
-**What Hydra needs to read:**
-1. Current Excel scan implementation — how are Excel files parsed? What scan types exist? Where is the Excel parser?
-2. `Frontend/src/popup/components/ScanView.tsx` — how are different scan types selected and processed?
-3. Current mapping system — how does `MappingView` handle column mapping for different scan types?
-4. Preview system — how does `BillPreviewForm` render line items? Is there already a ChequePreviewForm?
-5. `Backend/src/routes/scans.ts` — how are different scan types stored and processed?
-6. Prisma schema — what fields exist on ScanRecord for storing parsed cheque data?
+**Outcome:** Completed audit. The existing pipeline already supports CHEQUE transactionType, Excel parsing via `columnMappings`, payee+checkNo+date grouping in `ScanView`, multi-line cheque preview rendering, and backend QB cheque payload building.
 
-**Purpose:** Understand the current Excel scan pipeline to determine how to add the cheque scan type.
+**Remaining work:**
+- E-2: enforce a fixed 11-column CHEQUE Excel format in the parser
+- E-3: refine customer mapping and add an optional same-category merge path before preview
+
+**Why E-4 is removed:** Cheque preview is already implemented in the current code, so it is no longer a separate scope item.
 
 ---
 
-#### E-2: Excel Cheque Format — Fixed Columns (1-2 prompts)
+#### E-2: Cheque Fixed-Column Excel Parser (1-2 prompts)
 
-**What:** Define the fixed column format for cheque Excel files.
+**What:** Enforce a fixed 11-column format for CHEQUE Excel files.
 
 **Required columns (Row 1 = headers):**
 
-| Column | Header | Type | Required | Mapping |
-|---|---|---|---|---|
-| 1 | Payee | String | ✅ | User maps values (e.g., "Kevin" → "Kevin Durant") |
-| 2 | Bank Account | String | ✅ | User maps to QB bank account |
-| 3 | Payment Date | Date | ✅ | Format: MM/DD/YYYY or YYYY-MM-DD |
-| 4 | Check No. | String | ✅ | Used for merge logic |
-| 5 | Category | String | ✅ | User maps values (e.g., "Maynilad" → "Utilities Expense") |
-| 6 | Description | String | ✅ | Auto-fills from Excel |
-| 7 | Amount | Number | ✅ | Decimal |
-| 8 | Tax | String | ❌ | "Exclusive", "Inclusive", or "Out of Scope" |
-| 9 | Customer | String | ❌ | User maps values |
-| 10 | QB Memo | String | ❌ | Auto-fills from Excel |
-| 11 | Tax Type | String | ❌ | Maps to Exclusive/Inclusive/Out of Scope |
+| Column | Header | Required | Notes |
+|---|---|---|---|
+| 1 | Payee | ✅ | Used for grouping and vendor mapping |
+| 2 | Bank Account | ✅ | Maps to QB bank account |
+| 3 | Payment Date | ✅ | Format: MM/DD/YYYY or YYYY-MM-DD |
+| 4 | Check No. | ✅ | Used for grouping |
+| 5 | Category | ✅ | Maps to QB expense account |
+| 6 | Description | ✅ | Cheque line description |
+| 7 | Amount | ✅ | Decimal amount |
+| 8 | Tax | ❌ | Exclusive / Inclusive / Out of Scope |
+| 9 | Customer | ❌ | Maps to QB customer |
+| 10 | QB Memo | ❌ | Cheque-level memo |
+| 11 | Tax Type | ❌ | Maps to tax type when present |
 
-**Merge logic:** If rows share the same Payee + Check No. + Payment Date → merge into 1 cheque with multiple line items (Category, Description, Amount, Tax per line item).
-
-**Format enforcement:** Users CANNOT customize column order. The format is fixed. If the Excel doesn't match, show a clear error: "Column 1 must be 'Payee'. Found: [actual header]."
-
-**Expected output:** Parser validates column headers. Parses data rows. Merges rows with matching payee+checkno+date. Returns structured cheque data for mapping.
-
----
-
-#### E-3: Cheque Mapping (Payee, Category, Tax, Customer) (1-2 prompts)
-
-**What:** Extend the mapping system to support cheque-specific fields.
-
-**Mapping behavior:**
-- **Payee mapping:** User maps detected payee names to QB vendor names. E.g., all rows where Payee contains "Kevin" → vendor "Kevin Durant"
-- **Category mapping:** User maps detected category text to QB expense accounts. E.g., "Maynilad" → "Utilities Expense"
-- **Tax mapping:** User maps tax column values to QB tax codes
-- **Customer mapping:** User maps customer names to QB customers
-- **"Merge same category" option:** When enabled, multiple line items with the same mapped category are merged into one line item with summed amounts
-
-**Expected output:** Mapping section shows detected unique values for Payee, Category, Tax, Customer. User maps each to a QB entity. Mapped values appear correctly in preview.
+**Expected behavior:**
+- Validate exact header names and order for CHEQUE files
+- Reject files that do not match the fixed schema with a clear header error
+- Parse row 2+ as cheque rows where columns 1-4 + 10 are header-level fields and columns 5-9 + 11 are line-item fields
+- Preserve existing downstream grouping and preview behavior
 
 ---
 
-#### E-4: Cheque Preview (1-2 prompts)
+#### E-3: Customer Mapping Refinement + Same-Category Merge Option (1 prompt)
 
-**What:** Render cheque previews — one cheque form per unique payee+checkno+date combination, with line items for each data row.
+**What:** Close the remaining cheque mapping gaps.
 
-**Preview behavior:**
-- Each merged cheque shows as one cheque form
-- Cheque header: Payee, Bank Account, Payment Date, Check No.
-- Line items: Category, Description, Amount, Tax, Customer, QB Memo per row
-- User can review and edit before syncing
-- "Sync to QuickBooks" creates one `Cheque` in QB per cheque form (with multiple `Line` items)
+**Scope:**
+- Add a dedicated `customer` mapping field type so users can map cheque row `Customer` values directly to QuickBooks customers
+- Keep existing `name` mapping for generic vendor/employee/name resolution
+- Optionally allow multiple cheque line items with the same mapped category to merge into a single line item with a summed amount before preview
 
-**Expected output:** Users see cheque previews with correct merge logic. Each cheque form has the right line items. Syncing creates correct QB Cheque records.
+**Expected behavior:**
+- Mapping UI exposes `Customer` as a first-class field type for cheque scans
+- Preview shows accurate mapped customers and categories
+- Optional same-category merge produces a cleaner cheque payload when enabled
 
 ---
 
@@ -187,9 +172,8 @@ Pure text/metadata changes. No logic changes. ~42 files.
 | 2 | T-be-fix (done) | Fix 4 broken test suites | — | R-1 |
 | 3 | F-1 | Default Memo Auto-Fill | — | F-2 |
 | 4 | F-2 | Row Selection | — | F-1 |
-| 5 | E-1 | Cheque Excel Scoping | — | R-1 |
-| 6 | E-2 | Cheque Excel Format + Parser | E-1 | — |
-| 7 | E-3 | Cheque Mapping | E-2 | — |
-| 8 | E-4 | Cheque Preview | E-2, E-3 | — |
-| 9 | A-1 (done) | Admin Distribution Scoping | — | R-1 |
-| 10 | A-2 (done) | Admin Resource Distribution Logic | A-1 | — |
+| 5 | E-1 (done) | Cheque Excel Scoping Audit | — | R-1 |
+| 6 | E-2 | Cheque Fixed-Column Excel Parser | E-1 | — |
+| 7 | E-3 | Customer Mapping + Merge Option | E-2 | — |
+| 8 | A-1 (done) | Admin Distribution Scoping | — | R-1 |
+| 9 | A-2 (done) | Admin Resource Distribution Logic | A-1 | — |
