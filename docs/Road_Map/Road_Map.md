@@ -13,7 +13,7 @@
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`2923c8b`, clean, pushed)
+### Repo State (`5fb3f12`, clean, pushed)
 
 | Area | Status |
 |---|---|
