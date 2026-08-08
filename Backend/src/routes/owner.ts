@@ -100,6 +100,7 @@ router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) 
         currentPlan: true,
         poolScans: true,
         poolLocations: true,
+        poolTemplates: true,
         maxMembers: true,
         createdAt: true,
         _count: { select: { managedMembers: true } },
@@ -125,10 +126,11 @@ router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) 
 router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = String(req.params['id']);
-    const { poolScans, poolLocations, maxMembers } = req.body as {
+    const { poolScans, poolLocations, maxMembers, poolTemplates } = req.body as {
       poolScans?: number;
       poolLocations?: number;
       maxMembers?: number;
+      poolTemplates?: number;
     };
 
     const admin = await prisma.user.findFirst({ where: { id, role: 'ADMIN' } });
@@ -141,6 +143,7 @@ router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Respons
       data: {
         ...(poolScans !== undefined && { poolScans }),
         ...(poolLocations !== undefined && { poolLocations }),
+        ...(poolTemplates !== undefined && { poolTemplates }),
         ...(maxMembers !== undefined && { maxMembers }),
       },
     });
@@ -149,7 +152,7 @@ router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Respons
       actorId: req.user!.userId,
       action: 'PERMISSION_OVERRIDE',
       targetUserId: id,
-      details: { type: 'pool_update', poolScans, poolLocations, maxMembers, previousPoolScans: admin.poolScans, previousPoolLocations: admin.poolLocations, previousMaxMembers: admin.maxMembers },
+      details: { type: 'pool_update', poolScans, poolLocations, poolTemplates, maxMembers, previousPoolScans: admin.poolScans, previousPoolLocations: admin.poolLocations, previousPoolTemplates: admin.poolTemplates, previousMaxMembers: admin.maxMembers },
       ip: req.ip,
       userAgent: req.headers['user-agent'],
     });
@@ -352,6 +355,7 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
         role: true,
         allocatedScans: true,
         allocatedLocations: true,
+        allocatedTemplates: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -365,10 +369,12 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
       admin: {
         poolScans: admin.poolScans,
         poolLocations: admin.poolLocations,
+        poolTemplates: admin.poolTemplates,
         maxMembers: admin.maxMembers,
         memberCount: members.length,
         remainingScans: (admin.poolScans ?? 0) - totalAllocatedScans,
         remainingLocations: (admin.poolLocations ?? 0) - totalAllocatedLocations,
+        remainingTemplates: (admin.poolTemplates ?? 0) - members.reduce((sum, m) => sum + (m.allocatedTemplates ?? 0), 0),
       },
     });
   } catch (err) {

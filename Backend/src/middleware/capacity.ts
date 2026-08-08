@@ -237,6 +237,21 @@ export function requireCapacity(action: CapacityAction) {
         }
       }
 
+      if (action === 'user' && team.maxMembers != null) {
+        const memberCount = await prisma.user.count({
+          where: { adminId: team.id, status: { not: 'DISABLED' } },
+        });
+        if (memberCount >= team.maxMembers) {
+          res.status(403).json({
+            error: 'USER_LIMIT_REACHED',
+            currentUsage: memberCount,
+            limit: team.maxMembers,
+            message: `You have reached your team member limit (${team.maxMembers}).`,
+          });
+          return;
+        }
+      }
+
       return next();
     }
 

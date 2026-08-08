@@ -205,6 +205,7 @@ router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('us
         password: hashedPassword,
         role: role as 'STAFF' | 'ACCOUNTANT' | 'VIEWER',
         adminId: req.user!.userId,
+        managedById: req.user!.userId,
         status: 'ACTIVE',
         mustChangePassword: true,
         ...(trialExpiresAt !== undefined && { trialExpiresAt }),

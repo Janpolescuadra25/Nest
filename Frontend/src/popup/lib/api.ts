@@ -177,6 +177,7 @@ export interface OwnerAdminPool {
   currentPlan: string | null;
   poolScans: number | null;
   poolLocations: number | null;
+  poolTemplates: number | null;
   maxMembers: number | null;
   createdAt: string;
   managedMembers: number;
@@ -190,6 +191,7 @@ export interface OwnerAdminMember {
   status: string;
   allocatedScans: number | null;
   allocatedLocations: number | null;
+  allocatedTemplates: number | null;
   createdAt: string;
 }
 
@@ -247,7 +249,7 @@ export const api = {
       `/api/admin-requests?page=${page}${status ? `&status=${status}` : ''}`, jwt
     ),
 
-  approveAdminRequest: (jwt: string, id: string, data?: { poolScans?: number; poolLocations?: number; maxMembers?: number }) =>
+  approveAdminRequest: (jwt: string, id: string, data?: { poolScans?: number; poolLocations?: number; poolTemplates?: number; maxMembers?: number }) =>
     post<{ user: { id: string; email: string; name: string | null; role: string } }>(`/api/admin-requests/${id}/approve`, data ?? {}, jwt),
 
   rejectAdminRequest: (jwt: string, id: string) =>
@@ -288,7 +290,7 @@ export const api = {
   getOwnerAdminPools: (jwt: string) =>
     get<{ admins: OwnerAdminPool[] }>('/api/owner/admins/pools', jwt),
 
-  updateOwnerAdminPool: (jwt: string, adminId: string, data: { poolScans?: number; poolLocations?: number; maxMembers?: number }) =>
+  updateOwnerAdminPool: (jwt: string, adminId: string, data: { poolScans?: number; poolLocations?: number; poolTemplates?: number; maxMembers?: number }) =>
     put<UserInfo>(`/api/owner/admins/${adminId}/pool`, data, jwt),
 
   updateBranding: (jwt: string, adminId: string, data: { brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }) =>
@@ -315,13 +317,13 @@ export const api = {
     const sp = new URLSearchParams();
     if (page) sp.set('page', String(page));
     if (limit) sp.set('limit', String(limit));
-    return get<{ members: OwnerAdminMember[]; admin: { poolScans: number | null; poolLocations: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number } }>(
+    return get<{ members: OwnerAdminMember[]; admin: { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingTemplates: number } }>(
       `/api/owner/admins/${adminId}/members${sp.toString() ? `?${sp.toString()}` : ''}`,
       jwt,
     );
   },
 
-  updateOwnerMemberAllocation: (jwt: string, adminId: string, userId: string, data: { allocatedScans?: number; allocatedLocations?: number }) =>
+  updateOwnerMemberAllocation: (jwt: string, adminId: string, userId: string, data: { allocatedScans?: number; allocatedLocations?: number; allocatedTemplates?: number }) =>
     put<UserInfo>(`/api/owner/admins/${adminId}/members/${userId}/allocation`, data, jwt),
 
   patchOwnerAdmin: (jwt: string, id: string, data: { maxUsers?: number; status?: string }) =>

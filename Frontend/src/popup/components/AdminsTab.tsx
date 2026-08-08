@@ -40,15 +40,15 @@ export default function AdminsTab({ jwt }: Props) {
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [memberMap, setMemberMap] = useState<Record<string, OwnerAdminMember[]>>({});
-  const [poolStats, setPoolStats] = useState<Record<string, { poolScans: number | null; poolLocations: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number }>>({});
+  const [poolStats, setPoolStats] = useState<Record<string, { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingTemplates: number }>>({});
   const [teamLoading, setTeamLoading] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [editMaxUsers, setEditMaxUsers] = useState<Record<string, string>>({});
   const [showEditMaxUsers, setShowEditMaxUsers] = useState<Record<string, boolean>>({});
   const [showEditPool, setShowEditPool] = useState<Record<string, boolean>>({});
-  const [editPoolValues, setEditPoolValues] = useState<Record<string, { poolScans: string; poolLocations: string; maxMembers: string }>>({});
+  const [editPoolValues, setEditPoolValues] = useState<Record<string, { poolScans: string; poolLocations: string; poolTemplates: string; maxMembers: string }>>({});
   const [showEditAllocation, setShowEditAllocation] = useState<Record<string, boolean>>({});
-  const [editAllocationValues, setEditAllocationValues] = useState<Record<string, { allocatedScans: string; allocatedLocations: string }>>({});
+  const [editAllocationValues, setEditAllocationValues] = useState<Record<string, { allocatedScans: string; allocatedLocations: string; allocatedTemplates: string }>>({});
   const [showEditAgreement, setShowEditAgreement] = useState<Record<string, boolean>>({});
   const [agreementInputs, setAgreementInputs] = useState<Record<string, { agreementPrice: string; agreementDate: string; agreementTerms: string }>>({});
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function AdminsTab({ jwt }: Props) {
   const [approveResult, setApproveResult] = useState<ApproveResult | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const [expandedRequestId, setExpandedRequestId] = useState<string | null>(null);
-  const [poolInputs, setPoolInputs] = useState<Record<string, { poolScans: string; poolLocations: string; maxMembers: string }>>({});
+  const [poolInputs, setPoolInputs] = useState<Record<string, { poolScans: string; poolLocations: string; poolTemplates: string; maxMembers: string }>>({});
   const [pendingCount, setPendingCount] = useState<number>(0);
 
   const fetchAdmins = useCallback(async () => {
@@ -189,14 +189,16 @@ export default function AdminsTab({ jwt }: Props) {
     const values = editPoolValues[admin.id] ?? {
       poolScans: String(poolData[admin.id]?.poolScans ?? 200),
       poolLocations: String(poolData[admin.id]?.poolLocations ?? 50),
+      poolTemplates: String(poolData[admin.id]?.poolTemplates ?? 25),
       maxMembers: String(poolData[admin.id]?.maxMembers ?? 5),
     };
     const poolScans = parseInt(values.poolScans, 10) || 200;
     const poolLocations = parseInt(values.poolLocations, 10) || 50;
+    const poolTemplates = parseInt(values.poolTemplates, 10) || 25;
     const maxMembers = parseInt(values.maxMembers, 10) || 5;
     setActionLoading(p => ({ ...p, [`pool_${admin.id}`]: true }));
     try {
-      await api.updateOwnerAdminPool(jwt, admin.id, { poolScans, poolLocations, maxMembers });
+      await api.updateOwnerAdminPool(jwt, admin.id, { poolScans, poolLocations, poolTemplates, maxMembers });
       showToast('Pool settings updated', 'success');
       setShowEditPool(p => ({ ...p, [admin.id]: false }));
       await fetchAdmins();
@@ -214,19 +216,24 @@ export default function AdminsTab({ jwt }: Props) {
     const values = editAllocationValues[member.id] ?? {
       allocatedScans: String(member.allocatedScans ?? 0),
       allocatedLocations: String(member.allocatedLocations ?? 0),
+      allocatedTemplates: String(member.allocatedTemplates ?? 0),
     };
     const allocatedScans = parseInt(values.allocatedScans, 10);
     const allocatedLocations = parseInt(values.allocatedLocations, 10);
-    if (isNaN(allocatedScans) || allocatedScans < 0 || isNaN(allocatedLocations) || allocatedLocations < 0) {
+    const allocatedTemplates = parseInt(values.allocatedTemplates, 10);
+    if (isNaN(allocatedScans) || allocatedScans < 0 || isNaN(allocatedLocations) || allocatedLocations < 0 || isNaN(allocatedTemplates) || allocatedTemplates < 0) {
       showToast('Enter valid allocation numbers', 'error');
       return;
     }
     const currentScans = member.allocatedScans ?? 0;
     const currentLocations = member.allocatedLocations ?? 0;
+    const currentTemplates = member.allocatedTemplates ?? 0;
     const remainingScans = poolStats[admin.id]?.remainingScans ?? 0;
     const remainingLocations = poolStats[admin.id]?.remainingLocations ?? 0;
+    const remainingTemplates = poolStats[admin.id]?.remainingTemplates ?? 0;
     const maxAllowedScans = currentScans + remainingScans;
     const maxAllowedLocations = currentLocations + remainingLocations;
+    const maxAllowedTemplates = currentTemplates + remainingTemplates;
     if (allocatedScans > maxAllowedScans) {
       showToast(`Scans cannot exceed ${maxAllowedScans}`, 'error');
       return;
@@ -235,9 +242,13 @@ export default function AdminsTab({ jwt }: Props) {
       showToast(`Locations cannot exceed ${maxAllowedLocations}`, 'error');
       return;
     }
+    if (allocatedTemplates > maxAllowedTemplates) {
+      showToast(`Templates cannot exceed ${maxAllowedTemplates}`, 'error');
+      return;
+    }
     setActionLoading(p => ({ ...p, [`alloc_${member.id}`]: true }));
     try {
-      await api.updateOwnerMemberAllocation(jwt, admin.id, member.id, { allocatedScans, allocatedLocations });
+      await api.updateOwnerMemberAllocation(jwt, admin.id, member.id, { allocatedScans, allocatedLocations, allocatedTemplates });
       showToast('Allocation updated', 'success');
       setShowEditAllocation(p => ({ ...p, [member.id]: false }));
       await loadAdminMembers(admin.id);
@@ -280,10 +291,11 @@ export default function AdminsTab({ jwt }: Props) {
   const handleApproveRequest = async (id: string) => {
     setActionLoading(p => ({ ...p, [id]: true }));
     try {
-      const pool = poolInputs[id] ?? { poolScans: '200', poolLocations: '50', maxMembers: '5' };
+      const pool = poolInputs[id] ?? { poolScans: '200', poolLocations: '50', poolTemplates: '25', maxMembers: '5' };
       const result = await api.approveAdminRequest(jwt, id, {
         poolScans: parseInt(pool.poolScans, 10) || 200,
         poolLocations: parseInt(pool.poolLocations, 10) || 50,
+        poolTemplates: parseInt(pool.poolTemplates, 10) || 25,
         maxMembers: parseInt(pool.maxMembers, 10) || 5,
       });
       setApproveResult(result);
@@ -393,7 +405,7 @@ export default function AdminsTab({ jwt }: Props) {
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <p className="text-xs font-medium text-gray-600">Pool Settings</p>
-                            <p className="text-xs text-gray-600">{poolData[admin.id].poolScans} scans · {poolData[admin.id].poolLocations} locations · max {poolData[admin.id].maxMembers ?? '∞'} members</p>
+                            <p className="text-xs text-gray-600">{poolData[admin.id].poolScans} scans · {poolData[admin.id].poolLocations} locations · {poolData[admin.id].poolTemplates} templates · max {poolData[admin.id].maxMembers ?? '∞'} members</p>
                           </div>
                           <button
                             onClick={() => {
@@ -402,6 +414,7 @@ export default function AdminsTab({ jwt }: Props) {
                                 [admin.id]: {
                                   poolScans: String(poolData[admin.id]?.poolScans ?? 200),
                                   poolLocations: String(poolData[admin.id]?.poolLocations ?? 50),
+                                  poolTemplates: String(poolData[admin.id]?.poolTemplates ?? 25),
                                   maxMembers: String(poolData[admin.id]?.maxMembers ?? 5),
                                 },
                               }));
@@ -414,14 +427,14 @@ export default function AdminsTab({ jwt }: Props) {
                         </div>
                         {showEditPool[admin.id] && (
                           <div className="space-y-2">
-                            <div className="grid gap-2 sm:grid-cols-3">
+                            <div className="grid gap-2 sm:grid-cols-4">
                               <div>
                                 <p className="text-xs text-gray-600 mb-1">Scans</p>
                                 <input
                                   type="number"
                                   min={0}
                                   value={editPoolValues[admin.id]?.poolScans ?? '200'}
-                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolLocations: '50', maxMembers: '5' }), poolScans: e.target.value } }))}
+                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolLocations: '50', poolTemplates: '25', maxMembers: '5' }), poolScans: e.target.value } }))}
                                   className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                                 />
                               </div>
@@ -431,7 +444,17 @@ export default function AdminsTab({ jwt }: Props) {
                                   type="number"
                                   min={0}
                                   value={editPoolValues[admin.id]?.poolLocations ?? '50'}
-                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', maxMembers: '5' }), poolLocations: e.target.value } }))}
+                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', poolTemplates: '25', maxMembers: '5' }), poolLocations: e.target.value } }))}
+                                  className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Templates</p>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={editPoolValues[admin.id]?.poolTemplates ?? '25'}
+                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', poolLocations: '50', maxMembers: '5' }), poolTemplates: e.target.value } }))}
                                   className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                                 />
                               </div>
@@ -441,7 +464,7 @@ export default function AdminsTab({ jwt }: Props) {
                                   type="number"
                                   min={0}
                                   value={editPoolValues[admin.id]?.maxMembers ?? '5'}
-                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', poolLocations: '50' }), maxMembers: e.target.value } }))}
+                                  onChange={e => setEditPoolValues(p => ({ ...p, [admin.id]: { ...(p[admin.id] ?? { poolScans: '200', poolLocations: '50', poolTemplates: '25' }), maxMembers: e.target.value } }))}
                                   className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                                 />
                               </div>
@@ -713,6 +736,7 @@ export default function AdminsTab({ jwt }: Props) {
                                         [member.id]: {
                                           allocatedScans: String(member.allocatedScans ?? 0),
                                           allocatedLocations: String(member.allocatedLocations ?? 0),
+                                          allocatedTemplates: String(member.allocatedTemplates ?? 0),
                                         },
                                       }));
                                       setShowEditAllocation(p => ({ ...p, [member.id]: true }));
@@ -726,28 +750,40 @@ export default function AdminsTab({ jwt }: Props) {
                               {showEditAllocation[member.id] ? (
                                 <div className="mt-3 space-y-2">
                                   <div className="grid gap-2 sm:grid-cols-2">
-                                    <div>
-                                      <p className="text-xs text-gray-600 mb-1">Scans</p>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={editAllocationValues[member.id]?.allocatedScans ?? '0'}
-                                        onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedLocations: '0' }), allocatedScans: e.target.value } }))}
-                                        className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
-                                      />
-                                    </div>
-                                    <div>
-                                      <p className="text-xs text-gray-600 mb-1">Locations</p>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={editAllocationValues[member.id]?.allocatedLocations ?? '0'}
-                                        onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedScans: '0' }), allocatedLocations: e.target.value } }))}
-                                        className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
-                                      />
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                      <div>
+                                        <p className="text-xs text-gray-600 mb-1">Scans</p>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={editAllocationValues[member.id]?.allocatedScans ?? '0'}
+                                          onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedLocations: '0', allocatedTemplates: '0' }), allocatedScans: e.target.value } }))}
+                                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
+                                        />
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-600 mb-1">Locations</p>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={editAllocationValues[member.id]?.allocatedLocations ?? '0'}
+                                          onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedScans: '0', allocatedTemplates: '0' }), allocatedLocations: e.target.value } }))}
+                                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
+                                        />
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-gray-600 mb-1">Templates</p>
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          value={editAllocationValues[member.id]?.allocatedTemplates ?? '0'}
+                                          onChange={e => setEditAllocationValues(p => ({ ...p, [member.id]: { ...(p[member.id] ?? { allocatedScans: '0', allocatedLocations: '0' }), allocatedTemplates: e.target.value } }))}
+                                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
-                                  <p className="text-xs text-gray-600">Remaining: {poolStats[admin.id]?.remainingScans ?? 0} scans · {poolStats[admin.id]?.remainingLocations ?? 0} locations</p>
+                                  <p className="text-xs text-gray-600">Remaining: {poolStats[admin.id]?.remainingScans ?? 0} scans · {poolStats[admin.id]?.remainingLocations ?? 0} locations · {poolStats[admin.id]?.remainingTemplates ?? 0} templates</p>
                                   <button
                                     onClick={() => handleSaveAllocation(admin, member)}
                                     disabled={actionLoading[`alloc_${member.id}`]}
@@ -928,14 +964,14 @@ export default function AdminsTab({ jwt }: Props) {
                 {expandedRequestId === req.id && (
                   <div className="pt-2 border-t border-gray-200 space-y-3">
                     {req.description && <p className="text-xs text-gray-600 italic">"{req.description}"</p>}
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid gap-2 sm:grid-cols-4">
                       <div>
                         <p className="text-xs text-gray-600 mb-1">Scans</p>
                         <input
                           type="number"
                           min={0}
                           value={poolInputs[req.id]?.poolScans ?? '200'}
-                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolLocations: '50', maxMembers: '5' }), poolScans: e.target.value } }))}
+                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolLocations: '50', poolTemplates: '25', maxMembers: '5' }), poolScans: e.target.value } }))}
                           className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                         />
                       </div>
@@ -945,7 +981,17 @@ export default function AdminsTab({ jwt }: Props) {
                           type="number"
                           min={0}
                           value={poolInputs[req.id]?.poolLocations ?? '50'}
-                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', maxMembers: '5' }), poolLocations: e.target.value } }))}
+                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolTemplates: '25', maxMembers: '5' }), poolLocations: e.target.value } }))}
+                          className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Templates</p>
+                        <input
+                          type="number"
+                          min={0}
+                          value={poolInputs[req.id]?.poolTemplates ?? '25'}
+                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolLocations: '50', maxMembers: '5' }), poolTemplates: e.target.value } }))}
                           className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                         />
                       </div>
@@ -955,7 +1001,7 @@ export default function AdminsTab({ jwt }: Props) {
                           type="number"
                           min={1}
                           value={poolInputs[req.id]?.maxMembers ?? '5'}
-                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolLocations: '50' }), maxMembers: e.target.value } }))}
+                          onChange={(e) => setPoolInputs((p) => ({ ...p, [req.id]: { ...(p[req.id] ?? { poolScans: '200', poolLocations: '50', poolTemplates: '25' }), maxMembers: e.target.value } }))}
                           className="bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 p-1.5 w-full"
                         />
                       </div>

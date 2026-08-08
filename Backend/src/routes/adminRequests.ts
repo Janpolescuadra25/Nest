@@ -98,10 +98,11 @@ router.get('/', authenticate, requireRole('OWNER'), asyncHandler(async(req: Auth
 router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
-    const { poolScans, poolLocations, maxMembers } = req.body as {
+    const { poolScans, poolLocations, maxMembers, poolTemplates } = req.body as {
       poolScans?: number;
       poolLocations?: number;
       maxMembers?: number;
+      poolTemplates?: number;
     };
     const request = await prisma.adminRequest.findUnique({ where: { id } });
     if (!request) throw new AppError('Request not found.', 404);
@@ -129,6 +130,7 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
           subscriptionSource: 'owner',
           poolScans: poolScans ?? 200,
           poolLocations: poolLocations ?? 50,
+          poolTemplates: poolTemplates ?? 25,
           maxMembers: maxMembers ?? 5,
           maxUsers: 5,
           permissions: getPermissionDefaults('ADMIN'),
