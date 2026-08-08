@@ -4,7 +4,7 @@
   "private": true,
   "description": "Qyra Chrome Extension — Toast POS to QuickBooks sync",
   "scripts": {
-    "build": "node scripts/generate-icons.js && node scripts/build.js",
+    "build": "node scripts/build.js",
     "build:watch": "node scripts/build.js --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest"
