@@ -1,28 +1,15 @@
 ## ✅ Completed Phases
 
-- **R-1: Rebrand Backend** — Commit `c392366`. 20 files rebranded (Nest → AutoBooks, nestsync.fyi → autobooks.cloud, NEST- → AB-). All 7 sync-batch tests pass.
-- **R-2: Rebrand Frontend** — Commit `54cbe87`. 25 files + 1 new icon file rebranded. 78 frontend tests pass, `tsc --noEmit` clean, `npm run build` succeeds. localStorage migration added for `nest_je_col_vis` → `autobooks_je_col_vis`.
-- **R-3: Rebrand Web + Root Configs** — Commit `c93a8ff`. Root and web files rebranded. `render.yaml` now uses `qyra-backend` and `noreply@qyra.space`. All web pages now use Qyra branding.
-- **S-1a: Rebrand Backend** — `d5f399d`. AutoBooks → Solyra across Backend/ (~65 references, 16 files). DocNumber prefix `AB-` → `S-`.
-- **S-1b: Rebrand Frontend** — `2df16b6`. AutoBooks → Solyra across Frontend/ (~75 references, 16 files). Legacy migration chains updated (nest → autobooks → solyra). New Solyra icons integrated.
-- **S-1c: Rebrand Web + Root Configs** — `eacf637`. AutoBooks → Solyra across web/ and root configs (~55 references, 7 files). Case-sensitive `-creplace` used throughout.
-- **S-2a: Backend Qyra Rebrand** — `ece5767`.
-- **S-2b: Frontend Qyra Rebrand** — `9c3f524`.
-- **S-2c: Web + Configs Qyra Rebrand** — `05f7a82`.
-- **L-1: Remove Partner Section** — Commit `0626652`. Removed "Become a Partner" CTA, nav links, partner section, and partner form JS from `web/index.html`. Signup form and `setMessage` helper preserved.
-- **W-2: Database Schema** — SKIPPED. `PENDING_APPROVAL` already serves as "For Review", `PENDING` serves as "Drafted". No schema change needed.
-- **W-3: Role-Based Permissions Update** — Commit `b1a7170`. Removed `sync:execute` from ACCOUNTANT role (kept `sync:read`).
-- **W-5: Backend Workflow API Endpoints** — Commit `b1a7170`. Added `POST /bulk-approve`, `DELETE /:id`, `POST /bulk-delete` to `scans.ts`.
-- **W-1: Workflow Scoping Audit** — Scoping audit completed. Output drove W-2 (skipped), W-3, W-4, W-5.
-- **W-4: Frontend Tab Restructure** — Commit `6b490d9`. Split Sync tab into Review / Approved / Sync-History. Added `mode` prop to SyncView + 3 API methods (`bulkApproveScans`, `deleteScan`, `bulkDeleteScans`). 78 tests pass.
-- **T-be-fix-1a: Fix stripe-plans.test.ts** — Commit `3f44041`. Full rewrite — updated PLANS shape assertions (tier existence, numeric limits, pricing, priority support).
-- **T-be-fix-1b: Fix webhooks.test.ts** — Commit `9f482fc`. Added Prisma `stripeEvent` mocks, `PLANS`/`getPlanLimits`/`getScanPack` to stripe mock, fixed `MockPrisma` type, corrected env vars + assertions. 44/44 pass.
-- **T-be-fix-1c: Fix capacity-middleware.test.ts** — Commit `a008cab`. Corrected plan key (`solo` → `starter`), fixed error code assertions to match current middleware output (`USER_LIMIT_REACHED`, `LOCATION_LIMIT_REACHED`).
-- **T-be-fix-1d: Fix team-status.test.ts** — Commit `95e6cca`. Added missing `auditLog.createMany` mock method.
-- **A-1: Admin Distribution Scoping** — Repo state `fdb3315`. Hydra audit confirmed ~80% of owner→admin→member distribution is built. Identified 5 gaps (4 to fix, 1 optional): `poolTemplates` missing from 2 write paths + 2 GET endpoints, `maxMembers` unenforced, `managedById` not set in direct invite, frontend missing `poolTemplates`/`allocatedTemplates` inputs, `MANAGER` role excluded from allocation UI (deferred).
-- **A-2: Admin Resource Distribution** — Closed 4 gaps in owner→admin→member resource system: added `poolTemplates` to 2 backend write paths + 2 GET endpoints (which also expose `allocatedTemplates` per member and compute `remainingTemplates`), enforced `maxMembers` in capacity middleware (with null guard), set `managedById` in direct invite creation (enables direct-invite members to appear in allocation management endpoints), added `poolTemplates`/`allocatedTemplates`/`remainingTemplates` to frontend types, state, and UI. Commit `472bf7f`. All tests green (44/44 backend, 78/78 frontend, tsc clean).
-- **E-1: Cheque Excel Scoping Audit** — Audited 6 areas (parser, ScanView, MappingView, preview, scans routes, Prisma schema). Found 11/11 pipeline stages already built: Excel parsing via exceljs with template-driven columnMappings, CHEQUE as valid transactionType, payee+checkNo+date merge grouping in ScanView, CheckPreviewForm with multi-line items, PayeeMapping + ValueMapping (account/class/tax), frontend+backend buildChequePayload, QB Purchase API sync, ScanRecord with transactionType:CHEQUE. JP confirmed fixed 11-column format (replacing flexible mappings for CHEQUE). Remaining: E-3 customer mapping refinement + merge-same-category option. Repo state `76f1f53` at audit time.
-- **E-2: Cheque Fixed-Column Excel Parser** — Commit `b02a173`. Added fixed 11-column CHEQUE parser branch to `parse-excel-data` route. Validates exact header names (case-insensitive), enforces 11-column count, skips empty rows + invalid amounts, returns structured cheque transactions. Added `CHEQUE` to `VALID_TRANSACTION_TYPES` and `validateModeTypeCompatibility`. 6 regression tests in `cheque-parser.test.ts`. 50/50 backend tests pass.
+- **Rebrand (9 commits)**: Nest → AutoBooks → Solyra → Qyra — text/metadata only across ~42 files. `c392366` `54cbe87` `c93a8ff` `d5f399d` `2df16b6` `eacf637` `ece5767` `9c3f524` `05f7a82`
+- **Workflow Restructure (2 commits)**: scoping audit, role permissions, tab restructure, bulk endpoints. W-2 (schema) skipped. `b1a7170` `6b490d9`
+- **Backend Test Fixes (4 commits)**: fixed stripe-plans, webhooks, capacity-middleware, team-status. `3f44041` `9f482fc` `a008cab` `95e6cca`
+- **L-1**: Partner Section Removal. `0626652`
+- **A-1**: Admin Distribution Scoping — audited 4 gaps. `56b9a43`
+- **A-2**: Admin Resource Distribution — closed 4 gaps. `472bf7f`
+- **E-1**: Cheque Excel Scoping Audit — 11/11 pipeline stages built, reduced Phase E scope. `bcbac30`
+- **E-2**: Cheque Fixed-Column Excel Parser — 11-col header validation, 6 new tests (50/50). `b02a173`
+
+---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
@@ -42,12 +29,7 @@
 
 ---
 
-### Phase R: Rebrand (Nest → AutoBooks)
-
-Pure text/metadata changes. No logic changes. ~42 files.
-
----
-
+### Phase R: Domain Migration
 
 #### R-4: Domain Migration (Manual — JP only)
 
@@ -109,7 +91,7 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 **What:** A new scan type for uploading Excel files containing cheque data. Each row = one cheque in QuickBooks (unless payee + check no. + payment date match, then merge into one cheque with multiple line items).
 
-#### E-1: Cheque Excel Scoping Audit (done)
+#### E-1: Cheque Excel Scoping Audit
 
 **Outcome:** Completed audit. The existing pipeline already supports CHEQUE transactionType, Excel parsing via `columnMappings`, payee+checkNo+date grouping in `ScanView`, multi-line cheque preview rendering, and backend QB cheque payload building.
 
@@ -140,12 +122,7 @@ Pure text/metadata changes. No logic changes. ~42 files.
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
-| 1 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 | — |
-| 2 | T-be-fix (done) | Fix 4 broken test suites | — | R-1 |
-| 3 | F-1 | Default Memo Auto-Fill | — | F-2 |
-| 4 | F-2 | Row Selection | — | F-1 |
-| 5 | E-1 (done) | Cheque Excel Scoping Audit | — | R-1 |
-| 6 | E-2 (done) | Cheque Fixed-Column Excel Parser | E-1 | — |
-| 7 | E-3 | Customer Mapping + Merge Option | E-2 | — |
-| 8 | A-1 (done) | Admin Distribution Scoping | — | R-1 |
-| 9 | A-2 (done) | Admin Resource Distribution Logic | A-1 | — |
+| 1 | R-4 | Domain Migration (manual) | R-1, R-2, R-3 (done) | — |
+| 2 | F-1 | Default Memo Auto-Fill | — | F-2 |
+| 3 | F-2 | Row Selection | — | F-1 |
+| 4 | E-3 | Customer Mapping + Merge Option | E-2 (done) | — |
