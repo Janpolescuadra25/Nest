@@ -225,7 +225,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   }
 
   const columnMappings = template.columnMappings as Record<string, unknown> | null;
-  if (template.transactionType !== 'JOURNAL_ENTRY') {
+  if (template.transactionType !== 'JOURNAL_ENTRY' && template.transactionType !== 'CHEQUE') {
     if (!columnMappings || typeof columnMappings !== 'object' || Array.isArray(columnMappings) || Object.keys(columnMappings).length === 0) {
       res.status(400).json({ error: 'Template has no column mapping configured.' });
       return;
@@ -342,11 +342,87 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
       skippedRows,
     });
     return;
-  }
+  } else if (template.transactionType === 'CHEQUE') {
+    // --- CHEQUE fixed-column parser ---
+    const EXPECTED_CHEQUE_HEADERS = [
+      'payee', 'bank account', 'payment date', 'check no.',
+      'category', 'description', 'amount', 'tax',
+      'customer', 'qb memo', 'tax type'
+    ];
 
-  if (!columnMappings) {
-    res.status(400).json({ error: 'Template has no column mapping configured.' });
+    const headerRow = rows[0].map(h => String(h ?? '').trim().toLowerCase());
+
+    if (rows.length < 2) {
+      res.status(400).json({
+        error: 'Cheque file must contain at least a header row and one data row.'
+      });
+      return;
+    }
+
+    if (headerRow.length !== 11) {
+      res.status(400).json({
+        error: `Cheque file must have exactly 11 columns per row. Found ${headerRow.length} columns.`
+      });
+      return;
+    }
+
+    const mismatched: string[] = [];
+    for (let i = 0; i < EXPECTED_CHEQUE_HEADERS.length; i++) {
+      if (headerRow[i] !== EXPECTED_CHEQUE_HEADERS[i]) {
+        const expected = EXPECTED_CHEQUE_HEADERS[i].replace(/\b\w/g, c => c.toUpperCase());
+        const found = headerRow[i] ? headerRow[i].replace(/\b\w/g, c => c.toUpperCase()) : '(empty)';
+        mismatched.push(`Column ${i + 1}: expected "${expected}", found "${found}"`);
+      }
+    }
+    if (mismatched.length > 0) {
+      res.status(400).json({
+        error: 'Header mismatch: ' + mismatched.join('; ')
+      });
+      return;
+    }
+
+    const transactions: any[] = [];
+    let skippedRows = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row.some(cell => cell != null && String(cell).trim() !== '')) continue;
+
+      const amountRaw = String(row[6] ?? '').trim();
+      const amount = parseFloat(amountRaw);
+      if (isNaN(amount)) {
+        skippedRows++;
+        continue;
+      }
+
+      transactions.push({
+        type: 'CHEQUE',
+        header: {
+          payeeName: String(row[0] ?? '').trim(),
+          bankAccount: String(row[1] ?? '').trim(),
+          paymentDate: String(row[2] ?? '').trim(),
+          checkNo: String(row[3] ?? '').trim(),
+        },
+        lineItems: [{
+          category: String(row[4] ?? '').trim(),
+          description: String(row[5] ?? '').trim(),
+          amount: amountRaw,
+          postingType: '',
+          tax: String(row[7] ?? '').trim(),
+          customer: String(row[8] ?? '').trim(),
+          memo: String(row[9] ?? '').trim(),
+          taxType: String(row[10] ?? '').trim(),
+        }],
+      });
+    }
+
+    res.json({ transactions, totalRows: rows.length - 1, skippedRows });
     return;
+  } else {
+    if (!columnMappings) {
+      res.status(400).json({ error: 'Template has no column mapping configured.' });
+      return;
+    }
   }
 
   const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
