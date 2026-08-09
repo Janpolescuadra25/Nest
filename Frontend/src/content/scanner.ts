@@ -396,6 +396,9 @@ if ((globalThis as unknown as Record<string, boolean>).__toastScannerLoaded) {
             if (process.env.NODE_ENV !== 'production') console.error('[Qyra Scanner] Scan failed:', err);
             sendResponse({ data: null });
           }
+        })
+        .catch(() => {
+          sendResponse({ data: null });
         });
 
       return true; // Keep message channel open for async response
