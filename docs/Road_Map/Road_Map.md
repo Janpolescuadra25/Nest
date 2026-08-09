@@ -9,12 +9,13 @@
 - **E-1**: Cheque Excel Scoping Audit — 11/11 pipeline stages built, reduced Phase E scope. `bcbac30`
 - **E-2**: Cheque Fixed-Column Excel Parser — 11-col header validation, 6 new tests (50/50). `b02a173`
 - **E-3: Customer Data Flow** — Extract customer from line items, pass as CustomerRef on Cheque header. 5 new tests (80/80 + 53/53). `955af6d`
+- **F-2: Row Selection in SyncView** — Row-level checkboxes, "Sync Selected" and "Delete Selected" with role/permission checks. `80d96f3`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`955af6d`, clean, pushed)
+### Repo State (`80d96f3`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -70,21 +71,9 @@
 
 ---
 
-#### F-2: Row Selection in SyncView (W-fe-row-select) (1-2 prompts)
+#### F-2: Row Selection in SyncView (W-fe-row-select)
 
-**What:** Add row-level checkboxes to the pending sync table. "Sync Selected" and "Delete Selected" bulk action buttons.
-
-**Scoping needed:** Hydra reads `Frontend/src/popup/components/SyncView.tsx` — documents current table column structure, how scan data is passed, how `api.syncBatch` is called, existing state patterns.
-
-**Expected behavior:**
-- Checkbox column (first column) on each scan row
-- "Select All" checkbox in table header
-- When 1+ rows checked: "Sync Selected (N)" button appears + "Delete Selected (N)" button appears
-- "Sync Selected" calls `api.syncBatch` with only checked scans
-- "Delete Selected" hard-deletes checked scans (with confirmation dialog)
-- "Sync All Pending" button still works unchanged for syncing everything
-
-**Expected output:** Users can selectively sync or delete individual scans. No backend changes needed.
+**Outcome:** Completed. Users can select specific scan records via checkboxes, sync only selected scans, and delete selected scans with confirmation. Role/permission checks prevent unauthorized access.
 
 ---
 
@@ -113,5 +102,4 @@
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
 | 1 | R-4 | Domain Migration (partial — GitHub renamed, Render URL updated, DNS configured. Remaining: Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
-| 2 | F-1 | Default Memo Auto-Fill | — | F-2 |
-| 3 | F-2 | Row Selection | — | F-1 |
+| 2 | F-1 | Default Memo Auto-Fill | — | — |
