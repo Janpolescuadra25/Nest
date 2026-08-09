@@ -108,6 +108,7 @@ export const chequeSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   memo: z.string().optional(),
   docNumber: z.string().optional(),
+  customerRef: z.object({ value: z.string().min(1, 'Customer value is required'), name: z.string().optional() }).optional(),
   lines: z.array(z.object({
     amount: z.number().positive('Amount must be positive'),
     accountRef: z.object({

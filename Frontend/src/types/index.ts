@@ -422,6 +422,7 @@ export interface BatchSyncItem {
   bankAccountRef?: { value: string; name?: string };
   payeeRef?: { value: string; name?: string };
   amount?: number;
+  customerRef?: { value: string; name?: string };
 }
 
 export interface BatchSyncResult {

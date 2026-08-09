@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { buildBillLikePayload, buildChequePayload } from '../batch-payload-builder';
 import type { Mapping, QBBillLineItem, QBChequeLineItem, ScanData, ScanEntry, ValueMapping } from '../../../types';
-import type { QBAccount } from '../../types/qb';
+import type { QBAccount, QBCustomer } from '../../types/qb';
 
 const mockAccounts: QBAccount[] = [
   { Id: 'acc-1', Name: 'Checking', FullyQualifiedName: 'Checking', AccountType: 'Bank', AccountSubType: 'Checking', Classification: 'Asset', Active: true },
   { Id: 'acc-2', Name: 'Rent Expense', FullyQualifiedName: 'Rent Expense', AccountType: 'Expense', AccountSubType: 'Rent', Classification: 'Expense', Active: true },
   { Id: 'acc-3', Name: 'Utilities Expense', FullyQualifiedName: 'Utilities Expense', AccountType: 'Expense', AccountSubType: 'Utilities', Classification: 'Expense', Active: true },
   { Id: 'acc-4', Name: 'Office Supplies', FullyQualifiedName: 'Office Supplies', AccountType: 'Expense', AccountSubType: 'Office Supplies', Classification: 'Expense', Active: true },
+];
+
+const mockCustomers: QBCustomer[] = [
+  { Id: 'cust-123', DisplayName: 'ACME Corp', Active: true },
 ];
 
 const mockMappings: Mapping[] = [
@@ -66,6 +70,58 @@ describe('batch-payload-builder', () => {
     expect(result!.payeeRef?.value).toBe('vendor-1');
     expect(result!.docNumber).toBe('CHK-001');
     expect(result!.memo).toBe('Monthly payment');
+  });
+
+  it('extracts customer from cheque line items and sets customerRef when a matching customer exists', () => {
+    const scanEntry: ScanEntry = {
+      id: 'scan-cust-1',
+      source: 'excel',
+      header: { payeeRef: 'ACME Corp', docNumber: 'CHK-003', date: '2026-01-15' },
+      lineItems: [
+        { Rent: '1500', Customer: 'ACME Corp' },
+      ],
+    };
+
+    const result = buildChequePayload({
+      scanRecordId: 'scan-cust-1',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      customers: mockCustomers,
+      txnDate: '2026-01-15',
+      defaults: mockDefaults,
+      scanEntry,
+      valueMappings: mockValueMappings,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.customerRef).toEqual({ value: 'cust-123', name: 'ACME Corp' });
+  });
+
+  it('does not set customerRef when there is no matching customer in the customers list', () => {
+    const scanEntry: ScanEntry = {
+      id: 'scan-cust-2',
+      source: 'excel',
+      header: { payeeRef: 'ACME Corp', docNumber: 'CHK-004', date: '2026-01-16' },
+      lineItems: [
+        { Rent: '1500', Customer: 'Unknown Corp' },
+      ],
+    };
+
+    const result = buildChequePayload({
+      scanRecordId: 'scan-cust-2',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      customers: mockCustomers,
+      txnDate: '2026-01-16',
+      defaults: mockDefaults,
+      scanEntry,
+      valueMappings: mockValueMappings,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.customerRef).toBeUndefined();
   });
 
   it('handles a single line item correctly (baseline)', () => {

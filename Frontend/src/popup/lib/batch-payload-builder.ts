@@ -3,7 +3,7 @@ import { decodeMapping } from './je-builder';
 import { resolveMapping } from './mapping-conditions';
 import { resolveValueMapping } from './resolve-value-mapping';
 import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem, ValueMapping } from '../../types';
-import type { QBAccount } from '../types/qb';
+import type { QBAccount, QBCustomer } from '../types/qb';
 
 type TemplateDefaults = Record<string, { value: string; name?: string } | null>;
 
@@ -79,13 +79,30 @@ export function buildChequePayload(params: {
   scanData: ScanData;
   mappings: Mapping[];
   accounts: QBAccount[];
+  customers?: QBCustomer[];
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
   valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, scanData, mappings, accounts, txnDate, defaults, scanEntry, valueMappings } = params;
+  const { scanRecordId, scanData, mappings, accounts, customers, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
+
+  let customerRef: { value: string; name?: string } | undefined;
+  if (customers?.length && scanEntry?.lineItems?.length) {
+    for (const lineItem of scanEntry.lineItems) {
+      for (const value of Object.values(lineItem)) {
+        if (typeof value !== 'string') continue;
+        const normalized = value.trim().toLowerCase();
+        const matchedCustomer = customers.find((customer) => customer.DisplayName.toLowerCase() === normalized);
+        if (matchedCustomer) {
+          customerRef = { value: matchedCustomer.Id, name: matchedCustomer.DisplayName };
+          break;
+        }
+      }
+      if (customerRef) break;
+    }
+  }
 
   const buildLines = (fields: ScanData): QBChequeLineItem[] =>
     Object.entries(fields)
@@ -143,6 +160,7 @@ export function buildChequePayload(params: {
     lines,
     bankAccountRef: defaults.bankAccountRef ?? undefined,
     payeeRef: defaults.payeeRef ?? undefined,
+    customerRef,
     amount,
     memo: defaults.qbMemo?.value || defaults.memo?.value,
     docNumber: defaults.docNumber?.value,

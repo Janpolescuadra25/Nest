@@ -80,6 +80,7 @@ export interface CreateChequeInput {
   docNumber?: string;
   bankAccountRef: { value: string; name?: string };
   payeeRef: { value: string; name?: string };
+  customerRef?: { value: string; name?: string };
   amount: number;
   memo?: string;
   lines: QBChequeLineItem[];

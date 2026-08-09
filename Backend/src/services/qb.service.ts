@@ -602,6 +602,10 @@ function buildChequePayload(input: CreateChequeInput): object {
     PrintStatus: 'NeedToPrint',
   };
 
+  if (input.customerRef) {
+    payload.CustomerRef = { value: input.customerRef.value };
+  }
+
   if (input.memo) payload.Memo = input.memo;
   if (input.docNumber) payload.DocNumber = input.docNumber;
 

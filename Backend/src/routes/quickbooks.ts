@@ -633,10 +633,12 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
       docNumber,
       lines,
       scanRecordId,
+      customerRef,
     } = req.body as {
       txnDate?: string;
       bankAccountRef?: { value: string; name?: string };
       payeeRef?: { value: string; name?: string };
+      customerRef?: { value: string; name?: string };
       amount?: number;
       memo?: string;
       docNumber?: string;
@@ -688,6 +690,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
       lines,
       docNumber,
       Boolean(req.body.skipDedupCheck),
+      customerRef,
     );
 
     if (result.status === 'SKIPPED') {
@@ -1054,9 +1057,10 @@ async function syncSingleCheque(
   lines: QBChequeLineItem[],
   docNumber?: string,
   skipDedupCheck = false,
+  customerRef?: { value: string; name?: string },
 ): Promise<SyncSingleResult> {
   const syncType = SyncType.CHEQUE;
-  const requestHash = hashSyncRequest(syncType, { txnDate, bankAccountRef, payeeRef, amount, memo, lines, docNumber });
+  const requestHash = hashSyncRequest(syncType, { txnDate, bankAccountRef, payeeRef, amount, memo, lines, docNumber, customerRef });
 
   const attemptCount = scanRecordId
     ? (await prisma.syncLog.count({ where: { scanRecordId } })) + 1
@@ -1096,6 +1100,7 @@ async function syncSingleCheque(
         docNumber: finalDocNumber,
         bankAccountRef,
         payeeRef,
+        customerRef,
         amount,
         memo,
         lines,
@@ -1113,7 +1118,7 @@ async function syncSingleCheque(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
@@ -1174,7 +1179,7 @@ async function syncSingleCheque(
       requestHash,
       status: 'FAILED',
       attemptCount,
-      requestPayload: { txnDate, bankAccountRef, payeeRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
     }).catch(console.error);
@@ -1491,6 +1496,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
         bankAccountRef?: { value: string; name?: string };
         payeeRef?: { value: string; name?: string };
         amount?: number;
+        customerRef?: { value: string; name?: string };
       }>;
     };
 
@@ -1650,6 +1656,8 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
             item.memo,
             item.lines as QBChequeLineItem[],
             item.docNumber,
+            undefined,
+            item.customerRef,
           );
           break;
         }
@@ -2003,12 +2011,13 @@ async function retrySyncFromLog(
         txnDate: string;
         bankAccountRef: { value: string; name?: string };
         payeeRef: { value: string; name?: string };
+        customerRef?: { value: string; name?: string };
         amount: number;
         memo?: string;
         lines: QBChequeLineItem[];
         docNumber?: string;
       };
-      return syncSingleCheque(userId, scanRecordId, p.txnDate, p.bankAccountRef, p.payeeRef, p.amount, p.memo, p.lines, p.docNumber, true);
+      return syncSingleCheque(userId, scanRecordId, p.txnDate, p.bankAccountRef, p.payeeRef, p.amount, p.memo, p.lines, p.docNumber, true, p.customerRef);
     }
 
     case 'BILL': {
