@@ -98,5 +98,4 @@
 
 | # | Phase | Description | Dependencies | Can Parallel With |
 |---|---|---|
-| 1 | I | Admin Resource Distribution | None | — |
 | — | R-4 | Domain Migration (manual — JP only) | None | — |
