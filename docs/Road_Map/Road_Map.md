@@ -10,12 +10,13 @@
 - **E-2**: Cheque Fixed-Column Excel Parser — 11-col header validation, 6 new tests (50/50). `b02a173`
 - **E-3: Customer Data Flow** — Extract customer from line items, pass as CustomerRef on Cheque header. 5 new tests (80/80 + 53/53). `955af6d`
 - **F-2: Row Selection in SyncView** — Row-level checkboxes, "Sync Selected" and "Delete Selected" with role/permission checks. `80d96f3`
+- **F-1: Default Memo Auto-Fill** — Cheque defaults section gains QB Memo + Private Note input fields and save logic. JE gains `defaults.privateNote` support with `prev ||` priority chain. `e899e8c`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`80d96f3`, clean, pushed)
+### Repo State (`ae059cb`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -52,22 +53,7 @@
 
 #### F-1: Default Memo Auto-Fill (1-2 prompts)
 
-**What:** Every form type (JE, Bill, Cheque, Vendor Credit) has a "Memo" field in QuickBooks. Users should be able to set a customizable default memo that auto-fills when creating entries.
-
-**Scoping needed:** Hydra audits:
-1. `Frontend/src/popup/components/BillPreviewForm.tsx` — how is the memo field currently rendered? Is there already a default?
-2. Same for `JournalEntryPreview.tsx`, `VendorCreditPreviewForm.tsx`, and the Cheque preview form
-3. `Frontend/src/popup/components/MappingView/index.tsx` — is there a settings section where default memo could be configured?
-4. Does the User model or a settings model store per-form-type defaults?
-
-**Expected behavior:**
-- In MappingView (or SettingsView), user can set a default memo for each form type: JE, Bill, Cheque, Vendor Credit
-- Default memo persists (localStorage or backend)
-- When creating a new entry in the preview form, the memo field pre-fills with the default
-- User can still edit the memo before syncing — default is just a starting point
-- QB Memo (visible in QuickBooks) and Private Memo (internal only) each have their own default
-
-**Expected output:** Each preview form auto-fills its memo field with the user's configured default. Defaults are saved and persist across sessions.
+**Outcome:** Completed. Cheque defaults section now includes configurable QB Memo and Private Note fields matching Bill and Vendor Credit patterns. JournalEntryPreview reads `defaults.privateNote` with proper `prev ||` priority chain — defaults → memoTemplate → scan header → fallback.
 
 ---
 
@@ -102,4 +88,3 @@
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
 | 1 | R-4 | Domain Migration (partial — GitHub renamed, Render URL updated, DNS configured. Remaining: Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
-| 2 | F-1 | Default Memo Auto-Fill | — | — |
