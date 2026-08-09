@@ -59,6 +59,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [isRetryingId, setIsRetryingId] = useState<string | null>(null);
   const [isRetryingAll, setIsRetryingAll] = useState(false);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+  const [selectedScanIds, setSelectedScanIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
@@ -148,6 +150,194 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
       showToast(err instanceof Error ? err.message : 'Batch retry failed', 'error');
     } finally {
       setIsRetryingAll(false);
+    }
+  };
+
+  const clearSelectedScans = () => setSelectedScanIds(new Set());
+
+  const handleSyncSelected = async () => {
+    if (selectedScanIds.size === 0) return;
+
+    setBatchSyncing(true);
+    setBatchProgress('Preparing...');
+    try {
+      const isAdminOrOwner = userRole === 'ADMIN' || userRole === 'OWNER';
+      const allPending: ScanRecord[] = [];
+      let fetchPage = 1;
+      let fetchMore = true;
+      while (fetchMore) {
+        if (fetchPage > 100) break;
+        const { scans: pageScans, hasMore: more } = await api.getScans(jwt, locationId, fetchPage, 100);
+        allPending.push(...(pageScans ?? []).filter((s) =>
+          isAdminOrOwner
+            ? (s.status === 'PENDING' || s.status === 'MAPPED')
+            : s.status === 'APPROVED'
+        ));
+        fetchMore = more;
+        fetchPage++;
+      }
+
+      const mappings = await api.getMappings(jwt, locationId);
+      const templates = await api.getTemplates(jwt, locationId);
+      const valueMappingsByTemplate = new Map<string, ValueMapping[]>();
+      await Promise.all(
+        templates.map(async (template) => {
+          const valueMappings = await api.getValueMappings(jwt, template.id);
+          valueMappingsByTemplate.set(template.id, valueMappings ?? []);
+        }),
+      );
+      const journalEntryTemplate = templates.find((t) => t.transactionType === 'JOURNAL_ENTRY' && t.isActive);
+
+      const selectedScans = allPending.filter((scan) => selectedScanIds.has(scan.id));
+      const skippedReasons: { type: string; reason: string; count: number }[] = [];
+      const skippedWarnings: string[] = [];
+      const items: BatchSyncItem[] = [];
+
+      for (const scan of selectedScans) {
+        const txnType = (scan.transactionType ?? 'JOURNAL_ENTRY').toUpperCase();
+        const sharedScanEntry = scan.source && scan.source !== 'pos' && scan.rawScanEntry ? scan.rawScanEntry as ScanEntry : undefined;
+
+        if (txnType === 'JOURNAL_ENTRY') {
+          const payload = buildJEPayload({
+            scanRecordId: scan.id,
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            txnDate: scan.scanDate.slice(0, 10),
+            scanEntry: sharedScanEntry,
+            valueMappings: journalEntryTemplate ? valueMappingsByTemplate.get(journalEntryTemplate.id) ?? [] : [],
+          });
+
+          if (payload.lines.length > 0) {
+            if (!payload.balanced) {
+              skippedWarnings.push(
+                `Skipped unbalanced entry (Debits: $${payload.totalDebits.toFixed(2)}, Credits: $${payload.totalCredits.toFixed(2)}, Diff: $${payload.imbalanceAmount.toFixed(2)})`,
+              );
+            } else {
+              items.push({ ...payload, transactionType: 'JOURNAL_ENTRY' });
+            }
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
+
+        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT') {
+          const template = templates.find((t) => t.transactionType === txnType && t.isActive);
+          if (!template?.defaults || !template.defaults.vendorRef || !template.defaults.apAccountRef) {
+            const reason = 'missing header defaults (set up in Mapping tab)';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+            continue;
+          }
+
+          const payload = buildBillLikePayload({
+            scanRecordId: scan.id,
+            transactionType: txnType as 'BILL' | 'VENDOR_CREDIT',
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            txnDate: scan.scanDate.slice(0, 10),
+            defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
+            scanEntry: sharedScanEntry,
+            valueMappings: valueMappingsByTemplate.get(template.id) ?? [],
+          });
+
+          if (payload) {
+            items.push(payload);
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
+
+        if (txnType === 'CHEQUE') {
+          const template = templates.find((t) => t.transactionType === 'CHEQUE' && t.isActive);
+          if (!template?.defaults || !template.defaults.bankAccountRef || !template.defaults.payeeRef) {
+            const reason = 'missing header defaults (set up in Mapping tab)';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+            continue;
+          }
+
+          const payload = buildChequePayload({
+            scanRecordId: scan.id,
+            scanData: scan.rawData,
+            mappings,
+            accounts,
+            customers,
+            txnDate: scan.scanDate.slice(0, 10),
+            defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
+            scanEntry: sharedScanEntry,
+            valueMappings: valueMappingsByTemplate.get(template.id) ?? [],
+          });
+
+          if (payload) {
+            items.push(payload);
+          } else {
+            const reason = 'no mapped line items';
+            const existing = skippedReasons.find((s) => s.type === txnType && s.reason === reason);
+            if (existing) { existing.count++; } else { skippedReasons.push({ type: txnType, reason, count: 1 }); }
+          }
+          continue;
+        }
+      }
+
+      if (skippedWarnings.length > 0) {
+        showToast(
+          `[Batch Sync] Skipped ${skippedWarnings.length} unbalanced entries. Review them individually.`,
+          'error',
+        );
+      }
+
+      for (const skip of skippedReasons) {
+        const label = TRANSACTION_TYPE_LABELS[skip.type as keyof typeof TRANSACTION_TYPE_LABELS] ?? skip.type;
+        showToast(`${skip.count} ${label} scan(s) skipped — ${skip.reason}`, 'info');
+      }
+
+      if (items.length === 0) {
+        if (skippedReasons.length === 0) {
+          showToast('No selected scans to sync', 'info');
+        }
+        return;
+      }
+
+      setBatchProgress(`Syncing ${items.length} scan${items.length !== 1 ? 's' : ''}...`);
+
+      const { results, summary } = await api.syncBatch(jwt, items);
+
+      const hasAuthFailure = results.some((r) => r.status === 'FAILED' && r.errorType === 'AUTH');
+      showToast(
+        `${summary.synced} synced, ${summary.skipped} skipped, ${summary.failed} failed`,
+        summary.failed > 0 ? 'error' : 'success',
+      );
+      if (hasAuthFailure) {
+        showToast('QuickBooks connection expired. Please reconnect.', 'error');
+      }
+
+      clearSelectedScans();
+      await refreshScans();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Batch sync failed', 'error');
+    } finally {
+      setBatchSyncing(false);
+      setBatchProgress('');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    try {
+      await api.bulkDeleteScans(jwt, [...selectedScanIds]);
+      setShowDeleteConfirm(false);
+      clearSelectedScans();
+      await refreshScans();
+      showToast(`Deleted ${selectedScanIds.size} selected scan${selectedScanIds.size !== 1 ? 's' : ''}`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Delete failed', 'error');
     }
   };
 
@@ -379,6 +569,26 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
     return true;
   });
+  const isAllVisibleSelected = filteredScans.length > 0 && filteredScans.every((scan) => selectedScanIds.has(scan.id));
+  const selectedCount = selectedScanIds.size;
+  const toggleScanSelection = (scanId: string) => {
+    const nextSelection = new Set(selectedScanIds);
+    if (nextSelection.has(scanId)) {
+      nextSelection.delete(scanId);
+    } else {
+      nextSelection.add(scanId);
+    }
+    setSelectedScanIds(nextSelection);
+  };
+  const toggleSelectAllVisible = () => {
+    const nextSelection = new Set(selectedScanIds);
+    if (isAllVisibleSelected) {
+      filteredScans.forEach((scan) => nextSelection.delete(scan.id));
+    } else {
+      filteredScans.forEach((scan) => nextSelection.add(scan.id));
+    }
+    setSelectedScanIds(nextSelection);
+  };
   const totalSynced = safeScans.filter((s) => s.status === 'SYNCED').length;
   const totalFailed = safeScans.filter((s) => s.status === 'FAILED').length;
   const totalPendingApproval = safeScans.filter((s) => s.status === 'PENDING_APPROVAL').length;
@@ -445,6 +655,26 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                 {isRetryingAll ? '⏳ Retrying...' : `↻ Retry ${totalFailed} Failed`}
               </button>
             )}
+            {selectedScanIds.size > 0 && (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (
+              <>
+                {status.connected && (
+                  <button
+                    onClick={() => void handleSyncSelected()}
+                    disabled={batchSyncing}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-200 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
+                  >
+                    {batchSyncing ? '⏳ Syncing...' : `Sync Selected (${selectedScanIds.size})`}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={batchSyncing}
+                  className="text-xs bg-red-600 hover:bg-red-700 disabled:bg-red-200 text-white px-3 py-1 rounded transition-colors flex-shrink-0"
+                >
+                  Delete Selected
+                </button>
+              </>
+            )}
           </div>
           {batchSyncing && batchProgress && (
             <p className="text-xs text-amber-400 text-center animate-pulse">{batchProgress}</p>
@@ -456,6 +686,14 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             confirmText="Sync All"
             onConfirm={() => { setShowSyncConfirm(false); void handleSyncAll(); }}
             onCancel={() => setShowSyncConfirm(false)}
+          />
+          <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Delete Selected Scans"
+            message={`Delete ${selectedScanIds.size} selected scan${selectedScanIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+            confirmText="Delete"
+            onConfirm={() => { setShowDeleteConfirm(false); void handleDeleteSelected(); }}
+            onCancel={() => setShowDeleteConfirm(false)}
           />
         </div>
       )}
@@ -488,7 +726,10 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           <select
             className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
+            onChange={(e) => {
+              setSourceFilter(e.target.value);
+              setSelectedScanIds(new Set());
+            }}
           >
             <option value="all">All Sources</option>
             <option value="pos">POS Only</option>
@@ -498,7 +739,10 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
           </select>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setSelectedScanIds(new Set());
+            }}
             className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
           >
             {STATUS_FILTER_OPTIONS.map((opt) => (
@@ -543,6 +787,15 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-200/30">
+                  <th className="text-left px-3 py-2 text-gray-600 font-medium w-[32px]">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-4 w-4 text-emerald-600"
+                      checked={isAllVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="Select all visible scans"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2 text-gray-600 font-medium">Scan Date</th>
                   <th className="text-left px-3 py-2 text-gray-600 font-medium">Status</th>
                   <th className="text-left px-3 py-2 text-gray-600 font-medium">QB Document ID</th>
@@ -572,6 +825,15 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                   return (
                     <React.Fragment key={scan.id}>
                       <tr className={`border-t border-gray-200/50 hover:bg-gray-100 ${attention === 'max-retried' ? 'bg-red-50' : attention === 'stale' || attention === 'old-failure' ? 'bg-amber-50' : ''}`}>
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            className="form-checkbox h-4 w-4 text-emerald-600"
+                            checked={selectedScanIds.has(scan.id)}
+                            onChange={() => toggleScanSelection(scan.id)}
+                            aria-label={`Select scan ${scan.scanDate}`}
+                          />
+                        </td>
                         <td className="px-3 py-2 text-gray-700 font-mono">{scan.scanDate}</td>
                         <td className="px-3 py-2">
                           <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-600'}`}>
@@ -686,7 +948,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                       </tr>
                       {expandedScanId === scan.id && scan.rawScanEntry && (
                         <tr className="border-t border-gray-200/30 bg-gray-100">
-                          <td colSpan={9} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
+                          <td colSpan={10} className="px-4 py-3" onClick={() => setExpandedScanId(null)}>
                             {(() => {
                               const entry = scan.rawScanEntry as ScanEntry;
                               const header = entry.header ?? {};
@@ -739,7 +1001,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                       )}
                       {scan.status === 'FAILED' && latestLog && (latestLog.errorMessage || latestLog.errorType) && (
                         <tr>
-                          <td colSpan={9} className="px-3 pb-2 pt-0">
+                          <td colSpan={10} className="px-3 pb-2 pt-0">
                             {latestLog.errorType === 'AUTH' ? (
                               <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-2 py-1.5 space-y-1">
                                 <div>QuickBooks connection expired. Please reconnect.</div>
