@@ -12,16 +12,17 @@
 - **F-2: Row Selection in SyncView** — Row-level checkboxes, "Sync Selected" and "Delete Selected" with role/permission checks. `80d96f3`
 - **F-1: Default Memo Auto-Fill** — Cheque defaults section gains QB Memo + Private Note input fields and save logic. JE gains `defaults.privateNote` support with `prev ||` priority chain. `e899e8c`
 - **UI Cleanup** — Removed redundant "Qyra" text below login logo, removed partner section from landing page (HTML + JS), restricted status filter dropdown per tab (For Review hides "Approved", Approved hides filter entirely). `e9d9ce6`
+- **H: Fixed Cheque Excel Format** — Cheque-specific MappingView UI (hide Column Roles, show fixed 11-column format). CheckPreviewForm reads fixed columns directly. batch-payload-builder preserves string fields. 1 new test (81/81 + 53/53). `9cfca33` `8b09240`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`e9d9ce6`, clean, pushed)
+### Repo State (`8b09240`, clean, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 80/80 ✅ |
+| Frontend tests | 81/81 ✅ |
 | Backend tests | 53/53 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -84,30 +85,7 @@
 
 ---
 
-### Phase H: Fixed Cheque Excel Format
-
-**What:** Cheques use a fixed 10-column Excel format, unlike Bills and Vendor Credits which use flexible user-configurable column mapping. When a CHEQUE template is selected, the MappingView must enforce this fixed format instead of showing the generic invoice-style column roles.
-
-**Goal:** Users scanning cheque Excel files see a cheque-specific mapping experience — fixed column headers, cheque-specific preview showing individual cheque forms, and each row syncing as a separate cheque to QuickBooks.
-
-**Scoping needed:**
-- `MappingView/index.tsx` — conditionally hide "Column Roles" section and "Line Item Fields" section when `transactionType === 'CHEQUE'`
-- `MappingView/index.tsx` — "Scanned Line Items" table must show cheque-specific columns instead of invoice columns (Description, Qty, Unit Price, Total)
-- Cheque Excel parser — fixed 10-column format: Payee (col 1), Bank Account (col 2), Payment Date (col 3), Check No. (col 4), Category (col 5), Description (col 6), Amount (col 7), Tax (col 8), Customer (col 9), QB Memo (col 10)
-- Row merging logic — if payee + check no. + payment date match across rows, merge into one cheque with multiple line items; otherwise each row = one separate cheque
-- Mapping section still works for Payee → QB Vendor, Category → QB Account, Customer → QB Customer, Tax → tax code
-- Description auto-fills from Excel description column
-- Tax column maps to Exclusive/Inclusive/Out of scope tax treatment
-
-**Expected behavior:**
-1. User selects CHEQUE template in MappingView → "Column Roles" and "Line Item Fields" sections are hidden
-2. "Scanned Line Items" table shows cheque columns: #, Payee, Bank Account, Date, Check No., Category, Description, Amount, Tax, Customer, Memo
-3. Helper text says "cheque items" not "invoice items"
-4. Mapping section allows mapping Payee, Category, Tax, Customer values to QB names
-5. Preview section shows individual cheque forms (one per row, or merged if matching payee/check#/date)
-6. Sync creates one QB Cheque per row (or one merged cheque with multiple line items)
-
-**Expected output:** MappingView enforces fixed cheque format, preview shows correct cheque forms, sync creates correct QB Cheques.
+**Outcome:** Completed. MappingView shows cheque-specific columns and hides Column Roles/Line Item Fields for CHEQUE templates. CheckPreviewForm extracts fixed columns directly (category, amount, description, tax, customer, memo, taxType) instead of requiring columnMappings. batch-payload-builder reads fixed columns without parseNumericValue destroying strings. L366 useEffect updated with E-2 key name fallbacks (paymentDate, checkNo, bankAccount).
 
 ---
 
@@ -140,7 +118,6 @@
 ### Execution Order
 
 | # | Phase | Description | Dependencies | Can Parallel With |
-|---|---|---|---|---|
-| 1 | H | Fixed Cheque Excel Format | None | I |
-| 2 | I | Admin Resource Distribution | None | H |
+|---|---|---|
+| 1 | I | Admin Resource Distribution | None | — |
 | — | R-4 | Domain Migration (manual — JP only) | None | — |
