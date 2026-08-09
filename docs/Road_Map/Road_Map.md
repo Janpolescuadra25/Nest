@@ -8,17 +8,18 @@
 - **A-2**: Admin Resource Distribution — closed 4 gaps. `472bf7f`
 - **E-1**: Cheque Excel Scoping Audit — 11/11 pipeline stages built, reduced Phase E scope. `bcbac30`
 - **E-2**: Cheque Fixed-Column Excel Parser — 11-col header validation, 6 new tests (50/50). `b02a173`
+- **E-3: Customer Data Flow** — Extract customer from line items, pass as CustomerRef on Cheque header. 5 new tests (80/80 + 53/53). `955af6d`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`5fb3f12`, clean, pushed)
+### Repo State (`955af6d`, clean, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 78/78 ✅ |
-| Backend tests | 50/50 ✅ |
+| Frontend tests | 80/80 ✅ |
+| Backend tests | 53/53 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -95,8 +96,7 @@
 
 **Outcome:** Completed audit. The existing pipeline already supports CHEQUE transactionType, Excel parsing via `columnMappings`, payee+checkNo+date grouping in `ScanView`, multi-line cheque preview rendering, and backend QB cheque payload building.
 
-**Remaining work:**
-- E-3: refine customer mapping and add an optional same-category merge path before preview
+- **Remaining work:** None — E-3 complete.
 
 **Why E-4 is removed:** Cheque preview is already implemented in the current code, so it is no longer a separate scope item.
 
@@ -104,17 +104,7 @@
 
 #### E-3: Customer Mapping Refinement + Same-Category Merge Option (1 prompt)
 
-**What:** Close the remaining cheque mapping gaps.
-
-**Scope:**
-- Add a dedicated `customer` mapping field type so users can map cheque row `Customer` values directly to QuickBooks customers
-- Keep existing `name` mapping for generic vendor/employee/name resolution
-- Optionally allow multiple cheque line items with the same mapped category to merge into a single line item with a summed amount before preview
-
-**Expected behavior:**
-- Mapping UI exposes `Customer` as a first-class field type for cheque scans
-- Preview shows accurate mapped customers and categories
-- Optional same-category merge produces a cleaner cheque payload when enabled
+**Outcome:** Completed. Customer values extracted from scan line items before numeric filtering, resolved against QBCustomer list, passed as CustomerRef on QB Cheque header payload through full stack.
 
 ---
 
@@ -122,7 +112,6 @@
 
 | # | Phase | Prompt | Depends On | Can Parallel With |
 |---|---|---|---|---|
-| 1 | R-4 | Domain Migration (partial — GitHub repo renamed to Qyra, Render URL updated. Remaining: DNS, Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
+| 1 | R-4 | Domain Migration (partial — GitHub renamed, Render URL updated, DNS configured. Remaining: Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
 | 2 | F-1 | Default Memo Auto-Fill | — | F-2 |
 | 3 | F-2 | Row Selection | — | F-1 |
-| 4 | E-3 | Customer Mapping + Merge Option | E-2 (done) | — |
