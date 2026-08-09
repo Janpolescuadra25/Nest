@@ -147,6 +147,38 @@ export default function CheckPreviewForm({
   useEffect(() => {
     if (!activeScanEntry) return;
     if (activeScanEntry.source === 'pos') return;
+    if (activeScanEntry.source === 'excel' && selectedTemplate?.transactionType === 'CHEQUE') {
+      if (userHasEditedLinesRef.current) return;
+      const excelChequeLines = activeScanEntry.lineItems?.map((item) => {
+        const category = String(item['category'] ?? '').trim();
+        const amount = String(item['amount'] ?? '').trim();
+        let accountId = '';
+        if (category) {
+          const vmResult = resolveValueMapping(
+            category,
+            'account',
+            valueMappings,
+            (id) => accountsRef.current.find((a) => a.Id === id),
+          );
+          if (vmResult.matched) {
+            accountId = vmResult.entityId;
+          }
+        }
+        const accountName = accountsRef.current.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
+        return newLine({
+          accountId,
+          accountName,
+          description: String(item['description'] ?? category).trim(),
+          amount,
+        });
+      }) ?? [];
+
+      if (excelChequeLines.length > 0) {
+        setLines(excelChequeLines);
+      }
+      setMemo((prev) => prev || String(activeScanEntry.header['memo'] ?? ''));
+      return;
+    }
     if (!selectedTemplate?.columnMappings || !selectedTemplate?.id) return;
     if (!jwt || !locId) return;
     if (userHasEditedLinesRef.current) return;
@@ -421,10 +453,11 @@ export default function CheckPreviewForm({
 
     setDocNumber((prev) => {
       if (prev) return prev;
-      return (h.chequeNumber || '').trim() || prev;
+      const checkNo = String(h.checkNo || h.chequeNumber || '').trim();
+      return checkNo || prev;
     });
 
-    const parsedDate = parseScanDate(h.date || h.chequeDate || h.invoiceDate);
+    const parsedDate = parseScanDate(h.paymentDate || h.date || h.chequeDate || h.invoiceDate);
     if (parsedDate) {
       setTxnDate((prev) => {
         if (prev && prev !== toYMD(new Date())) return prev;
@@ -439,8 +472,9 @@ export default function CheckPreviewForm({
       });
     }
 
-    if (h.bankName && !bankAccountRef.value) {
-      const bankName = String(h.bankName).toLowerCase();
+    const bankHeader = h.bankAccount || h.bankName;
+    if (bankHeader && !bankAccountRef.value) {
+      const bankName = String(bankHeader).toLowerCase();
       const match = accounts.find((a) => a.FullyQualifiedName.toLowerCase().includes(bankName));
       if (match) setBankAccountRef({ value: match.Id, name: match.FullyQualifiedName });
     }
@@ -449,13 +483,15 @@ export default function CheckPreviewForm({
   useEffect(() => {
     if (!mappingsLoaded) return;
     if (activeScanEntry?.source === 'image' || activeScanEntry?.source === 'pdf') return;
+    if (activeScanEntry?.source === 'excel' && selectedTemplate?.transactionType === 'CHEQUE') return;
+
     const decoded = savedMappings.map(decodeMapping);
     const scanFields: Record<string, number> = activeScanEntry
       ? Object.fromEntries(
-        Object.entries(activeScanEntry.lineItems?.[0] ?? {})
-          .map(([key, value]) => [key, parseNumericValue(value)])
-          .filter(([, v]) => v !== 0),
-      ) as Record<string, number>
+          Object.entries(activeScanEntry.lineItems?.[0] ?? {})
+            .map(([key, value]) => [key, parseNumericValue(value)])
+            .filter(([, v]) => v !== 0),
+        ) as Record<string, number>
       : scanData ?? {};
 
     const checkLines = Object.entries(scanFields)
@@ -476,7 +512,7 @@ export default function CheckPreviewForm({
     if (checkLines.length > 0) {
       setLines(checkLines);
     }
-  }, [activeScanEntry, scanData, savedMappings, mappingsLoaded, accountsRef]);
+  }, [activeScanEntry, scanData, savedMappings, mappingsLoaded, accountsRef, selectedTemplate]);
 
   const payeeOptions = useMemo(() =>
     vendors

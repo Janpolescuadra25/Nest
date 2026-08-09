@@ -212,6 +212,45 @@ describe('batch-payload-builder', () => {
     expect(result!.lines).toHaveLength(1);
     expect(result!.amount).toBe(500);
   });
+
+  it('supports fixed-format cheque rows with category and amount fields', () => {
+    const scanEntry: ScanEntry = {
+      id: 'scan-fixed-1',
+      source: 'excel',
+      header: {
+        payeeName: 'ACME Corp',
+        bankAccount: 'Checking',
+        paymentDate: '2026-02-20',
+        checkNo: 'CHK-007',
+        memo: 'Fixed cheque memo',
+      },
+      lineItems: [
+        { category: 'Rent', description: 'Office rent', amount: '1500', tax: '0', customer: '', memo: 'Rent month', taxType: '' },
+        { category: 'Utilities', description: 'Electricity', amount: '200.25', tax: '0', customer: '', memo: 'Utilities month', taxType: '' },
+      ],
+    };
+
+    const result = buildChequePayload({
+      scanRecordId: 'scan-fixed-1',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      txnDate: '2026-02-20',
+      defaults: mockDefaults,
+      scanEntry,
+      valueMappings: mockValueMappings,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.lines).toHaveLength(2);
+    expect(result!.lines[0].description).toBe('Office rent');
+    expect(result!.lines[0].amount).toBe(1500);
+    expect(result!.lines[1].amount).toBe(200.25);
+    expect(result!.amount).toBe(1700.25);
+    expect(result!.bankAccountRef?.value).toBe('acc-1');
+    expect(result!.payeeRef?.value).toBe('vendor-1');
+    expect(result!.memo).toBe('Monthly payment');
+  });
 });
 
 describe('buildBillLikePayload', () => {
