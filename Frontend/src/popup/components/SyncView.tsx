@@ -569,6 +569,11 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
     return true;
   });
+  const visibleStatusOptions = mode === 'approved'
+    ? []
+    : mode === 'review'
+      ? STATUS_FILTER_OPTIONS.filter((opt) => opt.value !== 'APPROVED')
+      : STATUS_FILTER_OPTIONS;
   const isAllVisibleSelected = filteredScans.length > 0 && filteredScans.every((scan) => selectedScanIds.has(scan.id));
   const selectedCount = selectedScanIds.size;
   const toggleScanSelection = (scanId: string) => {
@@ -737,18 +742,20 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <option value="image">Image Only</option>
             <option value="pdf">PDF Only</option>
           </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setSelectedScanIds(new Set());
-            }}
-            className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
-          >
-            {STATUS_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          {mode !== 'approved' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setSelectedScanIds(new Set());
+              }}
+              className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+            >
+              {visibleStatusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          )}
           {(sourceFilter !== 'all' || statusFilter !== 'ALL') && (
             <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
