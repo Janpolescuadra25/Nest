@@ -13,6 +13,7 @@
 - **F-1: Default Memo Auto-Fill** — Cheque defaults section gains QB Memo + Private Note input fields and save logic. JE gains `defaults.privateNote` support with `prev ||` priority chain. `e899e8c`
 - **UI Cleanup** — Removed redundant "Qyra" text below login logo, removed partner section from landing page (HTML + JS), restricted status filter dropdown per tab (For Review hides "Approved", Approved hides filter entirely). `e9d9ce6`
 - **H: Fixed Cheque Excel Format** — Cheque-specific MappingView UI (hide Column Roles, show fixed 11-column format). CheckPreviewForm reads fixed columns directly. batch-payload-builder preserves string fields. 1 new test (81/81 + 53/53). `9cfca33` `8b09240`
+- **I: Admin Resource Distribution** — Already fully implemented via A-1/A-2. Owner sets admin pools (PUT /api/owner/admins/:id/pool). Admin distributes scans/locations/templates to members (PATCH /api/admin/team/:id/allocation). Pool validation enforces limits. Frontend: AdminsTab (owner) + MyTeamTab (admin). Capacity middleware enforces at request time.
 
 ---
 
@@ -89,29 +90,7 @@
 
 ---
 
-### Phase I: Admin Resource Distribution
-
-**What:** Admin users (registered via owner's invite link) can distribute their allocated scans, locations, and templates to their team members. The owner sets limits per admin; admins sub-distribute from their pool, reducing their own available count.
-
-**Goal:** Owners can allocate capacity to admins, admins can manage their team's capacity through a distribution UI, and non-invited users use Stripe subscription plans.
-
-**Scoping needed:**
-- Current allocation model (`allocatedScans`, `allocatedLocations`, `allocatedTemplates` on User model)
-- Current invite link system (`InviteLink` model with `roleHint`)
-- Admin team management UI — list members, show current allocations, distribute form
-- API endpoints for admin to distribute capacity to members
-- Distribution reduces admin's available count
-- Free tier and Stripe subscription plans for non-invited users
-
-**Expected behavior:**
-1. Owner creates invite link with role ADMIN, sets limits (scans, locations, templates, max members)
-2. Admin registers via link, receives those limits
-3. Admin can invite members under them (up to max members)
-4. Admin distributes portions of their allocation to each member (scans, locations, templates)
-5. Distributed amounts reduce admin's available count
-6. Non-invited users register normally and use Stripe subscription plans with fixed capacities
-
-**Expected output:** Full capacity distribution chain — Owner → Admin → Members, with Stripe plans for non-invited users.
+**Outcome:** Already implemented via A-1 (scoping) and A-2 (implementation). Owner → Admin → Member distribution chain is complete: data model (poolScans/poolLocations/poolTemplates → allocatedScans/allocatedLocations/allocatedTemplates), API endpoints with pool validation, capacity middleware enforcement, and frontend UI (AdminsTab + MyTeamTab).
 
 ---
 
