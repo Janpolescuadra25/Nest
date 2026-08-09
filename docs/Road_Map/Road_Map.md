@@ -11,12 +11,13 @@
 - **E-3: Customer Data Flow** — Extract customer from line items, pass as CustomerRef on Cheque header. 5 new tests (80/80 + 53/53). `955af6d`
 - **F-2: Row Selection in SyncView** — Row-level checkboxes, "Sync Selected" and "Delete Selected" with role/permission checks. `80d96f3`
 - **F-1: Default Memo Auto-Fill** — Cheque defaults section gains QB Memo + Private Note input fields and save logic. JE gains `defaults.privateNote` support with `prev ||` priority chain. `e899e8c`
+- **UI Cleanup** — Removed redundant "Qyra" text below login logo, removed partner section from landing page (HTML + JS), restricted status filter dropdown per tab (For Review hides "Approved", Approved hides filter entirely). `e9d9ce6`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`ae059cb`, clean, pushed)
+### Repo State (`e9d9ce6`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -83,8 +84,63 @@
 
 ---
 
+### Phase H: Fixed Cheque Excel Format
+
+**What:** Cheques use a fixed 10-column Excel format, unlike Bills and Vendor Credits which use flexible user-configurable column mapping. When a CHEQUE template is selected, the MappingView must enforce this fixed format instead of showing the generic invoice-style column roles.
+
+**Goal:** Users scanning cheque Excel files see a cheque-specific mapping experience — fixed column headers, cheque-specific preview showing individual cheque forms, and each row syncing as a separate cheque to QuickBooks.
+
+**Scoping needed:**
+- `MappingView/index.tsx` — conditionally hide "Column Roles" section and "Line Item Fields" section when `transactionType === 'CHEQUE'`
+- `MappingView/index.tsx` — "Scanned Line Items" table must show cheque-specific columns instead of invoice columns (Description, Qty, Unit Price, Total)
+- Cheque Excel parser — fixed 10-column format: Payee (col 1), Bank Account (col 2), Payment Date (col 3), Check No. (col 4), Category (col 5), Description (col 6), Amount (col 7), Tax (col 8), Customer (col 9), QB Memo (col 10)
+- Row merging logic — if payee + check no. + payment date match across rows, merge into one cheque with multiple line items; otherwise each row = one separate cheque
+- Mapping section still works for Payee → QB Vendor, Category → QB Account, Customer → QB Customer, Tax → tax code
+- Description auto-fills from Excel description column
+- Tax column maps to Exclusive/Inclusive/Out of scope tax treatment
+
+**Expected behavior:**
+1. User selects CHEQUE template in MappingView → "Column Roles" and "Line Item Fields" sections are hidden
+2. "Scanned Line Items" table shows cheque columns: #, Payee, Bank Account, Date, Check No., Category, Description, Amount, Tax, Customer, Memo
+3. Helper text says "cheque items" not "invoice items"
+4. Mapping section allows mapping Payee, Category, Tax, Customer values to QB names
+5. Preview section shows individual cheque forms (one per row, or merged if matching payee/check#/date)
+6. Sync creates one QB Cheque per row (or one merged cheque with multiple line items)
+
+**Expected output:** MappingView enforces fixed cheque format, preview shows correct cheque forms, sync creates correct QB Cheques.
+
+---
+
+### Phase I: Admin Resource Distribution
+
+**What:** Admin users (registered via owner's invite link) can distribute their allocated scans, locations, and templates to their team members. The owner sets limits per admin; admins sub-distribute from their pool, reducing their own available count.
+
+**Goal:** Owners can allocate capacity to admins, admins can manage their team's capacity through a distribution UI, and non-invited users use Stripe subscription plans.
+
+**Scoping needed:**
+- Current allocation model (`allocatedScans`, `allocatedLocations`, `allocatedTemplates` on User model)
+- Current invite link system (`InviteLink` model with `roleHint`)
+- Admin team management UI — list members, show current allocations, distribute form
+- API endpoints for admin to distribute capacity to members
+- Distribution reduces admin's available count
+- Free tier and Stripe subscription plans for non-invited users
+
+**Expected behavior:**
+1. Owner creates invite link with role ADMIN, sets limits (scans, locations, templates, max members)
+2. Admin registers via link, receives those limits
+3. Admin can invite members under them (up to max members)
+4. Admin distributes portions of their allocation to each member (scans, locations, templates)
+5. Distributed amounts reduce admin's available count
+6. Non-invited users register normally and use Stripe subscription plans with fixed capacities
+
+**Expected output:** Full capacity distribution chain — Owner → Admin → Members, with Stripe plans for non-invited users.
+
+---
+
 ### Execution Order
 
-| # | Phase | Prompt | Depends On | Can Parallel With |
+| # | Phase | Description | Dependencies | Can Parallel With |
 |---|---|---|---|---|
-| 1 | R-4 | Domain Migration (partial — GitHub renamed, Render URL updated, DNS configured. Remaining: Resend verification, Intuit redirect URI, Vercel, Chrome Web Store) | R-1, R-2, R-3 (done) | — |
+| 1 | H | Fixed Cheque Excel Format | None | I |
+| 2 | I | Admin Resource Distribution | None | H |
+| — | R-4 | Domain Migration (manual — JP only) | None | — |
