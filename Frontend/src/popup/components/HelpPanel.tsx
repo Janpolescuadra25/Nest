@@ -332,7 +332,7 @@ const SECTIONS: Section[] = [
           <p className="text-[11px] text-gray-600">Include your browser version, Qyra version (1.0.0), and steps to reproduce the issue.</p>
         </div>
         <div className="text-center pt-2 border-t border-gray-200/50">
-          <p className="text-xs text-gray-600">Created by <span className="text-gray-600">John Paul O. Escuadra</span></p>
+          <p className="text-xs text-gray-600">Created by <a href="https://vortexsdo.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:underline">Vortex Studios</a></p>
           <p className="text-[10px] text-gray-600 mt-0.5">Made with ❤️ in the Philippines</p>
         </div>
       </div>
@@ -442,7 +442,7 @@ export default function HelpPanel({ onClose }: Props) {
           Qyra — Financial Automation
         </p>
         <p className="text-[10px] text-gray-700">
-          Created by John Paul O. Escuadra
+          Created by <a href="https://vortexsdo.com" target="_blank" rel="noopener noreferrer" className="hover:underline">Vortex Studios</a>
         </p>
       </div>
     </div>

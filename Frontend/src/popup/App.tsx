@@ -386,7 +386,15 @@ export default function App() {
           <div className="flex items-center justify-center gap-2">
             <span className="text-emerald-400 font-bold text-base tracking-tight">🪹 Qyra</span>
             <span className="text-gray-600 text-xs">Financial Automation</span>
-            <span className="text-gray-600 text-[10px]" title="Created by John Paul O. Escuadra">· by JP Escuadra</span>
+            <a
+              href="https://vortexsdo.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 text-[10px] hover:underline"
+              title="Created by Vortex Studios"
+            >
+              · by Vortex Studios
+            </a>
             {user.bonusScans ? (
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-100">
                 +{user.bonusScans} bonus scans

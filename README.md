@@ -111,8 +111,8 @@ Qyra is a Chrome extension that bridges point-of-sale systems with QuickBooks On
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Janpolescuadra25/Nest.git
-cd Nest
+git clone https://github.com/Janpolescuadra25/Qyra.git
+cd Qyra
 ```
 
 2. Install backend dependencies:

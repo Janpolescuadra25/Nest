@@ -408,11 +408,9 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
         {/* Creator card */}
         <div className="from-white to-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
           <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">Created By</div>
-          <div className="text-gray-900 text-sm font-medium">John Paul O. Escuadra</div>
+          <a href="https://vortexsdo.com" target="_blank" rel="noopener noreferrer" className="text-gray-900 text-sm font-medium hover:underline">Vortex Studios</a>
           <div className="text-gray-600 text-xs mt-1 leading-relaxed">
-            John Paul is a full-stack developer specializing in financial technology and financial integrations.
-            Qyra was built to solve the real-world challenge of bridging POS sales data with QuickBooks accounting,
-            making daily bookkeeping effortless for business teams.
+            A studio where ideas don't just stay ideas.
           </div>
         </div>
 
