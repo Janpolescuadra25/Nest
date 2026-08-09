@@ -2073,17 +2073,26 @@ export default function MappingView({
       )}
 
       {isSectionVisible('columnMapping', activeScanMode, selectedTemplate?.transactionType) && (
-        isJE && activeScanMode === 'EXCEL' ? (
+        (isJE || isCheque) && activeScanMode === 'EXCEL' ? (
           <div className="rounded-md bg-amber-50 border border-amber-200 p-4 mt-3">
-            <p className="text-sm font-medium text-amber-800 mb-2">Required Excel Format for Journal Entry</p>
-            <pre className="text-xs text-amber-700 whitespace-pre leading-relaxed">
+            <p className="text-sm font-medium text-amber-800 mb-2">
+              {isJE ? 'Required Excel Format for Journal Entry' : 'Fixed format required (11 columns)'}
+            </p>
+            {isJE ? (
+              <pre className="text-xs text-amber-700 whitespace-pre leading-relaxed">
 {`Row 1:  Date          | (date value, e.g. 2026-07-30)
 Row 2:  Journal No.   | (journal number, e.g. JE-001)
 Row 3:  Adjusting     | (true or false)
 Row 4:  Memo          | (memo text)
 Row 5:  Account | Debit | Credit | Description | Name | Class | Tax
 Row 6+: (data rows with values matching column headers)`}
-            </pre>
+              </pre>
+            ) : (
+              <div className="text-xs text-amber-700 leading-relaxed">
+                Fixed format required (11 columns):<br />
+                Payee | Bank Account | Payment Date | Check No. | Category | Description | Amount | Tax | Customer | QB Memo | Tax Type
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2147,27 +2156,65 @@ Row 6+: (data rows with values matching column headers)`}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-3 py-2 bg-gray-100 border-b border-gray-200">
             <div className="text-xs font-semibold text-gray-600">Scanned Line Items</div>
-            <div className="text-xs text-gray-600">Review all detected invoice items before mapping.</div>
+            <div className="text-xs text-gray-600">
+              {isCheque ? 'Review all detected cheque items before mapping.' : 'Review all detected invoice items before mapping.'}
+            </div>
           </div>
           <div className="max-h-[250px] overflow-y-auto">
             <table className="min-w-full text-left text-xs text-gray-700">
               <thead className="bg-[#F5F5F7] text-gray-600">
                 <tr>
                   <th className="px-3 py-2 font-medium">#</th>
-                  <th className="px-3 py-2 font-medium">Description</th>
-                  <th className="px-3 py-2 font-medium">Qty</th>
-                  <th className="px-3 py-2 font-medium">Unit Price</th>
-                  <th className="px-3 py-2 font-medium">Total</th>
+                  {isCheque ? (
+                    <>
+                      <th className="px-3 py-2 font-medium">Payee</th>
+                      <th className="px-3 py-2 font-medium">Bank Account</th>
+                      <th className="px-3 py-2 font-medium">Date</th>
+                      <th className="px-3 py-2 font-medium">Check No.</th>
+                      <th className="px-3 py-2 font-medium">Category</th>
+                      <th className="px-3 py-2 font-medium">Description</th>
+                      <th className="px-3 py-2 font-medium">Amount</th>
+                      <th className="px-3 py-2 font-medium">Tax</th>
+                      <th className="px-3 py-2 font-medium">Customer</th>
+                      <th className="px-3 py-2 font-medium">Memo</th>
+                      <th className="px-3 py-2 font-medium">Tax Type</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-3 py-2 font-medium">Description</th>
+                      <th className="px-3 py-2 font-medium">Qty</th>
+                      <th className="px-3 py-2 font-medium">Unit Price</th>
+                      <th className="px-3 py-2 font-medium">Total</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {activeScanEntry.lineItems.map((lineItem, index) => (
                   <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-3 py-2 align-top text-gray-600">{index + 1}</td>
-                    <td className="px-3 py-2 align-top text-gray-800 overflow-hidden line-clamp-2">{lineItem.description ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.quantity ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.unitPrice ?? ''}</td>
-                    <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.total ?? ''}</td>
+                    {isCheque ? (
+                      <>
+                        <td className="px-3 py-2 align-top text-gray-800 overflow-hidden line-clamp-2">{activeScanEntry.header['payeeName'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{activeScanEntry.header['bankAccount'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{activeScanEntry.header['paymentDate'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{activeScanEntry.header['checkNo'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['category'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-800 overflow-hidden line-clamp-2">{lineItem['description'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['amount'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['tax'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['customer'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['memo'] ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem['taxType'] ?? ''}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-3 py-2 align-top text-gray-800 overflow-hidden line-clamp-2">{lineItem.description ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.quantity ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.unitPrice ?? ''}</td>
+                        <td className="px-3 py-2 align-top text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">{lineItem.total ?? ''}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -2179,7 +2226,7 @@ Row 6+: (data rows with values matching column headers)`}
         </div>
       )}
 
-      {(isBill || isVendorCredit || isCheque) && activeScanEntry && activeScanEntry.lineItems.length > 1 && (
+      {(isBill || isVendorCredit) && activeScanEntry && activeScanEntry.lineItems.length > 1 && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <button
             type="button"
