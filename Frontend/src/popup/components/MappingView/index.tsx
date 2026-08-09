@@ -1273,13 +1273,23 @@ export default function MappingView({
       } else {
         delete merged.taxCodeRef;
       }
+      if (privateNoteDefault.value) {
+        merged.privateNote = { value: privateNoteDefault.value };
+      } else {
+        delete merged.privateNote;
+      }
+      if (qbMemoDefault.value) {
+        merged.qbMemo = { value: qbMemoDefault.value };
+      } else {
+        delete merged.qbMemo;
+      }
       await api.updateTemplate(jwt, selectedTemplateId!, { defaults: merged });
       await loadTemplates();
       showToast('Cheque defaults saved', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save cheque defaults', 'error');
     }
-  }, [jwt, selectedTemplateId, selectedTemplate, bankDefault, payeeDefault, taxCodeDefault, loadTemplates, showToast]);
+  }, [jwt, selectedTemplateId, selectedTemplate, bankDefault, payeeDefault, taxCodeDefault, privateNoteDefault, qbMemoDefault, loadTemplates, showToast]);
 
   const getAmountForField = (field: string): number => {
     if (activeScanEntry?.lineItems?.[0]) {
@@ -1844,6 +1854,26 @@ export default function MappingView({
                               setTaxCodeDefault({ value, name: selected?.Name });
                           }}
                           placeholder="Select tax code…"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">Private Note</label>
+                      <input
+                          type="text"
+                          value={privateNoteDefault.value}
+                          onChange={(e) => setPrivateNoteDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Internal note (not sent to QuickBooks)"
+                      />
+                  </div>
+                  <div>
+                      <label className="block text-xs text-gray-600 mb-1">QB Memo</label>
+                      <input
+                          type="text"
+                          value={qbMemoDefault.value}
+                          onChange={(e) => setQbMemoDefault({ value: e.target.value })}
+                          className="w-full bg-[#F5F5F7] border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-emerald-500"
+                          placeholder="Visible on the transaction in QuickBooks"
                       />
                   </div>
               </div>

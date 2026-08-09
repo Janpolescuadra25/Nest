@@ -119,7 +119,7 @@ interface Props {
   scanRecordId?: string | null;
   userRole?: string;
   attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
-  selectedTemplate?: { id: string; memoTemplate?: string; docNumberTemplate?: string } | null;
+  selectedTemplate?: { id: string; memoTemplate?: string; docNumberTemplate?: string; defaults?: Record<string, unknown> | null } | null;
   templateId?: string;
 }
 
@@ -200,7 +200,9 @@ export default function JournalEntryPreview({ jwt, scanData, scanEntries, active
   // Apply memo/docNumber templates from location data when scan data loads
   useEffect(() => {
     if (!scanData || !locId || !selectedTemplate) return;
-    if (selectedTemplate.memoTemplate) setPrivateNote(resolveMemoTemplate(selectedTemplate.memoTemplate, scanData));
+    setPrivateNote((prev) => prev || (selectedTemplate.defaults as Record<string, any> | null)?.privateNote?.value || '');
+    const memoTpl = selectedTemplate.memoTemplate;
+    if (memoTpl) setPrivateNote((prev) => prev || resolveMemoTemplate(memoTpl, scanData));
     if (selectedTemplate.docNumberTemplate) setDocNumber(resolveMemoTemplate(selectedTemplate.docNumberTemplate, scanData));
   }, [scanData, locId, selectedTemplate]);
 
