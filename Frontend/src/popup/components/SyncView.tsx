@@ -569,11 +569,12 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
     return true;
   });
-  const visibleStatusOptions = mode === 'approved'
-    ? []
-    : mode === 'review'
-      ? STATUS_FILTER_OPTIONS.filter((opt) => opt.value !== 'APPROVED')
-      : STATUS_FILTER_OPTIONS;
+  const isSyncMode = mode === 'sync-history' || mode === undefined;
+  const visibleStatusOptions = mode === 'review'
+    ? STATUS_FILTER_OPTIONS.filter((opt) => ['PENDING_APPROVAL', 'REJECTED'].includes(opt.value))
+    : mode === 'approved'
+      ? STATUS_FILTER_OPTIONS.filter((opt) => ['APPROVED', 'REJECTED'].includes(opt.value))
+      : STATUS_FILTER_OPTIONS.filter((opt) => ['PENDING', 'SYNCED', 'FAILED'].includes(opt.value));
   const isAllVisibleSelected = filteredScans.length > 0 && filteredScans.every((scan) => selectedScanIds.has(scan.id));
   const selectedCount = selectedScanIds.size;
   const toggleScanSelection = (scanId: string) => {
@@ -596,6 +597,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   };
   const totalSynced = safeScans.filter((s) => s.status === 'SYNCED').length;
   const totalFailed = safeScans.filter((s) => s.status === 'FAILED').length;
+  const totalApproved = safeScans.filter((s) => s.status === 'APPROVED').length;
+  const totalRejected = safeScans.filter((s) => s.status === 'REJECTED').length;
   const totalPendingApproval = safeScans.filter((s) => s.status === 'PENDING_APPROVAL').length;
   const totalPending = safeScans.filter((s) => s.status === 'PENDING' || s.status === 'MAPPED').length;
   const staleCount = safeScans.filter((s) => getScanAttention(s) === 'stale').length;
@@ -612,26 +615,44 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   return (
     <div className="p-3 space-y-3">
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2">
-        <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-gray-900">{safeScans.length}</div>
-          <div className="text-xs text-gray-600 mt-0.5">Total Scans</div>
-        </div>
-        <div className="bg-white border border-emerald-200 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-600">{totalSynced}</div>
-          <div className="text-xs text-gray-600 mt-0.5">Synced to QB</div>
-        </div>
-        <div className="bg-white border border-red-300 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-red-600">{totalFailed}</div>
-          <div className="text-xs text-gray-600 mt-0.5">Failed</div>
-        </div>
-        {totalPendingApproval > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+      {mode === 'review' ? (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-white border border-blue-200 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-blue-600">{totalPendingApproval}</div>
-            <div className="text-xs text-blue-500">Pending Approval</div>
+            <div className="text-xs text-blue-500 mt-0.5">For Review</div>
           </div>
-        )}
-      </div>
+          <div className="bg-white border border-red-300 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-red-600">{totalRejected}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Rejected</div>
+          </div>
+        </div>
+      ) : mode === 'approved' ? (
+        <div className="grid grid-cols-1 gap-2">
+          <div className="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-600">{totalApproved}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Approved</div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-gray-900">{safeScans.length}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Total Scans</div>
+          </div>
+          <div className="bg-white border border-emerald-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-600">{totalSynced}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Synced to QB</div>
+          </div>
+          <div className="bg-white border border-red-300 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-red-600">{totalFailed}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Failed</div>
+          </div>
+          <div className="bg-white border border-amber-200 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-amber-600">{totalPending}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Pending</div>
+          </div>
+        </div>
+      )}
 
       {/* Location picker */}
       {locations.length > 0 && (
@@ -642,7 +663,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                 {totalPending} pending
               </span>
             )}
-            {status.connected && (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (totalPending > 0 || batchSyncing) && (
+            {isSyncMode && status.connected && (userRole === 'ADMIN' || userRole === 'OWNER' || userRole === 'MANAGER') && (totalPending > 0 || batchSyncing) && (
               <button
                 onClick={() => setShowSyncConfirm(true)}
                 disabled={batchSyncing || isRetryingAll}
@@ -703,7 +724,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
         </div>
       )}
 
-      {totalAttention > 0 && (
+      {isSyncMode && totalAttention > 0 && (
         <div className="mb-3 px-3 py-2 rounded bg-amber-50 border border-amber-200 text-xs">
           <span className="text-amber-600 font-medium">
             ⚠ {totalAttention} scan{totalAttention > 1 ? 's' : ''} need{totalAttention === 1 ? 's' : ''} attention
@@ -742,20 +763,18 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             <option value="image">Image Only</option>
             <option value="pdf">PDF Only</option>
           </select>
-          {mode !== 'approved' && (
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setSelectedScanIds(new Set());
-              }}
-              className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
-            >
-              {visibleStatusOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          )}
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setSelectedScanIds(new Set());
+            }}
+            className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+          >
+            {visibleStatusOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
           {(sourceFilter !== 'all' || statusFilter !== 'ALL') && (
             <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
