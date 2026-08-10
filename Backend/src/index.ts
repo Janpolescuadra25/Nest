@@ -156,6 +156,18 @@ app.get('/reset-password', (_req, res) => {
 app.get('/verify-email', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/verify-email/index.html'));
 });
+app.get('/privacy', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/privacy.html'));
+});
+app.get('/terms', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/terms.html'));
+});
+app.get('/billing-success', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/billing-success.html'));
+});
+app.get('/billing-cancel', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/billing-cancel.html'));
+});
 
 // ── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req, res) => {
