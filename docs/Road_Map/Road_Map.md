@@ -15,12 +15,13 @@
 - **H: Fixed Cheque Excel Format** — Cheque-specific MappingView UI (hide Column Roles, show fixed 11-column format). CheckPreviewForm reads fixed columns directly. batch-payload-builder preserves string fields. 1 new test (81/81 + 53/53). `9cfca33` `8b09240`
 - **I: Admin Resource Distribution** — Already fully implemented via A-1/A-2. Owner sets admin pools (PUT /api/owner/admins/:id/pool). Admin distributes scans/locations/templates to members (PATCH /api/admin/team/:id/allocation). Pool validation enforces limits. Frontend: AdminsTab (owner) + MyTeamTab (admin). Capacity middleware enforces at request time.
 - **R-4: Domain Migration** — `qyra.space` live: Render Starter plan, custom domain connected, Resend verified (DKIM/SPF/DMARC), Intuit redirect URI updated, env vars updated. Chrome Web Store pending.
+- **J: Tab UI Polish** — Mode-specific filters, cards, and banners. Review tab shows For Review + Rejected cards. Approved tab shows Approved card. Sync tab shows Total + Synced + Failed + Pending. Sync button + banner only on Sync tab. `4e09eed`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`165601f`, clean, pushed)
+### Repo State (`4e09eed`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -87,38 +88,12 @@
 
 ---
 
-### Phase J: Tab UI Polish
+#### J: Tab UI Polish
 
-**Goal:** Make the Review, Approved, and Sync tabs each show only context-relevant information — filters, summary cards, and action banners should match what the user is looking at on each tab.
-
-**File:** `Frontend/src/popup/components/SyncView.tsx` (all 3 tabs render from this single component via `mode` prop)
-
-**Changes:**
-
-**J-1: Review Tab**
-- Status filter dropdown: Remove all options except "For Review" and "Rejected". Default to "For Review".
-- Summary cards: Replace the current 4-card grid (Total Scans, Synced to QB, Failed, Pending Approval) with 2 cards: "For Review" count and "Rejected" count.
-- Remove the attention banner ("⚠ X scans need attention / X stale") — this information is only relevant on the Sync tab.
-- Remove the "X pending ⚡ Sync All Pending" action — this is only relevant on the Sync tab.
-
-**J-2: Approved Tab**
-- Status filter dropdown: Show only "Approved" and "Rejected" options. Default to "Approved".
-- Summary: Show a single "Total Approved" count (either a card or simple text — whichever fits the existing layout).
-- Remove the attention banner and "Sync All Pending" action — same reason as Review tab.
-
-**J-3: Sync Tab**
-- Status filter dropdown: Show only "Pending", "Synced", and "Failed" options. Remove "For Review", "Mapped", "Approved", "Rejected".
-- Keep the existing 3 summary cards: Total Scans, Synced to QB, Failed.
-- Add a 4th summary card: "Pending" total count.
-- Keep the attention banner and "Sync All Pending" action — these belong here.
-- Remove "Mapped" from the filter entirely (it is not a sync-relevant status).
-
-**Expected output:** Each tab shows only information relevant to its purpose. No cross-tab confusion. No action buttons or banners appearing on tabs where they don't apply. All 81 frontend tests pass.
+**Outcome:** Completed. Each tab shows context-specific filters, summary cards, and action banners. Review: PENDING_APPROVAL/REJECTED filter, 2 cards. Approved: APPROVED/REJECTED filter, 1 card. Sync: PENDING/SYNCED/FAILED filter, 4 cards + sync button + attention banner. `4e09eed`
 
 ---
 
 ### Execution Order
 
-| # | Phase | Description | Dependencies | Can Parallel With |
-|---|---|---|---|---|
-| 1 | J | Tab UI Polish | None | — |
+All phases complete. No pending work.
