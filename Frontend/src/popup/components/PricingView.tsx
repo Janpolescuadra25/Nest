@@ -131,7 +131,7 @@ export default function PricingView({ jwt, user, onManageBilling, onClose }: Pro
 
                 <div className="mt-4 space-y-2 text-sm text-gray-600">
                   <div>{plan.maxUsers} user{plan.maxUsers !== 1 ? 's' : ''} • {plan.maxLocations} locations</div>
-                  <div>{plan.maxScans.toLocaleString()} AI scans/mo • {formatHistory(plan.scanHistoryDays)}</div>
+                  <div>{plan.maxScans.toLocaleString()} AI scans/wk • {formatHistory(plan.scanHistoryDays)}</div>
                   {plan.prioritySupport && <div>Priority support</div>}
                 </div>
 
