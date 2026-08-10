@@ -20,7 +20,7 @@
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`91b8d65`, clean, pushed)
+### Repo State (`165601f`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -87,6 +87,38 @@
 
 ---
 
+### Phase J: Tab UI Polish
+
+**Goal:** Make the Review, Approved, and Sync tabs each show only context-relevant information — filters, summary cards, and action banners should match what the user is looking at on each tab.
+
+**File:** `Frontend/src/popup/components/SyncView.tsx` (all 3 tabs render from this single component via `mode` prop)
+
+**Changes:**
+
+**J-1: Review Tab**
+- Status filter dropdown: Remove all options except "For Review" and "Rejected". Default to "For Review".
+- Summary cards: Replace the current 4-card grid (Total Scans, Synced to QB, Failed, Pending Approval) with 2 cards: "For Review" count and "Rejected" count.
+- Remove the attention banner ("⚠ X scans need attention / X stale") — this information is only relevant on the Sync tab.
+- Remove the "X pending ⚡ Sync All Pending" action — this is only relevant on the Sync tab.
+
+**J-2: Approved Tab**
+- Status filter dropdown: Show only "Approved" and "Rejected" options. Default to "Approved".
+- Summary: Show a single "Total Approved" count (either a card or simple text — whichever fits the existing layout).
+- Remove the attention banner and "Sync All Pending" action — same reason as Review tab.
+
+**J-3: Sync Tab**
+- Status filter dropdown: Show only "Pending", "Synced", and "Failed" options. Remove "For Review", "Mapped", "Approved", "Rejected".
+- Keep the existing 3 summary cards: Total Scans, Synced to QB, Failed.
+- Add a 4th summary card: "Pending" total count.
+- Keep the attention banner and "Sync All Pending" action — these belong here.
+- Remove "Mapped" from the filter entirely (it is not a sync-relevant status).
+
+**Expected output:** Each tab shows only information relevant to its purpose. No cross-tab confusion. No action buttons or banners appearing on tabs where they don't apply. All 81 frontend tests pass.
+
+---
+
 ### Execution Order
 
-All phases complete. No pending work.
+| # | Phase | Description | Dependencies | Can Parallel With |
+|---|---|---|---|---|
+| 1 | J | Tab UI Polish | None | — |
