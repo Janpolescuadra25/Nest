@@ -14,12 +14,13 @@
 - **UI Cleanup** — Removed redundant "Qyra" text below login logo, removed partner section from landing page (HTML + JS), restricted status filter dropdown per tab (For Review hides "Approved", Approved hides filter entirely). `e9d9ce6`
 - **H: Fixed Cheque Excel Format** — Cheque-specific MappingView UI (hide Column Roles, show fixed 11-column format). CheckPreviewForm reads fixed columns directly. batch-payload-builder preserves string fields. 1 new test (81/81 + 53/53). `9cfca33` `8b09240`
 - **I: Admin Resource Distribution** — Already fully implemented via A-1/A-2. Owner sets admin pools (PUT /api/owner/admins/:id/pool). Admin distributes scans/locations/templates to members (PATCH /api/admin/team/:id/allocation). Pool validation enforces limits. Frontend: AdminsTab (owner) + MyTeamTab (admin). Capacity middleware enforces at request time.
+- **R-4: Domain Migration** — `qyra.space` live: Render Starter plan, custom domain connected, Resend verified (DKIM/SPF/DMARC), Intuit redirect URI updated, env vars updated. Chrome Web Store pending.
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`8b09240`, clean, pushed)
+### Repo State (`91b8d65`, clean, pushed)
 
 | Area | Status |
 |---|---|
@@ -37,18 +38,10 @@
 
 ### Phase R: Domain Migration
 
-#### R-4: Domain Migration (Manual — JP only)
+#### R-4: Domain Migration
 
-**JP's steps:**
-1. **Porkbun DNS:** Point `qyra.space` A/CNAME records to Render's hostname
-2. **Render env vars:** `RESEND_FROM_ADDRESS`, `QB_REDIRECT_URI`, `APP_URL`, `FRONTEND_URL`, `LANDING_PAGE_URL`
-3. **Resend:** Add `qyra.space` as verified sending domain. Configure SPF/DKIM/DMARC DNS records on Porkbun per Resend's instructions
-4. **Intuit Developer Portal:** Update OAuth redirect URI if domain changes
-5. **Vercel:** Update custom domain from `nestsync.fyi` to `qyra.space` for `web/` directory
-6. **Chrome Web Store:** Update listing name, description, support URL
-7. **Test:** Signup, email verification, password reset, OAuth — all with new domain
+**Outcome:** Completed. `qyra.space` is live — Render upgraded to Starter plan, custom domain connected, Resend domain verified (DKIM/SPF/DMARC), Intuit redirect URI updated to `https://qyra.space/api/quickbooks/callback`, all env vars updated. Chrome Web Store listing update pending (separate JP task).
 
-**Expected output:** `qyra.space` resolves. Emails send from `noreply@qyra.space`. OAuth works. Landing page loads.
 
 ---
 
@@ -96,6 +89,4 @@
 
 ### Execution Order
 
-| # | Phase | Description | Dependencies | Can Parallel With |
-|---|---|---|
-| — | R-4 | Domain Migration (manual — JP only) | None | — |
+All phases complete. No pending work.
