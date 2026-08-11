@@ -18,15 +18,17 @@ async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) 
   return template;
 }
 
-function serializeValueMapping(mapping: { id: string; templateId: string; fieldType: string; scannedText: string; entityId: string; matchingRule: unknown; createdAt: Date; }) {
+function serializeValueMapping(mapping: { id: string; templateId: string; fieldType: string; scannedText: string; sourceField: string | null; entityId: string; matchingRule: unknown; createdAt: Date; updatedAt: Date; }) {
   return {
     id: mapping.id,
     templateId: mapping.templateId,
     fieldType: mapping.fieldType,
     scannedText: mapping.scannedText,
+    sourceField: mapping.sourceField,
     entityId: mapping.entityId,
     matchingRule: mapping.matchingRule ?? null,
     createdAt: mapping.createdAt,
+    updatedAt: mapping.updatedAt.toISOString(),
   };
 }
 
@@ -40,13 +42,21 @@ router.get('/:templateId', requireFeaturePermission('map', 'read'), asyncHandler
 }));
 
 router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
-  const { templateId, fieldType, scannedText, entityId, matchingRule } = req.body as {
+  const { templateId, fieldType, scannedText, sourceField, entityId, matchingRule } = req.body as {
     templateId?: string;
     fieldType?: string;
     scannedText?: string;
+    sourceField?: string | null;
     entityId?: string;
     matchingRule?: Record<string, unknown> | null;
   };
+
+  if (sourceField !== undefined && sourceField !== null && typeof sourceField !== 'string') {
+    throw new AppError('sourceField must be a string, null, or omitted', 400);
+  }
+
+  const normalizedSourceField = sourceField?.trim() ?? null;
+  const normalizedSourceFieldValue = normalizedSourceField === '' ? null : normalizedSourceField;
 
   if (!templateId || !fieldType || !scannedText || !entityId) {
     throw new AppError('templateId, fieldType, scannedText, and entityId are required', 400);
@@ -59,8 +69,9 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
 
   const template = await getTemplateOrFail(templateId, req.user);
 
+  const trimmedScannedText = scannedText.trim();
   const existing = await prisma.valueMapping.findFirst({
-    where: { templateId: template.id, fieldType, scannedText: scannedText.trim() },
+    where: { templateId: template.id, fieldType, sourceField: normalizedSourceFieldValue, scannedText: trimmedScannedText },
   });
   if (existing) {
     throw new AppError('A value mapping for this template already exists', 409);
@@ -70,7 +81,8 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
     data: {
       templateId: template.id,
       fieldType,
-      scannedText: scannedText.trim(),
+      scannedText: trimmedScannedText,
+      sourceField: normalizedSourceFieldValue,
       entityId: entityId.trim(),
       matchingRule: matchingRule !== undefined ? matchingRule as unknown as Prisma.InputJsonValue : undefined,
     },
@@ -81,12 +93,17 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
 
 router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
-  const { fieldType, scannedText, entityId, matchingRule } = req.body as {
+  const { fieldType, scannedText, sourceField, entityId, matchingRule } = req.body as {
     fieldType?: string;
     scannedText?: string;
+    sourceField?: string | null;
     entityId?: string;
     matchingRule?: Record<string, unknown> | null;
   };
+
+  if (sourceField !== undefined && sourceField !== null && typeof sourceField !== 'string') {
+    throw new AppError('sourceField must be a string, null, or omitted', 400);
+  }
 
   const mapping = await prisma.valueMapping.findUnique({ where: { id } });
   if (!mapping) {
@@ -94,11 +111,30 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
   }
   await getTemplateOrFail(mapping.templateId, req.user);
 
+  const effectiveFieldType = fieldType !== undefined ? fieldType : mapping.fieldType;
+  const effectiveScannedText = scannedText !== undefined ? scannedText.trim() : mapping.scannedText;
+  const sourceFieldNormalized = sourceField === undefined ? mapping.sourceField : sourceField?.trim() ?? null;
+  const effectiveSourceField = sourceField === undefined ? mapping.sourceField : sourceFieldNormalized === '' ? null : sourceFieldNormalized;
+
+  const existing = await prisma.valueMapping.findFirst({
+    where: {
+      id: { not: id },
+      templateId: mapping.templateId,
+      fieldType: effectiveFieldType,
+      sourceField: effectiveSourceField,
+      scannedText: effectiveScannedText,
+    },
+  });
+  if (existing) {
+    throw new AppError('A value mapping for this template already exists', 409);
+  }
+
   const updated = await prisma.valueMapping.update({
     where: { id },
     data: {
       ...(fieldType !== undefined ? { fieldType } : {}),
       ...(scannedText !== undefined ? { scannedText: scannedText.trim() } : {}),
+      ...(sourceField !== undefined ? { sourceField: effectiveSourceField } : {}),
       ...(entityId !== undefined ? { entityId: entityId.trim() } : {}),
       ...(matchingRule !== undefined ? { matchingRule: matchingRule as unknown as Prisma.InputJsonValue } : {}),
     },

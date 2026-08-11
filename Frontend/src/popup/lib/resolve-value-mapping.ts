@@ -18,12 +18,19 @@ export function resolveValueMapping(
   fieldType: ValueMapping['fieldType'],
   valueMappings: ValueMapping[],
   entityLookup: (id: string) => { Id: string; FullyQualifiedName?: string; DisplayName?: string; Name?: string } | undefined,
+  sourceField?: string | null,
 ): ValueMappingResult {
   if (!scannedText || !valueMappings.length) {
     return { matched: false, entityId: '', entityName: '', confidence: 0 };
   }
 
-  const relevant = valueMappings.filter((m) => m.fieldType === fieldType);
+  let relevant = valueMappings.filter((m) => m.fieldType === fieldType);
+  if (sourceField !== undefined) {
+    relevant = relevant.filter((m) => m.sourceField === sourceField);
+  } else {
+    relevant = relevant.filter((m) => m.sourceField === null || m.sourceField === undefined);
+  }
+
   if (!relevant.length) {
     return { matched: false, entityId: '', entityName: '', confidence: 0 };
   }

@@ -44,7 +44,7 @@ model User {
   maxScans                Int?
   managedById             String?
   poolScans               Int?
-  bonusScans              Int       @default(0)
+  bonusScans              Int                      @default(0)
   poolLocations           Int?
   poolTemplates           Int?
   maxMembers              Int?
@@ -152,16 +152,16 @@ model InviteLink {
 }
 
 model Location {
-  id                 String              @id @default(cuid())
+  id                 String               @id @default(cuid())
   userId             String
   adminId            String?
   name               String
   description        String?
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  admin              User?               @relation("AdminLocations", fields: [adminId], references: [id])
-  user               User                @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  admin              User?                @relation("AdminLocations", fields: [adminId], references: [id])
+  user               User                 @relation("UserLocations", fields: [userId], references: [id], onDelete: Cascade)
   mappingPreferences MappingPreference[]
   mappings           Mapping[]
   rules              Rule[]
@@ -176,16 +176,16 @@ model Location {
 }
 
 model LocationAttachment {
-  id          String   @id @default(cuid())
-  locationId  String
-  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  fileName    String
-  storageKey  String   @unique
-  fileSize    Int
-  mimeType    String
-  uploadedBy  String
-  uploader    User     @relation(fields: [uploadedBy], references: [id])
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  fileName   String
+  storageKey String   @unique
+  fileSize   Int
+  mimeType   String
+  uploadedBy String
+  uploader   User     @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime @default(now())
 
   @@index([locationId])
   @@map("location_attachments")
@@ -298,13 +298,14 @@ model ValueMapping {
   templateId   String
   fieldType    String
   scannedText  String
+  sourceField  String?
   entityId     String
   matchingRule Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-  @@unique([templateId, fieldType, scannedText])
+  @@unique([templateId, fieldType, sourceField, scannedText])
   @@index([templateId])
 }
 
@@ -327,25 +328,25 @@ model Rule {
 }
 
 model ScanRecord {
-  id              String     @id @default(cuid())
+  id              String       @id @default(cuid())
   locationId      String
   scanDate        DateTime
   rawData         Json
-  status          ScanStatus @default(PENDING)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  status          ScanStatus   @default(PENDING)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
   rawScanEntry    Json?
   submittedById   String?
   submittedAt     DateTime?
   approvedById    String?
   approvedAt      DateTime?
   approvalNotes   String?
-  source          String     @default("pos")
-  transactionType String     @default("JOURNAL_ENTRY")
-  autoAttach     Boolean    @default(true)
-  location        Location   @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  submittedBy     User?      @relation("ScanSubmitter", fields: [submittedById], references: [id])
-  approvedBy      User?      @relation("ScanApprover", fields: [approvedById], references: [id])
+  source          String       @default("pos")
+  transactionType String       @default("JOURNAL_ENTRY")
+  autoAttach      Boolean      @default(true)
+  location        Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  submittedBy     User?        @relation("ScanSubmitter", fields: [submittedById], references: [id])
+  approvedBy      User?        @relation("ScanApprover", fields: [approvedById], references: [id])
   syncLogs        SyncLog[]
   attachments     Attachment[]
 
@@ -361,12 +362,12 @@ model Attachment {
   scanRecordId String
   scanRecord   ScanRecord @relation(fields: [scanRecordId], references: [id], onDelete: Cascade)
 
-  fileName     String
-  storageKey   String     @unique
-  fileSize     Int
-  mimeType     String
+  fileName   String
+  storageKey String @unique
+  fileSize   Int
+  mimeType   String
 
-  createdAt    DateTime   @default(now())
+  createdAt DateTime @default(now())
 
   @@index([scanRecordId])
 }

@@ -182,6 +182,7 @@ export interface ValueMapping {
   templateId: string;
   fieldType: 'account' | 'name' | 'class' | 'taxCode';
   scannedText: string;
+  sourceField: string | null;
   entityId: string;
   matchingRule: MatchingRule | null;
   createdAt: string;
@@ -191,6 +192,7 @@ export interface ValueMapping {
 export interface ValueMappingFormData {
   fieldType: 'account' | 'name' | 'class' | 'taxCode';
   scannedText: string;
+  sourceField?: string | null;
   entityId: string;
   matchingRule?: MatchingRule | null;
 }
@@ -215,6 +217,7 @@ export interface ScanEntry {
   thumbnail?: string;
   header: Record<string, string>;
   lineItems: Record<string, string>[];
+  scanRecordId?: string;
 }
 
 export type ScanMode = 'IMAGE' | 'EXCEL' | 'POS';
