@@ -19,14 +19,14 @@
 
 ---
 
-## 🗺️ Qyra Roadmap — Cypra v5 (Phase K Pending)
+## 🗺️ Qyra Roadmap — Cypra v5 (K-1 Complete; K-2 Pending)
 
-### Repo State (`91bad8a`, pushed)
+### Repo State (`49af089`, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 81/81 ✅ |
-| Backend tests | 53/53 ✅ |
+| Frontend tests | 86/86 ✅ |
+| Backend tests | 67/67 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -133,6 +133,8 @@ The current `ValueMapping` schema stores `templateId`, `fieldType` (account/name
 - Update `value-mappings.ts` API routes to accept `sourceField` in request bodies, persist it, and filter by it when querying. Existing mappings without `sourceField` continue to work.
 - Update frontend types in `types/index.ts` to include `sourceField` in the value mapping interface.
 - Update `resolve-value-mapping.ts` to accept an optional `sourceField` and use null-safe matching: when `sourceField` is omitted (journal entries), match only mappings whose `sourceField` is `null`/unset; when supplied (cheques), match that exact `sourceField` value. This prevents a column-specific cheque mapping from accidentally applying to journal entries or to other cheque columns.
+
+**Outcome:** Completed. Added sourceField schema/API/type/resolver support, migration, and K-1 coverage. 67 backend tests and 86 frontend tests pass.
 
 **K-2: Cheque Value Mapping Section**
 - In MappingView, show a value mapping UI for CHEQUE templates (currently only shown for JOURNAL_ENTRY). Present columns: payee, bank account, category, tax type.
