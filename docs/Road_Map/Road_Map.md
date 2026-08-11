@@ -19,7 +19,7 @@
 
 ---
 
-## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
+## 🗺️ Qyra Roadmap — Cypra v5 (Phase K Pending)
 
 ### Repo State (`91bad8a`, pushed)
 
