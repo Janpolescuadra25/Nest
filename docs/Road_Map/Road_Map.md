@@ -16,13 +16,12 @@
 - **I: Admin Resource Distribution** — Already fully implemented via A-1/A-2. Owner sets admin pools (PUT /api/owner/admins/:id/pool). Admin distributes scans/locations/templates to members (PATCH /api/admin/team/:id/allocation). Pool validation enforces limits. Frontend: AdminsTab (owner) + MyTeamTab (admin). Capacity middleware enforces at request time.
 - **R-4: Domain Migration** — `qyra.space` live: Render Starter plan, custom domain connected, Resend verified (DKIM/SPF/DMARC), Intuit redirect URI updated, env vars updated. Chrome Web Store pending.
 - **J: Tab UI Polish** — Mode-specific filters, cards, and banners. Review tab shows For Review + Rejected cards. Approved tab shows Approved card. Sync tab shows Total + Synced + Failed + Pending. Sync button + banner only on Sync tab. `4e09eed`
-- **K: Cheque Value Mapping + Per-Row Preview** — Cheque Excel value mapping, per-row cheque preview, sourceField-backed mappings, `checkRecordId` propagation. `fee637e`
 
 ---
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (Complete)
 
-### Repo State (`fee637e`, pushed)
+### Repo State (`91bad8a`, pushed)
 
 | Area | Status |
 |---|---|
@@ -179,10 +178,6 @@ The current `ValueMapping` schema stores `templateId`, `fieldType` (account/name
 ---
 
 ### Execution Order
-
-| # | Phase | Description | Dependencies | Can Parallel With |
-|---|---|---|---|---|
-| 1 | K | Cheque Value Mapping + Per-Row Preview | None | — |
 
 | # | Phase | Description | Dependencies | Can Parallel With |
 |---|---|---|---|---|
