@@ -197,6 +197,14 @@ export interface ValueMappingFormData {
   matchingRule?: MatchingRule | null;
 }
 
+export interface ColumnMappingConfig {
+  sourceField: 'payee' | 'bankAccount' | 'category' | 'taxType';
+  fieldType: ValueMapping['fieldType'];
+  label: string;
+  description: string;
+  targetOptions: Array<{ value: string; label: string; subtitle?: string }>;
+}
+
 export interface ExcelSheetPreview {
   name: string;
   headers: string[];

@@ -4,12 +4,19 @@ import { useQBContext } from '../../contexts/QBContext';
 import { ConfirmDialog } from '../shared';
 import SearchableSelect from '../SearchableSelect';
 import { evaluateProductMatch } from '../../lib/column-extractor';
+import {
+  filterMappingsForColumn,
+  getEffectiveFieldType,
+  getEffectiveTargetOptions,
+  buildValueMappingPayload,
+} from '../../lib/value-mapping-column-utils';
 import type { SelectOption } from '../SearchableSelect';
-import type { ValueMapping, ValueMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
+import type { ColumnMappingConfig, ValueMapping, ValueMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
 
 interface Props {
   jwt: string;
   templateId: string;
+  columnConfig?: ColumnMappingConfig;
 }
 
 const FIELD_TYPE_OPTIONS: Array<{ value: ValueMapping['fieldType']; label: string; description: string }> = [
@@ -19,7 +26,7 @@ const FIELD_TYPE_OPTIONS: Array<{ value: ValueMapping['fieldType']; label: strin
   { value: 'taxCode', label: 'Tax Code', description: 'Map scanned text to a QuickBooks tax code' },
 ];
 
-export default function ValueMappingSection({ jwt, templateId }: Props) {
+export default function ValueMappingSection({ jwt, templateId, columnConfig }: Props) {
   const { accounts, classes, taxCodes, vendors, customers, employees } = useQBContext();
   const [mappings, setMappings] = useState<ValueMapping[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +85,10 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
     return items.sort((a, b) => a.label.localeCompare(b.label));
   }, [vendors, customers, employees]);
 
+  const effectiveFieldType = getEffectiveFieldType(formData, columnConfig);
+
   const entityOptions = useMemo<SelectOption[]>(() => {
-    switch (formData.fieldType) {
+    switch (effectiveFieldType) {
       case 'account':
         return accountOptions;
       case 'class':
@@ -90,7 +99,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
       default:
         return nameOptions;
     }
-  }, [formData.fieldType, accountOptions, classOptions, taxCodeOptions, nameOptions]);
+  }, [effectiveFieldType, accountOptions, classOptions, taxCodeOptions, nameOptions]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -100,7 +109,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
       setError(null);
       try {
         const data = await api.getValueMappings(jwt, templateId);
-        setMappings(data);
+        setMappings(filterMappingsForColumn(data, columnConfig));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load value mappings');
       } finally {
@@ -109,7 +118,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
     };
 
     loadMappings();
-  }, [jwt, templateId]);
+  }, [jwt, templateId, columnConfig]);
 
   useEffect(() => {
     setEditingMapping(null);
@@ -190,21 +199,15 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
       : null;
 
     try {
+      const payload = buildValueMappingPayload(formData, matchingRule, columnConfig);
+
       if (editingMapping) {
-        const updated = await api.updateValueMapping(jwt, editingMapping.id, {
-          fieldType: formData.fieldType,
-          scannedText: formData.scannedText.trim(),
-          entityId: formData.entityId,
-          matchingRule,
-        });
+        const updated = await api.updateValueMapping(jwt, editingMapping.id, payload);
         setMappings((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       } else {
         const created = await api.createValueMapping(jwt, {
           templateId,
-          fieldType: formData.fieldType,
-          scannedText: formData.scannedText.trim(),
-          entityId: formData.entityId,
-          matchingRule,
+          ...payload,
         });
         setMappings((prev) => [...prev, created].sort((a, b) =>
           a.fieldType.localeCompare(b.fieldType) || a.scannedText.localeCompare(b.scannedText),
@@ -288,21 +291,23 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 transition-colors"
       >
         <span className="text-xs font-semibold text-gray-600">
-          ⚙️ Journal Entry Value Mappings ({mappings.length})
+          ⚙️ {columnConfig ? `${columnConfig.label} Value Mappings` : 'Journal Entry Value Mappings'} ({mappings.length})
         </span>
         <span className="text-gray-600 text-xs">{isOpen ? '▲' : '▼'}</span>
       </button>
       {isOpen && (
         <div className="px-3 pb-3">
           <p className="text-xs text-gray-600 mb-3">
-            Map Excel values to the correct QuickBooks account, name, class, or tax code when importing journal entries.
+            {columnConfig ? columnConfig.description : 'Map Excel values to the correct QuickBooks account, name, class, or tax code when importing journal entries.'}
           </p>
 
           <div className="rounded-xl border border-gray-200 bg-[#F5F5F7] p-4 space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">🧾 Journal Entry Excel Mappings</h2>
-                <p className="text-xs text-gray-600">Configure known value translations for your Excel journal entry upload.</p>
+                <h2 className="text-sm font-semibold text-gray-900">🧾 {columnConfig ? `${columnConfig.label} Excel Mappings` : 'Journal Entry Excel Mappings'}</h2>
+                <p className="text-xs text-gray-600">
+                  {columnConfig ? `Map your Excel ${columnConfig.label.toLowerCase()} values to QuickBooks` : 'Configure known value translations for your Excel journal entry upload.'}
+                </p>
               </div>
               <button
                 type="button"
@@ -326,18 +331,20 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
                 {showForm && (
                   <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="text-xs text-gray-600">Field Type</label>
-                        <select
-                          value={formData.fieldType}
-                          onChange={(e) => setFormData((prev) => ({ ...prev, fieldType: e.target.value as ValueMapping['fieldType'], entityId: '' }))}
-                          className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
-                        >
-                          {FIELD_TYPE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
+                      {!columnConfig && (
+                        <div>
+                          <label className="text-xs text-gray-600">Field Type</label>
+                          <select
+                            value={formData.fieldType}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, fieldType: e.target.value as ValueMapping['fieldType'], entityId: '' }))}
+                            className="mt-1 w-full rounded border border-gray-200 bg-[#F5F5F7] px-3 py-2 text-sm text-gray-900 focus:border-emerald-500 focus:outline-none"
+                          >
+                            {FIELD_TYPE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
                       <div>
                         <label className="text-xs text-gray-600">Scanned Text</label>
@@ -351,12 +358,12 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
                     </div>
 
                     <div>
-                      <label className="text-xs text-gray-600">Target {FIELD_TYPE_OPTIONS.find((item) => item.value === formData.fieldType)?.label}</label>
+                      <label className="text-xs text-gray-600">Target {FIELD_TYPE_OPTIONS.find((item) => item.value === effectiveFieldType)?.label}</label>
                       <SearchableSelect
-                        options={entityOptions}
+                        options={getEffectiveTargetOptions(entityOptions, columnConfig)}
                         value={formData.entityId}
                         onChange={(value) => setFormData((prev) => ({ ...prev, entityId: value }))}
-                        placeholder={`Select ${FIELD_TYPE_OPTIONS.find((item) => item.value === formData.fieldType)?.label}…`}
+                        placeholder={`Select ${FIELD_TYPE_OPTIONS.find((item) => item.value === effectiveFieldType)?.label}…`}
                       />
                     </div>
 
@@ -491,7 +498,7 @@ export default function ValueMappingSection({ jwt, templateId }: Props) {
                 )}
 
                 <div className="rounded-lg border border-gray-200 bg-white p-3">
-                  <div className="text-xs font-semibold text-gray-900">Test Value Mapping</div>
+                  <div className="text-xs font-semibold text-gray-900">{columnConfig ? `Test ${columnConfig.label} Mapping` : 'Test Value Mapping'}</div>
                   <p className="text-xs text-gray-600 mb-2">Enter a sample scanned value to preview matching mappings.</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <input

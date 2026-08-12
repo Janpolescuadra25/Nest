@@ -11,6 +11,7 @@ import ProductMappingSection from './ProductMappingSection';
 import PayeeMappingSection from './PayeeMappingSection';
 import ValueMappingSection from './ValueMappingSection';
 import TemplateWizard from '../TemplateWizard';
+import { buildChequeColumnConfigs } from '../../lib/value-mapping-column-utils';
 import SearchableSelect from '../SearchableSelect';
 import RuleFormSection from './RuleFormSection';
 import type { SelectOption } from '../SearchableSelect';
@@ -478,6 +479,13 @@ export default function MappingView({
       .map((a) => ({ value: a.Id, label: a.FullyQualifiedName })),
     [accounts],
   );
+
+  const chequeColumnConfigs = useMemo(() => buildChequeColumnConfigs({
+    chequePayeeOptions,
+    chequeBankOptions,
+    accountOptions,
+    taxCodeOptions,
+  }), [chequePayeeOptions, chequeBankOptions, accountOptions, taxCodeOptions]);
 
   const termsOptions = useMemo(() =>
     terms
@@ -2070,6 +2078,23 @@ export default function MappingView({
           jwt={jwt}
           templateId={selectedTemplateId}
         />
+      )}
+
+      {isCheque && activeScanMode === 'EXCEL' && selectedTemplateId && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-gray-900">Cheque Value Mappings</h3>
+          <p className="text-sm text-gray-500 mb-4">Map each cheque column to the correct QuickBooks target</p>
+          <div className="space-y-4">
+            {chequeColumnConfigs.map((config) => (
+              <ValueMappingSection
+                key={config.sourceField}
+                jwt={jwt}
+                templateId={selectedTemplateId}
+                columnConfig={config}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {isSectionVisible('columnMapping', activeScanMode, selectedTemplate?.transactionType) && (

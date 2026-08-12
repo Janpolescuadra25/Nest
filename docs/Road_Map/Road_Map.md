@@ -19,13 +19,13 @@
 
 ---
 
-## 🗺️ Qyra Roadmap — Cypra v5 (K-1 Complete; K-2 Pending)
+## 🗺️ Qyra Roadmap — Cypra v5 (K-2 Complete; K-3 Pending)
 
-### Repo State (`49af089`, pushed)
+### Repo State (`4823637`, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 86/86 ✅ |
+| Frontend tests | 102/102 ✅ |
 | Backend tests | 67/67 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -141,6 +141,8 @@ The current `ValueMapping` schema stores `templateId`, `fieldType` (account/name
 - Restrict the entity picker targets per column: for `payee`, show only active Vendors; for `bankAccount`, show only active QuickBooks accounts where `AccountType === 'Bank'`. The existing template defaults already filter by these types at MappingView L461 — apply the same filters in the mapping UI.
 - Each column lets users map raw Excel values to QuickBooks values (e.g., "JP" → "JPEscuadra" for payee, "BofA" → "Bank of America Checking" for bank account).
 - Store and load mappings per template with `sourceField` set to the cheque column name.
+
+**Outcome:** Completed. Cheque value mapping UI with 4 column-specific sections, per-column target filtering, and tested helper utilities. 102 frontend tests and 67 backend tests pass.
 
 **K-3: Per-Row Autofill in Preview**
 - In CheckPreviewForm, when source is 'excel', autofill all fields per row:
