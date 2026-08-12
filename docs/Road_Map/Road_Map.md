@@ -1,10 +1,10 @@
-## 🗺️ Qyra Roadmap — Cypra v5 (K-4 Complete; K-5 Pending)
+## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`b3132c7`, local only)
+### Repo State (`8faaf31`, local only)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 102/102 ✅ |
+| Frontend tests | 104/104 ✅ |
 | Backend tests | 67/67 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -53,11 +53,12 @@
 **Outcome:** Completed. `7a8a211` — sourceField value mapping for all 4 cheque columns (payee, bankAccount, category, taxType), customer state/SearchableSelect in CheckPreviewForm, customerRef added to `api.createCheque`, raw tax amount displayed as read-only. 102/102 frontend, 67/67 backend tests pass.
 
 #### K-4: Multi-Check Preview with Scan-Record Association
-**Outcome:** Completed. `COMMIT_HASH` — Multi-check preview renders N independent CheckPreviewForm instances for N Excel rows, scanRecordId captured from api.saveScanEntry and passed per-entry, each form independently editable. 102/102 frontend, 67/67 backend tests pass.
+**Outcome:** Completed. `8faaf31` — Multi-check preview renders N independent CheckPreviewForm instances for N Excel rows, scanRecordId captured from api.saveScanEntry and passed per-entry, each form independently editable. 104/104 frontend, 67/67 backend tests pass.
 
 #### K-5: Per-Row Batch Payload
-- In `batch-payload-builder.ts`, use per-row payee, qb memo, customer, and tax type values instead of defaults.
-- Preserve each row's `scanRecordId` and pass it to its corresponding sync/approval action.
-- Do not group rows by matching header fields; generate exactly one QuickBooks cheque payload per source row.
-- Fix `Backend/src/lib/validators.ts` L100 to validate and preserve line-level `taxCodeRef` (currently stripped even though `qb.service.ts` L575 supports it).
-- Bulk sync sends N separate cheques for N rows.
+**Outcome:** Completed. `8faaf31` — Batch sync now generates one cheque payload per saved Excel row, preserves each entry's `scanRecordId`, resolves row-specific payee, bank, category, taxType, and customer values, and validates line-level `taxCodeRef` on the backend.
+- In `Frontend/src/popup/components/ScanView.tsx`, cheque Excel parsing now keeps each row as a distinct scan entry instead of grouping by header values.
+- In `Frontend/src/popup/lib/batch-payload-builder.ts`, cheque payload building uses per-row `scanEntry.scanRecordId`, row header memo, row-specific payee/bank resolution, and `taxCodeRef` preservation.
+- In `Frontend/src/popup/components/SyncView.tsx`, the CHEQUE batch flow now passes `vendors` and `taxCodes` into `buildChequePayload` so sourceField lookups can resolve bank and tax code mappings.
+- In `Backend/src/lib/validators.ts`, `chequeSchema` now validates line-level `taxCodeRef` consistently.
+- Verified by `Frontend` Vitest: 104/104 passing and backend schema change review. 

@@ -98,6 +98,72 @@ describe('batch-payload-builder', () => {
     expect(result!.customerRef).toEqual({ value: 'cust-123', name: 'ACME Corp' });
   });
 
+  it('resolves customerRef from value mappings when sourceField is customer', () => {
+    const scanEntry: ScanEntry = {
+      id: 'scan-cust-3',
+      source: 'excel',
+      header: { payeeRef: 'ACME Corp', docNumber: 'CHK-005', date: '2026-01-15' },
+      lineItems: [
+        { Rent: '1500', Customer: 'ACME Corp' },
+      ],
+    };
+
+    const customerValueMappings: ValueMapping[] = [
+      {
+        id: 'vm-1',
+        templateId: 'tmpl-1',
+        fieldType: 'name',
+        scannedText: 'ACME Corp',
+        sourceField: 'customer',
+        entityId: 'cust-123',
+        matchingRule: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
+
+    const result = buildChequePayload({
+      scanRecordId: 'scan-cust-3',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      customers: mockCustomers,
+      txnDate: '2026-01-15',
+      defaults: mockDefaults,
+      scanEntry,
+      valueMappings: customerValueMappings,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.customerRef).toEqual({ value: 'cust-123', name: 'ACME Corp' });
+  });
+
+  it('uses scanEntry.scanRecordId when provided', () => {
+    const scanEntry: ScanEntry = {
+      id: 'scan-cust-4',
+      source: 'excel',
+      scanRecordId: 'row-scan-record-id',
+      header: { payeeRef: 'ACME Corp', docNumber: 'CHK-006', date: '2026-01-15' },
+      lineItems: [
+        { Rent: '1500' },
+      ],
+    };
+
+    const result = buildChequePayload({
+      scanRecordId: 'scan-cust-4',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      txnDate: '2026-01-15',
+      defaults: mockDefaults,
+      scanEntry,
+      valueMappings: mockValueMappings,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.scanRecordId).toBe('row-scan-record-id');
+  });
+
   it('does not set customerRef when there is no matching customer in the customers list', () => {
     const scanEntry: ScanEntry = {
       id: 'scan-cust-2',

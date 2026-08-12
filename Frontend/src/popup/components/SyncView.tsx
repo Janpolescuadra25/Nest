@@ -46,7 +46,7 @@ const STATUS_CLASSES: Record<string, string> = {
 export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced, userRole, mode }: Props) {
   const { locations } = useLocations(jwt);
   const { status } = useQuickBooks(jwt);
-  const { accounts, customers } = useQBContext();
+  const { accounts, customers, vendors, taxCodes } = useQBContext();
   const { showToast } = useToast();
   const locationId = selectedLocationId || locations[0]?.id || '';
   const [scans, setScans] = useState<ScanRecord[]>([]);
@@ -270,6 +270,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             mappings,
             accounts,
             customers,
+            vendors,
+            taxCodes,
             txnDate: scan.scanDate.slice(0, 10),
             defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
             scanEntry: sharedScanEntry,
@@ -505,6 +507,8 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
             mappings,
             accounts,
             customers,
+            vendors,
+            taxCodes,
             txnDate: scan.scanDate.slice(0, 10),
             defaults: template.defaults as Record<string, { value: string; name?: string } | null>,
             scanEntry: sharedScanEntry,

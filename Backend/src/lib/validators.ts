@@ -120,6 +120,10 @@ export const chequeSchema = z.object({
       value: z.string().optional(),
       name: z.string().optional(),
     }).optional(),
+    taxCodeRef: z.object({
+      value: z.string().optional(),
+      name: z.string().optional(),
+    }).optional(),
   })).min(1, 'At least one line item is required'),
   scanRecordId: z.string().optional(),
   skipDedupCheck: z.boolean().optional(),

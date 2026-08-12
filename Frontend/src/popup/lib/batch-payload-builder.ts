@@ -80,27 +80,45 @@ export function buildChequePayload(params: {
   mappings: Mapping[];
   accounts: QBAccount[];
   customers?: QBCustomer[];
+  vendors?: Array<{ Id: string; DisplayName?: string; Name?: string }>;
+  taxCodes?: Array<{ Id: string; Name?: string; Description?: string }>;
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
   valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, scanData, mappings, accounts, customers, txnDate, defaults, scanEntry, valueMappings } = params;
+  const { scanRecordId, scanData, mappings, accounts, customers, vendors, taxCodes, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   let customerRef: { value: string; name?: string } | undefined;
   if (customers?.length && scanEntry?.lineItems?.length) {
     for (const lineItem of scanEntry.lineItems) {
-      for (const value of Object.values(lineItem)) {
-        if (typeof value !== 'string') continue;
-        const normalized = value.trim().toLowerCase();
-        const matchedCustomer = customers.find((customer) => customer.DisplayName.toLowerCase() === normalized);
-        if (matchedCustomer) {
-          customerRef = { value: matchedCustomer.Id, name: matchedCustomer.DisplayName };
+      const rawCustomer = String(lineItem.customer ?? lineItem.Customer ?? '').trim();
+      if (!rawCustomer) continue;
+
+      const normalized = rawCustomer.toLowerCase();
+      const matchedCustomer = customers.find((customer) => {
+        const candidate = String(customer.DisplayName || customer.CompanyName || customer.Name || '').toLowerCase();
+        return candidate.includes(normalized) || normalized.includes(candidate);
+      });
+      if (matchedCustomer) {
+        customerRef = { value: matchedCustomer.Id, name: matchedCustomer.DisplayName || matchedCustomer.CompanyName || matchedCustomer.Name };
+        break;
+      }
+
+      if (valueMappings.length > 0) {
+        const vmResult = resolveValueMapping(
+          rawCustomer,
+          'name',
+          valueMappings,
+          (id) => customers.find((customer) => customer.Id === id),
+          'customer',
+        );
+        if (vmResult.matched) {
+          customerRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
           break;
         }
       }
-      if (customerRef) break;
     }
   }
 
@@ -121,10 +139,26 @@ export function buildChequePayload(params: {
           'account',
           valueMappings,
           (id) => accounts.find((a) => a.Id === id),
+          'category',
         );
         if (vmResult.matched) {
           accountId = vmResult.entityId;
         }
+      }
+    }
+
+    const taxType = String(lineItem.taxType ?? lineItem.TaxType ?? '').trim();
+    let taxCodeRef;
+    if (taxType && valueMappings.length > 0) {
+      const vmResult = resolveValueMapping(
+        taxType,
+        'taxCode',
+        valueMappings,
+        (id) => taxCodes?.find((t) => t.Id === id),
+        'taxType',
+      );
+      if (vmResult.matched) {
+        taxCodeRef = { value: vmResult.entityId, name: vmResult.entityName ?? undefined };
       }
     }
 
@@ -136,7 +170,8 @@ export function buildChequePayload(params: {
       accountRef: { value: accountId, name: accountName || undefined },
       description: description || undefined,
       classRef: classId ? { value: classId } : undefined,
-    }];
+      ...(taxCodeRef ? { taxCodeRef } : {}),
+    } as QBChequeLineItem & { taxCodeRef?: { value: string; name?: string } }];
   };
 
   const buildLines = (fields: ScanData): QBChequeLineItem[] =>
@@ -151,6 +186,7 @@ export function buildChequePayload(params: {
             'account',
             valueMappings,
             (id) => accounts.find((a) => a.Id === id),
+            field,
           );
           if (vmResult.matched) {
             accountId = vmResult.entityId;
@@ -194,20 +230,58 @@ export function buildChequePayload(params: {
   const headerBank = scanEntry?.header?.['bankAccount'] as string | undefined;
   const headerDate = scanEntry?.header?.['paymentDate'] as string | undefined;
   const headerCheckNo = scanEntry?.header?.['checkNo'] as string | undefined;
-  const matchedBank = headerBank
+  const rawPayee = String(scanEntry?.header?.payeeName ?? scanEntry?.header?.['payee'] ?? scanEntry?.header?.vendor ?? '').trim();
+  const rawBank = String(scanEntry?.header?.bankAccount ?? scanEntry?.header?.['bankName'] ?? '').trim();
+  const rawMemo = '';
+
+  let payeeRef = defaults.payeeRef ?? undefined;
+  if (rawPayee && valueMappings.length > 0) {
+    const vmResult = resolveValueMapping(
+      rawPayee,
+      'name',
+      valueMappings,
+      (id) => vendors?.find((v) => v.Id === id),
+      'payee',
+    );
+    if (vmResult.matched) {
+      payeeRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
+    }
+  }
+
+  let bankAccountRef = defaults.bankAccountRef ?? undefined;
+  if (rawBank && valueMappings.length > 0) {
+    const vmResult = resolveValueMapping(
+      rawBank,
+      'account',
+      valueMappings,
+      (id) => accounts.find((a) => a.Id === id),
+      'bankAccount',
+    );
+    if (vmResult.matched) {
+      bankAccountRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
+    }
+  }
+
+  const matchedBank = !bankAccountRef && headerBank
     ? accounts.find((a) => a.Name.toLowerCase().includes(headerBank.toLowerCase()))
     : undefined;
 
+  const finalBankAccountRef = bankAccountRef || (matchedBank ? { value: matchedBank.Id, name: matchedBank.FullyQualifiedName || undefined } : undefined);
+
+  const memo = rawMemo || defaults.qbMemo?.value || defaults.memo?.value;
+
+  const finalScanRecordId = scanEntry?.scanRecordId ?? scanRecordId;
+
   return {
-    scanRecordId,
+    scanRecordId: finalScanRecordId,
     transactionType: 'CHEQUE',
     txnDate: headerDate || txnDate,
     lines,
-    bankAccountRef: matchedBank ? { value: matchedBank.Id } : (defaults.bankAccountRef ?? undefined),
-    payeeRef: defaults.payeeRef ?? undefined,
+    bankAccountRef: finalBankAccountRef,
+    payeeRef,
     customerRef,
     amount,
-    memo: defaults.qbMemo?.value || defaults.memo?.value,
+    memo,
     docNumber: headerCheckNo || defaults.docNumber?.value,
   };
 }
