@@ -21,7 +21,7 @@
 
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-2 Complete; K-3 Pending)
 
-### Repo State (`4823637`, pushed)
+### Repo State (`db84872`, pushed)
 
 | Area | Status |
 |---|---|
