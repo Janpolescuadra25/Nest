@@ -683,9 +683,10 @@ export const api = {
     scanRecordId?: string,
     memo?: string,
     docNumber?: string,
+    customerRef?: { value: string; name?: string },
     skipDedupCheck?: boolean,
   ) =>
-    post('/api/quickbooks/cheque', { txnDate, bankAccountRef, payeeRef, amount, lines, scanRecordId, memo, docNumber, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
+    post('/api/quickbooks/cheque', { txnDate, bankAccountRef, payeeRef, amount, lines, scanRecordId, memo, docNumber, customerRef, ...(skipDedupCheck ? { skipDedupCheck } : {}) }, jwt),
 
   syncBatch: (jwt: string, items: BatchSyncItem[]) =>
     post<{ results: BatchSyncResult[]; summary: BatchSyncSummary }>(

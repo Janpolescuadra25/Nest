@@ -19,9 +19,9 @@
 
 ---
 
-## 🗺️ Qyra Roadmap — Cypra v5 (K-2 Complete; K-3 Pending)
+## 🗺️ Qyra Roadmap — Cypra v5 (K-3 Complete; K-4 Pending)
 
-### Repo State (`db84872`, pushed)
+### Repo State (`6b030a3`, pushed)
 
 | Area | Status |
 |---|---|
@@ -79,8 +79,6 @@
 **Outcome:** Completed. Customer values extracted from scan line items before numeric filtering, resolved against QBCustomer list, passed as CustomerRef on QB Cheque header payload through full stack.
 
 ---
-
-**Outcome:** Completed. MappingView shows cheque-specific columns and hides Column Roles/Line Item Fields for CHEQUE templates. CheckPreviewForm extracts fixed columns directly (category, amount, description, tax, customer, memo, taxType) instead of requiring columnMappings. batch-payload-builder reads fixed columns without parseNumericValue destroying strings. L366 useEffect updated with E-2 key name fallbacks (paymentDate, checkNo, bankAccount).
 
 ---
 
@@ -153,11 +151,14 @@ The current `ValueMapping` schema stores `templateId`, `fieldType` (account/name
 - Add customer state and UI to CheckPreviewForm. Pass `customerRef` during direct sync via `api.ts` L676.
 - Each row's data populates its own cheque entry form independently.
 
+**Outcome:** Completed. Per-row autofill for all cheque fields with sourceField value mapping, customer state/UI, and customerRef in createCheque. 102 frontend tests and 67 backend tests pass.
+
 **K-4: Multi-Check Preview with Scan-Record Association**
 - The preview should show one cheque form per Excel row (e.g., 5 rows = 5 separate cheque forms).
 - Currently `ScanView.tsx` L1119 creates per-row scan records by calling `api.saveScanEntry` in a loop but **discards the returned `{ id }` values**. Fix: add an optional `scanRecordId` field to the `ScanEntry` type (`types/index.ts` L210) and populate it from each save response so the preview knows which scan record belongs to which cheque.
 - Currently `App.tsx` L586 passes only one `scanRecordId` for a single active entry. Change to support an array or map of scan record IDs, one per row.
 - Each cheque form should be independently reviewable and editable before sync.
+- Tests: Frontend — test multi-check preview renders N forms for N rows; test each form receives correct scanRecordId; test forms are independently editable.
 
 **K-5: Per-Row Batch Payload**
 - In `batch-payload-builder.ts`, use per-row payee, qb memo, customer, and tax type values instead of defaults.
@@ -175,7 +176,7 @@ The current `ValueMapping` schema stores `templateId`, `fieldType` (account/name
 - Frontend: test per-row autofill applies all fields with value mappings
 - Frontend: test multi-check preview renders N forms for N rows
 - Frontend: test `customerRef` is passed through to `api.createCheque`
-- All existing tests (81 frontend, 53 backend) must continue to pass.
+- All existing tests (102 frontend, 67 backend) must continue to pass.
 
 **Expected output:** Cheque Excel templates have a value mapping section with per-column mapping support via `sourceField`. Each Excel row auto-fills into its own cheque entry with all fields in correct QuickBooks locations. Customer and tax code data flow end-to-end (frontend → API → QuickBooks). Bulk sync creates one QuickBooks cheque per row, each linked to its correct scan record.
 

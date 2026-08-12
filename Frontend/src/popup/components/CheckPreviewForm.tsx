@@ -106,6 +106,7 @@ export default function CheckPreviewForm({
     classes,
     vendors,
     taxCodes,
+    customers,
     listsLoaded,
     listsLoading,
     listsError,
@@ -116,6 +117,7 @@ export default function CheckPreviewForm({
   const [txnDate, setTxnDate] = useState(today);
   const [bankAccountRef, setBankAccountRef] = useState<{ value: string; name?: string }>({ value: '' });
   const [payeeRef, setPayeeRef] = useState<{ value: string; name?: string }>({ value: '' });
+  const [customerRef, setCustomerRef] = useState<{ value: string; name?: string } | null>(null);
   const [valueMappings, setValueMappings] = useState<ValueMapping[]>([]);
   const [payeeMappings, setPayeeMappings] = useState<PayeeMapping[]>([]);
   const [memo, setMemo] = useState('');
@@ -152,16 +154,31 @@ export default function CheckPreviewForm({
       const excelChequeLines = activeScanEntry.lineItems?.map((item) => {
         const category = String(item['category'] ?? '').trim();
         const amount = String(item['amount'] ?? '').trim();
+        const rawTaxType = String(item['taxType'] ?? '').trim();
         let accountId = '';
+        let taxCodeId = '';
         if (category) {
           const vmResult = resolveValueMapping(
             category,
             'account',
             valueMappings,
             (id) => accountsRef.current.find((a) => a.Id === id),
+            'category',
           );
           if (vmResult.matched) {
             accountId = vmResult.entityId;
+          }
+        }
+        if (rawTaxType) {
+          const vmResult = resolveValueMapping(
+            rawTaxType,
+            'taxCode',
+            valueMappings,
+            (id) => taxCodes.find((t) => t.Id === id),
+            'taxType',
+          );
+          if (vmResult.matched) {
+            taxCodeId = vmResult.entityId;
           }
         }
         const accountName = accountsRef.current.find((a) => a.Id === accountId)?.FullyQualifiedName ?? '';
@@ -170,13 +187,31 @@ export default function CheckPreviewForm({
           accountName,
           description: String(item['description'] ?? category).trim(),
           amount,
+          taxCodeId,
         });
       }) ?? [];
 
       if (excelChequeLines.length > 0) {
         setLines(excelChequeLines);
       }
-      setMemo((prev) => prev || String(activeScanEntry.header['memo'] ?? ''));
+      setMemo((prev) => prev || String(activeScanEntry.header['memo'] ?? activeScanEntry.lineItems?.[0]?.memo ?? ''));
+
+      const rawCustomer = String(activeScanEntry.lineItems?.[0]?.customer ?? '').trim();
+      if (rawCustomer) {
+        const normalized = rawCustomer.toLowerCase();
+        const match = customers.find((customer) => {
+          const candidate = String(customer.DisplayName || customer.CompanyName || '').toLowerCase();
+          return candidate.includes(normalized) || normalized.includes(candidate);
+        });
+        if (match) {
+          setCustomerRef({ value: match.Id, name: match.DisplayName || match.CompanyName });
+        } else {
+          setCustomerRef(null);
+        }
+      } else {
+        setCustomerRef(null);
+      }
+
       return;
     }
     if (!selectedTemplate?.columnMappings || !selectedTemplate?.id) return;
@@ -406,6 +441,7 @@ export default function CheckPreviewForm({
       const vendorName = (h.payeeName || h.vendor || '').trim();
       if (!vendorName) return prev;
 
+      const sourceField = activeScanEntry.source === 'excel' && selectedTemplate?.transactionType === 'CHEQUE' ? 'payee' : undefined;
       const vmResult = resolveValueMapping(
         vendorName,
         'name',
@@ -414,6 +450,7 @@ export default function CheckPreviewForm({
           if (id.startsWith('vendor:')) return vendors.find((v) => v.Id === id.replace('vendor:', ''));
           return undefined;
         },
+        sourceField,
       );
       if (vmResult.matched && vmResult.entityId.startsWith('vendor:')) {
         const vendorId = vmResult.entityId.replace('vendor:', '');
@@ -474,11 +511,26 @@ export default function CheckPreviewForm({
 
     const bankHeader = h.bankAccount || h.bankName;
     if (bankHeader && !bankAccountRef.value) {
-      const bankName = String(bankHeader).toLowerCase();
-      const match = accounts.find((a) => a.FullyQualifiedName.toLowerCase().includes(bankName));
-      if (match) setBankAccountRef({ value: match.Id, name: match.FullyQualifiedName });
+      const bankName = String(bankHeader).trim();
+      if (activeScanEntry.source === 'excel' && selectedTemplate?.transactionType === 'CHEQUE') {
+        const vmResult = resolveValueMapping(
+          bankName,
+          'account',
+          valueMappings,
+          (id) => accounts.find((a) => a.Id === id),
+          'bankAccount',
+        );
+        if (vmResult.matched) {
+          setBankAccountRef({ value: vmResult.entityId, name: vmResult.entityName });
+        }
+      }
+      if (!bankAccountRef.value) {
+        const bankNameLower = bankName.toLowerCase();
+        const match = accounts.find((a) => a.FullyQualifiedName.toLowerCase().includes(bankNameLower));
+        if (match) setBankAccountRef({ value: match.Id, name: match.FullyQualifiedName });
+      }
     }
-  }, [activeScanEntry, vendors, accounts, bankAccountRef.value, payeeMappings, valueMappings]);
+  }, [activeScanEntry, vendors, accounts, bankAccountRef.value, payeeMappings, valueMappings, customers, selectedTemplate]);
 
   useEffect(() => {
     if (!mappingsLoaded) return;
@@ -526,6 +578,12 @@ export default function CheckPreviewForm({
       .filter((account) => account.Active && account.AccountType === 'Bank')
       .map((account) => ({ value: account.Id, label: account.FullyQualifiedName, subtitle: account.AccountSubType })),
     [accounts],
+  );
+
+  const customerOptions = useMemo(() =>
+    customers
+      .map((customer) => ({ value: customer.Id, label: customer.DisplayName || customer.CompanyName || customer.Id })),
+    [customers],
   );
 
   const accountOptions = useMemo(() =>
@@ -668,6 +726,7 @@ export default function CheckPreviewForm({
     setTxnDate(today);
     setBankAccountRef({ value: '' });
     setPayeeRef({ value: '' });
+    setCustomerRef(null);
     setMemo('');
     setDocNumber('');
     setLines([newLine(), newLine()]);
@@ -708,6 +767,7 @@ export default function CheckPreviewForm({
         scanRecordId ?? undefined,
         memo || undefined,
         docNumber || undefined,
+        customerRef ?? undefined,
         skipDedupCheck,
       ) as { chequeId?: string; qbJournalEntryId?: string; txnDate?: string; docNumber?: string; skipped?: boolean };
 
@@ -721,7 +781,7 @@ export default function CheckPreviewForm({
     } finally {
       setSyncing(false);
     }
-  }, [allMapped, bankAccountRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, totalAmount, txnDate, payeeRef]);
+  }, [allMapped, bankAccountRef, customerRef, docNumber, effectiveLines, hasAmount, hasHeader, jwt, memo, scanRecordId, totalAmount, txnDate, payeeRef]);
 
   const handleSubmitForApproval = useCallback(async () => {
     if (!scanRecordId) {
@@ -813,6 +873,20 @@ export default function CheckPreviewForm({
             placeholder="Select payee/vendor…"
           />
         </div>
+        {customers.length > 0 ? (
+          <div className="col-span-2">
+            <div className="text-sm font-medium text-gray-700 mb-1">Customer</div>
+            <SearchableSelect
+              options={customerOptions}
+              value={customerRef?.value ?? ''}
+              onChange={(value) => {
+                const selected = customers.find((c) => c.Id === value);
+                setCustomerRef({ value, name: selected?.DisplayName || selected?.CompanyName });
+              }}
+              placeholder="Select QB customer…"
+            />
+          </div>
+        ) : null}
         <div className="col-span-2">
           <div className="text-sm font-medium text-gray-700 mb-1">Check # / Doc Number</div>
           <input
@@ -831,6 +905,14 @@ export default function CheckPreviewForm({
             placeholder="Optional memo"
           />
         </div>
+        {activeScanEntry?.source === 'excel' && selectedTemplate?.transactionType === 'CHEQUE' ? (
+          <div className="col-span-2">
+            <div className="text-sm font-medium text-gray-700 mb-1">Tax (reference)</div>
+            <div className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-600 bg-gray-50">
+              {String(activeScanEntry.lineItems?.[0]?.tax ?? '').trim() || '—'}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
