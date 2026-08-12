@@ -584,16 +584,38 @@ export default function App() {
                 attachments={scanAttachments}
               />
             ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
-              <CheckPreviewForm
-                jwt={jwt!}
-                scanData={scanData}
-                activeScanEntry={activeScanEntry}
-                selectedLocationId={selectedLocationId}
-                scanRecordId={scanRecordId}
-                selectedTemplate={selectedTemplateForScan}
-                userRole={user?.role}
-                attachments={scanAttachments}
-              />
+              selectedTemplateForScan?.transactionType === 'CHEQUE' && activeScanEntry?.source === 'excel' && scanEntries.length > 0 ? (
+                <div>
+                  {scanEntries.map((entry, index) => (
+                    <div key={entry.id} style={{ marginBottom: '2rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                        Cheque {index + 1}{entry.rowNumber ? ` (Row ${entry.rowNumber})` : ''}
+                      </h3>
+                      <CheckPreviewForm
+                        jwt={jwt!}
+                        scanData={scanData}
+                        activeScanEntry={entry}
+                        selectedLocationId={selectedLocationId}
+                        scanRecordId={entry.scanRecordId ?? null}
+                        selectedTemplate={selectedTemplateForScan}
+                        userRole={user?.role}
+                        attachments={scanAttachments}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <CheckPreviewForm
+                  jwt={jwt!}
+                  scanData={scanData}
+                  activeScanEntry={activeScanEntry}
+                  selectedLocationId={selectedLocationId}
+                  scanRecordId={scanRecordId}
+                  selectedTemplate={selectedTemplateForScan}
+                  userRole={user?.role}
+                  attachments={scanAttachments}
+                />
+              )
             ) : (
               <JournalEntryPreview
                 jwt={jwt!}

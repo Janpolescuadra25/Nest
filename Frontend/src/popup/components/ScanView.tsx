@@ -1116,7 +1116,7 @@ export default function ScanView({
         let failCount = 0;
         for (const entry of parsedEntries) {
           try {
-            await api.saveScanEntry(
+            const result = await api.saveScanEntry(
               jwt,
               locationId,
               new Date().toISOString().split('T')[0],
@@ -1126,6 +1126,7 @@ export default function ScanView({
               pendingAttachment ?? undefined,
               autoAttach,
             );
+            entry.scanRecordId = result.id;
             savedCount++;
           } catch (saveErr) {
             console.error(`[Qyra] Failed to save Excel entry ${entry.id} (row ${entry.rowNumber ?? '?'}) :`, saveErr);

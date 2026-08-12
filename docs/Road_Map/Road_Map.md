@@ -1,6 +1,6 @@
-## 🗺️ Qyra Roadmap — Cypra v5 (K-3 Complete; K-4 Pending)
+## 🗺️ Qyra Roadmap — Cypra v5 (K-4 Complete; K-5 Pending)
 
-### Repo State (`7a8a211`, local only)
+### Repo State (`b3132c7`, local only)
 
 | Area | Status |
 |---|---|
@@ -53,11 +53,7 @@
 **Outcome:** Completed. `7a8a211` — sourceField value mapping for all 4 cheque columns (payee, bankAccount, category, taxType), customer state/SearchableSelect in CheckPreviewForm, customerRef added to `api.createCheque`, raw tax amount displayed as read-only. 102/102 frontend, 67/67 backend tests pass.
 
 #### K-4: Multi-Check Preview with Scan-Record Association
-- The preview should show one cheque form per Excel row (e.g., 5 rows = 5 separate cheque forms).
-- Currently `ScanView.tsx` L1119 creates per-row scan records by calling `api.saveScanEntry` in a loop but **discards the returned `{ id }` values**. Fix: populate `ScanEntry.scanRecordId` from each save response so the preview knows which scan record belongs to which cheque.
-- Currently `App.tsx` L586 passes only one `scanRecordId` for a single active entry. Change to support an array or map of scan record IDs, one per row.
-- Each cheque form should be independently reviewable and editable before sync.
-- Tests: Frontend — test multi-check preview renders N forms for N rows; test each form receives correct scanRecordId; test forms are independently editable.
+**Outcome:** Completed. `COMMIT_HASH` — Multi-check preview renders N independent CheckPreviewForm instances for N Excel rows, scanRecordId captured from api.saveScanEntry and passed per-entry, each form independently editable. 102/102 frontend, 67/67 backend tests pass.
 
 #### K-5: Per-Row Batch Payload
 - In `batch-payload-builder.ts`, use per-row payee, qb memo, customer, and tax type values instead of defaults.
