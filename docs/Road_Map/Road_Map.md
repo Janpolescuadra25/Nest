@@ -15,6 +15,65 @@
 
 ---
 
+### Phase L: Bill Excel Sync (pending)
+**Goal:** Enable users to import vendor bills from Excel into QuickBooks, mirroring the cheque flow with bill-specific fields (due dates, payment terms), value mapping, per-row preview, and batch sync.
+
+#### L-1: Bill Excel Format & Parsing
+**Goal:** Define the bill Excel column format and extend the scan pipeline to parse bill rows into ScanEntry objects with bill-specific data.
+**Expected outcome:**
+- Bill Excel column format defined (expected columns: vendor, billNo, date, dueDate, account, taxType, amount, memo, and optionally terms, poNumber, department)
+- ScanView.tsx extended to detect bill Excel files and parse bill rows into individual ScanEntry objects (no row-grouping — one entry per row, matching K-5 pattern)
+- Each ScanEntry tagged with entry type `BILL` for downstream routing
+- Bill-specific fields (dueDate, terms, poNumber) captured in scan data even if optional
+- Frontend tests added for bill parsing logic
+
+#### L-2: Bill Value Mapping
+**Goal:** Extend MappingView and the value mapping system to support bill-specific fields so users can map Excel columns to QBO bill fields.
+**Expected outcome:**
+- MappingView supports a bill mapping mode with fields: vendor, account, taxType, dueDate, terms, poNumber, memo
+- Value mapping table entries created for bill field types with sourceField disambiguation (matching K-3/K-5 pattern: `sourceField` parameter distinguishes same fieldType across columns)
+- `resolveValueMapping` handles bill field types without conflicts
+- `batch-payload-builder.ts` extended with `buildBillPayload` function (mirrors `buildChequePayload`)
+- `buildBillPayload` resolves vendor via value mapping (not customer lookup — bills always reference vendors), resolves account and taxType via mapping, and includes dueDate/terms/poNumber when present
+- Frontend tests added for bill value mapping and payload building
+
+#### L-3: Bill Preview (Per-Row)
+**Goal:** Show each parsed bill row as an independent, editable preview form with bill-specific fields, rendered as stacked instances for multi-bill Excel files.
+**Expected outcome:**
+- `BillPreviewForm` component created (or CheckPreviewForm extended with bill mode) with fields: vendor (SearchableSelect), billNo, date, dueDate (date picker), account, taxType, amount, memo, terms (SearchableSelect or dropdown), poNumber
+- Vendor resolved by direct name match against QBVendors (no customer lookup — bills are always vendor-facing)
+- Line-level taxCodeRef preserved in preview (matching K-5 pattern)
+- App.tsx routes `BILL`-type scanEntries to render N BillPreviewForm instances stacked vertically with `Bill {index + 1} (Row {rowNumber})` headings
+- Each form has independent scanRecordId tracking
+- Editable fields with manual override capability
+- Frontend tests added for BillPreviewForm rendering and data flow
+
+#### L-4: Direct Bill Sync (Per-Row)
+**Goal:** Enable per-row bill submission from the preview form directly to QuickBooks, with validation against billSchema.
+**Expected outcome:**
+- `api.createBill` (or equivalent) endpoint called from BillPreviewForm submit handler
+- Payload includes: vendorRef, docNumber (billNo), txnDate, dueDate, line items (account, amount, taxCodeRef), memo, termsRef, poNumber
+- Backend validates against `billSchema` in validators.ts (schema already exists)
+- Per-row success/failure feedback displayed on the form
+- Frontend tests added for direct bill sync
+
+#### L-5: Batch Bill Sync
+**Goal:** Enable bulk sync of all bill rows from SyncView using the batch payload builder, matching the per-row pattern established in K-5.
+**Expected outcome:**
+- SyncView bulk handler loops over `scan.scanEntries` for `BILL`-type entries
+- Each entry passes through `buildBillPayload` with vendors, taxCodes, and accounts from `useQBContext()`
+- `buildBillPayload` produces one payload per entry with all value mapping resolved and scanRecordId attached
+- Batch sync API call submits all bill payloads
+- Per-entry success/failure tracked and displayed in SyncView
+- `taxCodeRef` included in line items when taxType is resolved
+- Frontend tests added for batch bill payload building
+
+**Mapping contract** (same as cheque — permanent reference):
+- `resolveValueMapping(scannedText, fieldType, mappings, entityLookup, sourceField)` — sourceField disambiguates same fieldType across bill columns (e.g., vendor column vs account column)
+- Customer lookup does NOT apply to bills — bills use vendor value mapping only
+
+---
+
 ### Completed History
 
 | Phase | Commits | Summary |
