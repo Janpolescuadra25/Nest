@@ -98,11 +98,11 @@ export function buildChequePayload(params: {
 
       const normalized = rawCustomer.toLowerCase();
       const matchedCustomer = customers.find((customer) => {
-        const candidate = String(customer.DisplayName || customer.CompanyName || customer.Name || '').toLowerCase();
+        const candidate = String(customer.DisplayName || customer.CompanyName || '').toLowerCase();
         return candidate.includes(normalized) || normalized.includes(candidate);
       });
       if (matchedCustomer) {
-        customerRef = { value: matchedCustomer.Id, name: matchedCustomer.DisplayName || matchedCustomer.CompanyName || matchedCustomer.Name };
+        customerRef = { value: matchedCustomer.Id, name: matchedCustomer.DisplayName || matchedCustomer.CompanyName };
         break;
       }
 
