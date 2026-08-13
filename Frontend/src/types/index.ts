@@ -220,6 +220,7 @@ export interface ExcelParseResult {
 export interface ScanEntry {
   id: string;
   source: 'pos' | 'excel' | 'image' | 'pdf';
+  type?: 'CHEQUE' | 'BILL';
   fileName?: string;
   rowNumber?: number;
   thumbnail?: string;

@@ -225,7 +225,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   }
 
   const columnMappings = template.columnMappings as Record<string, unknown> | null;
-  if (template.transactionType !== 'JOURNAL_ENTRY' && template.transactionType !== 'CHEQUE') {
+  if (template.transactionType !== 'JOURNAL_ENTRY' && template.transactionType !== 'CHEQUE' && template.transactionType !== 'BILL') {
     if (!columnMappings || typeof columnMappings !== 'object' || Array.isArray(columnMappings) || Object.keys(columnMappings).length === 0) {
       res.status(400).json({ error: 'Template has no column mapping configured.' });
       return;
@@ -418,6 +418,79 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
 
     res.json({ transactions, totalRows: rows.length - 1, skippedRows });
     return;
+  } else if (template.transactionType === 'BILL') {
+    const headerRow = (rows[0] || []).map((h: unknown) => String(h ?? '').trim().toLowerCase());
+    const matchesFixedBillHeader = headerRow.length >= 7
+      && headerRow[0] === 'date'
+      && headerRow[1] === 'vendor'
+      && (headerRow[2] === 'bill no' || headerRow[2] === 'bill number')
+      && headerRow[3] === 'due date'
+      && headerRow[4] === 'account'
+      && headerRow[5] === 'tax type'
+      && headerRow[6] === 'amount';
+
+    if (matchesFixedBillHeader) {
+      if (rows.length < 2) {
+        res.status(400).json({
+          error: 'Bill file must contain at least a header row and one data row.',
+        });
+        return;
+      }
+
+      const transactions: any[] = [];
+      let skippedRows = 0;
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row.some(cell => cell != null && String(cell).trim() !== '')) continue;
+
+        const amountRaw = String(row[6] ?? '').trim();
+        const amount = parseFloat(amountRaw);
+        if (isNaN(amount)) {
+          skippedRows++;
+          continue;
+        }
+
+        const transaction: any = {
+          type: 'BILL',
+          header: {
+            date: String(row[0] ?? '').trim(),
+            vendor: String(row[1] ?? '').trim(),
+            docNumber: String(row[2] ?? '').trim(),
+            dueDate: String(row[3] ?? '').trim(),
+            account: String(row[4] ?? '').trim(),
+            taxType: String(row[5] ?? '').trim(),
+          },
+          lineItems: [{
+            amount: amountRaw,
+            postingType: 'Credit',
+          }],
+        };
+
+        if (headerRow[7] === 'memo') {
+          transaction.header.memo = String(row[7] ?? '').trim();
+        }
+        if (headerRow[8] === 'terms') {
+          transaction.header.terms = String(row[8] ?? '').trim();
+        }
+        if (headerRow[9] === 'po number') {
+          transaction.header.poNumber = String(row[9] ?? '').trim();
+        }
+        if (headerRow[10] === 'department') {
+          transaction.header.department = String(row[10] ?? '').trim();
+        }
+
+        transactions.push(transaction);
+      }
+
+      res.json({ transactions, totalRows: rows.length - 1, skippedRows });
+      return;
+    }
+
+    if (!columnMappings) {
+      res.status(400).json({ error: 'Template has no column mapping configured.' });
+      return;
+    }
   } else {
     if (!columnMappings) {
       res.status(400).json({ error: 'Template has no column mapping configured.' });

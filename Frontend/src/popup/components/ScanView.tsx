@@ -78,6 +78,36 @@ async function findPOSTab(): Promise<{ tab: chrome.tabs.Tab; posType: string; po
   return null;
 }
 
+export function mapParsedTransactionsToScanEntries(
+  transactions: ExcelDataParseResult['transactions'],
+  uploadedExcelFileName: string,
+): ScanEntry[] {
+  return transactions.flatMap((transaction, transactionIndex) => {
+    const commonEntry: Omit<ScanEntry, 'id' | 'rowNumber' | 'lineItems'> = {
+      source: 'excel',
+      fileName: uploadedExcelFileName,
+      header: transaction.header,
+      ...(transaction.type === 'CHEQUE' || transaction.type === 'BILL' ? { type: transaction.type } : {}),
+    } as Omit<ScanEntry, 'id' | 'rowNumber' | 'lineItems'>;
+
+    if (transaction.type === 'CHEQUE') {
+      return transaction.lineItems.map((lineItem, rowIndex) => ({
+        ...commonEntry,
+        id: generateId(),
+        rowNumber: rowIndex + 1,
+        lineItems: [lineItem],
+      }));
+    }
+
+    return [{
+      ...commonEntry,
+      id: generateId(),
+      rowNumber: transactionIndex + 1,
+      lineItems: transaction.lineItems,
+    }];
+  });
+}
+
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
 interface Props {
@@ -1038,40 +1068,7 @@ export default function ScanView({
     try {
       const result = await api.parseExcelData(jwt, selectedTemplate.id, uploadedExcelFile);
       setExcelDataResult(result);
-      const parsedEntries: ScanEntry[] = result.transactions.flatMap((transaction) => {
-        const txnType = selectedTemplate?.transactionType ?? 'JOURNAL_ENTRY';
-
-        if (txnType === 'BILL' || txnType === 'VENDOR_CREDIT' || txnType === 'JOURNAL_ENTRY') {
-          return [{
-            id: generateId(),
-            source: 'excel',
-            fileName: uploadedExcelFile.name,
-            rowNumber: 1,
-            header: transaction.header,
-            lineItems: transaction.lineItems,
-          }];
-        }
-
-        if (txnType === 'CHEQUE') {
-          return transaction.lineItems.map((lineItem, rowIndex) => ({
-            id: generateId(),
-            source: 'excel',
-            fileName: uploadedExcelFile.name,
-            rowNumber: rowIndex + 1,
-            header: transaction.header,
-            lineItems: [lineItem],
-          }));
-        }
-
-        return transaction.lineItems.map((lineItem, rowIndex) => ({
-          id: generateId(),
-          source: 'excel',
-          fileName: uploadedExcelFile.name,
-          rowNumber: rowIndex + 1,
-          header: transaction.header,
-          lineItems: [lineItem],
-        }));
-      });
+      const parsedEntries: ScanEntry[] = mapParsedTransactionsToScanEntries(result.transactions, uploadedExcelFile.name);
       setScanEntries(parsedEntries);
       setActiveScanEntryId(parsedEntries[0]?.id ?? null);
 

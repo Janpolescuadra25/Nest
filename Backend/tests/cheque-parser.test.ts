@@ -187,3 +187,68 @@ describe('Cheque fixed-column Excel parser', () => {
     expect(res.body.transactions).toHaveLength(1);
   });
 });
+
+describe('Bill fixed-column Excel parser', () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTemplateFindFirst.mockResolvedValue({
+      id: 'test-template-2',
+      transactionType: 'BILL',
+      columnMappings: null,
+    });
+    app = buildApp();
+  });
+
+  it('parses a valid bill Excel file into a bill transaction', async () => {
+    const data = [
+      ['Date', 'Vendor', 'Bill No', 'Due Date', 'Account', 'Tax Type', 'Amount', 'Memo', 'Terms', 'PO Number', 'Department'],
+      ['2026-08-10', 'Vendor A', 'BILL-1001', '2026-08-30', 'Accounts Payable', 'Taxable', '250.00', 'Office supplies', 'Net 30', 'PO-123', 'Operations'],
+    ];
+    const buf = await createChequeWorkbook(data);
+
+    const res = await request(app)
+      .post('/api/templates/parse-excel-data?templateId=test-template-2')
+      .attach('file', buf, {
+        filename: 'bill.xlsx',
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.transactions).toHaveLength(1);
+    expect(res.body.transactions[0].type).toBe('BILL');
+    expect(res.body.transactions[0].header.date).toBe('2026-08-10');
+    expect(res.body.transactions[0].header.vendor).toBe('Vendor A');
+    expect(res.body.transactions[0].header.docNumber).toBe('BILL-1001');
+    expect(res.body.transactions[0].header.dueDate).toBe('2026-08-30');
+    expect(res.body.transactions[0].header.account).toBe('Accounts Payable');
+    expect(res.body.transactions[0].header.taxType).toBe('Taxable');
+    expect(res.body.transactions[0].header.memo).toBe('Office supplies');
+    expect(res.body.transactions[0].header.terms).toBe('Net 30');
+    expect(res.body.transactions[0].header.poNumber).toBe('PO-123');
+    expect(res.body.transactions[0].header.department).toBe('Operations');
+    expect(res.body.transactions[0].lineItems[0].amount).toBe('250.00');
+    expect(res.body.totalRows).toBe(1);
+    expect(res.body.skippedRows).toBe(0);
+  });
+
+  it('parses bill headers case-insensitively and recognizes Bill Number', async () => {
+    const data = [
+      ['date', 'vendor', 'Bill Number', 'due date', 'ACCOUNT', 'tax type', 'amount'],
+      ['2026-08-10', 'Vendor B', 'BILL-2002', '2026-09-05', 'Accounts Payable', 'NonTaxable', '125.00'],
+    ];
+    const buf = await createChequeWorkbook(data);
+
+    const res = await request(app)
+      .post('/api/templates/parse-excel-data?templateId=test-template-2')
+      .attach('file', buf, {
+        filename: 'bill.xlsx',
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.transactions[0].type).toBe('BILL');
+    expect(res.body.transactions[0].header.docNumber).toBe('BILL-2002');
+  });
+});
