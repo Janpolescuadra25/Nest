@@ -1,10 +1,10 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`9dc6412`, pushed)
+### Repo State (`7bb9f25`, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 105/105 ✅ |
+| Frontend tests | 106/106 ✅ |
 | Backend tests | 69/69 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -15,18 +15,8 @@
 
 ---
 
-### Phase L: Bill Excel Sync (L-2 pending)
+### Phase L: Bill Excel Sync (L-3 pending)
 **Goal:** Enable users to import vendor bills from Excel into QuickBooks, mirroring the cheque flow with bill-specific fields (due dates, payment terms), value mapping, per-row preview, and batch sync.
-
-#### L-2: Bill Value Mapping
-**Goal:** Extend MappingView and the value mapping system to support bill-specific fields so users can map Excel columns to QBO bill fields.
-**Expected outcome:**
-- MappingView supports a bill mapping mode with fields: vendor, account, taxType, dueDate, terms, poNumber, memo
-- Value mapping table entries created for bill field types with sourceField disambiguation (matching K-3/K-5 pattern: `sourceField` parameter distinguishes same fieldType across columns)
-- `resolveValueMapping` handles bill field types without conflicts
-- `batch-payload-builder.ts` extended with `buildBillPayload` function (mirrors `buildChequePayload`)
-- `buildBillPayload` resolves vendor via value mapping (not customer lookup — bills always reference vendors), resolves account and taxType via mapping, and includes dueDate/terms/poNumber when present
-- Frontend tests added for bill value mapping and payload building
 
 #### L-3: Bill Preview (Per-Row)
 **Goal:** Show each parsed bill row as an independent, editable preview form with bill-specific fields, rendered as stacked instances for multi-bill Excel files.
@@ -79,6 +69,7 @@
 | J | 4e09eed | Tab-specific filters, cards, and banners |
 | K | b83853a | Per-row cheque batch payload generation, line-level taxCodeRef validation, sourceField-based value mapping for all cheque columns, multi-check preview with independent scanRecordId, row-grouping removal |
 | L-1 | 9dc6412 | Bill Excel format definition and parsing, ScanEntry type tagging, backend bill column detection |
+| L-2 | 7bb9f25 | Bill value mapping for header fields, MappingView bill column configs, SyncView vendor/terms passthrough |
 | R-4 | (no code commit) | qyra.space live, Render, Resend, Intuit URI |
 
 ---
