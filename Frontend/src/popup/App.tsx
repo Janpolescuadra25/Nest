@@ -561,17 +561,39 @@ export default function App() {
                 </p>
               </div>
             ) : selectedTemplateForScan.transactionType === 'BILL' ? (
-              <BillPreviewForm
-                jwt={jwt!}
-                scanData={scanData}
-                activeScanEntry={activeScanEntry}
-                selectedLocationId={selectedLocationId}
-                scanRecordId={scanRecordId}
-                selectedTemplate={selectedTemplateForScan}
-                onNavigateToPayments={() => setCurrentTab('payments')}
-                userRole={user?.role}
-                attachments={scanAttachments}
-              />
+              activeScanEntry?.source === 'excel' && scanEntries.length > 0 ? (
+                <div>
+                  {scanEntries.map((entry, index) => (
+                    <div key={entry.id} style={{ marginBottom: '2rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                        Bill {index + 1}{entry.rowNumber ? ` (Row ${entry.rowNumber})` : ''}
+                      </h3>
+                      <BillPreviewForm
+                        jwt={jwt!}
+                        scanData={scanData}
+                        activeScanEntry={entry}
+                        selectedLocationId={selectedLocationId}
+                        scanRecordId={entry.scanRecordId ?? null}
+                        selectedTemplate={selectedTemplateForScan}
+                        userRole={user?.role}
+                        attachments={scanAttachments}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <BillPreviewForm
+                  jwt={jwt!}
+                  scanData={scanData}
+                  activeScanEntry={activeScanEntry}
+                  selectedLocationId={selectedLocationId}
+                  scanRecordId={scanRecordId}
+                  selectedTemplate={selectedTemplateForScan}
+                  onNavigateToPayments={() => setCurrentTab('payments')}
+                  userRole={user?.role}
+                  attachments={scanAttachments}
+                />
+              )
             ) : selectedTemplateForScan.transactionType === 'VENDOR_CREDIT' ? (
               <VendorCreditPreviewForm
                 jwt={jwt!}

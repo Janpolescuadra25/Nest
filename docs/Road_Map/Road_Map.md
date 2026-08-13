@@ -4,7 +4,7 @@
 
 | Area | Status |
 |---|---|
-| Frontend tests | 106/106 ✅ |
+| Frontend tests | 107/107 ✅ |
 | Backend tests | 69/69 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -15,7 +15,7 @@
 
 ---
 
-### Phase L: Bill Excel Sync (L-3 pending)
+### Phase L: Bill Excel Sync (L-3 complete)
 **Goal:** Enable users to import vendor bills from Excel into QuickBooks, mirroring the cheque flow with bill-specific fields (due dates, payment terms), value mapping, per-row preview, and batch sync.
 
 #### L-3: Bill Preview (Per-Row)
