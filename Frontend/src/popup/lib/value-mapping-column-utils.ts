@@ -7,6 +7,12 @@ interface ChequeColumnOptions {
   taxCodeOptions: Array<{ value: string; label: string; subtitle?: string }>;
 }
 
+interface BillColumnOptions {
+  billVendorOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  apAccountOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  termsOptions: Array<{ value: string; label: string; subtitle?: string }>;
+}
+
 export function buildChequeColumnConfigs(options: ChequeColumnOptions): ColumnMappingConfig[] {
   return [
     {
@@ -36,6 +42,38 @@ export function buildChequeColumnConfigs(options: ChequeColumnOptions): ColumnMa
       label: 'Tax Type',
       description: 'Map tax type text to QuickBooks tax codes',
       targetOptions: options.taxCodeOptions,
+    },
+  ];
+}
+
+interface BillColumnOptions {
+  billVendorOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  apAccountOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  termsOptions: Array<{ value: string; label: string; subtitle?: string }>;
+}
+
+export function buildBillColumnConfigs(options: BillColumnOptions): ColumnMappingConfig[] {
+  return [
+    {
+      sourceField: 'vendorRef',
+      fieldType: 'name',
+      label: 'Vendor',
+      description: 'Map raw vendor names from your Excel to QuickBooks vendors',
+      targetOptions: options.billVendorOptions,
+    },
+    {
+      sourceField: 'apAccountRef',
+      fieldType: 'account',
+      label: 'AP Account',
+      description: 'Map raw AP account names from your Excel to QuickBooks accounts',
+      targetOptions: options.apAccountOptions,
+    },
+    {
+      sourceField: 'termsRef',
+      fieldType: 'name',
+      label: 'Terms',
+      description: 'Map terms text from your Excel to QuickBooks terms',
+      targetOptions: options.termsOptions,
     },
   ];
 }

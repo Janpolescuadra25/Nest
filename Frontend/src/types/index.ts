@@ -198,7 +198,7 @@ export interface ValueMappingFormData {
 }
 
 export interface ColumnMappingConfig {
-  sourceField: 'payee' | 'bankAccount' | 'category' | 'taxType';
+  sourceField: 'payee' | 'bankAccount' | 'category' | 'taxType' | 'vendorRef' | 'apAccountRef' | 'termsRef';
   fieldType: ValueMapping['fieldType'];
   label: string;
   description: string;

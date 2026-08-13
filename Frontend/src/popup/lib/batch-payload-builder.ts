@@ -2,7 +2,7 @@ import { parseNumericValue } from './parse-numeric-value';
 import { decodeMapping } from './je-builder';
 import { resolveMapping } from './mapping-conditions';
 import { resolveValueMapping } from './resolve-value-mapping';
-import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem, ValueMapping } from '../../types';
+import type { Mapping, ScanData, ScanEntry, QBBillLineItem, QBChequeLineItem, BatchSyncItem, ValueMapping, QBTerm } from '../../types';
 import type { QBAccount, QBCustomer } from '../types/qb';
 
 type TemplateDefaults = Record<string, { value: string; name?: string } | null>;
@@ -13,12 +13,14 @@ export function buildBillLikePayload(params: {
   scanData: ScanData;
   mappings: Mapping[];
   accounts: QBAccount[];
+  vendors?: Array<{ Id: string; DisplayName?: string; CompanyName?: string }>;
+  terms?: QBTerm[];
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
   valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, transactionType, scanData, mappings, accounts, txnDate, defaults, scanEntry, valueMappings } = params;
+  const { scanRecordId, transactionType, scanData, mappings, accounts, vendors, terms, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   const scanFields: ScanData = scanEntry
@@ -59,14 +61,59 @@ export function buildBillLikePayload(params: {
 
   if (lines.length === 0) return null;
 
+  let vendorRef = defaults.vendorRef ?? undefined;
+  const rawVendor = String(scanEntry?.header?.vendor ?? scanEntry?.header?.vendorRef ?? '').trim();
+  if (rawVendor && valueMappings.length > 0) {
+    const vmResult = resolveValueMapping(
+      rawVendor,
+      'name',
+      valueMappings,
+      (id) => vendors?.find((vendor) => vendor.Id === id),
+      'vendorRef',
+    );
+    if (vmResult.matched) {
+      vendorRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
+    }
+  }
+
+  let apAccountRef = defaults.apAccountRef ?? undefined;
+  const rawAccount = String(scanEntry?.header?.account ?? scanEntry?.header?.apAccountRef ?? '').trim();
+  if (rawAccount && valueMappings.length > 0) {
+    const vmResult = resolveValueMapping(
+      rawAccount,
+      'account',
+      valueMappings,
+      (id) => accounts.find((account) => account.Id === id),
+      'apAccountRef',
+    );
+    if (vmResult.matched) {
+      apAccountRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
+    }
+  }
+
+  let termsRef = defaults.termsRef ?? undefined;
+  const rawTerms = String(scanEntry?.header?.terms ?? scanEntry?.header?.termsRef ?? '').trim();
+  if (rawTerms && valueMappings.length > 0) {
+    const vmResult = resolveValueMapping(
+      rawTerms,
+      'name',
+      valueMappings,
+      (id) => terms?.find((term) => term.Id === id),
+      'termsRef',
+    );
+    if (vmResult.matched) {
+      termsRef = { value: vmResult.entityId, name: vmResult.entityName || undefined };
+    }
+  }
+
   return {
     scanRecordId,
     transactionType,
     txnDate,
     lines,
-    vendorRef: defaults.vendorRef ?? undefined,
-    apAccountRef: defaults.apAccountRef ?? undefined,
-    termsRef: defaults.termsRef ?? undefined,
+    vendorRef,
+    apAccountRef,
+    termsRef,
     dueDate: defaults.dueDate?.value,
     privateNote: defaults.privateNote?.value || defaults.memo?.value,
     memo: defaults.qbMemo?.value,

@@ -8,6 +8,7 @@ const mockAccounts: QBAccount[] = [
   { Id: 'acc-2', Name: 'Rent Expense', FullyQualifiedName: 'Rent Expense', AccountType: 'Expense', AccountSubType: 'Rent', Classification: 'Expense', Active: true },
   { Id: 'acc-3', Name: 'Utilities Expense', FullyQualifiedName: 'Utilities Expense', AccountType: 'Expense', AccountSubType: 'Utilities', Classification: 'Expense', Active: true },
   { Id: 'acc-4', Name: 'Office Supplies', FullyQualifiedName: 'Office Supplies', AccountType: 'Expense', AccountSubType: 'Office Supplies', Classification: 'Expense', Active: true },
+  { Id: 'acc-5', Name: 'Accounts Payable', FullyQualifiedName: 'Accounts Payable', AccountType: 'Accounts Payable', AccountSubType: 'AccountsPayable', Classification: 'Liability', Active: true },
 ];
 
 const mockCustomers: QBCustomer[] = [
@@ -479,5 +480,80 @@ describe('buildBillLikePayload', () => {
     expect(result).not.toBeNull();
     expect(result!.privateNote).toBeUndefined();
     expect(result!.memo).toBeUndefined();
+  });
+
+  it('resolves bill header vendor, AP account, and terms via value mappings', () => {
+    const values: ValueMapping[] = [
+      {
+        id: 'vm-vendor-1',
+        templateId: 'tmpl-1',
+        fieldType: 'name',
+        scannedText: 'Acme Supplies',
+        sourceField: 'vendorRef',
+        entityId: 'vendor-1',
+        matchingRule: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'vm-ap-1',
+        templateId: 'tmpl-1',
+        fieldType: 'account',
+        scannedText: 'Accounts Payable',
+        sourceField: 'apAccountRef',
+        entityId: 'acc-5',
+        matchingRule: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'vm-terms-1',
+        templateId: 'tmpl-1',
+        fieldType: 'name',
+        scannedText: 'Net 30',
+        sourceField: 'termsRef',
+        entityId: 'term-30',
+        matchingRule: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ];
+
+    const billDefaults = {
+      vendorRef: { value: 'vendor-default', name: 'Default Vendor' },
+      apAccountRef: { value: 'acc-default', name: 'Default AP' },
+      termsRef: { value: 'term-default', name: 'Default Terms' },
+      docNumber: { value: 'BILL-005' },
+    };
+
+    const scanEntry: ScanEntry = {
+      id: 'scan-bill-5',
+      source: 'excel',
+      header: {
+        vendorRef: 'Acme Supplies',
+        apAccountRef: 'Accounts Payable',
+        termsRef: 'Net 30',
+      },
+      lineItems: [{ Rent: '900' }],
+    };
+
+    const result = buildBillLikePayload({
+      scanRecordId: 'scan-bill-5',
+      transactionType: 'BILL',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      vendors: [{ Id: 'vendor-1', DisplayName: 'Acme Supplies', CompanyName: 'Acme Supplies Co.' }],
+      terms: [{ Id: 'term-30', Name: 'Net 30', Active: true }],
+      txnDate: '2026-01-15',
+      defaults: billDefaults,
+      scanEntry,
+      valueMappings: values,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.vendorRef).toEqual({ value: 'vendor-1', name: 'Acme Supplies' });
+    expect(result!.apAccountRef).toEqual({ value: 'acc-5', name: 'Accounts Payable' });
+    expect(result!.termsRef).toEqual({ value: 'term-30', name: 'Net 30' });
   });
 });

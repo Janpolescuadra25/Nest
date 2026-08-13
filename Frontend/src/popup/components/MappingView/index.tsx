@@ -11,7 +11,7 @@ import ProductMappingSection from './ProductMappingSection';
 import PayeeMappingSection from './PayeeMappingSection';
 import ValueMappingSection from './ValueMappingSection';
 import TemplateWizard from '../TemplateWizard';
-import { buildChequeColumnConfigs } from '../../lib/value-mapping-column-utils';
+import { buildChequeColumnConfigs, buildBillColumnConfigs } from '../../lib/value-mapping-column-utils';
 import SearchableSelect from '../SearchableSelect';
 import RuleFormSection from './RuleFormSection';
 import type { SelectOption } from '../SearchableSelect';
@@ -480,6 +480,13 @@ export default function MappingView({
     [accounts],
   );
 
+  const termsOptions = useMemo(() =>
+    terms
+      .filter((t) => t.Active !== false)
+      .map((t) => ({ value: t.Id, label: t.Name, subtitle: t.DueDays ? `Net ${t.DueDays}` : undefined })),
+    [terms],
+  );
+
   const chequeColumnConfigs = useMemo(() => buildChequeColumnConfigs({
     chequePayeeOptions,
     chequeBankOptions,
@@ -487,12 +494,11 @@ export default function MappingView({
     taxCodeOptions,
   }), [chequePayeeOptions, chequeBankOptions, accountOptions, taxCodeOptions]);
 
-  const termsOptions = useMemo(() =>
-    terms
-      .filter((t) => t.Active !== false)
-      .map((t) => ({ value: t.Id, label: t.Name, subtitle: t.DueDays ? `Net ${t.DueDays}` : undefined })),
-    [terms],
-  );
+  const billColumnConfigs = useMemo(() => buildBillColumnConfigs({
+    billVendorOptions: chequePayeeOptions,
+    apAccountOptions,
+    termsOptions,
+  }), [chequePayeeOptions, apAccountOptions, termsOptions]);
 
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
@@ -2078,6 +2084,23 @@ export default function MappingView({
           jwt={jwt}
           templateId={selectedTemplateId}
         />
+      )}
+
+      {isBill && activeScanMode === 'EXCEL' && selectedTemplateId && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-gray-900">Bill Value Mappings</h3>
+          <p className="text-sm text-gray-500 mb-4">Map each bill header field to the correct QuickBooks target</p>
+          <div className="space-y-4">
+            {billColumnConfigs.map((config) => (
+              <ValueMappingSection
+                key={config.sourceField}
+                jwt={jwt}
+                templateId={selectedTemplateId}
+                columnConfig={config}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {isCheque && activeScanMode === 'EXCEL' && selectedTemplateId && (
