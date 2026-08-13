@@ -1,6 +1,6 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`8faaf31`, local only)
+### Repo State (`b83853a`, pushed)
 
 | Area | Status |
 |---|---|
@@ -27,38 +27,7 @@
 | F-1/F-2 | e899e8c 80d96f3 | Default memo auto-fill, row selection in SyncView |
 | H | 9cfca33 8b09240 | Fixed cheque Excel format in MappingView + CheckPreviewForm |
 | J | 4e09eed | Tab-specific filters, cards, and banners |
+| K | b83853a | Per-row cheque batch payload generation, line-level taxCodeRef validation, sourceField-based value mapping for all cheque columns, multi-check preview with independent scanRecordId, row-grouping removal |
 | R-4 | (no code commit) | qyra.space live, Render, Resend, Intuit URI |
 
 ---
-
-### Phase K: Cheque Value Mapping + Per-Row Preview
-
-**Goal:** Enable value mapping for cheque Excel templates and show each Excel row as a separate cheque entry in the preview, allowing bulk sync of individual cheques to QuickBooks.
-
-**Mapping contract per cheque column:**
-- `payee` → `fieldType: 'name'` (targets a Vendor in QuickBooks)
-- `bankAccount` → `fieldType: 'account'` (targets a Bank-type Account)
-- `category` → `fieldType: 'account'` (targets an Account)
-- `taxType` → `fieldType: 'taxCode'` (targets a Tax Code)
-
-**Tax column note:** The Excel `tax` column (a dollar amount) has no independent QuickBooks target field — QuickBooks calculates tax from the `TaxCodeRef`. The `tax` value should be displayed in the preview form for user reference only (not sent to QuickBooks). Only `taxType` (mapped to `taxCodeRef`) is sent.
-
-#### K-1: Schema + API for sourceField
-**Outcome:** Completed. `49af089` — Added `sourceField String?` to ValueMapping in `schema.prisma`, migration, API routes accept/persist/filter by sourceField, resolver null-safe matching (omitted matches null/undefined, supplied matches exact), frontend types updated.
-
-#### K-2: Cheque Value Mapping Section
-**Outcome:** Completed. `002608c` — Per-column mapping UI (payee/bankAccount/category/taxType) in MappingView for CHEQUE templates, per-column target filtering (vendors for payee, Bank-type accounts for bankAccount), tested helper utilities in `value-mapping-column-utils.ts`.
-
-#### K-3: Per-Row Autofill in Preview
-**Outcome:** Completed. `7a8a211` — sourceField value mapping for all 4 cheque columns (payee, bankAccount, category, taxType), customer state/SearchableSelect in CheckPreviewForm, customerRef added to `api.createCheque`, raw tax amount displayed as read-only. 102/102 frontend, 67/67 backend tests pass.
-
-#### K-4: Multi-Check Preview with Scan-Record Association
-**Outcome:** Completed. `8faaf31` — Multi-check preview renders N independent CheckPreviewForm instances for N Excel rows, scanRecordId captured from api.saveScanEntry and passed per-entry, each form independently editable. 104/104 frontend, 67/67 backend tests pass.
-
-#### K-5: Per-Row Batch Payload
-**Outcome:** Completed. `8faaf31` — Batch sync now generates one cheque payload per saved Excel row, preserves each entry's `scanRecordId`, resolves row-specific payee, bank, category, taxType, and customer values, and validates line-level `taxCodeRef` on the backend.
-- In `Frontend/src/popup/components/ScanView.tsx`, cheque Excel parsing now keeps each row as a distinct scan entry instead of grouping by header values.
-- In `Frontend/src/popup/lib/batch-payload-builder.ts`, cheque payload building uses per-row `scanEntry.scanRecordId`, row header memo, row-specific payee/bank resolution, and `taxCodeRef` preservation.
-- In `Frontend/src/popup/components/SyncView.tsx`, the CHEQUE batch flow now passes `vendors` and `taxCodes` into `buildChequePayload` so sourceField lookups can resolve bank and tax code mappings.
-- In `Backend/src/lib/validators.ts`, `chequeSchema` now validates line-level `taxCodeRef` consistently.
-- Verified by `Frontend` Vitest: 104/104 passing and backend schema change review. 
