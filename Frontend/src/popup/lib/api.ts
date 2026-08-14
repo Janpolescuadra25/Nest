@@ -205,6 +205,7 @@ export interface OwnerUserUsage {
   scanCount: number;
   locationCount: number;
   attachmentCount: number;
+  storageLimitBytes: number | null;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

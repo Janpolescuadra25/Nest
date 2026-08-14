@@ -42,6 +42,7 @@ model User {
   maxLocations            Int?
   paymentIssue            Boolean                  @default(false)
   maxScans                Int?
+  maxStorageBytes         Int?
   managedById             String?
   poolScans               Int?
   bonusScans              Int                      @default(0)

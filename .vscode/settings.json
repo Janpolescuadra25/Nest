@@ -26,5 +26,6 @@
         "statusBar.debuggingForeground": "#15202b"
     },
     "peacock.color": "#f9e64f",
-    "Codegeex.RepoIndex": true
+    "Codegeex.RepoIndex": true,
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

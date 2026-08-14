@@ -74,6 +74,7 @@ export default function UsersTab({ jwt }: Props) {
   const [resetPermissionsDialog, setResetPermissionsDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
   const [usageByUserId, setUsageByUserId] = useState<Record<string, { loading: boolean; data: OwnerUserUsage | null; error?: string }>>({});
+  const [storageLimitEditor, setStorageLimitEditor] = useState<Record<string, { open: boolean; value: string; unit: 'MB' | 'GB'; unlimited: boolean }>>({});
 
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -82,6 +83,53 @@ export default function UsersTab({ jwt }: Props) {
     const mb = kb / 1024;
     if (mb < 1024) return `${mb.toFixed(1)} MB`;
     return `${(mb / 1024).toFixed(1)} GB`;
+  };
+
+  const getEditorState = (userId: string) => storageLimitEditor[userId] ?? { open: false, value: '', unit: 'GB', unlimited: false };
+
+  const handleStartEditLimit = (user: OwnerUser) => {
+    const currentLimit = usageByUserId[user.id]?.data?.storageLimitBytes ?? null;
+    const unit = currentLimit && currentLimit % (1024 * 1024 * 1024) === 0 ? 'GB' : 'MB';
+    const value = currentLimit == null ? '' : String(Math.round(currentLimit / (unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)));
+    setStorageLimitEditor((prev) => ({
+      ...prev,
+      [user.id]: {
+        open: true,
+        value,
+        unit,
+        unlimited: currentLimit == null,
+      },
+    }));
+  };
+
+  const handleCancelEditLimit = (userId: string) => {
+    setStorageLimitEditor((prev) => ({ ...prev, [userId]: { ...(prev[userId] ?? { open: false, value: '', unit: 'GB', unlimited: false }), open: false } }));
+  };
+
+  const handleSaveLimit = async (user: OwnerUser) => {
+    const editor = getEditorState(user.id);
+    const maxStorageBytes = editor.unlimited
+      ? null
+      : editor.value
+        ? Number(editor.value) * (editor.unit === 'GB' ? 1024 * 1024 * 1024 : 1024 * 1024)
+        : null;
+
+    if (!editor.unlimited && (editor.value === '' || Number(editor.value) < 0 || Number.isNaN(Number(editor.value)))) {
+      showToast('Enter a valid storage limit', 'error');
+      return;
+    }
+
+    setActionLoading((p) => ({ ...p, [`limit_${user.id}`]: true }));
+    try {
+      await api.ownerSetStorageLimit(jwt, user.id, maxStorageBytes);
+      showToast('Storage limit updated', 'success');
+      setStorageLimitEditor((prev) => ({ ...prev, [user.id]: { ...prev[user.id], open: false } }));
+      await loadUsageForUser(user.id);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update storage limit', 'error');
+    } finally {
+      setActionLoading((p) => ({ ...p, [`limit_${user.id}`]: false }));
+    }
   };
 
   const loadUsageForUser = useCallback(async (userId: string) => {
@@ -336,6 +384,82 @@ export default function UsersTab({ jwt }: Props) {
                           <div className="rounded-lg bg-gray-50 p-2">
                             <div className="text-[11px] text-gray-500">Attachments</div>
                             <div className="text-sm font-semibold text-gray-900">{usageByUserId[user.id]!.data!.attachmentCount}</div>
+                          </div>
+                          <div className="col-span-2 rounded-lg bg-gray-50 p-3 border border-gray-200">
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <div className="text-[11px] text-gray-500">Storage limit</div>
+                                <div className="text-sm font-semibold text-gray-900">
+                                  {usageByUserId[user.id]!.data!.storageLimitBytes == null ? 'Unlimited' : formatBytes(usageByUserId[user.id]!.data!.storageLimitBytes)}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleStartEditLimit(user)}
+                                className="text-xs text-blue-600 hover:text-blue-800"
+                              >
+                                {getEditorState(user.id).open ? 'Close' : 'Set'} limit
+                              </button>
+                            </div>
+                            {getEditorState(user.id).open && (
+                              <div className="mt-2 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`unlimited-${user.id}`}
+                                    checked={getEditorState(user.id).unlimited}
+                                    onChange={(e) => setStorageLimitEditor((prev) => ({
+                                      ...prev,
+                                      [user.id]: {
+                                        ...getEditorState(user.id),
+                                        unlimited: e.target.checked,
+                                      },
+                                    }))}
+                                  />
+                                  <label htmlFor={`unlimited-${user.id}`} className="text-xs text-gray-600">Unlimited</label>
+                                </div>
+                                {!getEditorState(user.id).unlimited && (
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={getEditorState(user.id).value}
+                                      onChange={(e) => setStorageLimitEditor((prev) => ({
+                                        ...prev,
+                                        [user.id]: { ...getEditorState(user.id), value: e.target.value },
+                                      }))}
+                                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-900"
+                                      placeholder="Amount"
+                                    />
+                                    <select
+                                      value={getEditorState(user.id).unit}
+                                      onChange={(e) => setStorageLimitEditor((prev) => ({
+                                        ...prev,
+                                        [user.id]: { ...getEditorState(user.id), unit: e.target.value as 'MB' | 'GB' },
+                                      }))}
+                                      className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-900"
+                                    >
+                                      <option value="GB">GB</option>
+                                      <option value="MB">MB</option>
+                                    </select>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleSaveLimit(user)}
+                                    disabled={actionLoading[`limit_${user.id}`]}
+                                    className="px-2 py-1 rounded bg-emerald-600 text-white text-xs font-medium disabled:opacity-50"
+                                  >
+                                    {actionLoading[`limit_${user.id}`] ? 'Saving…' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleCancelEditLimit(user.id)}
+                                    className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </>
                       ) : (

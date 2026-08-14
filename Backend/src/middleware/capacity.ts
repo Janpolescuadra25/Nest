@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/errors';
 import { PLANS, type PlanKey, getPlanLimits } from '../lib/stripe';
 import { AuthRequest } from './auth.middleware';
+import { formatBytes } from '../lib/utils';
 
 type CapacityAction = 'user' | 'location' | 'scan' | 'template';
 
@@ -335,4 +336,58 @@ export function requireCapacity(action: CapacityAction) {
     next(err);
   }
   };
+}
+
+export async function checkStorageQuota(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const incomingBytes = req.file?.buffer?.length || 0;
+    if (incomingBytes === 0) {
+      return next();
+    }
+
+    const teamId = req.user!.adminId ?? req.user!.userId;
+
+    const team = await prisma.user.findUnique({
+      where: { id: teamId },
+      select: { maxStorageBytes: true },
+    });
+
+    if (team?.maxStorageBytes == null) {
+      return next();
+    }
+
+    const locations = await prisma.location.findMany({
+      where: { userId: teamId },
+      select: { id: true },
+    });
+    const locationIds = locations.map((l) => l.id);
+
+    if (locationIds.length === 0) {
+      return next();
+    }
+
+    const [scanAtt, locAtt] = await Promise.all([
+      prisma.attachment.aggregate({
+        _sum: { fileSize: true },
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.aggregate({
+        _sum: { fileSize: true },
+        where: { locationId: { in: locationIds } },
+      }),
+    ]);
+
+    const currentUsage = (scanAtt._sum.fileSize || 0) + (locAtt._sum.fileSize || 0);
+
+    if (currentUsage + incomingBytes > team.maxStorageBytes) {
+      throw new AppError(
+        `Storage quota exceeded. Using ${formatBytes(currentUsage)} of ${formatBytes(team.maxStorageBytes)}.`,
+        403,
+      );
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 }

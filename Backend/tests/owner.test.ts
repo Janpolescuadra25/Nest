@@ -191,6 +191,7 @@ describe('DELETE /api/owner/users/:id', () => {
         scanCount: 3,
         locationCount: 2,
         attachmentCount: 3,
+        storageLimitBytes: null,
       });
     });
 
@@ -207,6 +208,7 @@ describe('DELETE /api/owner/users/:id', () => {
         scanCount: 0,
         locationCount: 0,
         attachmentCount: 0,
+        storageLimitBytes: null,
       });
     });
 
@@ -217,6 +219,67 @@ describe('DELETE /api/owner/users/:id', () => {
 
       expect(res.status).toBe(404);
       expect(res.body.error).toContain('User not found');
+    });
+  });
+
+  describe('PUT /api/owner/users/:id/storage-limit', () => {
+    it('sets a storage limit on an admin user', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', role: 'ADMIN' });
+      (prisma.user.update as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', maxStorageBytes: 1073741824 });
+
+      const res = await request(app)
+        .put('/api/owner/users/admin-id/storage-limit')
+        .send({ maxStorageBytes: 1073741824 });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ success: true, maxStorageBytes: 1073741824 });
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'admin-id' }, data: { maxStorageBytes: 1073741824 } });
+    });
+
+    it('clears the storage limit when set to null', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', role: 'ADMIN' });
+      (prisma.user.update as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', maxStorageBytes: null });
+
+      const res = await request(app)
+        .put('/api/owner/users/admin-id/storage-limit')
+        .send({ maxStorageBytes: null });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ success: true, maxStorageBytes: null });
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'admin-id' }, data: { maxStorageBytes: null } });
+    });
+
+    it('returns 404 when the user is not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .put('/api/owner/users/nonexistent-id/storage-limit')
+        .send({ maxStorageBytes: 1024 });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('User not found');
+    });
+
+    it('rejects storage limit updates for an owner account', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'owner-id', role: 'OWNER' });
+
+      const res = await request(app)
+        .put('/api/owner/users/owner-id/storage-limit')
+        .send({ maxStorageBytes: 1024 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Cannot modify owner limits');
+    });
+
+    it('rejects invalid storage limit values', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', role: 'ADMIN' });
+
+      const res = await request(app)
+        .put('/api/owner/users/admin-id/storage-limit')
+        .send({ maxStorageBytes: -1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('Validation failed');
     });
   });
 });

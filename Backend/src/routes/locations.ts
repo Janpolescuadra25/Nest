@@ -4,7 +4,7 @@ import multer from 'multer';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { uploadLocationAttachment, getPresignedUrl, deleteFile } from '../lib/storage';
 import { logAction } from '../middleware/audit';
-import { requireCapacity } from '../middleware/capacity';
+import { requireCapacity, checkStorageQuota } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import type { Prisma } from '@prisma/client';
@@ -443,6 +443,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), validate(
 router.post('/:id/attachments',
   requireFeaturePermission('locations', 'write'),
   attachmentUpload.single('file'),
+  checkStorageQuota,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     const locationId = String(req.params['id']);
     const location = await prisma.location.findFirst({

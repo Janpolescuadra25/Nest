@@ -632,7 +632,7 @@ router.get('/users/:id/usage', asyncHandler(async (req: AuthRequest, res: Respon
 
     const user = await prisma.user.findUnique({
       where: { id: targetUserId },
-      select: { id: true, role: true, email: true, name: true },
+      select: { id: true, role: true, email: true, name: true, maxStorageBytes: true },
     });
     if (!user) throw new AppError('User not found', 404);
 
@@ -649,6 +649,7 @@ router.get('/users/:id/usage', asyncHandler(async (req: AuthRequest, res: Respon
         scanCount: 0,
         locationCount: 0,
         attachmentCount: 0,
+        storageLimitBytes: user.maxStorageBytes ?? null,
       });
     }
 
@@ -684,12 +685,40 @@ router.get('/users/:id/usage', asyncHandler(async (req: AuthRequest, res: Respon
       scanCount,
       locationCount,
       attachmentCount,
+      storageLimitBytes: user.maxStorageBytes ?? null,
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error('[Owner] getUserUsage error:', err);
     throw new AppError('Internal server error.', 500);
   }
+}));
+
+router.put('/users/:id/storage-limit', validate(z.object({
+  maxStorageBytes: z.number().int().min(0).nullable().optional(),
+})), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const targetUserId = String(req.params.id);
+  const { maxStorageBytes } = req.body as { maxStorageBytes?: number | null };
+
+  const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!targetUser) throw new AppError('User not found', 404);
+  if (targetUser.role === 'OWNER') throw new AppError('Cannot modify owner limits', 400);
+
+  await prisma.user.update({
+    where: { id: targetUserId },
+    data: { maxStorageBytes },
+  });
+
+  await logAction({
+    actorId: req.user!.userId,
+    action: 'USER_LIMIT_SET',
+    targetUserId,
+    details: { maxStorageBytes },
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({ success: true, maxStorageBytes });
 }));
 
 // ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────

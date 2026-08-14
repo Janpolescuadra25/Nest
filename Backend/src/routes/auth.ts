@@ -104,6 +104,128 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
   }
 }))
 
+router.get('/usage', authenticate, asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const teamId = req.user!.adminId ?? req.user!.userId;
+    const team = await prisma.user.findUnique({
+      where: { id: teamId },
+      select: { maxStorageBytes: true },
+    });
+
+    const locations = await prisma.location.findMany({
+      where: { userId: teamId },
+      select: { id: true },
+    });
+    const locationIds = locations.map((l) => l.id);
+
+    if (locationIds.length === 0) {
+      return res.json({
+        userId: req.user!.userId,
+        totalStorageBytes: 0,
+        scanCount: 0,
+        locationCount: 0,
+        attachmentCount: 0,
+        storageLimitBytes: team?.maxStorageBytes ?? null,
+      });
+    }
+
+    const [scanAttachments, locationAttachments, scanCount, scanAttachmentCount, locationAttachmentCount] = await Promise.all([
+      prisma.attachment.aggregate({
+        _sum: { fileSize: true },
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.aggregate({
+        _sum: { fileSize: true },
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.scanRecord.count({
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.attachment.count({
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.count({
+        where: { locationId: { in: locationIds } },
+      }),
+    ]);
+
+    const totalStorageBytes = (scanAttachments._sum.fileSize || 0) + (locationAttachments._sum.fileSize || 0);
+
+    res.json({
+      userId: req.user!.userId,
+      totalStorageBytes,
+      scanCount,
+      locationCount: locationIds.length,
+      attachmentCount: scanAttachmentCount + locationAttachmentCount,
+      storageLimitBytes: team?.maxStorageBytes ?? null,
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Auth] get usage error:', err);
+    throw new AppError('Failed to fetch usage', 500);
+  }
+}))
+
+router.get('/usage', authenticate, asyncHandler(async(req: AuthRequest, res: Response) => {
+  try {
+    const teamId = req.user!.adminId ?? req.user!.userId;
+    const team = await prisma.user.findUnique({
+      where: { id: teamId },
+      select: { maxStorageBytes: true },
+    });
+
+    const locations = await prisma.location.findMany({
+      where: { userId: teamId },
+      select: { id: true },
+    });
+    const locationIds = locations.map((l) => l.id);
+
+    if (locationIds.length === 0) {
+      return res.json({
+        userId: req.user!.userId,
+        totalStorageBytes: 0,
+        scanCount: 0,
+        locationCount: 0,
+        attachmentCount: 0,
+        storageLimitBytes: team?.maxStorageBytes ?? null,
+      });
+    }
+
+    const [scanAttachments, locationAttachments, scanCount, scanAttachmentCount, locationAttachmentCount] = await Promise.all([
+      prisma.attachment.aggregate({
+        _sum: { fileSize: true },
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.aggregate({
+        _sum: { fileSize: true },
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.scanRecord.count({
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.attachment.count({
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.count({
+        where: { locationId: { in: locationIds } },
+      }),
+    ]);
+
+    res.json({
+      userId: req.user!.userId,
+      totalStorageBytes: (scanAttachments._sum.fileSize || 0) + (locationAttachments._sum.fileSize || 0),
+      scanCount,
+      locationCount: locationIds.length,
+      attachmentCount: scanAttachmentCount + locationAttachmentCount,
+      storageLimitBytes: team?.maxStorageBytes ?? null,
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Auth] get usage error:', err);
+    throw new AppError('Failed to fetch usage', 500);
+  }
+}))
+
 // POST /api/auth/register
 // Creates a new VIEWER account. No admin approval required.
 router.post('/register', authLimiter, validate(registerSchema), asyncHandler(async(req: Request, res: Response) => {

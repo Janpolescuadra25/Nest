@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, type OwnerUserUsage } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { relativeTime } from '../lib/utils';
 import type { RecentScan, UserInfo } from '../lib/api';
@@ -20,6 +20,7 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [scansLoading, setScansLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [usage, setUsage] = useState<OwnerUserUsage | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +53,12 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
       .then((response) => setRecentScans(response.scans))
       .catch(() => setRecentScans([]))
       .finally(() => setScansLoading(false));
+  }, [jwt]);
+
+  useEffect(() => {
+    api.getUserUsage(jwt)
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, [jwt]);
 
   const handleReconnect = useCallback(async () => {
@@ -139,6 +146,27 @@ export function UserDashboard({ jwt, user }: UserDashboardProps) {
           <div className={hasPerm(user, 'locations', 'write') ? 'text-emerald-600' : 'text-red-600'}>{hasPerm(user, 'locations', 'write') ? '✅ Locations' : '❌ Locations'}</div>
         </div>
       </div>
+
+      {usage && (
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+          <h3 className="text-sm font-medium text-emerald-600">Storage Usage</h3>
+          {usage.storageLimitBytes == null ? (
+            <p className="text-sm text-gray-700">Storage used: <span className="font-semibold">{formatBytes(usage.totalStorageBytes)}</span> (unlimited)</p>
+          ) : (
+            <>
+              <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${usage.totalStorageBytes / usage.storageLimitBytes >= 0.9 ? 'bg-red-500' : usage.totalStorageBytes / usage.storageLimitBytes >= 0.7 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                  style={{ width: `${Math.min(100, Math.round((usage.totalStorageBytes / usage.storageLimitBytes) * 100))}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-700">
+                {formatBytes(usage.totalStorageBytes)} of {formatBytes(usage.storageLimitBytes)} used ({Math.min(100, Math.round((usage.totalStorageBytes / usage.storageLimitBytes) * 100))}% )
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <h3 className="text-sm font-medium text-emerald-600">Trial Status</h3>

@@ -4,7 +4,7 @@ import path from 'path';
 import Excel from 'exceljs';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { uploadFile, deleteFile, getPresignedUrl } from '../lib/storage';
-import { requireCapacity } from '../middleware/capacity';
+import { requireCapacity, checkStorageQuota } from '../middleware/capacity';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { logAction } from '../middleware/audit';
 import { validate } from '../middleware/validate';
@@ -547,6 +547,7 @@ router.post(
   requireFeaturePermission('scan', 'write'),
   requireCapacity('scan'),
   upload.single('file'),
+  checkStorageQuota,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       throw new AppError('No file uploaded', 400);
@@ -581,6 +582,7 @@ router.post(
   requireFeaturePermission('scan', 'write'),
   requireCapacity('scan'),
   upload.single('file'),
+  checkStorageQuota,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       throw new AppError('No file uploaded', 400);
@@ -633,6 +635,7 @@ router.post(
   enforceEffectiveRole,
   requireFeaturePermission('scan', 'write'),
   upload.single('file'),
+  checkStorageQuota,
   asyncHandler(async (req: AuthRequest, res: Response) => {
     if (!req.file) {
       throw new AppError('Image file is required', 400);
