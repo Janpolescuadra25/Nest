@@ -13,23 +13,23 @@ describe('Stripe plan utilities', () => {
   it('exposes the correct numeric limits for each tier', () => {
     expect(getPlanLimits('free')).toEqual({
       maxUsers: 1, maxLocations: 1, maxScans: 7,
-      maxTemplates: 3, scanHistoryDays: 7,
+      maxTemplates: 3, scanHistoryDays: 7, maxStorageBytes: 53687091200,
     });
     expect(getPlanLimits('starter')).toEqual({
       maxUsers: 2, maxLocations: 5, maxScans: 50,
-      maxTemplates: 10, scanHistoryDays: 30,
+      maxTemplates: 10, scanHistoryDays: 30, maxStorageBytes: 53687091200,
     });
     expect(getPlanLimits('professional')).toEqual({
       maxUsers: 5, maxLocations: 20, maxScans: 250,
-      maxTemplates: 25, scanHistoryDays: 90,
+      maxTemplates: 25, scanHistoryDays: 90, maxStorageBytes: 53687091200,
     });
     expect(getPlanLimits('premium')).toEqual({
       maxUsers: 12, maxLocations: 75, maxScans: 1250,
-      maxTemplates: 75, scanHistoryDays: 365,
+      maxTemplates: 75, scanHistoryDays: 365, maxStorageBytes: 53687091200,
     });
     expect(getPlanLimits('enterprise')).toEqual({
       maxUsers: 20, maxLocations: 250, maxScans: 5000,
-      maxTemplates: 200, scanHistoryDays: 730,
+      maxTemplates: 200, scanHistoryDays: 730, maxStorageBytes: 53687091200,
     });
   });
 

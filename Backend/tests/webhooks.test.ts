@@ -16,19 +16,20 @@ jest.mock('../src/lib/stripe', () => {
     },
     isStripeConfigured: true,
     getPlanLimits: jest.fn((planKey: string) => {
-      if (planKey === 'starter') return { maxUsers: 2, maxLocations: 5, maxScans: 50, maxTemplates: 10, scanHistoryDays: 30 };
-      if (planKey === 'professional') return { maxUsers: 5, maxLocations: 20, maxScans: 250, maxTemplates: 25, scanHistoryDays: 90 };
-      if (planKey === 'premium') return { maxUsers: 12, maxLocations: 75, maxScans: 1250, maxTemplates: 75, scanHistoryDays: 365 };
-      if (planKey === 'enterprise') return { maxUsers: 20, maxLocations: 250, maxScans: 5000, maxTemplates: 200, scanHistoryDays: 730 };
-      return { maxUsers: 1, maxLocations: 1, maxScans: 7, maxTemplates: 3, scanHistoryDays: 7 };
+      const base = { maxStorageBytes: 53687091200 };
+      if (planKey === 'starter') return { maxUsers: 2, maxLocations: 5, maxScans: 50, maxTemplates: 10, scanHistoryDays: 30, ...base };
+      if (planKey === 'professional') return { maxUsers: 5, maxLocations: 20, maxScans: 250, maxTemplates: 25, scanHistoryDays: 90, ...base };
+      if (planKey === 'premium') return { maxUsers: 12, maxLocations: 75, maxScans: 1250, maxTemplates: 75, scanHistoryDays: 365, ...base };
+      if (planKey === 'enterprise') return { maxUsers: 20, maxLocations: 250, maxScans: 5000, maxTemplates: 200, scanHistoryDays: 730, ...base };
+      return { maxUsers: 1, maxLocations: 1, maxScans: 7, maxTemplates: 3, scanHistoryDays: 7, ...base };
     }),
     getScanPack: jest.fn().mockReturnValue(undefined),
     PLANS: {
-      free: { prioritySupport: false },
-      starter: { prioritySupport: false },
-      professional: { prioritySupport: true },
-      premium: { prioritySupport: true },
-      enterprise: { prioritySupport: true },
+      free: { prioritySupport: false, maxStorageBytes: 53687091200 },
+      starter: { prioritySupport: false, maxStorageBytes: 53687091200 },
+      professional: { prioritySupport: true, maxStorageBytes: 53687091200 },
+      premium: { prioritySupport: true, maxStorageBytes: 53687091200 },
+      enterprise: { prioritySupport: true, maxStorageBytes: 53687091200 },
     },
     __stripeMocks: {
       mockConstructEvent,
@@ -107,6 +108,80 @@ const rawPayload = JSON.stringify({ hello: 'world' });
 describe('Stripe webhook route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('M-6: Storage abuse prevention', () => {
+    it('ensures all plans define a 50 GB storage safety net', async () => {
+      const { getPlanLimits, PLANS } = jest.requireMock('../src/lib/stripe') as any;
+      expect(PLANS.free.maxStorageBytes).toBe(53687091200);
+      expect(PLANS.starter.maxStorageBytes).toBe(53687091200);
+      expect(PLANS.professional.maxStorageBytes).toBe(53687091200);
+      expect(PLANS.premium.maxStorageBytes).toBe(53687091200);
+      expect(PLANS.enterprise.maxStorageBytes).toBe(53687091200);
+      expect(getPlanLimits('starter').maxStorageBytes).toBe(53687091200);
+      expect(getPlanLimits('free').maxStorageBytes).toBe(53687091200);
+    });
+
+    it('checkout.session.completed sets storage limits on the plan', async () => {
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            customer: 'cust_1',
+            subscription: 'sub_1',
+            metadata: { teamId: 'team-1', planKey: 'starter' },
+          },
+        },
+      });
+      mockRetrieveSubscription.mockResolvedValueOnce({ current_period_end: 1700000000 });
+
+      const app = buildApp();
+      await request(app)
+        .post('/api/webhooks/stripe')
+        .set('stripe-signature', 'sig')
+        .set('Content-Type', 'application/json')
+        .send(rawPayload)
+        .expect(200);
+
+      expect(mockedPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'team-1' },
+          data: expect.objectContaining({
+            maxStorageBytes: 53687091200,
+            poolStorageBytes: 53687091200,
+          }),
+        })
+      );
+    });
+
+    it('customer.subscription.deleted resets storage to free plan values', async () => {
+      mockConstructEvent.mockReturnValueOnce({
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            id: 'sub_1',
+          },
+        },
+      });
+
+      const app = buildApp();
+      await request(app)
+        .post('/api/webhooks/stripe')
+        .set('stripe-signature', 'sig')
+        .set('Content-Type', 'application/json')
+        .send(rawPayload)
+        .expect(200);
+
+      expect(mockedPrisma.user.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeSubscriptionId: 'sub_1' },
+          data: expect.objectContaining({
+            maxStorageBytes: 53687091200,
+            poolStorageBytes: 53687091200,
+          }),
+        })
+      );
+    });
   });
 
   it('handles checkout.session.completed and updates the team subscription', async () => {

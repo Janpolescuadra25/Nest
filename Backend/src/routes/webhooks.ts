@@ -126,6 +126,8 @@ router.post(
             maxScans: limits.maxScans,
             poolScans: limits.maxScans,
             poolLocations: limits.maxLocations,
+            maxStorageBytes: limits.maxStorageBytes,
+            poolStorageBytes: limits.maxStorageBytes,
             maxMembers: limits.maxUsers > 1 ? limits.maxUsers - 1 : 0,
             role: limits.maxUsers > 1 ? 'ADMIN' : 'VIEWER',
             scanHistoryDays: limits.scanHistoryDays,
@@ -161,6 +163,8 @@ router.post(
           updateData.maxScans = limits.maxScans;
           updateData.poolScans = limits.maxScans;
           updateData.poolLocations = limits.maxLocations;
+          updateData.maxStorageBytes = limits.maxStorageBytes;
+          updateData.poolStorageBytes = limits.maxStorageBytes;
           updateData.poolTemplates = limits.maxTemplates;
           updateData.maxMembers = limits.maxUsers > 1 ? limits.maxUsers - 1 : 0;
           updateData.role = limits.maxUsers > 1 ? 'ADMIN' : 'VIEWER';
@@ -221,6 +225,7 @@ router.post(
           select: { id: true },
         });
         const affectedIds = affectedUsers.map(u => u.id);
+        const freeLimits = getPlanLimits('free');
 
         await prisma.user.updateMany({
           where: { stripeSubscriptionId: subscription.id },
@@ -236,6 +241,8 @@ router.post(
             maxScans: null,
             poolScans: null,
             poolLocations: null,
+            maxStorageBytes: freeLimits.maxStorageBytes,
+            poolStorageBytes: freeLimits.maxStorageBytes,
             poolTemplates: null,
             maxMembers: null,
             scanHistoryDays: null,
