@@ -24,6 +24,86 @@
 
 ---
 
+### Phase M: Owner Capacity Management & Account Deletion (M-1 pending)
+**Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
+
+**Mapping contract** (permanent reference):
+- Owner invite links create ADMIN accounts only — role is fixed, not selectable
+- Admin invite links can assign STAFF, VIEWER, ACCOUNTANT, or MANAGER roles
+- Capacity fields: maxScans, maxTemplates, maxLocations, maxMembers, maxStorageBytes
+- When an admin distributes capacity to a member, the admin's available capacity decreases by the distributed amount
+- Members (non-admin roles) cannot invite or distribute capacity further
+- Subscription plans define fixed capacities — owner cannot modify plan-based limits
+- When a subscription expires, the admin account drops to free tier with default free limits
+- All file attachments have `fileSize` stored in DB — storage usage is the sum of all attachment fileSizes for a user's organization
+- Prisma schema already has `onDelete: Cascade` on all user-related models — DB cleanup is automatic
+- Deletion permission hierarchy: only owners can delete admin accounts, only admins can delete their own team members
+
+#### M-1: Permanent Account Deletion
+**Goal:** Owner can permanently delete an admin account; all related data (locations, scans, templates, attachments, invite links, audit logs) is cascade-deleted from the database, and all attachment files are deleted from cloud storage. Permission hierarchy: owners delete admins, admins delete their own team members (STAFF, VIEWER, ACCOUNTANT, MANAGER).
+**Expected outcome:**
+- Backend endpoint `DELETE /api/owner/users/:id` that deletes the user record (Prisma cascade handles DB cleanup)
+- Before deletion: query all `Attachment` and `LocationAttachment` records for the user's locations/scans, collect all `storageKey` values, call `storage.deleteFile()` for each
+- Frontend: "Delete Account" button in `Clients` tab (or `UsersTab`) with confirmation dialog showing the user's email and a warning that all data will be permanently deleted
+- Owner cannot delete their own account
+- Only owners can delete admin accounts; admins can delete their own team members (STAFF, VIEWER, ACCOUNTANT, MANAGER)
+- Backend tests for the deletion endpoint
+
+#### M-2: Data Usage Calculation & Owner Monitoring
+**Goal:** Backend calculates per-organization storage usage (sum of all attachment fileSizes), and the owner can view each client's usage in the Clients tab.
+**Expected outcome:**
+- Backend endpoint `GET /api/owner/users/:id/usage` that returns:
+  - `totalStorageBytes`: sum of `fileSize` from `Attachment` + `LocationAttachment` for all scans/locations belonging to the user's organization
+  - `scanCount`: total number of ScanRecords
+  - `templateCount`: total number of Templates
+  - `locationCount`: total number of Locations
+  - `memberCount`: total number of Users in the organization
+- Frontend: Usage column/section in the Clients tab showing storage (formatted as MB/GB), scan count, member count for each client
+- Backend tests for the usage calculation
+
+#### M-3: Storage Limits & User-Visible Quota
+**Goal:** Owner can set a storage limit per client (maxStorageBytes), and users can see their own usage and limit in their dashboard.
+**Expected outcome:**
+- Add `maxStorageBytes` field to User model (nullable — null means unlimited)
+- Owner can set this field when creating invite links or editing a client in the Clients tab
+- Backend enforces the limit on file upload: check current usage + new file size against `maxStorageBytes`, reject with 413 if exceeded
+- Frontend: User dashboard shows storage usage bar (e.g., "350 MB / 1 GB") with visual indicator when approaching limit
+- Error message on upload when limit is exceeded: "Storage limit reached. Contact your administrator."
+- Backend tests for limit enforcement
+
+#### M-4: Owner Invite Link Capacity Customization
+**Goal:** Owner invite links have customizable capacity fields (maxScans, maxTemplates, maxLocations, maxMembers, maxStorageBytes) instead of just expiry and max uses. Role selection is removed — owner invite links always create ADMIN accounts.
+**Expected outcome:**
+- Extend InviteLink model or create a new model for capacity fields on invite links
+- Frontend: Owner invite link form in Clients tab adds fields: Max Scans, Max Templates, Max Locations, Max Members, Max Storage (MB/GB)
+- Remove role selection buttons (STAFF, VIEWER, ACCOUNTANT, MANAGER) from owner invite links — role is fixed to ADMIN
+- When a user registers via the invite link, their User record is created with the specified capacity limits
+- Backend validates that capacities are non-negative integers
+- Backend tests for capacity enforcement on registration
+
+#### M-5: Admin Invite Links & Capacity Distribution
+**Goal:** Admin accounts can create invite links for their team members (STAFF, VIEWER, ACCOUNTANT, MANAGER roles), distributing capacity from their own allocated pool. Members cannot further invite or distribute.
+**Expected outcome:**
+- Admin invite link form has role selection (STAFF, VIEWER, ACCOUNTANT, MANAGER) and capacity fields (scans, templates, locations, storage)
+- When admin creates an invite link, the specified capacities are subtracted from the admin's available capacity
+- Admin's remaining capacity = owner-assigned capacity minus sum of all distributed capacities to team members
+- Backend validates: admin cannot distribute more than their available capacity (return 400 if exceeded)
+- Members (non-admin roles) do not see invite link creation UI
+- Admin dashboard shows: Total Capacity | Distributed | Remaining for each resource type
+- Backend tests for distribution math and overflow prevention
+
+#### M-6: Subscription Plan Capacity Enforcement
+**Goal:** Subscription plans define fixed capacities. When an admin subscribes to a plan, their capacities are set to the plan's limits (owner cannot modify). When the plan expires, the admin drops to free tier.
+**Expected outcome:**
+- Extend subscription plan model with fields: `maxScans`, `maxTemplates`, `maxLocations`, `maxMembers`, `maxStorageBytes`
+- When a user subscribes to a plan, their User record's capacity fields are set to the plan's values
+- Owner cannot edit capacities of plan-subscribed admins (UI shows capacities as read-only, sourced from plan)
+- When subscription expires (webhook or cron), admin's capacities reset to free tier defaults
+- Admin invite link form shows available capacity (plan limits minus distributed) and prevents over-allocation
+- Backend tests for plan enforcement and expiry handling
+
+---
+
 ### Completed History
 
 | Phase | Commits | Summary |
