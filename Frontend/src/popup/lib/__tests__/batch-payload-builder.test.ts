@@ -545,6 +545,7 @@ describe('buildBillLikePayload', () => {
       accounts: mockAccounts,
       vendors: [{ Id: 'vendor-1', DisplayName: 'Acme Supplies', CompanyName: 'Acme Supplies Co.' }],
       terms: [{ Id: 'term-30', Name: 'Net 30', Active: true }],
+      taxCodes: [{ Id: 'tax-1', Name: 'Standard Sales Tax', Description: 'Standard' }],
       txnDate: '2026-01-15',
       defaults: billDefaults,
       scanEntry,
@@ -555,5 +556,51 @@ describe('buildBillLikePayload', () => {
     expect(result!.vendorRef).toEqual({ value: 'vendor-1', name: 'Acme Supplies' });
     expect(result!.apAccountRef).toEqual({ value: 'acc-5', name: 'Accounts Payable' });
     expect(result!.termsRef).toEqual({ value: 'term-30', name: 'Net 30' });
+  });
+
+  it('resolves taxCodeRef for bill line items using taxType mapping', () => {
+    const billDefaults = {
+      vendorRef: { value: 'vendor-default', name: 'Default Vendor' },
+      apAccountRef: { value: 'acc-default', name: 'Default AP' },
+      docNumber: { value: 'BILL-006' },
+    };
+
+    const scanEntry: ScanEntry = {
+      id: 'scan-bill-6',
+      source: 'excel',
+      header: { vendorRef: 'Acme Supplies' },
+      lineItems: [{ Rent: '1500', taxType: 'Standard' }],
+    };
+
+    const result = buildBillLikePayload({
+      scanRecordId: 'scan-bill-6',
+      transactionType: 'BILL',
+      scanData: {},
+      mappings: mockMappings,
+      accounts: mockAccounts,
+      vendors: [{ Id: 'vendor-1', DisplayName: 'Acme Supplies', CompanyName: 'Acme Supplies Co.' }],
+      terms: [{ Id: 'term-30', Name: 'Net 30', Active: true }],
+      taxCodes: [{ Id: 'tax-1', Name: 'Standard Sales Tax' }],
+      txnDate: '2026-01-15',
+      defaults: billDefaults,
+      scanEntry,
+      valueMappings: [
+        {
+          id: 'vm-tax-1',
+          templateId: 'tmpl-1',
+          fieldType: 'taxCode',
+          scannedText: 'Standard',
+          sourceField: 'taxCodeRef',
+          entityId: 'tax-1',
+          matchingRule: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.lines).toHaveLength(1);
+    expect((result!.lines[0] as QBBillLineItem).taxCodeRef).toEqual({ value: 'tax-1', name: 'Standard Sales Tax' });
   });
 });

@@ -15,12 +15,13 @@ export function buildBillLikePayload(params: {
   accounts: QBAccount[];
   vendors?: Array<{ Id: string; DisplayName?: string; CompanyName?: string }>;
   terms?: QBTerm[];
+  taxCodes?: Array<{ Id: string; Name?: string; Description?: string }>;
   txnDate: string;
   defaults: TemplateDefaults;
   scanEntry?: ScanEntry;
   valueMappings: ValueMapping[];
 }): BatchSyncItem | null {
-  const { scanRecordId, transactionType, scanData, mappings, accounts, vendors, terms, txnDate, defaults, scanEntry, valueMappings } = params;
+  const { scanRecordId, transactionType, scanData, mappings, accounts, vendors, terms, taxCodes, txnDate, defaults, scanEntry, valueMappings } = params;
   const decoded = mappings.map(decodeMapping);
 
   const scanFields: ScanData = scanEntry
@@ -30,6 +31,8 @@ export function buildBillLikePayload(params: {
           .filter(([, value]) => !Number.isNaN(value)),
       ) as ScanData
     : scanData;
+
+  const taxTypeForLines = scanEntry?.lineItems?.[0] ?? {};
 
   const lines: QBBillLineItem[] = Object.entries(scanFields)
     .filter(([, amount]) => amount !== 0)
@@ -51,11 +54,27 @@ export function buildBillLikePayload(params: {
       const description = mapping?.description ?? field;
       const classId = mapping?.classId;
 
+      const taxType = String(taxTypeForLines.taxType ?? taxTypeForLines.TaxType ?? '').trim();
+      let taxCodeRef;
+      if (taxType && valueMappings.length > 0) {
+        const vmResult = resolveValueMapping(
+          taxType,
+          'taxCode',
+          valueMappings,
+          (id) => taxCodes?.find((taxCode) => taxCode.Id === id),
+          'taxCodeRef',
+        );
+        if (vmResult.matched) {
+          taxCodeRef = { value: vmResult.entityId, name: vmResult.entityName ?? undefined };
+        }
+      }
+
       return {
         amount: Math.abs(amount),
         accountRef: { value: accountId, name: accountName || undefined },
         description: description || undefined,
         classRef: classId ? { value: classId } : undefined,
+        ...(taxCodeRef ? { taxCodeRef } : {}),
       };
     });
 
