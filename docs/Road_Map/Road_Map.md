@@ -1,6 +1,6 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`687b243`, pushed)
+### Repo State (`544b8c8`, pushed)
 
 | Area | Status |
 |---|---|
@@ -33,8 +33,6 @@
 | L-4 | (pre-built) | Direct bill sync — BillPreviewForm handleSync calls api.createBill, backend POST /api/quickbooks/bill validates with billSchema |
 | L-5 | 983848c | taxCodeRef resolution in bill batch payload line items, taxCodes passthrough in SyncView |
 | R-4 | (no code commit) | qyra.space live, Render, Resend, Intuit URI |
-
----
 
 | Phase | Commits | Summary |
 |-------|---------|---------|
