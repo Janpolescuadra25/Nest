@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`d0fb0c5`, pushed)
+### Repo State (`6f8de19`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 77/77 ✅ |
+| Backend tests | 86/86 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -24,7 +24,7 @@
 
 ---
 
-### Phase M: Owner Capacity Management & Account Deletion (M-3 pending)
+### Phase M: Owner Capacity Management & Account Deletion (M-4 pending)
 **Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
 
 **Mapping contract** (permanent reference):
@@ -61,7 +61,7 @@
 - Frontend: Usage column/section in the Clients tab showing storage (formatted as MB/GB), scan count, member count for each client
 - Backend tests for the usage calculation
 
-#### M-3: Storage Limits & User-Visible Quota
+#### ~~M-3: Storage Limits & User-Visible Quota~~ ✅
 **Goal:** Owner can set a storage limit per client (maxStorageBytes), and users can see their own usage and limit in their dashboard.
 **Expected outcome:**
 - Add `maxStorageBytes` field to User model (nullable — null means unlimited)
