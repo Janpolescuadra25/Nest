@@ -25,8 +25,12 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
 
   // 401 auto-logout — JWT expired mid-session
   if (res.status === 401) {
-    chrome.storage.local.remove(['jwt'], () => {
-      chrome.runtime.reload();
+    chrome.storage.local.get(['jwt'], (result) => {
+      if (result.jwt) {
+        chrome.storage.local.remove(['jwt'], () => {
+          chrome.runtime.reload();
+        });
+      }
     });
     throw new ApiError('Your session has expired. Please log in again.', 401, payload);
   }
