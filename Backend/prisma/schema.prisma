@@ -45,11 +45,13 @@ model User {
   maxStorageBytes         Int?
   managedById             String?
   poolScans               Int?
+  poolStorageBytes        Int?
   bonusScans              Int                      @default(0)
   poolLocations           Int?
   poolTemplates           Int?
   maxMembers              Int?
   allocatedScans          Int?
+  allocatedStorageBytes   Int?
   allocatedLocations      Int?
   allocatedTemplates      Int?
   brandName               String?
@@ -145,6 +147,8 @@ model InviteLink {
   maxUses         Int       @default(1)
   useCount        Int       @default(0)
   maxStorageBytes Int?
+  maxScans        Int?
+  maxLocations    Int?
   createdAt       DateTime  @default(now())
   creator         User      @relation("InviteCreator", fields: [createdBy], references: [id])
 

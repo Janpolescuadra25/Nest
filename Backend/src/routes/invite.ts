@@ -107,6 +107,11 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
           mustChangePassword: false,
           permissions: perms,
           maxStorageBytes: invite.maxStorageBytes ?? null,
+          maxScans: invite.maxScans ?? null,
+          maxLocations: invite.maxLocations ?? null,
+          allocatedStorageBytes: invite.maxStorageBytes ?? null,
+          allocatedScans: invite.maxScans ?? null,
+          allocatedLocations: invite.maxLocations ?? null,
         },
       });
 

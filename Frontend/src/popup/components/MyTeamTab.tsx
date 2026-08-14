@@ -53,6 +53,11 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade, userRole
   const [linkRoleHint, setLinkRoleHint] = useState('VIEWER');
   const [linkExpiry, setLinkExpiry] = useState('72');
   const [linkMaxUses, setLinkMaxUses] = useState('1');
+  const [linkScans, setLinkScans] = useState('0');
+  const [linkLocations, setLinkLocations] = useState('0');
+  const [linkStorageUnlimited, setLinkStorageUnlimited] = useState(true);
+  const [linkStorageValue, setLinkStorageValue] = useState('1024');
+  const [linkStorageUnit, setLinkStorageUnit] = useState<'MB' | 'GB'>('GB');
   const [createdLink, setCreatedLink] = useState<InviteLink | null>(null);
   const [allocationDraft, setAllocationDraft] = useState<Record<string, { scans: string; locations: string; templates: string }>>({});
   const [allocationSaving, setAllocationSaving] = useState<Record<string, boolean>>({});
@@ -254,11 +259,19 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade, userRole
         roleHint: linkRoleHint,
         expiresInHours: Number(linkExpiry) || 72,
         maxUses: Number(linkMaxUses) || 1,
+        maxScans: linkScans === '' ? null : Number(linkScans),
+        maxLocations: linkLocations === '' ? null : Number(linkLocations),
+        maxStorageBytes: linkStorageUnlimited ? null : Math.max(0, Number(linkStorageValue) || 0) * (linkStorageUnit === 'GB' ? 1073741824 : 1048576),
       });
       setCreatedLink(result.invite);
       setLinkRoleHint('VIEWER');
       setLinkExpiry('72');
       setLinkMaxUses('1');
+      setLinkScans('0');
+      setLinkLocations('0');
+      setLinkStorageUnlimited(true);
+      setLinkStorageValue('1024');
+      setLinkStorageUnit('GB');
       setShowInvitePanel(false);
       await fetchInviteLinks();
       showToast('Invite link created!', 'success');
@@ -453,6 +466,62 @@ export default function MyTeamTab({ jwt, subscriptionSource, onUpgrade, userRole
           >
             {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Scans allocation</label>
+              <input
+                type="number"
+                min={0}
+                value={linkScans}
+                onChange={e => setLinkScans(e.target.value)}
+                className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Locations allocation</label>
+              <input
+                type="number"
+                min={0}
+                value={linkLocations}
+                onChange={e => setLinkLocations(e.target.value)}
+                className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-gray-600">Storage allocation</label>
+                <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={linkStorageUnlimited}
+                    onChange={e => setLinkStorageUnlimited(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  Unlimited
+                </label>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[1fr_100px]">
+                <input
+                  type="number"
+                  min={0}
+                  value={linkStorageValue}
+                  onChange={e => setLinkStorageValue(e.target.value)}
+                  disabled={linkStorageUnlimited}
+                  placeholder="Amount"
+                  className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                />
+                <select
+                  value={linkStorageUnit}
+                  onChange={e => setLinkStorageUnit(e.target.value as 'MB' | 'GB')}
+                  disabled={linkStorageUnlimited}
+                  className="w-full px-2 py-1 bg-gray-200 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                >
+                  <option value="MB">MB</option>
+                  <option value="GB">GB</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-xs text-gray-600 mb-0.5">Expires (hours)</label>

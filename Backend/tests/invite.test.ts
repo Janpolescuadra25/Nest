@@ -2,10 +2,36 @@ import request from 'supertest';
 import express from 'express';
 import adminRoutes from '../src/routes/admin';
 import inviteRoutes from '../src/routes/invite';
+import ownerRoutes from '../src/routes/owner';
 import { createErrorHandler } from '../src/lib/errors';
 import { prisma } from '../src/lib/prisma';
 import { logAction } from '../src/middleware/audit';
 import { sendWelcomeEmail } from '../src/lib/email';
+
+let currentAuthUser: any = {
+  id: 'owner-id',
+  userId: 'owner-id',
+  email: 'owner@example.com',
+  emailVerified: true,
+  name: 'Owner',
+  role: 'OWNER',
+  status: 'ACTIVE',
+  adminId: null,
+  mustChangePassword: false,
+  trialExpiresAt: null,
+  maxUsers: null,
+  permissions: {},
+  timeBombAt: null,
+  gracePeriodHours: 48,
+  blocked: false,
+  blockedById: null,
+  maxScans: null,
+  scanHistoryDays: null,
+  approvedById: null,
+  approvedAt: null,
+  invitedById: null,
+  transferredFromId: null,
+};
 
 jest.mock('../src/lib/prisma', () => {
   const user = {
@@ -35,30 +61,7 @@ jest.mock('../src/lib/prisma', () => {
 
 jest.mock('../src/middleware/auth.middleware', () => ({
   authenticate: jest.fn((req: any, _res: any, next: any) => {
-    req.user = {
-      id: 'owner-id',
-      userId: 'owner-id',
-      email: 'owner@example.com',
-      emailVerified: true,
-      name: 'Owner',
-      role: 'OWNER',
-      status: 'ACTIVE',
-      adminId: null,
-      mustChangePassword: false,
-      trialExpiresAt: null,
-      maxUsers: null,
-      permissions: {},
-      timeBombAt: null,
-      gracePeriodHours: 48,
-      blocked: false,
-      blockedById: null,
-      maxScans: null,
-      scanHistoryDays: null,
-      approvedById: null,
-      approvedAt: null,
-      invitedById: null,
-      transferredFromId: null,
-    };
+    req.user = currentAuthUser;
     next();
   }),
   requireRole: () => (_req: any, _res: any, next: any) => next(),
@@ -71,6 +74,7 @@ jest.mock('../src/middleware/audit', () => ({
 
 jest.mock('../src/lib/email', () => ({
   sendWelcomeEmail: jest.fn().mockResolvedValue({ success: true }),
+  sendVerificationEmail: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 function buildApp() {
@@ -174,6 +178,71 @@ describe('Invite flow', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain('Owners can only create admin invite links');
+    expect(mockedPrisma.inviteLink.create).not.toHaveBeenCalled();
+  });
+
+  it('creates an admin invite with pool allocations for scans and locations', async () => {
+    currentAuthUser = { ...currentAuthUser, role: 'ADMIN', userId: 'admin-id', id: 'admin-id', maxUsers: null };
+    mockedPrisma.user.findUnique.mockResolvedValueOnce({
+      poolScans: 100,
+      poolLocations: 20,
+      poolStorageBytes: 10_737_418_240,
+      teamMembers: [
+        { allocatedScans: 10, allocatedLocations: 2, allocatedStorageBytes: 1_073_741_824 },
+      ],
+    });
+    mockedPrisma.inviteLink.create.mockResolvedValueOnce({
+      id: 'invite-5',
+      token: 'plain-token-5',
+      roleHint: 'STAFF',
+      expiresAt: new Date().toISOString(),
+      maxUses: 5,
+      maxStorageBytes: null,
+      maxScans: 20,
+      maxLocations: 5,
+      createdAt: new Date().toISOString(),
+    });
+
+    const res = await request(app)
+      .post('/api/admin/invite')
+      .send({ roleHint: 'STAFF', maxUses: 5, maxScans: 20, maxLocations: 5 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.invite).toEqual(expect.objectContaining({
+      id: 'invite-5',
+      roleHint: 'STAFF',
+      maxUses: 5,
+      maxScans: 20,
+      maxLocations: 5,
+      maxStorageBytes: null,
+    }));
+    expect(mockedPrisma.inviteLink.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        roleHint: 'STAFF',
+        maxUses: 5,
+        maxScans: 20,
+        maxLocations: 5,
+      }),
+    }));
+  });
+
+  it('rejects invite creation when admin pool does not have enough scan capacity', async () => {
+    currentAuthUser = { ...currentAuthUser, role: 'ADMIN', userId: 'admin-id', id: 'admin-id', maxUsers: null };
+    mockedPrisma.user.findUnique.mockResolvedValueOnce({
+      poolScans: 15,
+      poolLocations: 20,
+      poolStorageBytes: 10_737_418_240,
+      teamMembers: [
+        { allocatedScans: 10, allocatedLocations: 2, allocatedStorageBytes: 1_073_741_824 },
+      ],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/invite')
+      .send({ roleHint: 'STAFF', maxUses: 5, maxScans: 10, maxLocations: 5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('Insufficient scan pool');
     expect(mockedPrisma.inviteLink.create).not.toHaveBeenCalled();
   });
 

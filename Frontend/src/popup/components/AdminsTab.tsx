@@ -62,6 +62,8 @@ export default function AdminsTab({ jwt, userRole }: Props) {
   const [createStorageUnlimited, setCreateStorageUnlimited] = useState(true);
   const [createStorageValue, setCreateStorageValue] = useState<string>('1024');
   const [createStorageUnit, setCreateStorageUnit] = useState<'MB' | 'GB'>('GB');
+  const [createScans, setCreateScans] = useState<string>('0');
+  const [createLocations, setCreateLocations] = useState<string>('0');
   const [creating, setCreating] = useState(false);
   const [lastCreatedUrl, setLastCreatedUrl] = useState<string | null>(null);
   const [requests, setRequests] = useState<AdminRequest[]>([]);
@@ -275,6 +277,8 @@ export default function AdminsTab({ jwt, userRole }: Props) {
     const bytes = createStorageUnlimited
       ? null
       : Math.max(0, Number(createStorageValue) || 0) * (createStorageUnit === 'GB' ? 1073741824 : 1048576);
+    const scans = createScans === '' ? null : Number(createScans);
+    const locations = createLocations === '' ? null : Number(createLocations);
     setCreating(true);
     setLastCreatedUrl(null);
     try {
@@ -283,6 +287,8 @@ export default function AdminsTab({ jwt, userRole }: Props) {
         expiresInHours: expiry,
         maxUses: uses,
         maxStorageBytes: bytes,
+        maxScans: userRole === 'OWNER' ? null : scans,
+        maxLocations: userRole === 'OWNER' ? null : locations,
       });
       const url = `${BACKEND_URL}/api/invite/${data.invite.token ?? ''}`;
       setLastCreatedUrl(url);
@@ -836,20 +842,70 @@ export default function AdminsTab({ jwt, userRole }: Props) {
             </div>
             <div className="space-y-3">
               {userRole !== 'OWNER' ? (
-                <div className="flex flex-wrap gap-2">
-                  {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'] as const).map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => setCreateRole(role)}
-                      className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                        createRole === role
-                          ? 'border-[var(--brand-color)] text-[var(--brand-color)] bg-[var(--brand-color)]/10'
-                          : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                      }`}
-                    >
-                      {role}
-                    </button>
-                  ))}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'] as const).map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => setCreateRole(role)}
+                        className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                          createRole === role
+                            ? 'border-[var(--brand-color)] text-[var(--brand-color)] bg-[var(--brand-color)]/10'
+                            : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 block">Scans allocation</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={createScans}
+                        onChange={(e) => setCreateScans(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Remaining: {poolStats[expandedId ?? '']?.remainingScans ?? '—'} scans</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 block">Locations allocation</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={createLocations}
+                        onChange={(e) => setCreateLocations(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Remaining: {poolStats[expandedId ?? '']?.remainingLocations ?? '—'} locations</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 mb-1 block">Storage allocation</label>
+                      <div className="grid gap-2 sm:grid-cols-[1fr_100px]">
+                        <input
+                          type="number"
+                          min={0}
+                          value={createStorageValue}
+                          onChange={(e) => setCreateStorageValue(e.target.value)}
+                          disabled={createStorageUnlimited}
+                          placeholder="Amount"
+                          className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200 disabled:opacity-50"
+                        />
+                        <select
+                          value={createStorageUnit}
+                          onChange={(e) => setCreateStorageUnit(e.target.value as 'MB' | 'GB')}
+                          disabled={createStorageUnlimited}
+                          className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200 disabled:opacity-50"
+                        >
+                          <option value="MB">MB</option>
+                          <option value="GB">GB</option>
+                        </select>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Remaining: {poolStats[expandedId ?? '']?.remainingStorage ?? '—'} bytes</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-xs text-gray-600">Owners create ADMIN invite links only.</div>

@@ -101,6 +101,7 @@ router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) 
         poolScans: true,
         poolLocations: true,
         poolTemplates: true,
+        poolStorageBytes: true,
         maxMembers: true,
         createdAt: true,
         _count: { select: { managedMembers: true } },
@@ -126,11 +127,12 @@ router.get('/admins/pools', asyncHandler(async(req: AuthRequest, res: Response) 
 router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = String(req.params['id']);
-    const { poolScans, poolLocations, maxMembers, poolTemplates } = req.body as {
+    const { poolScans, poolLocations, maxMembers, poolTemplates, poolStorageBytes } = req.body as {
       poolScans?: number;
       poolLocations?: number;
       maxMembers?: number;
       poolTemplates?: number;
+      poolStorageBytes?: number | null;
     };
 
     const admin = await prisma.user.findFirst({ where: { id, role: 'ADMIN' } });
@@ -145,6 +147,7 @@ router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Respons
         ...(poolLocations !== undefined && { poolLocations }),
         ...(poolTemplates !== undefined && { poolTemplates }),
         ...(maxMembers !== undefined && { maxMembers }),
+        ...(poolStorageBytes !== undefined && { poolStorageBytes }),
       },
     });
 
@@ -152,7 +155,7 @@ router.put('/admins/:id/pool', asyncHandler(async(req: AuthRequest, res: Respons
       actorId: req.user!.userId,
       action: 'PERMISSION_OVERRIDE',
       targetUserId: id,
-      details: { type: 'pool_update', poolScans, poolLocations, poolTemplates, maxMembers, previousPoolScans: admin.poolScans, previousPoolLocations: admin.poolLocations, previousPoolTemplates: admin.poolTemplates, previousMaxMembers: admin.maxMembers },
+      details: { type: 'pool_update', poolScans, poolLocations, poolTemplates, maxMembers, poolStorageBytes, previousPoolScans: admin.poolScans, previousPoolLocations: admin.poolLocations, previousPoolTemplates: admin.poolTemplates, previousMaxMembers: admin.maxMembers },
       ip: req.ip,
       userAgent: req.headers['user-agent'],
     });
@@ -356,6 +359,7 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
         allocatedScans: true,
         allocatedLocations: true,
         allocatedTemplates: true,
+        allocatedStorageBytes: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -363,6 +367,8 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
 
     const totalAllocatedScans = members.reduce((sum, m) => sum + (m.allocatedScans ?? 0), 0);
     const totalAllocatedLocations = members.reduce((sum, m) => sum + (m.allocatedLocations ?? 0), 0);
+    const totalAllocatedStorage = members.reduce((sum, m) => sum + (m.allocatedStorageBytes ?? 0), 0);
+    const totalAllocatedTemplates = members.reduce((sum, m) => sum + (m.allocatedTemplates ?? 0), 0);
 
     res.json({
       members,
@@ -370,11 +376,13 @@ router.get('/admins/:id/members', asyncHandler(async(req: AuthRequest, res: Resp
         poolScans: admin.poolScans,
         poolLocations: admin.poolLocations,
         poolTemplates: admin.poolTemplates,
+        poolStorageBytes: admin.poolStorageBytes,
         maxMembers: admin.maxMembers,
         memberCount: members.length,
         remainingScans: (admin.poolScans ?? 0) - totalAllocatedScans,
         remainingLocations: (admin.poolLocations ?? 0) - totalAllocatedLocations,
-        remainingTemplates: (admin.poolTemplates ?? 0) - members.reduce((sum, m) => sum + (m.allocatedTemplates ?? 0), 0),
+        remainingStorage: (admin.poolStorageBytes ?? 0) - totalAllocatedStorage,
+        remainingTemplates: (admin.poolTemplates ?? 0) - totalAllocatedTemplates,
       },
     });
   } catch (err) {

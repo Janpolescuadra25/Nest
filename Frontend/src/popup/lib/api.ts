@@ -182,6 +182,7 @@ export interface OwnerAdminPool {
   poolScans: number | null;
   poolLocations: number | null;
   poolTemplates: number | null;
+  poolStorageBytes: number | null;
   maxMembers: number | null;
   createdAt: string;
   managedMembers: number;
@@ -303,7 +304,7 @@ export const api = {
   getOwnerAdminPools: (jwt: string) =>
     get<{ admins: OwnerAdminPool[] }>('/api/owner/admins/pools', jwt),
 
-  updateOwnerAdminPool: (jwt: string, adminId: string, data: { poolScans?: number; poolLocations?: number; poolTemplates?: number; maxMembers?: number }) =>
+  updateOwnerAdminPool: (jwt: string, adminId: string, data: { poolScans?: number; poolLocations?: number; poolTemplates?: number; maxMembers?: number; poolStorageBytes?: number | null }) =>
     put<UserInfo>(`/api/owner/admins/${adminId}/pool`, data, jwt),
 
   updateBranding: (jwt: string, adminId: string, data: { brandName?: string | null; brandColor?: string | null; logoUrl?: string | null }) =>
@@ -330,7 +331,7 @@ export const api = {
     const sp = new URLSearchParams();
     if (page) sp.set('page', String(page));
     if (limit) sp.set('limit', String(limit));
-    return get<{ members: OwnerAdminMember[]; admin: { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingTemplates: number } }>(
+    return get<{ members: OwnerAdminMember[]; admin: { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; poolStorageBytes: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingStorage: number; remainingTemplates: number } }>(
       `/api/owner/admins/${adminId}/members${sp.toString() ? `?${sp.toString()}` : ''}`,
       jwt,
     );
@@ -401,7 +402,7 @@ export const api = {
     post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 
   // ── Invite Links ──────────────────────────────────────────────────────────
-  createInviteLink: (jwt: string, data: { roleHint?: string; expiresInHours?: number; maxUses?: number; maxStorageBytes?: number | null }) =>
+  createInviteLink: (jwt: string, data: { roleHint?: string; expiresInHours?: number; maxUses?: number; maxStorageBytes?: number | null; maxScans?: number | null; maxLocations?: number | null }) =>
     post<{ invite: InviteLink }>('/api/admin/invite', data, jwt),
 
   listInviteLinks: (jwt: string, page = 1) =>

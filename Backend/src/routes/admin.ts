@@ -240,11 +240,13 @@ router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('us
 // ── POST /api/admin/invite  (OWNER + ADMIN) ──────────────────────────────────
 router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
-    const { roleHint, expiresInHours, maxUses, maxStorageBytes } = req.body as {
+    const { roleHint, expiresInHours, maxUses, maxStorageBytes, maxScans, maxLocations } = req.body as {
       roleHint?: string;
       expiresInHours?: number;
       maxUses?: number;
       maxStorageBytes?: number | null;
+      maxScans?: number | null;
+      maxLocations?: number | null;
     };
 
     // Role hint restrictions based on caller role
@@ -262,6 +264,10 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
 
     if (isOwner && roleHint && roleHint !== 'ADMIN') {
       throw new AppError('Owners can only create admin invite links', 400);
+    }
+
+    if (isOwner && (maxScans !== undefined || maxLocations !== undefined)) {
+      throw new AppError('Owners can only set storage limits on invite links', 400);
     }
 
     const effectiveRole = isOwner ? 'ADMIN' : resolvedRoleHint;
@@ -292,6 +298,39 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
       }
     }
 
+    // Pool validation for admins only
+    if (!isOwner && (maxScans !== undefined || maxLocations !== undefined || maxStorageBytes !== undefined)) {
+      const admin = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: {
+          poolScans: true,
+          poolLocations: true,
+          poolStorageBytes: true,
+          teamMembers: {
+            select: {
+              allocatedScans: true,
+              allocatedLocations: true,
+              allocatedStorageBytes: true,
+            },
+          },
+        },
+      });
+
+      const totalAllocatedScans = (admin?.teamMembers ?? []).reduce((s, m) => s + (m.allocatedScans ?? 0), 0);
+      const totalAllocatedLocations = (admin?.teamMembers ?? []).reduce((s, m) => s + (m.allocatedLocations ?? 0), 0);
+      const totalAllocatedStorage = (admin?.teamMembers ?? []).reduce((s, m) => s + (m.allocatedStorageBytes ?? 0), 0);
+
+      if (maxScans != null && admin?.poolScans != null && totalAllocatedScans + maxScans > admin.poolScans) {
+        throw new AppError(`Insufficient scan pool. Remaining: ${admin.poolScans - totalAllocatedScans}`, 400);
+      }
+      if (maxLocations != null && admin?.poolLocations != null && totalAllocatedLocations + maxLocations > admin.poolLocations) {
+        throw new AppError(`Insufficient location pool. Remaining: ${admin.poolLocations - totalAllocatedLocations}`, 400);
+      }
+      if (maxStorageBytes != null && admin?.poolStorageBytes != null && totalAllocatedStorage + maxStorageBytes > admin.poolStorageBytes) {
+        throw new AppError(`Insufficient storage pool. Remaining: ${admin.poolStorageBytes - totalAllocatedStorage} bytes`, 400);
+      }
+    }
+
     // Create invite via shared utility
     const invite = await createInviteLink({
       createdBy: req.user!.userId,
@@ -299,6 +338,8 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
       maxUses: uses,
       expiresInHours: hours,
       maxStorageBytes: maxStorageBytes ?? null,
+      maxScans: maxScans ?? null,
+      maxLocations: maxLocations ?? null,
     });
 
     await logAction({
@@ -317,6 +358,8 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
         expiresAt: invite.expiresAt,
         maxUses: invite.maxUses,
         maxStorageBytes: invite.maxStorageBytes ?? null,
+        maxScans: invite.maxScans ?? null,
+        maxLocations: invite.maxLocations ?? null,
         createdAt: invite.createdAt,
       },
     });
@@ -351,6 +394,8 @@ router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
       usedAt: inv.usedAt,
       maxUses: inv.maxUses,
       maxStorageBytes: inv.maxStorageBytes ?? null,
+      maxScans: inv.maxScans ?? null,
+      maxLocations: inv.maxLocations ?? null,
       useCount: inv.useCount,
       createdAt: inv.createdAt,
       isActive: new Date() <= inv.expiresAt && inv.useCount < inv.maxUses,

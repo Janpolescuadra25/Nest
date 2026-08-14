@@ -510,6 +510,8 @@ export interface InviteLink {
   creatorName?: string | null;
   creatorEmail?: string;
   maxStorageBytes?: number | null;
+  maxScans?: number | null;
+  maxLocations?: number | null;
 }
 
 export interface TeamMember {

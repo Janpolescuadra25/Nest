@@ -14,6 +14,8 @@ export interface InviteLinkWithCreator {
   maxUses: number;
   useCount: number;
   maxStorageBytes: number | null;
+  maxScans: number | null;
+  maxLocations: number | null;
   createdAt: Date;
   creator: {
     id: string;
@@ -44,6 +46,8 @@ export async function createInviteLink(params: {
   maxUses?: number;
   expiresInHours?: number;
   maxStorageBytes?: number | null;
+  maxScans?: number | null;
+  maxLocations?: number | null;
 }) {
   const token = crypto.randomUUID();
   const expiresInHours = params.expiresInHours ?? 72;
@@ -56,6 +60,8 @@ export async function createInviteLink(params: {
       expiresAt,
       maxUses: params.maxUses ?? 1,
       maxStorageBytes: params.maxStorageBytes ?? null,
+      maxScans: params.maxScans ?? null,
+      maxLocations: params.maxLocations ?? null,
     },
   });
 }
