@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`983848c`, pushed)
+### Repo State (`aa764aa`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 69/69 ✅ |
+| Backend tests | 74/74 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -24,7 +24,7 @@
 
 ---
 
-### Phase M: Owner Capacity Management & Account Deletion (M-1 pending)
+### Phase M: Owner Capacity Management & Account Deletion (M-2 pending)
 **Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
 
 **Mapping contract** (permanent reference):
@@ -39,7 +39,7 @@
 - Prisma schema already has `onDelete: Cascade` on all user-related models — DB cleanup is automatic
 - Deletion permission hierarchy: only owners can delete admin accounts, only admins can delete their own team members
 
-#### M-1: Permanent Account Deletion
+#### ~~M-1: Permanent Account Deletion~~ ✅
 **Goal:** Owner can permanently delete an admin account; all related data (locations, scans, templates, attachments, invite links, audit logs) is cascade-deleted from the database, and all attachment files are deleted from cloud storage. Permission hierarchy: owners delete admins, admins delete their own team members (STAFF, VIEWER, ACCOUNTANT, MANAGER).
 **Expected outcome:**
 - Backend endpoint `DELETE /api/owner/users/:id` that deletes the user record (Prisma cascade handles DB cleanup)
