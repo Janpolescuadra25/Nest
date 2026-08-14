@@ -1,6 +1,6 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`1f3f065`, pushed)
+### Repo State (`7ae256a`, pushed)
 
 | Area | Status |
 |---|---|
@@ -81,16 +81,7 @@
 - Backend validates that capacities are non-negative integers
 - Backend tests for capacity enforcement on registration
 
-#### M-5: Admin Invite Links & Capacity Distribution
-**Goal:** Admin accounts can create invite links for their team members (STAFF, VIEWER, ACCOUNTANT, MANAGER roles), distributing capacity from their own allocated pool. Members cannot further invite or distribute.
-**Expected outcome:**
-- Admin invite link form has role selection (STAFF, VIEWER, ACCOUNTANT, MANAGER) and capacity fields (scans, templates, locations, storage)
-- When admin creates an invite link, the specified capacities are subtracted from the admin's available capacity
-- Admin's remaining capacity = owner-assigned capacity minus sum of all distributed capacities to team members
-- Backend validates: admin cannot distribute more than their available capacity (return 400 if exceeded)
-- Members (non-admin roles) do not see invite link creation UI
-- Admin dashboard shows: Total Capacity | Distributed | Remaining for each resource type
-- Backend tests for distribution math and overflow prevention
+- ~~M-5: Admin Invite Links & Capacity Distribution~~ ✅
 
 #### M-6: Storage Abuse Prevention
 **Goal:** Subscription plans define fixed capacities. When an admin subscribes to a plan, their capacities are set to the plan's limits (owner cannot modify). When the plan expires, the admin drops to free tier.
