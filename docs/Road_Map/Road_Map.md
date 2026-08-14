@@ -1,6 +1,6 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`1680c4b`, pushed)
+### Repo State (`42f1d09`, pushed)
 
 | Area | Status |
 |---|---|
@@ -21,12 +21,12 @@
 - ~~N-1: Sync Error Recovery~~ ✅
 - ~~N-2: Activity Log Model~~ ✅ (built as `AuditLog` model + `logAction()` helper in earlier work)
 - ~~N-3: Activity Log UI~~ ✅ (built as `ActivityTab.tsx` in earlier work — filtering, pagination, role-based visibility)
-- N-4: Sync Status UI — Show sync status badges in SyncView (green for SYNCED, red for FAILED, gray for PENDING). Add filtering ScanRecords by sync status. (Schema fields `syncStatus` and `lastSyncError` already added to ScanRecord in N-1; backend already sets them on success/failure. Only the frontend badges and filter dropdown remain.)
+- ~~N-4: Sync Status UI~~ ✅
 - N-5: Email Notification Preferences — Create `NotificationPreference` Prisma model (`userId`, `syncFailureAlerts`, `quotaWarningAlerts`, `teamChangeAlerts`). Add a "Notifications" section in user settings UI. Add email alerts for storage usage exceeding 80% of limit and team member join/remove. (Sync failure email alerts already exist via `sync-failure-alerts.ts` cron job + Resend integration — do NOT rebuild those. Only the preference model, settings UI, and quota/team alerts are missing.)
 
 ### Standalone UX Fixes
 
-- **Approved/Review Tab Workflow Fix**: Remove the "Rejected" filter from the Approved tab — rejected entries don't belong there. When an approved entry is rejected, it should move back to the Review tab. Add a "Rejected" filter to the Review tab so users can see entries they've rejected. This ensures the tab workflow is logically consistent: Review (pending + rejected) → Approved (approved only) → Synced.
+- ~~**Approved/Review Tab Workflow Fix**~~ ✅
 
 ---
 

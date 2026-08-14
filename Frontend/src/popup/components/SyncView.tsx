@@ -818,7 +818,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
-          {(sourceFilter !== 'all' || statusFilter !== 'ALL') && (
+          {(sourceFilter !== 'all' || statusFilter !== 'ALL' || syncStatusFilter !== 'ALL') && (
             <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
             </span>
