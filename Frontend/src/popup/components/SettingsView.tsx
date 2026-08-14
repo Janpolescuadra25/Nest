@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function SettingsView({ jwt, user, onLogout }: Props) {
-  const { status, connect } = useQuickBooks(jwt);
+  const { status, connect, authError } = useQuickBooks(jwt);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [showPricing, setShowPricing] = useState(false);
@@ -181,6 +181,9 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           ) : (
             <div className="text-red-600 text-xs mb-2">❌ Not connected to QuickBooks</div>
           )}
+          {authError ? (
+            <div className="text-red-600 text-xs mb-2">{authError}</div>
+          ) : null}
           <button
             onClick={connect}
             className={`mt-2 w-full py-2 text-xs font-semibold rounded-lg transition-colors ${

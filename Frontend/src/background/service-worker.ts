@@ -62,6 +62,59 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
   }
 });
 
+let qbAuthTabId: number | null = null;
+let qbAuthCleanupTimer: number | null = null;
+
+const cleanupQBAuth = () => {
+  qbAuthTabId = null;
+  if (qbAuthCleanupTimer !== null) {
+    clearTimeout(qbAuthCleanupTimer);
+    qbAuthCleanupTimer = null;
+  }
+};
+
+const handleQBAuthCallbackUrl = (tabId: number, url: string) => {
+  const callbackUrl = url;
+  if (!callbackUrl.includes('/api/quickbooks/callback')) return;
+
+  let success = false;
+  let realmId: string | undefined;
+  let error: string | undefined;
+
+  try {
+    const parsed = new URL(callbackUrl);
+    const params = parsed.searchParams;
+    const maybeError = params.get('error');
+    const code = params.get('code');
+    const maybeRealmId = params.get('realmId');
+
+    if (maybeError) {
+      error = maybeError;
+    } else if (code && maybeRealmId) {
+      success = true;
+      realmId = maybeRealmId;
+    } else {
+      error = 'Missing QuickBooks callback parameters.';
+    }
+  } catch (err) {
+    error = 'Failed to parse QuickBooks callback URL.';
+  }
+
+  chrome.tabs.remove(tabId).catch(() => {});
+  cleanupQBAuth();
+  chrome.runtime.sendMessage({
+    type: 'QB_AUTH_CALLBACK',
+    payload: { success, error, realmId },
+  });
+};
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (qbAuthTabId === null || tabId !== qbAuthTabId) return;
+  const url = changeInfo.url ?? tab.url;
+  if (!url) return;
+  handleQBAuthCallbackUrl(tabId, url);
+});
+
 // ── Message handlers ──────────────────────────────────────────────────────────
 interface OpenQBAuthMessage {
   type: 'OPEN_QB_AUTH';
@@ -73,7 +126,16 @@ type ExtMessage = OpenQBAuthMessage;
 chrome.runtime.onMessage.addListener((message: ExtMessage, _sender, sendResponse) => {
   if (message.type === 'OPEN_QB_AUTH') {
     const { authUrl } = message.payload;
-    chrome.tabs.create({ url: authUrl }, () => {
+    chrome.tabs.create({ url: authUrl }, (tab) => {
+      if (tab?.id !== undefined) {
+        qbAuthTabId = tab.id;
+        if (qbAuthCleanupTimer !== null) {
+          clearTimeout(qbAuthCleanupTimer);
+        }
+        qbAuthCleanupTimer = window.setTimeout(() => {
+          cleanupQBAuth();
+        }, 5 * 60 * 1000);
+      }
       sendResponse({ ok: true });
     });
     return true;

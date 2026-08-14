@@ -5,6 +5,7 @@ import type { QBStatus } from '../../types';
 export function useQuickBooks(jwt: string | null) {
   const [status, setStatus] = useState<QBStatus>({ connected: false });
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const checkStatus = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!jwt) return;
@@ -27,6 +28,7 @@ export function useQuickBooks(jwt: string | null) {
 
   const connect = useCallback(async () => {
     if (!jwt) return;
+    setAuthError(null);
     try {
       const { authUrl } = await api.getQBAuthUrl(jwt);
       // Ask background to open the auth URL in a new tab
@@ -36,5 +38,23 @@ export function useQuickBooks(jwt: string | null) {
     }
   }, [jwt]);
 
-  return { status, loading, connect, checkStatus };
+  useEffect(() => {
+    const listener = (message: any) => {
+      if (message?.type !== 'QB_AUTH_CALLBACK') return;
+      const { success, error } = message.payload ?? {};
+      if (success) {
+        setAuthError(null);
+        void checkStatus();
+      } else {
+        setAuthError(error ?? 'QuickBooks authorization failed.');
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(listener);
+    return () => {
+      chrome.runtime.onMessage.removeListener(listener);
+    };
+  }, [checkStatus]);
+
+  return { status, loading, connect, checkStatus, authError };
 }
