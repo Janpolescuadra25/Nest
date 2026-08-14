@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`aa764aa`, pushed)
+### Repo State (`d0fb0c5`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 74/74 ✅ |
+| Backend tests | 77/77 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -24,7 +24,7 @@
 
 ---
 
-### Phase M: Owner Capacity Management & Account Deletion (M-2 pending)
+### Phase M: Owner Capacity Management & Account Deletion (M-3 pending)
 **Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
 
 **Mapping contract** (permanent reference):
@@ -49,7 +49,7 @@
 - Only owners can delete admin accounts; admins can delete their own team members (STAFF, VIEWER, ACCOUNTANT, MANAGER)
 - Backend tests for the deletion endpoint
 
-#### M-2: Data Usage Calculation & Owner Monitoring
+#### ~~M-2: Data Usage Calculation & Owner Monitoring~~ ✅
 **Goal:** Backend calculates per-organization storage usage (sum of all attachment fileSizes), and the owner can view each client's usage in the Clients tab.
 **Expected outcome:**
 - Backend endpoint `GET /api/owner/users/:id/usage` that returns:
