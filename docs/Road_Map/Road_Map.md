@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`6f8de19`, pushed)
+### Repo State (`1f3f065`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 91/91 ✅ |
+| Backend tests | 93/93 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -24,7 +24,7 @@
 
 ---
 
-### Phase M: Owner Capacity Management & Account Deletion (M-5 pending)
+### Phase M: Owner Capacity Management & Account Deletion (M-6 pending)
 **Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
 
 **Mapping contract** (permanent reference):
