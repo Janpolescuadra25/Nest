@@ -199,6 +199,14 @@ export interface OwnerAdminMember {
   createdAt: string;
 }
 
+export interface OwnerUserUsage {
+  userId: string;
+  totalStorageBytes: number;
+  scanCount: number;
+  locationCount: number;
+  attachmentCount: number;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const api = {
   getSession: (jwt: string) =>
@@ -355,10 +363,13 @@ export const api = {
   ownerResetPermissions: (jwt: string, userId: string) =>
     patch<{ user: { id: string } }>(`/api/owner/users/${userId}/permissions-reset`, {}, jwt),
 
+  getOwnerUserUsage: (jwt: string, userId: string) =>
+    get<OwnerUserUsage>(`/api/owner/users/${userId}/usage`, jwt),
+
   ownerDeleteUser: (jwt: string, userId: string) =>
     del<void>(`/api/owner/users/${userId}`, jwt),
 
-  // ── Admin Team ─────────────────────────────────────────────────────────────
+  // ── Admin Team ─────────────────────────────────────────────
   getAdminStats: (jwt: string) =>
     get<{
       teamSize: number;

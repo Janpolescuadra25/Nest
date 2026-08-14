@@ -21,9 +21,16 @@ jest.mock('../src/lib/prisma', () => ({
     attachment: {
       findMany: jest.fn(),
       deleteMany: jest.fn(),
+      aggregate: jest.fn(),
+      count: jest.fn(),
+    },
+    locationAttachment: {
+      aggregate: jest.fn(),
+      count: jest.fn(),
     },
     scanRecord: {
       findMany: jest.fn(),
+      count: jest.fn(),
     },
     auditLog: {
       create: jest.fn(),
@@ -163,5 +170,53 @@ describe('DELETE /api/owner/users/:id', () => {
     expect(deleteFile).toHaveBeenCalledWith('attach-2');
     expect(deleteFile).toHaveBeenCalledWith('loc-attach-1');
     expect(deleteFile).toHaveBeenCalledWith('loc-attach-2');
+  });
+
+  describe('GET /api/owner/users/:id/usage', () => {
+    it('returns usage totals for a user with attachments', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', email: 'admin@example.com', role: 'ADMIN', name: 'Admin User' });
+      (prisma.location.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'loc-1' }, { id: 'loc-2' }]);
+      (prisma.attachment.aggregate as jest.Mock).mockResolvedValueOnce({ _sum: { fileSize: 1500 } });
+      (prisma.locationAttachment.aggregate as jest.Mock).mockResolvedValueOnce({ _sum: { fileSize: 2500 } });
+      (prisma.scanRecord.count as jest.Mock).mockResolvedValueOnce(3);
+      (prisma.attachment.count as jest.Mock).mockResolvedValueOnce(2);
+      (prisma.locationAttachment.count as jest.Mock).mockResolvedValueOnce(1);
+
+      const res = await request(app).get('/api/owner/users/admin-id/usage');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        userId: 'admin-id',
+        totalStorageBytes: 4000,
+        scanCount: 3,
+        locationCount: 2,
+        attachmentCount: 3,
+      });
+    });
+
+    it('returns zero usage when there are no locations', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 'admin-id', email: 'admin@example.com', role: 'ADMIN', name: 'Admin User' });
+      (prisma.location.findMany as jest.Mock).mockResolvedValueOnce([]);
+
+      const res = await request(app).get('/api/owner/users/admin-id/usage');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        userId: 'admin-id',
+        totalStorageBytes: 0,
+        scanCount: 0,
+        locationCount: 0,
+        attachmentCount: 0,
+      });
+    });
+
+    it('returns 404 for nonexistent user', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
+
+      const res = await request(app).get('/api/owner/users/nonexistent_id/usage');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('User not found');
+    });
   });
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, type OwnerUserUsage } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
 import { ConfirmDialog, ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
@@ -73,6 +73,40 @@ export default function UsersTab({ jwt }: Props) {
   const [collapsedAdmins, setCollapsedAdmins] = useState<Record<string, boolean>>({});
   const [resetPermissionsDialog, setResetPermissionsDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
+  const [usageByUserId, setUsageByUserId] = useState<Record<string, { loading: boolean; data: OwnerUserUsage | null; error?: string }>>({});
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    if (mb < 1024) return `${mb.toFixed(1)} MB`;
+    return `${(mb / 1024).toFixed(1)} GB`;
+  };
+
+  const loadUsageForUser = useCallback(async (userId: string) => {
+    setUsageByUserId((prev) => ({
+      ...prev,
+      [userId]: { loading: true, data: prev[userId]?.data ?? null },
+    }));
+
+    try {
+      const usage = await api.getOwnerUserUsage(jwt, userId);
+      setUsageByUserId((prev) => ({
+        ...prev,
+        [userId]: { loading: false, data: usage },
+      }));
+    } catch (err: any) {
+      setUsageByUserId((prev) => ({
+        ...prev,
+        [userId]: {
+          loading: false,
+          data: prev[userId]?.data ?? null,
+          error: err.message || 'Failed to load usage',
+        },
+      }));
+    }
+  }, [jwt]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -264,13 +298,51 @@ export default function UsersTab({ jwt }: Props) {
                       {permPill('Locs', hasPerm(user, 'locations', 'write'))}
                     </div>
                   </div>
-                  <button onClick={() => setExpandedId(expandedId === user.id ? null : user.id)} className="text-gray-600 hover:text-gray-600 text-xs flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      const nextId = expandedId === user.id ? null : user.id;
+                      setExpandedId(nextId);
+                      if (nextId && !usageByUserId[nextId]?.data && !usageByUserId[nextId]?.loading) {
+                        void loadUsageForUser(nextId);
+                      }
+                    }}
+                    className="text-gray-600 hover:text-gray-600 text-xs flex-shrink-0"
+                  >
                     {expandedId === user.id ? '▲' : '▼'}
                   </button>
                 </div>
 
                 {expandedId === user.id && (
                   <div className="pt-2 border-t border-gray-200 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                      {usageByUserId[user.id]?.loading ? (
+                        <div className="col-span-2 text-gray-500">Loading usage...</div>
+                      ) : usageByUserId[user.id]?.error ? (
+                        <div className="col-span-2 text-red-600">Usage unavailable: {usageByUserId[user.id]?.error}</div>
+                      ) : usageByUserId[user.id]?.data ? (
+                        <>
+                          <div className="rounded-lg bg-gray-50 p-2">
+                            <div className="text-[11px] text-gray-500">Storage</div>
+                            <div className="text-sm font-semibold text-gray-900">{formatBytes(usageByUserId[user.id]!.data!.totalStorageBytes)}</div>
+                          </div>
+                          <div className="rounded-lg bg-gray-50 p-2">
+                            <div className="text-[11px] text-gray-500">Locations</div>
+                            <div className="text-sm font-semibold text-gray-900">{usageByUserId[user.id]!.data!.locationCount}</div>
+                          </div>
+                          <div className="rounded-lg bg-gray-50 p-2">
+                            <div className="text-[11px] text-gray-500">Scans</div>
+                            <div className="text-sm font-semibold text-gray-900">{usageByUserId[user.id]!.data!.scanCount}</div>
+                          </div>
+                          <div className="rounded-lg bg-gray-50 p-2">
+                            <div className="text-[11px] text-gray-500">Attachments</div>
+                            <div className="text-sm font-semibold text-gray-900">{usageByUserId[user.id]!.data!.attachmentCount}</div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="col-span-2 text-gray-500">Select this user to load usage details.</div>
+                      )}
+                    </div>
+
                     {/* Block / Unblock */}
                     <button
                       onClick={() => handleBlock(user)}

@@ -626,6 +626,72 @@ router.delete('/users/:id', asyncHandler(async (req: AuthRequest, res: Response)
   res.json({ success: true, message: 'User deleted permanently' });
 }));
 
+router.get('/users/:id/usage', asyncHandler(async (req: AuthRequest, res: Response) => {
+  try {
+    const targetUserId = String(req.params.id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, role: true, email: true, name: true },
+    });
+    if (!user) throw new AppError('User not found', 404);
+
+    const locations = await prisma.location.findMany({
+      where: { userId: targetUserId },
+      select: { id: true },
+    });
+    const locationIds = locations.map((l) => l.id);
+
+    if (locationIds.length === 0) {
+      return res.json({
+        userId: targetUserId,
+        totalStorageBytes: 0,
+        scanCount: 0,
+        locationCount: 0,
+        attachmentCount: 0,
+      });
+    }
+
+    const [scanAttachments, locationAttachments, scanCount, scanAttachmentCount, locationAttachmentCount] = await Promise.all([
+      prisma.attachment.aggregate({
+        _sum: { fileSize: true },
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.aggregate({
+        _sum: { fileSize: true },
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.scanRecord.count({
+        where: { locationId: { in: locationIds } },
+      }),
+      prisma.attachment.count({
+        where: { scanRecord: { locationId: { in: locationIds } } },
+      }),
+      prisma.locationAttachment.count({
+        where: { locationId: { in: locationIds } },
+      }),
+    ]);
+
+    const scanAttachmentBytes = scanAttachments._sum.fileSize || 0;
+    const locationAttachmentBytes = locationAttachments._sum.fileSize || 0;
+    const totalStorageBytes = scanAttachmentBytes + locationAttachmentBytes;
+    const locationCount = locationIds.length;
+    const attachmentCount = scanAttachmentCount + locationAttachmentCount;
+
+    res.json({
+      userId: targetUserId,
+      totalStorageBytes,
+      scanCount,
+      locationCount,
+      attachmentCount,
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error('[Owner] getUserUsage error:', err);
+    throw new AppError('Internal server error.', 500);
+  }
+}));
+
 // ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────
 const updateAdminSchema = z.object({
   maxUsers: z.number().int().min(1).max(1000).optional().nullable(),
