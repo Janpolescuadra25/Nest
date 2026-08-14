@@ -24,7 +24,7 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
   const payload = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
 
   // 401 auto-logout — JWT expired mid-session
-  if (res.status === 401) {
+  if (res.status === 401 && path !== '/api/auth/login') {
     chrome.storage.local.get(['jwt'], (result) => {
       if (result.jwt) {
         chrome.storage.local.remove(['jwt'], () => {
