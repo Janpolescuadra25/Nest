@@ -92,15 +92,10 @@
 - Admin dashboard shows: Total Capacity | Distributed | Remaining for each resource type
 - Backend tests for distribution math and overflow prevention
 
-#### M-6: Subscription Plan Capacity Enforcement
+#### M-6: Storage Abuse Prevention
 **Goal:** Subscription plans define fixed capacities. When an admin subscribes to a plan, their capacities are set to the plan's limits (owner cannot modify). When the plan expires, the admin drops to free tier.
 **Expected outcome:**
-- Extend subscription plan model with fields: `maxScans`, `maxTemplates`, `maxLocations`, `maxMembers`, `maxStorageBytes`
-- When a user subscribes to a plan, their User record's capacity fields are set to the plan's values
-- Owner cannot edit capacities of plan-subscribed admins (UI shows capacities as read-only, sourced from plan)
-- When subscription expires (webhook or cron), admin's capacities reset to free tier defaults
-- Admin invite link form shows available capacity (plan limits minus distributed) and prevents over-allocation
-- Backend tests for plan enforcement and expiry handling
+- M-6: Storage Abuse Prevention — Add a silent 50 GB safety net to all subscription plans via Stripe webhooks. Invisible to users (not displayed in pricing). Owners can override per-admin via the existing panel.
 
 ---
 
