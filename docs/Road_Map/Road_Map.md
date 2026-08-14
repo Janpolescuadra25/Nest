@@ -5,7 +5,7 @@
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 86/86 ✅ |
+| Backend tests | 91/91 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -24,7 +24,7 @@
 
 ---
 
-### Phase M: Owner Capacity Management & Account Deletion (M-4 pending)
+### Phase M: Owner Capacity Management & Account Deletion (M-5 pending)
 **Goal:** Enable owners to manage client account lifecycles (permanent deletion with full data cascade), monitor and limit per-user data usage (DB records + attachment storage), and implement a capacity distribution system where owners set resource limits on invite links, admins distribute from their allocated pool to team members, and subscription plans enforce fixed capacities.
 
 **Mapping contract** (permanent reference):
@@ -71,7 +71,7 @@
 - Error message on upload when limit is exceeded: "Storage limit reached. Contact your administrator."
 - Backend tests for limit enforcement
 
-#### M-4: Owner Invite Link Capacity Customization
+#### ~~M-4: Owner Invite Link Capacity Customization~~ ✅
 **Goal:** Owner invite links have customizable capacity fields (maxScans, maxTemplates, maxLocations, maxMembers, maxStorageBytes) instead of just expiry and max uses. Role selection is removed — owner invite links always create ADMIN accounts.
 **Expected outcome:**
 - Extend InviteLink model or create a new model for capacity fields on invite links
