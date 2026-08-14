@@ -43,6 +43,19 @@ const STATUS_CLASSES: Record<string, string> = {
   REJECTED: 'text-red-500 bg-red-50 border-red-200',
 };
 
+const SYNC_STATUS_CLASSES: Record<string, string> = {
+  SYNCED: 'text-green-700 bg-green-100 border-green-200',
+  FAILED: 'text-red-700 bg-red-100 border-red-200',
+  PENDING: 'text-gray-500 bg-gray-100 border-gray-200',
+};
+
+const SYNC_STATUS_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'All Sync Statuses' },
+  { value: 'SYNCED', label: 'Synced' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'NOT_SYNCED', label: 'Not Synced' },
+];
+
 export default function SyncView({ jwt, selectedLocationId, onLocationChange, onTabChange, onScanRecordId, onboardingStep = 0, onHasSynced, userRole, mode }: Props) {
   const { locations } = useLocations(jwt);
   const { status } = useQuickBooks(jwt);
@@ -63,6 +76,7 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [syncStatusFilter, setSyncStatusFilter] = useState<string>('ALL');
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -577,13 +591,20 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
   const filteredScans = safeScans.filter((s) => {
     if (sourceFilter !== 'all' && (s.source ?? 'pos').toLowerCase() !== sourceFilter) return false;
     if (statusFilter !== 'ALL' && s.status !== statusFilter) return false;
+    if (syncStatusFilter !== 'ALL') {
+      if (syncStatusFilter === 'NOT_SYNCED') {
+        if (s.syncStatus === 'SYNCED' || s.syncStatus === 'FAILED') return false;
+      } else if (s.syncStatus !== syncStatusFilter) {
+        return false;
+      }
+    }
     return true;
   });
   const isSyncMode = mode === 'sync-history' || mode === undefined;
   const visibleStatusOptions = mode === 'review'
     ? STATUS_FILTER_OPTIONS.filter((opt) => ['PENDING_APPROVAL', 'REJECTED'].includes(opt.value))
     : mode === 'approved'
-      ? STATUS_FILTER_OPTIONS.filter((opt) => ['APPROVED', 'REJECTED'].includes(opt.value))
+      ? STATUS_FILTER_OPTIONS.filter((opt) => ['APPROVED'].includes(opt.value))
       : STATUS_FILTER_OPTIONS.filter((opt) => ['PENDING', 'SYNCED', 'FAILED'].includes(opt.value));
   const isAllVisibleSelected = filteredScans.length > 0 && filteredScans.every((scan) => selectedScanIds.has(scan.id));
   const selectedCount = selectedScanIds.size;
@@ -785,6 +806,18 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <select
+            value={syncStatusFilter}
+            onChange={(e) => {
+              setSyncStatusFilter(e.target.value);
+              setSelectedScanIds(new Set());
+            }}
+            className="bg-[#F5F5F7] border border-gray-200 text-gray-600 text-xs rounded px-2 py-1 focus:border-emerald-500 focus:outline-none"
+          >
+            {SYNC_STATUS_FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
           {(sourceFilter !== 'all' || statusFilter !== 'ALL') && (
             <span className="text-xs text-gray-600">
               {filteredScans.length} of {safeScans.length} scans
@@ -872,19 +905,27 @@ export default function SyncView({ jwt, selectedLocationId, onLocationChange, on
                         </td>
                         <td className="px-3 py-2 text-gray-700 font-mono">{scan.scanDate}</td>
                         <td className="px-3 py-2">
-                          <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-600'}`}>
-                            {scan.status}
-                            {scan.status === 'FAILED' ? ` (${attempts}/3)` : ''}
-                            {attention === 'stale' && (
-                              <span className="ml-1 text-amber-400" title="Scan data is over 24h old and hasn't been synced">⏰</span>
-                            )}
-                            {attention === 'max-retried' && (
-                              <span className="ml-1 text-red-500" title="Maximum retries reached (3/3). Re-sync from Preview tab.">⛔</span>
-                            )}
-                            {attention === 'old-failure' && (
-                              <span className="ml-1 text-amber-400" title="Failed over 24h ago. Retries available — use Retry button.">⚠️</span>
-                            )}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`px-2 py-0.5 rounded border text-xs ${STATUS_CLASSES[scan.status] ?? 'text-gray-600'}`}>
+                              {scan.status}
+                              {scan.status === 'FAILED' ? ` (${attempts}/3)` : ''}
+                              {attention === 'stale' && (
+                                <span className="ml-1 text-amber-400" title="Scan data is over 24h old and hasn't been synced">⏰</span>
+                              )}
+                              {attention === 'max-retried' && (
+                                <span className="ml-1 text-red-500" title="Maximum retries reached (3/3). Re-sync from Preview tab.">⛔</span>
+                              )}
+                              {attention === 'old-failure' && (
+                                <span className="ml-1 text-amber-400" title="Failed over 24h ago. Retries available — use Retry button.">⚠️</span>
+                              )}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded border text-xs ${SYNC_STATUS_CLASSES[scan.syncStatus ?? 'PENDING']}`}
+                              title={scan.syncStatus === 'FAILED' && scan.lastSyncError ? scan.lastSyncError : undefined}
+                            >
+                              {scan.syncStatus === 'SYNCED' ? 'Synced' : scan.syncStatus === 'FAILED' ? 'Failed' : 'Not Synced'}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-3 py-2 font-mono text-gray-600">
                           {txnId

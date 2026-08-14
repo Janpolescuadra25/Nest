@@ -316,6 +316,8 @@ export interface ScanRecord {
   source?: string;
   transactionType?: string;
   status: 'PENDING' | 'MAPPED' | 'SYNCED' | 'FAILED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  syncStatus?: 'PENDING' | 'SYNCED' | 'FAILED' | null;
+  lastSyncError?: string | null;
   createdAt: string;
   syncLogs?: SyncLog[];
   attachments?: Array<{ id: string; fileName: string; fileSize: number; mimeType: string; createdAt: string }>;
