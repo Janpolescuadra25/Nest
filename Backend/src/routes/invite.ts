@@ -106,6 +106,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
           approvedById: isOwnerInvite ? invite.createdBy : null,
           mustChangePassword: false,
           permissions: perms,
+          maxStorageBytes: invite.maxStorageBytes ?? null,
         },
       });
 

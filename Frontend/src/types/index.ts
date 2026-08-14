@@ -509,6 +509,7 @@ export interface InviteLink {
   isActive: boolean;
   creatorName?: string | null;
   creatorEmail?: string;
+  maxStorageBytes?: number | null;
 }
 
 export interface TeamMember {

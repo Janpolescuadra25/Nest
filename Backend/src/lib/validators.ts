@@ -47,6 +47,7 @@ export const inviteLinkSchema = z.object({
   roleHint: z.enum(['ACCOUNTANT', 'STAFF', 'VIEWER', 'ADMIN', 'MANAGER']).optional(),
   expiresInHours: z.number().int().min(1).max(720).optional(),
   maxUses: z.number().int().min(1).max(100).optional(),
+  maxStorageBytes: z.number().int().min(0).nullable().optional(),
 });
 
 export const patchTeamMemberSchema = z.object({

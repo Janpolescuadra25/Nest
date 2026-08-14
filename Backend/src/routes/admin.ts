@@ -240,10 +240,11 @@ router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('us
 // ── POST /api/admin/invite  (OWNER + ADMIN) ──────────────────────────────────
 router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
-    const { roleHint, expiresInHours, maxUses } = req.body as {
+    const { roleHint, expiresInHours, maxUses, maxStorageBytes } = req.body as {
       roleHint?: string;
       expiresInHours?: number;
       maxUses?: number;
+      maxStorageBytes?: number | null;
     };
 
     // Role hint restrictions based on caller role
@@ -258,6 +259,12 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
     const isOwner = req.user!.role === 'OWNER';
     const allowedRoles = isOwner ? validOwnerRoles : validAdminRoles;
     const resolvedRoleHint = (roleHint && allowedRoles.includes(roleHint) ? roleHint : 'VIEWER') as UserRole;
+
+    if (isOwner && roleHint && roleHint !== 'ADMIN') {
+      throw new AppError('Owners can only create admin invite links', 400);
+    }
+
+    const effectiveRole = isOwner ? 'ADMIN' : resolvedRoleHint;
 
     if (roleHint && !allowedRoles.includes(roleHint)) {
       throw new AppError('Cannot invite users with admin role.', 400);
@@ -288,15 +295,16 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
     // Create invite via shared utility
     const invite = await createInviteLink({
       createdBy: req.user!.userId,
-      roleHint: resolvedRoleHint,
+      roleHint: effectiveRole,
       maxUses: uses,
       expiresInHours: hours,
+      maxStorageBytes: maxStorageBytes ?? null,
     });
 
     await logAction({
       actorId: req.user!.userId,
       action: 'INVITE_CREATED',
-      details: { roleHint: resolvedRoleHint, maxUses: uses, expiresInHours: hours },
+      details: { roleHint: effectiveRole, maxUses: uses, expiresInHours: hours, maxStorageBytes: maxStorageBytes ?? null },
       ip: req.ip,
       userAgent: req.headers['user-agent'],
     });
@@ -308,6 +316,7 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
         roleHint: invite.roleHint,
         expiresAt: invite.expiresAt,
         maxUses: invite.maxUses,
+        maxStorageBytes: invite.maxStorageBytes ?? null,
         createdAt: invite.createdAt,
       },
     });
@@ -341,6 +350,7 @@ router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
       expiresAt: inv.expiresAt,
       usedAt: inv.usedAt,
       maxUses: inv.maxUses,
+      maxStorageBytes: inv.maxStorageBytes ?? null,
       useCount: inv.useCount,
       createdAt: inv.createdAt,
       isActive: new Date() <= inv.expiresAt && inv.useCount < inv.maxUses,

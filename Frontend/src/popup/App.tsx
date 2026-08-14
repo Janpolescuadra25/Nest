@@ -686,7 +686,7 @@ export default function App() {
           )}
           {effectiveTab === 'my-team' && <MyTeamTab jwt={jwt!} subscriptionSource={user.subscriptionSource} userRole={user.role} onUpgrade={() => setCurrentTab('settings')} />}
           {effectiveTab === 'activity' && <ActivityTab jwt={jwt!} />}
-          {effectiveTab === 'clients' && <AdminsTab jwt={jwt!} />}
+          {effectiveTab === 'clients' && <AdminsTab jwt={jwt!} userRole={user?.role ?? 'VIEWER'} />}
           {effectiveTab === 'users' && <UsersTab jwt={jwt!} />}
           {effectiveTab === 'locations' && (
             <LocationsTab

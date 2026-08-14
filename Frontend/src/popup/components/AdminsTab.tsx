@@ -30,9 +30,10 @@ interface ApproveResult {
 
 interface Props {
   jwt: string;
+  userRole: string;
 }
 
-export default function AdminsTab({ jwt }: Props) {
+export default function AdminsTab({ jwt, userRole }: Props) {
   const { showToast } = useToast();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [poolData, setPoolData] = useState<Record<string, OwnerAdminPool>>({});
@@ -58,6 +59,9 @@ export default function AdminsTab({ jwt }: Props) {
   const [createRole, setCreateRole] = useState<string>('STAFF');
   const [createExpiry, setCreateExpiry] = useState<number>(168);
   const [createMaxUses, setCreateMaxUses] = useState<number>(1);
+  const [createStorageUnlimited, setCreateStorageUnlimited] = useState(true);
+  const [createStorageValue, setCreateStorageValue] = useState<string>('1024');
+  const [createStorageUnit, setCreateStorageUnit] = useState<'MB' | 'GB'>('GB');
   const [creating, setCreating] = useState(false);
   const [lastCreatedUrl, setLastCreatedUrl] = useState<string | null>(null);
   const [requests, setRequests] = useState<AdminRequest[]>([]);
@@ -90,6 +94,12 @@ export default function AdminsTab({ jwt }: Props) {
   }, [jwt]);
 
   useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
+
+  useEffect(() => {
+    if (userRole === 'OWNER') {
+      setCreateRole('ADMIN');
+    }
+  }, [userRole]);
 
   useEffect(() => {
     (async () => {
@@ -262,10 +272,18 @@ export default function AdminsTab({ jwt }: Props) {
   const handleCreateInviteLink = async () => {
     const expiry = Math.min(720, Math.max(1, createExpiry));
     const uses = Math.min(100, Math.max(1, createMaxUses));
+    const bytes = createStorageUnlimited
+      ? null
+      : Math.max(0, Number(createStorageValue) || 0) * (createStorageUnit === 'GB' ? 1073741824 : 1048576);
     setCreating(true);
     setLastCreatedUrl(null);
     try {
-      const data = await api.createInviteLink(jwt, { roleHint: createRole, expiresInHours: expiry, maxUses: uses });
+      const data = await api.createInviteLink(jwt, {
+        roleHint: userRole === 'OWNER' ? 'ADMIN' : createRole,
+        expiresInHours: expiry,
+        maxUses: uses,
+        maxStorageBytes: bytes,
+      });
       const url = `${BACKEND_URL}/api/invite/${data.invite.token ?? ''}`;
       setLastCreatedUrl(url);
       showToast('Invite link created', 'success');
@@ -817,21 +835,25 @@ export default function AdminsTab({ jwt }: Props) {
               </div>
             </div>
             <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'] as const).map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setCreateRole(role)}
-                    className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                      createRole === role
-                        ? 'border-[var(--brand-color)] text-[var(--brand-color)] bg-[var(--brand-color)]/10'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
+              {userRole !== 'OWNER' ? (
+                <div className="flex flex-wrap gap-2">
+                  {(['STAFF', 'VIEWER', 'ACCOUNTANT', 'ADMIN', 'MANAGER'] as const).map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setCreateRole(role)}
+                      className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                        createRole === role
+                          ? 'border-[var(--brand-color)] text-[var(--brand-color)] bg-[var(--brand-color)]/10'
+                          : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-600">Owners create ADMIN invite links only.</div>
+              )}
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
                   <label className="text-xs text-gray-600 mb-1 block">Expires in (hours)</label>
@@ -854,6 +876,43 @@ export default function AdminsTab({ jwt }: Props) {
                     onChange={(e) => setCreateMaxUses(Math.min(100, Math.max(1, Number(e.target.value))))}
                     className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200"
                   />
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-gray-600">Storage limit</label>
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={createStorageUnlimited}
+                        onChange={(e) => setCreateStorageUnlimited(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Unlimited
+                    </label>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_100px]">
+                    <input
+                      type="number"
+                      min={0}
+                      value={createStorageValue}
+                      onChange={(e) => setCreateStorageValue(e.target.value)}
+                      disabled={createStorageUnlimited}
+                      placeholder="Amount"
+                      className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200 disabled:opacity-50"
+                    />
+                    <select
+                      value={createStorageUnit}
+                      onChange={(e) => setCreateStorageUnit(e.target.value as 'MB' | 'GB')}
+                      disabled={createStorageUnlimited}
+                      className="w-full bg-gray-50 border border-gray-300 rounded px-2 py-1 text-xs text-gray-900 focus:outline-none focus:border-emerald-200 disabled:opacity-50"
+                    >
+                      <option value="MB">MB</option>
+                      <option value="GB">GB</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Leave unlimited or enter a storage cap for the invited admin.</p>
                 </div>
               </div>
               <button

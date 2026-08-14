@@ -136,16 +136,17 @@ model AuditLog {
 }
 
 model InviteLink {
-  id        String    @id @default(cuid())
-  token     String    @unique
-  createdBy String
-  roleHint  UserRole?
-  expiresAt DateTime
-  usedAt    DateTime?
-  maxUses   Int       @default(1)
-  useCount  Int       @default(0)
-  createdAt DateTime  @default(now())
-  creator   User      @relation("InviteCreator", fields: [createdBy], references: [id])
+  id              String    @id @default(cuid())
+  token           String    @unique
+  createdBy       String
+  roleHint        UserRole?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  maxUses         Int       @default(1)
+  useCount        Int       @default(0)
+  maxStorageBytes Int?
+  createdAt       DateTime  @default(now())
+  creator         User      @relation("InviteCreator", fields: [createdBy], references: [id])
 
   @@index([createdBy])
   @@index([expiresAt])

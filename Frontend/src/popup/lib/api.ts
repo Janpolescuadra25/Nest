@@ -401,7 +401,7 @@ export const api = {
     post<{ message: string }>(`/api/admin/team/${id}/disable`, {}, jwt),
 
   // ── Invite Links ──────────────────────────────────────────────────────────
-  createInviteLink: (jwt: string, data: { roleHint?: string; expiresInHours?: number; maxUses?: number }) =>
+  createInviteLink: (jwt: string, data: { roleHint?: string; expiresInHours?: number; maxUses?: number; maxStorageBytes?: number | null }) =>
     post<{ invite: InviteLink }>('/api/admin/invite', data, jwt),
 
   listInviteLinks: (jwt: string, page = 1) =>
