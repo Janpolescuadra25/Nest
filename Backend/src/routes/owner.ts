@@ -564,6 +564,68 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
   }
 }));
 
+router.delete('/users/:id', asyncHandler(async (req: AuthRequest, res: Response) => {
+  const targetUserId = String(req.params.id);
+  const requesterId = req.user!.userId;
+
+  // Prevent self-deletion
+  if (requesterId === targetUserId) {
+    throw new AppError('Cannot delete your own account', 400);
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true, email: true, role: true, agreementDocUrl: true },
+  });
+  if (!targetUser) throw new AppError('User not found', 404);
+  if (targetUser.role === 'OWNER') {
+    throw new AppError('Cannot delete an owner account', 400);
+  }
+
+  const locations = await prisma.location.findMany({
+    where: { userId: targetUserId },
+    include: {
+      scanRecords: { include: { attachments: true } },
+      attachments: true,
+    },
+  });
+
+  const allStorageKeys: string[] = [];
+  locations.forEach((loc) => {
+    loc.scanRecords.forEach((scan) => {
+      scan.attachments.forEach((att: { storageKey: string }) => {
+        if (att.storageKey) allStorageKeys.push(att.storageKey);
+      });
+    });
+    loc.attachments.forEach((att: { storageKey: string }) => {
+      if (att.storageKey) allStorageKeys.push(att.storageKey);
+    });
+  });
+
+  if (targetUser.agreementDocUrl) {
+    const agreementDoc = targetUser.agreementDocUrl;
+    // agreementDocUrl stores a raw storage key when uploaded through the backend.
+    // If it contains query params or is a full external URL, skip deletion because
+    // presigned URLs expire automatically and external links are not our storage.
+    if (!agreementDoc.includes('?') && !agreementDoc.startsWith('http://') && !agreementDoc.startsWith('https://')) {
+      allStorageKeys.push(agreementDoc);
+    }
+  }
+
+  await Promise.allSettled(allStorageKeys.map((key) => deleteFile(key).catch(() => {})));
+
+  await prisma.user.delete({ where: { id: targetUserId } });
+
+  await logAction({
+    actorId: requesterId,
+    action: 'USER_DELETED',
+    targetUserId: targetUserId,
+    details: { deletedUserEmail: targetUser.email, deletedUserRole: targetUser.role },
+  });
+
+  res.json({ success: true, message: 'User deleted permanently' });
+}));
+
 // ── PATCH /api/owner/admins/:id ───────────────────────────────────────────────
 const updateAdminSchema = z.object({
   maxUsers: z.number().int().min(1).max(1000).optional().nullable(),

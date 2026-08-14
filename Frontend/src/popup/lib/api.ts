@@ -355,6 +355,9 @@ export const api = {
   ownerResetPermissions: (jwt: string, userId: string) =>
     patch<{ user: { id: string } }>(`/api/owner/users/${userId}/permissions-reset`, {}, jwt),
 
+  ownerDeleteUser: (jwt: string, userId: string) =>
+    del<void>(`/api/owner/users/${userId}`, jwt),
+
   // ── Admin Team ─────────────────────────────────────────────────────────────
   getAdminStats: (jwt: string) =>
     get<{

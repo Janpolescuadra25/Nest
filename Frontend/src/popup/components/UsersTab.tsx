@@ -72,6 +72,7 @@ export default function UsersTab({ jwt }: Props) {
   const [trialEnabled, setTrialEnabled] = useState<Record<string, boolean>>({});
   const [collapsedAdmins, setCollapsedAdmins] = useState<Record<string, boolean>>({});
   const [resetPermissionsDialog, setResetPermissionsDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -141,6 +142,22 @@ export default function UsersTab({ jwt }: Props) {
       showToast(err.message || 'Failed to reset permissions', 'error');
     } finally {
       setActionLoading(p => ({ ...p, [`reset_${user.id}`]: false }));
+    }
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteDialog.user) return;
+    const user = deleteDialog.user;
+    setDeleteDialog({ open: false, user: null });
+    setActionLoading(p => ({ ...p, [`delete_${user.id}`]: true }));
+    try {
+      await api.ownerDeleteUser(jwt, user.id);
+      showToast('Account deleted permanently', 'success');
+      await fetchUsers();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete account', 'error');
+    } finally {
+      setActionLoading(p => ({ ...p, [`delete_${user.id}`]: false }));
     }
   };
 
@@ -275,6 +292,15 @@ export default function UsersTab({ jwt }: Props) {
                         {actionLoading[`reset_${user.id}`] ? 'Resetting…' : 'Reset CanX'}
                       </button>
                     )}
+                    {user.role !== 'OWNER' && (
+                      <button
+                        onClick={() => setDeleteDialog({ open: true, user })}
+                        disabled={actionLoading[`delete_${user.id}`]}
+                        className="w-full py-1.5 rounded text-xs font-medium border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        {actionLoading[`delete_${user.id}`] ? 'Deleting…' : 'Delete Account'}
+                      </button>
+                    )}
 
                     {/* Trial reset */}
                     <div className="pt-2 border-t border-gray-200 space-y-2">
@@ -323,6 +349,16 @@ export default function UsersTab({ jwt }: Props) {
         onConfirm={confirmResetCanX}
         onCancel={() => setResetPermissionsDialog({ open: false, user: null })}
         variant="default"
+      />
+      <ConfirmDialog
+        open={deleteDialog.open}
+        title="Delete Account Permanently"
+        message={`Are you sure you want to permanently delete ${deleteDialog.user?.name || deleteDialog.user?.email}? All their data, scans, and attachments will be destroyed. This cannot be undone.`}
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteUser}
+        onCancel={() => setDeleteDialog({ open: false, user: null })}
+        variant="danger"
       />
     </div>
   );
