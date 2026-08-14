@@ -1,6 +1,6 @@
-## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
+## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`42f1d09`, pushed)
+### Repo State (`010e9ca`, pushed)
 
 | Area | Status |
 |---|---|
@@ -15,25 +15,12 @@
 
 ---
 
-### Phase N: Sync Reliability & Activity Logging
-**Goal**: Eliminate silent sync failures and add full audit logging for all system actions, making the financial data pipeline trustworthy and production-ready.
-
-- ~~N-1: Sync Error Recovery~~ ✅
-- ~~N-2: Activity Log Model~~ ✅ (built as `AuditLog` model + `logAction()` helper in earlier work)
-- ~~N-3: Activity Log UI~~ ✅ (built as `ActivityTab.tsx` in earlier work — filtering, pagination, role-based visibility)
-- ~~N-4: Sync Status UI~~ ✅
-- N-5: Email Notification Preferences — Create `NotificationPreference` Prisma model (`userId`, `syncFailureAlerts`, `quotaWarningAlerts`, `teamChangeAlerts`). Add a "Notifications" section in user settings UI. Add email alerts for storage usage exceeding 80% of limit and team member join/remove. (Sync failure email alerts already exist via `sync-failure-alerts.ts` cron job + Resend integration — do NOT rebuild those. Only the preference model, settings UI, and quota/team alerts are missing.)
-
-### Standalone UX Fixes
-
-- ~~**Approved/Review Tab Workflow Fix**~~ ✅
-
----
-
 ### Completed History
 
 | Phase | Commits | Summary |
 |-------|---------|---------|
+| Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
+| UX Fix | (feature: `42f1d09`, docs: `010e9ca`) | Approved/Review tab workflow fix — REJECTED scans hidden from Approved tab, filter counts include syncStatus. |
 | Rebrand | c392366 … 05f7a82 | Nest → Qyra across ~42 files |
 | Workflow Restructure | b1a7170 6b490d9 | Role permissions, tab restructure, bulk endpoints |
 | Phase M | 2cffaad | ~~Phase M: Owner Capacity Management & Account Deletion~~ ✅ — Completed M-1 through M-6, including admin invite links, capacity distribution, storage limits, and silent 50 GB abuse prevention. |
