@@ -822,13 +822,17 @@ async function syncSingleScan(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, lines, privateNote, docNumber: finalDocNumber } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
+        data: {
+          status: 'SYNCED',
+          syncStatus: 'SYNCED',
+          lastSyncError: null,
+        },
       });
 
       try {
@@ -883,7 +887,7 @@ async function syncSingleScan(
       requestHash,
       status: 'FAILED',
       attemptCount,
-      requestPayload: { txnDate, lines, privateNote, docNumber } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, lines, privateNote, docNumber: finalDocNumber } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
     }).catch(console.error);
@@ -891,7 +895,11 @@ async function syncSingleScan(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'FAILED',
+          syncStatus: 'FAILED',
+          lastSyncError: message,
+        },
       }).catch(console.error);
     }
 
@@ -969,13 +977,17 @@ async function syncSingleVendorCredit(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, memo, privateNote, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, memo, privateNote, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
+        data: {
+          status: 'SYNCED',
+          syncStatus: 'SYNCED',
+          lastSyncError: null,
+        },
       });
 
       try {
@@ -1030,7 +1042,7 @@ async function syncSingleVendorCredit(
       requestHash,
       status: 'FAILED',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
     }).catch(console.error);
@@ -1038,7 +1050,11 @@ async function syncSingleVendorCredit(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'FAILED',
+          syncStatus: 'FAILED',
+          lastSyncError: message,
+        },
       }).catch(console.error);
     }
 
@@ -1118,13 +1134,17 @@ async function syncSingleCheque(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
+        data: {
+          status: 'SYNCED',
+          syncStatus: 'SYNCED',
+          lastSyncError: null,
+        },
       });
 
       try {
@@ -1179,7 +1199,7 @@ async function syncSingleCheque(
       requestHash,
       status: 'FAILED',
       attemptCount,
-      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
     }).catch(console.error);
@@ -1187,7 +1207,11 @@ async function syncSingleCheque(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'FAILED',
+          syncStatus: 'FAILED',
+          lastSyncError: message,
+        },
       }).catch(console.error);
     }
 
@@ -1269,13 +1293,17 @@ async function syncSingleBill(
       requestHash,
       status: 'SUCCESS',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
     });
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
+        data: {
+          status: 'SYNCED',
+          syncStatus: 'SYNCED',
+          lastSyncError: null,
+        },
       });
 
       try {
@@ -1330,7 +1358,7 @@ async function syncSingleBill(
       requestHash,
       status: 'FAILED',
       attemptCount,
-      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, docNumber, lines } as unknown as Prisma.JsonObject,
+      requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
     }).catch(console.error);
@@ -1338,7 +1366,11 @@ async function syncSingleBill(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'FAILED',
+          syncStatus: 'FAILED',
+          lastSyncError: message,
+        },
       }).catch(console.error);
     }
 
@@ -1407,7 +1439,11 @@ async function syncSingleBillPayment(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'SYNCED' },
+        data: {
+          status: 'SYNCED',
+          syncStatus: 'SYNCED',
+          lastSyncError: null,
+        },
       });
 
       try {
@@ -1469,7 +1505,11 @@ async function syncSingleBillPayment(
     if (scanRecordId) {
       await prisma.scanRecord.update({
         where: { id: scanRecordId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'FAILED',
+          syncStatus: 'FAILED',
+          lastSyncError: message,
+        },
       }).catch(console.error);
     }
 

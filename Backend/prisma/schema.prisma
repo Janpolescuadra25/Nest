@@ -350,6 +350,8 @@ model ScanRecord {
   source          String       @default("pos")
   transactionType String       @default("JOURNAL_ENTRY")
   autoAttach      Boolean      @default(true)
+  syncStatus      ScanStatus   @default(PENDING)
+  lastSyncError   String?
   location        Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
   submittedBy     User?        @relation("ScanSubmitter", fields: [submittedById], references: [id])
   approvedBy      User?        @relation("ScanApprover", fields: [approvedById], references: [id])

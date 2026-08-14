@@ -826,22 +826,34 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isRetryableError(err: unknown): boolean {
+  if (err instanceof QBApiError) {
+    return [429, 502, 503, 504, 408].includes(err.statusCode);
+  }
+  if (err instanceof Error) {
+    return /timeout|timed out|network|ECONNRESET|EAI_AGAIN/i.test(err.message);
+  }
+  return false;
+}
+
 async function callQB<T>(userId: string, fn: (creds: { accessToken: string; realmId: string }) => Promise<T>): Promise<T> {
   let { accessToken, realmId } = await getValidToken(userId);
+  const maxAttempts = 4;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await fn({ accessToken, realmId });
     } catch (err: unknown) {
-      if (!(err instanceof QBApiError)) throw err;
-      if (err.statusCode === 401 && attempt === 0) {
+      if (err instanceof QBApiError && err.statusCode === 401 && attempt === 0) {
         accessToken = await forceRefreshToken(userId);
         continue;
       }
-      if (err.statusCode === 429 && attempt < 2) {
+
+      if (isRetryableError(err) && attempt < maxAttempts - 1) {
         await sleep(1000 * Math.pow(2, attempt));
         continue;
       }
+
       throw err;
     }
   }
