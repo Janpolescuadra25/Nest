@@ -1,10 +1,10 @@
 ## 🗺️ Qyra Roadmap — Cypra v5 (K-5 Complete)
 
-### Repo State (`7bb9f25`, pushed)
+### Repo State (`983848c`, pushed)
 
 | Area | Status |
 |---|---|
-| Frontend tests | 107/107 ✅ |
+| Frontend tests | 108/108 ✅ |
 | Backend tests | 69/69 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
@@ -15,39 +15,8 @@
 
 ---
 
-### Phase L: Bill Excel Sync (L-3 complete)
+### Phase L: Bill Excel Sync (Phase L complete)
 **Goal:** Enable users to import vendor bills from Excel into QuickBooks, mirroring the cheque flow with bill-specific fields (due dates, payment terms), value mapping, per-row preview, and batch sync.
-
-#### L-3: Bill Preview (Per-Row)
-**Goal:** Show each parsed bill row as an independent, editable preview form with bill-specific fields, rendered as stacked instances for multi-bill Excel files.
-**Expected outcome:**
-- `BillPreviewForm` component created (or CheckPreviewForm extended with bill mode) with fields: vendor (SearchableSelect), billNo, date, dueDate (date picker), account, taxType, amount, memo, terms (SearchableSelect or dropdown), poNumber
-- Vendor resolved by direct name match against QBVendors (no customer lookup — bills are always vendor-facing)
-- Line-level taxCodeRef preserved in preview (matching K-5 pattern)
-- App.tsx routes `BILL`-type scanEntries to render N BillPreviewForm instances stacked vertically with `Bill {index + 1} (Row {rowNumber})` headings
-- Each form has independent scanRecordId tracking
-- Editable fields with manual override capability
-- Frontend tests added for BillPreviewForm rendering and data flow
-
-#### L-4: Direct Bill Sync (Per-Row)
-**Goal:** Enable per-row bill submission from the preview form directly to QuickBooks, with validation against billSchema.
-**Expected outcome:**
-- `api.createBill` (or equivalent) endpoint called from BillPreviewForm submit handler
-- Payload includes: vendorRef, docNumber (billNo), txnDate, dueDate, line items (account, amount, taxCodeRef), memo, termsRef, poNumber
-- Backend validates against `billSchema` in validators.ts (schema already exists)
-- Per-row success/failure feedback displayed on the form
-- Frontend tests added for direct bill sync
-
-#### L-5: Batch Bill Sync
-**Goal:** Enable bulk sync of all bill rows from SyncView using the batch payload builder, matching the per-row pattern established in K-5.
-**Expected outcome:**
-- SyncView bulk handler loops over `scan.scanEntries` for `BILL`-type entries
-- Each entry passes through `buildBillPayload` with vendors, taxCodes, and accounts from `useQBContext()`
-- `buildBillPayload` produces one payload per entry with all value mapping resolved and scanRecordId attached
-- Batch sync API call submits all bill payloads
-- Per-entry success/failure tracked and displayed in SyncView
-- `taxCodeRef` included in line items when taxType is resolved
-- Frontend tests added for batch bill payload building
 
 **Mapping contract** (same as cheque — permanent reference):
 - `resolveValueMapping(scannedText, fieldType, mappings, entityLookup, sourceField)` — sourceField disambiguates same fieldType across bill columns (e.g., vendor column vs account column)
@@ -70,6 +39,8 @@
 | K | b83853a | Per-row cheque batch payload generation, line-level taxCodeRef validation, sourceField-based value mapping for all cheque columns, multi-check preview with independent scanRecordId, row-grouping removal |
 | L-1 | 9dc6412 | Bill Excel format definition and parsing, ScanEntry type tagging, backend bill column detection |
 | L-2 | 7bb9f25 | Bill value mapping for header fields, MappingView bill column configs, SyncView vendor/terms passthrough |
+| L-4 | (pre-built) | Direct bill sync — BillPreviewForm handleSync calls api.createBill, backend POST /api/quickbooks/bill validates with billSchema |
+| L-5 | 983848c | taxCodeRef resolution in bill batch payload line items, taxCodes passthrough in SyncView |
 | R-4 | (no code commit) | qyra.space live, Render, Resend, Intuit URI |
 
 ---
