@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, downloadCSV } from '../lib/api';
 import { relativeTime } from '../lib/utils';
 import type { OwnerAuditLogEntry } from '../../types';
 
@@ -39,6 +39,7 @@ export default function ActivityTab({ jwt }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // Filters
   const [actionFilter, setActionFilter] = useState('');
@@ -74,6 +75,22 @@ export default function ActivityTab({ jwt }: Props) {
     setDateTo('');
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (actionFilter) params.set('action', actionFilter);
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
+      const qs = params.toString();
+      await downloadCSV(jwt, `/api/exports/audit-logs${qs ? '?' + qs : ''}`, 'audit-logs-export.csv');
+    } catch (err) {
+      console.error('[ActivityTab] Export failed', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const totalPages = Math.ceil(total / LIMIT);
   const startIdx = total === 0 ? 0 : (page - 1) * LIMIT + 1;
   const endIdx = Math.min(page * LIMIT, total);
@@ -82,7 +99,17 @@ export default function ActivityTab({ jwt }: Props) {
     <div className="p-3 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-gray-900">Activity Log</h2>
-        <span className="text-xs text-gray-600">{total} entries</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={exporting || loading}
+            onClick={handleExport}
+            className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded disabled:opacity-40"
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
+          <span className="text-xs text-gray-600">{total} entries</span>
+        </div>
       </div>
 
       {/* Filters */}

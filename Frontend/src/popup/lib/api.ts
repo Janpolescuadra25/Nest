@@ -53,6 +53,24 @@ async function get<T>(path: string, jwt?: string | null): Promise<T> {
   return parseResponse<T>(res, path);
 }
 
+export async function downloadCSV(jwt: string, path: string, filename: string): Promise<void> {
+  const h = await headers(jwt);
+  const res = await fetch(`${BASE_URL}${path}`, { headers: h });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new ApiError(payload.error || 'Download failed', res.status, payload);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function post<T>(path: string, body: unknown, jwt?: string | null): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',

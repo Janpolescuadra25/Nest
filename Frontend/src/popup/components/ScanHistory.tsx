@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ScanEntry, ScanRecord } from '../../types';
-import { api } from '../lib/api';
+import { api, downloadCSV } from '../lib/api';
 
 interface Props {
   jwt: string;
@@ -20,6 +20,7 @@ export default function ScanHistory({ jwt, locationId, currentScanMode, onLoadSc
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeLoadId, setActiveLoadId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const loadPage = async (nextPage: number) => {
     setLoading(true);
@@ -53,11 +54,32 @@ export default function ScanHistory({ jwt, locationId, currentScanMode, onLoadSc
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const dateTo = new Date().toISOString().split('T')[0];
+      const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      await downloadCSV(jwt, `/api/exports/scans?dateFrom=${dateFrom}&dateTo=${dateTo}`, 'scans-export.csv');
+    } catch (err) {
+      console.error('[ScanHistory] Export failed', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-sm font-semibold text-gray-900">Scan History</div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={exporting || loading}
+            onClick={handleExport}
+            className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded disabled:opacity-40"
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
           <button
             type="button"
             disabled={page <= 1 || loading}
