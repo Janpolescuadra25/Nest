@@ -32,11 +32,13 @@
 
 | Phase | Commits | Summary |
 |-------|---------|---------|
+| O-1 | `df459bb` | Dashboard analytics: monthly scan volume bar chart, sync health pie chart, top 5 mapped accounts table, storage usage gauge, date range selector, GET /api/analytics/dashboard endpoint. |
 | Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
+| N-5 | `01cf0fa` | Email notification preferences: NotificationPreference model, GET/PUT /api/notifications/preferences, quota warning cron, team change alerts in invite/admin/admin owner routes, SettingsView toggles, ToggleRow component. |
 | UX Fix | (feature: `42f1d09`, docs: `010e9ca`) | Approved/Review tab workflow fix — REJECTED scans hidden from Approved tab, filter counts include syncStatus. |
 | Rebrand | c392366 … 05f7a82 | Nest → Qyra across ~42 files |
 | Workflow Restructure | b1a7170 6b490d9 | Role permissions, tab restructure, bulk endpoints |
-| Phase M | 2cffaad | ~~Phase M: Owner Capacity Management & Account Deletion~~ ✅ — Completed M-1 through M-6, including admin invite links, capacity distribution, storage limits, and silent 50 GB abuse prevention. |
+| Phase M | 2cffaad | Owner Capacity Management & Account Deletion — M-1 through M-6, including admin invite links, capacity distribution, storage limits, and silent 50 GB abuse prevention. |
 | Phase L | 9dc6412, 7bb9f25, 983848c | Bill Excel sync complete: bill import parsing, bill-specific value mapping, and taxCodeRef resolution for QuickBooks bill sync. |
 | Backend Test Fixes | 3f44041 9f482fc a008cab 95e6cca | stripe-plans, webhooks, capacity, team-status |
 | A-1/A-2 | 56b9a43 472bf7f | Admin resource scoping + distribution (owner → admin → member) |
@@ -48,5 +50,3 @@
 | L-4 | (pre-built) | Direct bill sync — BillPreviewForm handleSync calls api.createBill, backend POST /api/quickbooks/bill validates with billSchema |
 | L-5 | 983848c | taxCodeRef resolution in bill batch payload line items, taxCodes passthrough in SyncView |
 | R-4 | (no code commit) | qyra.space live, Render, Resend, Intuit URI |
-
----
