@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api, type UserInfo, type ScanPack, type ScanPackPurchase } from '../lib/api';
 import { useQuickBooks } from '../hooks/useQuickBooks';
 import PricingView from './PricingView';
+import ToggleRow from './ToggleRow';
 
 interface Props {
   jwt: string;
@@ -30,6 +31,18 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
   const [packLoading, setPackLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(true);
   const [packError, setPackError] = useState<string | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<{ syncFailureAlerts: boolean; quotaWarningAlerts: boolean; teamChangeAlerts: boolean } | null>(null);
+
+  const handleNotifToggle = async (key: keyof NonNullable<typeof notifPrefs>) => {
+    if (!notifPrefs) return;
+    const newValue = !notifPrefs[key];
+    setNotifPrefs({ ...notifPrefs, [key]: newValue });
+    try {
+      await api.updateNotificationPreferences(jwt, { [key]: newValue });
+    } catch {
+      setNotifPrefs({ ...notifPrefs, [key]: !newValue });
+    }
+  };
 
   const handleResendVerification = async () => {
     setVerificationStatus('sending');
@@ -64,6 +77,13 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
       .then(setScanUsage)
       .catch(() => setScanUsage(null))
       .finally(() => setUsageLoading(false));
+  }, [jwt]);
+
+  useEffect(() => {
+    if (!jwt) return;
+    api.getNotificationPreferences(jwt)
+      .then(setNotifPrefs)
+      .catch(() => setNotifPrefs(null));
   }, [jwt]);
 
   useEffect(() => {
@@ -342,6 +362,30 @@ export default function SettingsView({ jwt, user, onLogout }: Props) {
           <PricingView jwt={jwt} user={user} onManageBilling={handleOpenBillingPortal} onClose={() => setShowPricing(false)} />
         </div>
       )}
+
+      <div>
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Notifications</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-3">
+          <ToggleRow
+            label="Sync Failure Alerts"
+            description="Get notified when cheque/bill syncs fail"
+            enabled={notifPrefs?.syncFailureAlerts ?? true}
+            onToggle={() => void handleNotifToggle('syncFailureAlerts')}
+          />
+          <ToggleRow
+            label="Storage Quota Warnings"
+            description="Alert when storage usage exceeds 80%"
+            enabled={notifPrefs?.quotaWarningAlerts ?? true}
+            onToggle={() => void handleNotifToggle('quotaWarningAlerts')}
+          />
+          <ToggleRow
+            label="Team Changes"
+            description="Notify when team members join or are removed"
+            enabled={notifPrefs?.teamChangeAlerts ?? true}
+            onToggle={() => void handleNotifToggle('teamChangeAlerts')}
+          />
+        </div>
+      </div>
 
       <div>
         <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Purchase History</div>

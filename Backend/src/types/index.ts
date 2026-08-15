@@ -22,6 +22,7 @@ export interface AuthPayload {
   gracePeriodHours: number;
   maxScans?: number | null;
   scanHistoryDays?: number | null;
+  allocatedScans?: number | null;
   blocked: boolean;
   blockedById: string | null;
   approvedById: string | null;

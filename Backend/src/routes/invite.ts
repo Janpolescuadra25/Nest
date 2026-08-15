@@ -13,7 +13,7 @@ import { validate } from '../middleware/validate';
 import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { getPermissionDefaults } from '../middleware/permissions';
-import { sendVerificationEmail } from '../lib/email';
+import { sendTeamChangeAlert, sendVerificationEmail } from '../lib/email';
 
 const router = Router();
 
@@ -145,6 +145,30 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
       }
     } catch (emailErr) {
       console.error('[Invite] signup setup error:', emailErr);
+    }
+
+    try {
+      const creator = await prisma.user.findUnique({
+        where: { id: invite.createdBy },
+        select: { id: true, email: true, name: true, status: true },
+      });
+      if (creator?.email && creator.status === 'ACTIVE') {
+        const prefs = await prisma.notificationPreference.findUnique({ where: { userId: creator.id } });
+        if (!prefs || prefs.teamChangeAlerts) {
+          const teamAlertResult = await sendTeamChangeAlert({
+            to: creator.email,
+            name: creator.name ?? creator.email,
+            memberName: result.name ?? result.email,
+            memberEmail: result.email,
+            action: 'joined',
+          });
+          if (!teamAlertResult.success) {
+            console.error('[Invite] sendTeamChangeAlert failed:', teamAlertResult.error);
+          }
+        }
+      }
+    } catch (alertErr) {
+      console.error('[Invite] sendTeamChangeAlert error:', alertErr);
     }
 
     // Log audit actions

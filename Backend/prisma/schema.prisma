@@ -76,6 +76,7 @@ model User {
   products                Product[]
   qbTokens                QBToken?
   syncLogs                SyncLog[]
+  notificationPreferences NotificationPreference?
   admin                   User?                    @relation("AdminUsers", fields: [adminId], references: [id])
   teamMembers             User[]                   @relation("AdminUsers")
   manager                 User?                    @relation("TeamManager", fields: [managedById], references: [id])
@@ -473,6 +474,19 @@ model EmailVerificationToken {
   @@index([token])
   @@index([userId])
   @@map("email_verification_tokens")
+}
+
+model NotificationPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncFailureAlerts  Boolean  @default(true)
+  quotaWarningAlerts Boolean  @default(true)
+  teamChangeAlerts   Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("notification_preferences")
 }
 
 model Product {

@@ -132,6 +132,11 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
       const total = data.staleCount + data.maxRetriedCount + data.oldFailureCount;
       if (total === 0) continue;
 
+      const prefs = await prisma.notificationPreference.findUnique({ where: { userId: leadId } });
+      if (prefs && !prefs.syncFailureAlerts) {
+        continue;
+      }
+
       const lastAlert = await prisma.auditLog.findFirst({
         where: { targetUserId: leadId, action: 'SYNC_FAILURE_ALERT' },
         orderBy: { createdAt: 'desc' },

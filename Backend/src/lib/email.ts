@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { formatBytes } from './utils';
 
 // ── Singleton ─────────────────────────────────────────────────────────────────
 
@@ -275,6 +276,96 @@ export async function sendSyncFailureAlert({
     return { success: true };
   } catch (err) {
     console.error('[Email] sendSyncFailureAlert failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function sendQuotaWarning({
+  to,
+  name,
+  currentUsage,
+  maxStorage,
+  percentage,
+}: {
+  to: string;
+  name: string;
+  currentUsage: number;
+  maxStorage: number;
+  percentage: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const resend = getResendClient();
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        Your team is using <strong style="color:#0f172a;">${percentage.toFixed(0)}%</strong> of your configured storage limit.
+      </p>
+      <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;">
+        <p style="color:#0f172a;font-size:14px;font-weight:700;margin:0 0 12px;">Storage usage</p>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(formatBytes(currentUsage))} of ${escapeHtml(formatBytes(maxStorage))} used.</p>
+      </div>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 16px;">
+        You are approaching your storage limit. Upgrade your plan or remove old attachments to avoid sync interruptions.
+      </p>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
+      to,
+      subject: 'Storage quota warning — Qyra',
+      html,
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Quota warning sent to ${to}`);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('[Email] sendQuotaWarning failed:', err);
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function sendTeamChangeAlert({
+  to,
+  name,
+  memberName,
+  memberEmail,
+  action,
+}: {
+  to: string;
+  name: string;
+  memberName: string;
+  memberEmail: string;
+  action: 'joined' | 'removed';
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const resend = getResendClient();
+    const verb = action === 'joined' ? 'joined your team' : 'was removed from your team';
+    const html = emailWrapper(`
+      <p style="color:#1e293b;font-size:16px;margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
+      <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px;">
+        <strong style="color:#0f172a;">${escapeHtml(memberName)}</strong> (${escapeHtml(memberEmail)}) ${verb}.
+      </p>
+      <div style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;">
+        <p style="color:#0f172a;font-size:14px;font-weight:700;margin:0 0 12px;">Team change details</p>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0;">Member: ${escapeHtml(memberName)}</p>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0;">Email: ${escapeHtml(memberEmail)}</p>
+        <p style="color:#475569;font-size:14px;line-height:1.6;margin:0;">Action: ${escapeHtml(action)}</p>
+      </div>
+    `);
+
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_ADDRESS ?? 'noreply@qyra.space',
+      to,
+      subject: `Team member ${action} — Qyra`,
+      html,
+    });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Email] Team change alert sent to ${to}`);
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('[Email] sendTeamChangeAlert failed:', err);
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

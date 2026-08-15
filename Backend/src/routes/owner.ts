@@ -13,8 +13,32 @@ import { validate } from '../middleware/validate';
 import { teamAllocationSchema } from '../lib/validators';
 import multer from 'multer';
 import { uploadAgreementDoc, deleteFile, getPresignedUrl } from '../lib/storage';
+import { sendTeamChangeAlert } from '../lib/email';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+async function maybeSendOwnerTeamChangeAlert(params: {
+  userId: string;
+  to: string;
+  name: string | null;
+  memberName: string | null;
+  memberEmail: string;
+  action: 'joined' | 'removed';
+}): Promise<void> {
+  const prefs = await prisma.notificationPreference.findUnique({ where: { userId: params.userId } });
+  if (prefs && !prefs.teamChangeAlerts) return;
+
+  const result = await sendTeamChangeAlert({
+    to: params.to,
+    name: params.name ?? params.to,
+    memberName: params.memberName ?? params.memberEmail,
+    memberEmail: params.memberEmail,
+    action: params.action,
+  });
+  if (!result.success) {
+    console.error('[Owner] sendTeamChangeAlert failed:', result.error);
+  }
+}
 
 const router = Router();
 
@@ -583,7 +607,7 @@ router.delete('/users/:id', asyncHandler(async (req: AuthRequest, res: Response)
 
   const targetUser = await prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { id: true, email: true, role: true, agreementDocUrl: true },
+    select: { id: true, email: true, name: true, role: true, agreementDocUrl: true },
   });
   if (!targetUser) throw new AppError('User not found', 404);
   if (targetUser.role === 'OWNER') {
@@ -623,6 +647,15 @@ router.delete('/users/:id', asyncHandler(async (req: AuthRequest, res: Response)
   await Promise.allSettled(allStorageKeys.map((key) => deleteFile(key).catch(() => {})));
 
   await prisma.user.delete({ where: { id: targetUserId } });
+
+  await maybeSendOwnerTeamChangeAlert({
+    userId: requesterId,
+    to: req.user!.email,
+    name: req.user!.name ?? req.user!.email,
+    memberName: targetUser.name ?? targetUser.email,
+    memberEmail: targetUser.email,
+    action: 'removed',
+  });
 
   await logAction({
     actorId: requesterId,

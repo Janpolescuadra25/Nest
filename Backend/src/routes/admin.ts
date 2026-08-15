@@ -6,7 +6,7 @@ import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
 import { requireCapacity } from '../middleware/capacity';
 import { prisma } from '../lib/prisma';
-import { sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
+import { sendTeamChangeAlert, sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
 import { validate } from '../middleware/validate';
 import { teamInviteSchema, patchTeamMemberSchema, inviteLinkSchema, teamAllocationSchema } from '../lib/validators';
 import { parsePagination, buildPaginationMeta } from '../lib/pagination';
@@ -17,6 +17,29 @@ import { ALL_FEATURES, ALL_ACTIONS, getPermissionDefaults } from '../middleware/
 import { mergePermissions } from '../lib/permission-utils';
 
 const router = Router();
+
+async function maybeSendTeamChangeAlert(params: {
+  userId: string;
+  to: string;
+  name: string | null;
+  memberName: string | null;
+  memberEmail: string;
+  action: 'joined' | 'removed';
+}): Promise<void> {
+  const prefs = await prisma.notificationPreference.findUnique({ where: { userId: params.userId } });
+  if (prefs && !prefs.teamChangeAlerts) return;
+
+  const result = await sendTeamChangeAlert({
+    to: params.to,
+    name: params.name ?? params.to,
+    memberName: params.memberName ?? params.memberEmail,
+    memberEmail: params.memberEmail,
+    action: params.action,
+  });
+  if (!result.success) {
+    console.error('[Admin] sendTeamChangeAlert failed:', result.error);
+  }
+}
 
 function buildUserForAccess(user: {
   role: string;
@@ -224,6 +247,15 @@ router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('us
     });
 
     const emailResult = await sendWelcomeEmail({ to: newUser.email, name: newUser.name, tempPassword });
+
+    await maybeSendTeamChangeAlert({
+      userId: req.user!.userId,
+      to: req.user!.email,
+      name: req.user!.name ?? req.user!.email,
+      memberName: newUser.name ?? newUser.email,
+      memberEmail: newUser.email,
+      action: 'joined',
+    });
 
     return res.status(201).json({
       user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role, adminId: newUser.adminId },
@@ -646,7 +678,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
 router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
-    const target = await prisma.user.findUnique({ where: { id } });
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true, role: true } });
     if (!target) throw new AppError('User not found.', 404);
     if (target.adminId !== req.user!.userId) {
       throw new AppError('You can only manage your own team members.', 403);
@@ -656,6 +688,15 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
     }
 
     await prisma.user.update({ where: { id }, data: { status: 'DISABLED' } });
+
+    await maybeSendTeamChangeAlert({
+      userId: req.user!.userId,
+      to: req.user!.email,
+      name: req.user!.name ?? req.user!.email,
+      memberName: target.name ?? target.email,
+      memberEmail: target.email,
+      action: 'removed',
+    });
 
     await prisma.auditLog.create({
       data: { actorId: req.user!.userId, action: 'USER_DISABLED', targetUserId: id },
