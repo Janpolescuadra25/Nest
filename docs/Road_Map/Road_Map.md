@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`df459bb`, pushed)
+### Repo State (`b76f62f`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 100/100 ✅ |
+| Backend tests | 103/103 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -18,7 +18,7 @@
 
 - ~~O-1: **Dashboard Analytics**~~ ✅ — Enhance `DashboardView.tsx` with: monthly scan volume bar chart, sync success/failure donut chart, top 5 mapped accounts table, and a storage usage gauge. New backend endpoint `GET /api/analytics/dashboard` returning aggregated stats from `ScanRecord`, `SyncLog`, and `AuditLog` models. No new Prisma models required — use existing `prisma.scanRecord.groupBy()` and count queries. Frontend charts rendered with a lightweight library (e.g., recharts or a simple CSS-based approach). Include a date range selector (last 7/30/90 days, this month, custom).
 
-- O-2: **Data Export (CSV)** — Add CSV export for scan history and sync logs. Backend: new file `Backend/src/routes/exports.ts` with `GET /api/exports/scans?format=csv&dateFrom=&dateTo=&status=` and `GET /api/exports/sync-logs?format=csv&dateFrom=&dateTo=&syncType=`. Use existing Prisma queries with streaming CSV generation (no in-memory buffering for large datasets). Set `Content-Disposition: attachment` header. Frontend: add "Export CSV" button in `ScanHistory.tsx` and `ActivityTab.tsx` that triggers a file download via `window.open()` or a blob URL. No new Prisma models required.
+- ~~O-2: **Data Export (CSV)**~~ ✅ — Add CSV export for scan history and sync logs. Backend: new file `Backend/src/routes/exports.ts` with `GET /api/exports/scans?format=csv&dateFrom=&dateTo=&status=` and `GET /api/exports/sync-logs?format=csv&dateFrom=&dateTo=&syncType=`. Use existing Prisma queries with streaming CSV generation (no in-memory buffering for large datasets). Set `Content-Disposition: attachment` header. Frontend: add "Export CSV" button in `ScanHistory.tsx` and `ActivityTab.tsx` that triggers a file download via `window.open()` or a blob URL. No new Prisma models required.
 
 - O-3: **Audit Log Enhancements** — Add date-range filtering and user filtering to the existing `ActivityTab.tsx`. Backend: first, locate the existing route that serves audit log data to the frontend (search `Backend/src/routes/` for any endpoint that queries the `AuditLog` model — likely in `admin.ts` or a similar file). If no dedicated endpoint exists, create `GET /api/activity-logs` in the appropriate route file. Then update that endpoint to accept optional query params: `dateFrom` (ISO string), `dateTo` (ISO string), and `userId` (string). Apply as `where` clause filters on the existing `AuditLog` query. Frontend: add a date range picker (reuse or extend `SmartDatePicker.tsx`) and a user dropdown (populated from team members list) above the existing activity log table in `ActivityTab.tsx`. Both filters should work together and update the URL query params for shareable filtered views.
 
@@ -33,6 +33,7 @@
 | Phase | Commits | Summary |
 |-------|---------|---------|
 | O-1 | `df459bb` | Dashboard analytics: monthly scan volume bar chart, sync health pie chart, top 5 mapped accounts table, storage usage gauge, date range selector, GET /api/analytics/dashboard endpoint. |
+| O-2 | `b76f62f` | CSV export: scans, sync logs, and audit logs export endpoints, downloadCSV helper, export buttons in ScanHistory and ActivityTab. |
 | Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
 | N-5 | `01cf0fa` | Email notification preferences: NotificationPreference model, GET/PUT /api/notifications/preferences, quota warning cron, team change alerts in invite/admin/admin owner routes, SettingsView toggles, ToggleRow component. |
 | UX Fix | (feature: `42f1d09`, docs: `010e9ca`) | Approved/Review tab workflow fix — REJECTED scans hidden from Approved tab, filter counts include syncStatus. |
