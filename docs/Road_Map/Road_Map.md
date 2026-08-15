@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`010e9ca`, pushed)
+### Repo State (`df459bb`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 98/98 ✅ |
+| Backend tests | 100/100 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -16,7 +16,7 @@
 ### Phase O: Observability, Export & Security Hardening
 **Goal**: Give users full visibility into their account activity, enable data portability, and harden the API against abuse — making Qyra production-ready for real-world teams.
 
-- O-1: **Dashboard Analytics** — Enhance `DashboardView.tsx` with: monthly scan volume bar chart, sync success/failure donut chart, top 5 mapped accounts table, and a storage usage gauge. New backend endpoint `GET /api/analytics/dashboard` returning aggregated stats from `ScanRecord`, `SyncLog`, and `AuditLog` models. No new Prisma models required — use existing `prisma.scanRecord.groupBy()` and count queries. Frontend charts rendered with a lightweight library (e.g., recharts or a simple CSS-based approach). Include a date range selector (last 7/30/90 days, this month, custom).
+- ~~O-1: **Dashboard Analytics**~~ ✅ — Enhance `DashboardView.tsx` with: monthly scan volume bar chart, sync success/failure donut chart, top 5 mapped accounts table, and a storage usage gauge. New backend endpoint `GET /api/analytics/dashboard` returning aggregated stats from `ScanRecord`, `SyncLog`, and `AuditLog` models. No new Prisma models required — use existing `prisma.scanRecord.groupBy()` and count queries. Frontend charts rendered with a lightweight library (e.g., recharts or a simple CSS-based approach). Include a date range selector (last 7/30/90 days, this month, custom).
 
 - O-2: **Data Export (CSV)** — Add CSV export for scan history and sync logs. Backend: new file `Backend/src/routes/exports.ts` with `GET /api/exports/scans?format=csv&dateFrom=&dateTo=&status=` and `GET /api/exports/sync-logs?format=csv&dateFrom=&dateTo=&syncType=`. Use existing Prisma queries with streaming CSV generation (no in-memory buffering for large datasets). Set `Content-Disposition: attachment` header. Frontend: add "Export CSV" button in `ScanHistory.tsx` and `ActivityTab.tsx` that triggers a file download via `window.open()` or a blob URL. No new Prisma models required.
 
