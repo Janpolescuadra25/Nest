@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`23f958a`, pushed)
+### Repo State (`37d7a92`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 115/115 ✅ |
+| Backend tests | 117/117 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -20,7 +20,7 @@
 | P-1 | Test suite reliability — all 18 suites green (110/110) | ✅ Complete |
 | P-2 | Structured logging & request tracing (pino + request ID) | ✅ Complete |
 | P-3 | API error response standardization (consistent shape, no stack traces in prod) | ✅ Complete |
-| P-4 | Input validation coverage completion (remaining unprotected routes) | Pending |
+| P-4 | Input validation coverage completion (remaining unprotected routes) | ✅ Complete |
 | P-5 | Security review (auth coverage, feature permissions, CORS, helmet) | Pending |
 | P-6 | Database performance audit (N+1 queries, indexes) | Pending |
 | P-7 | Enhanced health check (component-level status, env validation) | Pending |
@@ -29,6 +29,7 @@
 
 | Phase | Commits | Summary |
 |-------|---------|---------|
+| P-4 | `37d7a92` | Input validation completion: added Zod query schema for analytics dashboard endpoint, extended validate middleware to support query param validation, removed manual date validation, updated test assertions to reach 117/117 total backend tests — all 22 route files now have full Zod validation. |
 | P-3 | `23f958a` | API error response standardization: implemented global standardized error shape ({ success: false, error: { message, code, requestId, fields? } }), converted 16 direct error responses across 5 routes to AppError throws, proactively fixed capacity middleware direct responses, added 3 new error shape tests to reach 115/115 total backend tests. |
 | O-1 | `df459bb` | Dashboard analytics: monthly scan volume bar chart, sync health pie chart, top 5 mapped accounts table, storage usage gauge, date range selector, GET /api/analytics/dashboard endpoint. |
 | O-2 | `b76f62f` | CSV export: scans, sync logs, and audit logs export endpoints, downloadCSV helper, export buttons in ScanHistory and ActivityTab. |
