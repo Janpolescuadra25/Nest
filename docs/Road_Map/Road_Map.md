@@ -1,6 +1,6 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`9526c27`, pushed)
+### Repo State (`711ca8e`, pushed)
 
 | Area | Status |
 |---|---|
@@ -22,7 +22,7 @@
 
 - ~~O-3: **Audit Log Enhancements**~~ ✅ — Add date-range filtering and user filtering to the existing `ActivityTab.tsx`. Backend: first, locate the existing route that serves audit log data to the frontend (search `Backend/src/routes/` for any endpoint that queries the `AuditLog` model — likely in `admin.ts` or a similar file). If no dedicated endpoint exists, create `GET /api/activity-logs` in the appropriate route file. Then update that endpoint to accept optional query params: `dateFrom` (ISO string), `dateTo` (ISO string), and `userId` (string). Apply as `where` clause filters on the existing `AuditLog` query. Frontend: add a date range picker (reuse or extend `SmartDatePicker.tsx`) and a user dropdown (populated from team members list) above the existing activity log table in `ActivityTab.tsx`. Both filters should work together and update the URL query params for shareable filtered views.
 
-- O-4: **API Rate Limiting** — Install `express-rate-limit` and add tiered rate limits to all `/api/` routes. New file `Backend/src/middleware/rate-limiter.ts` exporting three limiters: `authLimiter` (10 req/min for login/register/password-reset endpoints), `apiLimiter` (100 req/min for all other authenticated endpoints), and `webhookLimiter` (exempt/skip for Stripe/Intuit webhook endpoints). Apply in `Backend/src/index.ts` via `app.use()` ordering (webhook routes registered before limiters, or webhook limiter set to unlimited). Include `X-RateLimit-Remaining` and `Retry-After` headers in responses. Add a test in `Backend/tests/` verifying that rate-limited endpoints return 429 after exceeding the limit.
+- ~~O-4: **API Rate Limiting**~~ ✅ — Install `express-rate-limit` and add tiered rate limits to all `/api/` routes. New file `Backend/src/middleware/rate-limiter.ts` exporting three limiters: `authLimiter` (10 req/min for login/register/password-reset endpoints), `apiLimiter` (100 req/min for all other authenticated endpoints), and `webhookLimiter` (exempt/skip for Stripe/Intuit webhook endpoints). Apply in `Backend/src/index.ts` via `app.use()` ordering (webhook routes registered before limiters, or webhook limiter set to unlimited). Include `X-RateLimit-Remaining` and `Retry-After` headers in responses. Add a test in `Backend/tests/` verifying that rate-limited endpoints return 429 after exceeding the limit.
 
 - O-5: **Input Sanitization Layer** — Audit all 22 route files under `Backend/src/routes/`. For any endpoint that reads `req.body`, `req.query`, or `req.params` and does NOT already use a Zod schema (or similar validation), add `z.object({ ... }).parse(req.body)` validation at the top of the handler. Use the existing pattern from `scans.ts` and `quickbooks.ts` as the template. Focus on: `admin.ts`, `adminRequests.ts`, `invite.ts`, `locations.ts`, `mappings.ts`, `notifications.ts`, `owner.ts`, `payee-mappings.ts`, `product-mappings.ts`, `products.ts`, `rules.ts`, `templates.ts`, `value-mappings.ts`. Endpoints that already have Zod schemas (auth, checkout, scans, quickbooks, webhooks) can be skipped. Add tests for at least 3 of the newly-validated endpoints confirming that invalid input returns 400.
 
@@ -35,6 +35,7 @@
 | O-1 | `df459bb` | Dashboard analytics: monthly scan volume bar chart, sync health pie chart, top 5 mapped accounts table, storage usage gauge, date range selector, GET /api/analytics/dashboard endpoint. |
 | O-2 | `b76f62f` | CSV export: scans, sync logs, and audit logs export endpoints, downloadCSV helper, export buttons in ScanHistory and ActivityTab. |
 | O-3 | `9526c27` | Audit log enhancements: actor/user dropdown filter populated from team members, URL query param sync (dateFrom, dateTo, action, actorId) for shareable filtered views in ActivityTab. No backend changes. |
+| O-4 | `711ca8e` | API rate limiting: added 100 req/min apiLimiter with tiered stacking (globalLimiter 200/15min + apiLimiter 100/min), Retry-After headers on all rate limiters, rate limit test file with 2 tests. |
 | Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
 | N-5 | `01cf0fa` | Email notification preferences: NotificationPreference model, GET/PUT /api/notifications/preferences, quota warning cron, team change alerts in invite/admin/admin owner routes, SettingsView toggles, ToggleRow component. |
 | UX Fix | (feature: `42f1d09`, docs: `010e9ca`) | Approved/Review tab workflow fix — REJECTED scans hidden from Approved tab, filter counts include syncStatus. |
