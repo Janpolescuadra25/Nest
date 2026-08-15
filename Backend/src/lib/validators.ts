@@ -258,6 +258,97 @@ export const teamAllocationSchema = z.object({
   allocatedTemplates: z.number().int().min(0).nullable().optional(),
 }).strict();
 
+// ── Notification schemas (O-5) ──────────────────────────────────────
+export const notificationPreferencesSchema = z.object({
+  syncFailureAlerts: z.boolean().optional(),
+  quotaWarningAlerts: z.boolean().optional(),
+  teamChangeAlerts: z.boolean().optional(),
+}).strict();
+
+// ── Payee mapping schemas (O-5) ─────────────────────────────────────
+export const payeeMappingCreateSchema = z.object({
+  rawName: z.string().min(1).max(500),
+  mappedTo: z.string().max(500).optional(),
+  categoryId: z.string().optional(),
+}).strict();
+
+export const payeeMappingUpdateSchema = z.object({
+  mappedTo: z.string().max(500).optional(),
+  categoryId: z.string().optional(),
+}).strict();
+
+export const payeeMappingBulkImportSchema = z.object({
+  mappings: z.array(payeeMappingCreateSchema),
+}).strict();
+
+// ── Product mapping schemas (O-5) ───────────────────────────────────
+export const productMappingCreateSchema = z.object({
+  rawSku: z.string().min(1).max(500),
+  productId: z.string().min(1),
+  templateId: z.string().optional(),
+  accountId: z.string().optional(),
+  postingType: z.enum(['standard', 'keep_separate']).optional(),
+}).strict();
+
+export const productMappingUpdateSchema = z.object({
+  productId: z.string().min(1).optional(),
+  templateId: z.string().optional(),
+  accountId: z.string().optional(),
+  postingType: z.enum(['standard', 'keep_separate']).optional(),
+}).strict();
+
+// ── Product schemas (O-5) ──────────────────────────────────────────
+export const productCreateSchema = z.object({
+  name: z.string().min(1).max(500),
+  sku: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  price: z.union([z.string(), z.number()]).optional(),
+  categoryId: z.string().optional(),
+}).strict();
+
+export const productUpdateSchema = z.object({
+  name: z.string().min(1).max(500).optional(),
+  sku: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  price: z.union([z.string(), z.number()]).optional(),
+  categoryId: z.string().optional(),
+}).strict();
+
+export const productBulkImportSchema = z.object({
+  products: z.array(productCreateSchema),
+}).strict();
+
+// ── Rule schemas (O-5) ─────────────────────────────────────────────
+export const ruleCreateSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  conditions: z.array(z.record(z.string(), z.unknown())).min(1),
+  actions: z.array(z.record(z.string(), z.unknown())).min(1),
+  triggerType: z.enum(['transaction_create', 'scheduled']),
+}).strict();
+
+export const ruleUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional(),
+  conditions: z.array(z.record(z.string(), z.unknown())).optional(),
+  actions: z.array(z.record(z.string(), z.unknown())).optional(),
+  triggerType: z.enum(['transaction_create', 'scheduled']).optional(),
+  isActive: z.boolean().optional(),
+}).strict();
+
+// ── Value mapping schemas (O-5) ─────────────────────────────────────
+export const valueMappingCreateSchema = z.object({
+  field: z.string().min(1).max(200),
+  rawValue: z.string().min(1).max(500),
+  mappedValue: z.string().max(500).optional(),
+  priority: z.number().int().min(0).optional(),
+}).strict();
+
+export const valueMappingUpdateSchema = z.object({
+  mappedValue: z.string().max(500).optional(),
+  priority: z.number().int().min(0).optional(),
+}).strict();
+
 export const locationCreateSchema = z.object({
   name: z.string().min(1).max(200),
 }).strict();
@@ -289,14 +380,6 @@ export const mappingCreateSchema = z.object({
   priority: z.number().int().optional(),
   conditions: z.unknown().optional(),
   templateId: z.string().optional(),
-}).strict();
-
-export const ruleCreateSchema = z.object({
-  name: z.string().min(1).max(200),
-  ruleType: z.enum(['COMBINE', 'DEDUCT', 'THRESHOLD', 'FORMULA']),
-  config: z.record(z.string(), z.unknown()),
-  isActive: z.boolean().optional(),
-  templateId: z.string().nullable().optional(),
 }).strict();
 
 export const templateCreateSchema = z.object({

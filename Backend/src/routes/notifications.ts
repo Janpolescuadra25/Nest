@@ -2,6 +2,10 @@ import { Router, Response } from 'express';
 import { authenticate, type AuthRequest } from '../middleware/auth.middleware';
 import { asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
+import { validate } from '../middleware/validate';
+import { notificationPreferencesSchema } from '../lib/validators';
+import { validate } from '../middleware/validate';
+import { notificationPreferencesSchema } from '../lib/validators';
 
 const router = Router();
 router.use(authenticate);
@@ -22,7 +26,7 @@ router.get('/preferences', asyncHandler(async (req: AuthRequest, res: Response) 
   });
 }));
 
-router.put('/preferences', asyncHandler(async (req: AuthRequest, res: Response) => {
+router.put('/preferences', validate(notificationPreferencesSchema), asyncHandler(async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId;
   const { syncFailureAlerts, quotaWarningAlerts, teamChangeAlerts } = req.body as {
     syncFailureAlerts?: boolean;

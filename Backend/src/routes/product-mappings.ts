@@ -6,6 +6,8 @@ import { qbService } from '../services/qb.service';
 import { suggestProductMappings } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
 import { AppError, asyncHandler } from '../lib/errors';
+import { validate } from '../middleware/validate';
+import { productMappingCreateSchema, productMappingUpdateSchema } from '../lib/validators';
 
 const router = Router();
 router.use(authenticate, enforceEffectiveRole);
@@ -44,7 +46,7 @@ router.get('/:templateId', requireFeaturePermission('map', 'read'), asyncHandler
   res.json(mappings.map(serializeProductMapping));
 }));
 
-router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('map', 'write'), validate(productMappingCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { templateId, productId, accountId, postingType, classId } = req.body as {
     templateId?: string;
     productId?: string;
@@ -89,7 +91,7 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
   res.status(201).json(serializeProductMapping(mapping));
 }));
 
-router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('map', 'write'), validate(productMappingUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const { accountId, postingType, classId, matchingRule } = req.body as {
     accountId?: string;

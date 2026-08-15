@@ -4,6 +4,8 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { applyRules, applyRulesToLineItems } from '../services/rules.engine';
+import { validate } from '../middleware/validate';
+import { ruleCreateSchema, ruleUpdateSchema } from '../lib/validators';
 
 const router = Router();
 
@@ -20,7 +22,7 @@ async function getTemplateOrFail(templateId: string, user: AuthRequest['user']) 
 }
 
 // ── PUT /api/rules/:id ────────────────────────────────────────────────────────
-router.put('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('rules', 'write'), validate(ruleUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params['id']);
     const rule = await prisma.rule.findFirst({

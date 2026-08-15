@@ -3,6 +3,8 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { AppError, asyncHandler } from '../lib/errors';
+import { validate } from '../middleware/validate';
+import { productCreateSchema, productUpdateSchema, productBulkImportSchema } from '../lib/validators';
 
 const router = Router();
 
@@ -28,7 +30,7 @@ router.get('/', requireFeaturePermission('products', 'read'), asyncHandler(async
   res.json(products);
 }));
 
-router.post('/', requireFeaturePermission('products', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('products', 'write'), validate(productCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { name, locationId } = req.body;
   const normalizedName = typeof name === 'string' ? name.trim() : '';
 
@@ -63,7 +65,7 @@ router.post('/', requireFeaturePermission('products', 'write'), asyncHandler(asy
   res.status(201).json(product);
 }));
 
-router.put('/:id', requireFeaturePermission('products', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('products', 'write'), validate(productUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const { name } = req.body;
 

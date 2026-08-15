@@ -4,6 +4,8 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { AppError, asyncHandler } from '../lib/errors';
+import { validate } from '../middleware/validate';
+import { payeeMappingCreateSchema, payeeMappingUpdateSchema, payeeMappingBulkImportSchema } from '../lib/validators';
 
 const router = Router();
 router.use(authenticate, enforceEffectiveRole);
@@ -38,7 +40,7 @@ router.get('/:templateId', requireFeaturePermission('map', 'read'), asyncHandler
   res.json(mappings.map(serializePayeeMapping));
 }));
 
-router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('map', 'write'), validate(payeeMappingCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { templateId, scannedName, vendorId, matchingRule } = req.body as {
     templateId?: string;
     scannedName?: string;
@@ -71,7 +73,7 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
   res.status(201).json(serializePayeeMapping(mapping));
 }));
 
-router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('map', 'write'), validate(payeeMappingUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const { scannedName, vendorId, matchingRule } = req.body as {
     scannedName?: string;

@@ -41,7 +41,7 @@ router.get('/:templateId', requireFeaturePermission('map', 'read'), asyncHandler
   res.json(mappings.map(serializeValueMapping));
 }));
 
-router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/', requireFeaturePermission('map', 'write'), validate(valueMappingCreateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const { templateId, fieldType, scannedText, sourceField, entityId, matchingRule } = req.body as {
     templateId?: string;
     fieldType?: string;
@@ -91,7 +91,7 @@ router.post('/', requireFeaturePermission('map', 'write'), asyncHandler(async (r
   res.status(201).json(serializeValueMapping(mapping));
 }));
 
-router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id', requireFeaturePermission('map', 'write'), validate(valueMappingUpdateSchema), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const { fieldType, scannedText, sourceField, entityId, matchingRule } = req.body as {
     fieldType?: string;
