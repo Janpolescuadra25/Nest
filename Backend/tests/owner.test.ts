@@ -1,10 +1,8 @@
 import request from 'supertest';
 import express from 'express';
-import ownerRoutes from '../src/routes/owner';
 import { createErrorHandler } from '../src/lib/errors';
-import { prisma } from '../src/lib/prisma';
-import { logAction } from '../src/middleware/audit';
-import { deleteFile } from '../src/lib/storage';
+
+type JestMock = jest.Mock<any, any>;
 
 jest.mock('../src/lib/prisma', () => ({
   prisma: {
@@ -35,6 +33,9 @@ jest.mock('../src/lib/prisma', () => ({
     auditLog: {
       create: jest.fn(),
     },
+    notificationPreference: {
+      findUnique: jest.fn(),
+    },
   },
 }));
 
@@ -48,6 +49,7 @@ jest.mock('../src/middleware/auth.middleware', () => ({
       timeBombAt: null,
       gracePeriodHours: 48,
       permissions: {},
+      email: 'owner@example.com',
     };
     next();
   }),
@@ -62,6 +64,15 @@ jest.mock('../src/middleware/audit', () => ({
 jest.mock('../src/lib/storage', () => ({
   deleteFile: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock('../src/lib/email', () => ({
+  sendTeamChangeAlert: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+const ownerRoutes = require('../src/routes/owner').default as express.Router;
+const { prisma } = require('../src/lib/prisma') as { prisma: any };
+const { logAction } = require('../src/middleware/audit') as { logAction: jest.Mock };
+const { deleteFile } = require('../src/lib/storage') as { deleteFile: jest.Mock };
 
 function buildApp() {
   const app = express();
@@ -83,6 +94,7 @@ describe('DELETE /api/owner/users/:id', () => {
     const targetUser = { id: 'admin-id', email: 'admin@example.com', role: 'ADMIN' };
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(targetUser);
+    (prisma.notificationPreference.findUnique as jest.Mock).mockResolvedValueOnce(null);
     (prisma.location.findMany as jest.Mock).mockResolvedValueOnce([
       {
         id: 'loc-1',
@@ -100,7 +112,7 @@ describe('DELETE /api/owner/users/:id', () => {
     expect(res.body).toEqual({ success: true, message: 'User deleted permanently' });
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { id: 'admin-id' },
-      select: { id: true, email: true, role: true, agreementDocUrl: true },
+      select: { id: true, email: true, role: true, agreementDocUrl: true, name: true },
     });
     expect(deleteFile).toHaveBeenCalledTimes(2);
     expect(deleteFile).toHaveBeenCalledWith('attach-1');
@@ -146,6 +158,7 @@ describe('DELETE /api/owner/users/:id', () => {
     const targetUser = { id: 'admin-id', email: 'admin@example.com', role: 'ADMIN' };
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(targetUser);
+    (prisma.notificationPreference.findUnique as jest.Mock).mockResolvedValueOnce(null);
     (prisma.location.findMany as jest.Mock).mockResolvedValueOnce([
       {
         id: 'loc-1',
@@ -170,6 +183,7 @@ describe('DELETE /api/owner/users/:id', () => {
     expect(deleteFile).toHaveBeenCalledWith('attach-2');
     expect(deleteFile).toHaveBeenCalledWith('loc-attach-1');
     expect(deleteFile).toHaveBeenCalledWith('loc-attach-2');
+    expect(prisma.notificationPreference.findUnique).toHaveBeenCalledWith({ where: { userId: 'owner-id' } });
   });
 
   describe('GET /api/owner/users/:id/usage', () => {
