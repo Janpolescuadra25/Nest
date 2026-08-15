@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`9cd6e4b`, pushed)
+### Repo State (`23f958a`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 112/112 ✅ |
+| Backend tests | 115/115 ✅ |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -19,7 +19,7 @@
 |----|-------|--------|
 | P-1 | Test suite reliability — all 18 suites green (110/110) | ✅ Complete |
 | P-2 | Structured logging & request tracing (pino + request ID) | ✅ Complete |
-| P-3 | API error response standardization (consistent shape, no stack traces in prod) | Pending |
+| P-3 | API error response standardization (consistent shape, no stack traces in prod) | ✅ Complete |
 | P-4 | Input validation coverage completion (remaining unprotected routes) | Pending |
 | P-5 | Security review (auth coverage, feature permissions, CORS, helmet) | Pending |
 | P-6 | Database performance audit (N+1 queries, indexes) | Pending |
@@ -29,6 +29,7 @@
 
 | Phase | Commits | Summary |
 |-------|---------|---------|
+| P-3 | `23f958a` | API error response standardization: implemented global standardized error shape ({ success: false, error: { message, code, requestId, fields? } }), converted 16 direct error responses across 5 routes to AppError throws, proactively fixed capacity middleware direct responses, added 3 new error shape tests to reach 115/115 total backend tests. |
 | O-1 | `df459bb` | Dashboard analytics: monthly scan volume bar chart, sync health pie chart, top 5 mapped accounts table, storage usage gauge, date range selector, GET /api/analytics/dashboard endpoint. |
 | O-2 | `b76f62f` | CSV export: scans, sync logs, and audit logs export endpoints, downloadCSV helper, export buttons in ScanHistory and ActivityTab. |
 | O-3 | `9526c27` | Audit log enhancements: actor/user dropdown filter populated from team members, URL query param sync (dateFrom, dateTo, action, actorId) for shareable filtered views in ActivityTab. No backend changes. |
