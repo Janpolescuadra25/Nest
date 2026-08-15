@@ -28,6 +28,7 @@ import emailVerificationRoutes from './routes/email-verification';
 import checkoutRoutes from './routes/checkout';
 import webhookRoutes from './routes/webhooks';
 import { authenticate } from './middleware/auth.middleware';
+import { apiLimiter } from './middleware/rate-limit';
 import { prisma } from './lib/prisma';
 import { resetOwnerIfRequested } from './lib/owner-reset';
 import { startTimeBombCron } from './cron/timebomb';
@@ -120,6 +121,7 @@ const globalLimiter = rateLimit({
   message: { error: 'Too many requests. Please try again later.' },
 });
 app.use(globalLimiter);
+app.use(apiLimiter);
 
 // ── Request Logger ─────────────────────────────────────────────────────────
 app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
