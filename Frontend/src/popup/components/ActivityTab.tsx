@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api, downloadCSV } from '../lib/api';
 import { relativeTime } from '../lib/utils';
-import type { OwnerAuditLogEntry } from '../../types';
+import type { OwnerAuditLogEntry, TeamMember } from '../../types';
 
 interface Props {
   jwt: string;
@@ -40,13 +40,25 @@ export default function ActivityTab({ jwt }: Props) {
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   // Filters
   const [actionFilter, setActionFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [actorId, setActorId] = useState('');
 
   const LIMIT = 25;
+
+  const syncUrlParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (actionFilter) params.set('action', actionFilter);
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    if (actorId) params.set('actorId', actorId);
+    const query = params.toString();
+    window.history.replaceState({}, '', query ? `${window.location.pathname}?${query}` : window.location.pathname);
+  }, [actionFilter, dateFrom, dateTo, actorId]);
 
   const fetchLogs = useCallback(async (p: number) => {
     setLoading(true);
@@ -56,6 +68,7 @@ export default function ActivityTab({ jwt }: Props) {
       if (actionFilter) params.action = actionFilter;
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
+      if (actorId) params.actorId = actorId;
       const data = await api.getAuditLog(jwt, params);
       setLogs(data.logs);
       setTotal(data.total);
@@ -65,9 +78,23 @@ export default function ActivityTab({ jwt }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [jwt, actionFilter, dateFrom, dateTo]);
+  }, [jwt, actionFilter, dateFrom, dateTo, actorId]);
 
-  useEffect(() => { fetchLogs(1); }, [fetchLogs]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('action')) setActionFilter(params.get('action') ?? '');
+    if (params.has('dateFrom')) setDateFrom(params.get('dateFrom') ?? '');
+    if (params.has('dateTo')) setDateTo(params.get('dateTo') ?? '');
+    if (params.has('actorId')) setActorId(params.get('actorId') ?? '');
+  }, []);
+
+  useEffect(() => {
+    fetchLogs(1);
+  }, [fetchLogs]);
+
+  useEffect(() => {
+    syncUrlParams();
+  }, [syncUrlParams]);
 
   const handleClearFilters = () => {
     setActionFilter('');
@@ -115,6 +142,21 @@ export default function ActivityTab({ jwt }: Props) {
       {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <div className="flex gap-2 flex-wrap">
+          <div className="min-w-[160px]">
+            <label className="block text-xs text-gray-600 mb-0.5">Actor</label>
+            <select
+              value={actorId}
+              onChange={e => setActorId(e.target.value)}
+              className="w-full px-2 py-1 bg-white border border-gray-300 rounded text-sm text-gray-700 focus:outline-none"
+            >
+              <option value="">All Members</option>
+              {teamMembers.map(member => (
+                <option key={member.id} value={member.id}>
+                  {member.name || member.email}
+                </option>
+              ))}
+            </select>
+          </div>
           <select
             value={actionFilter}
             onChange={e => setActionFilter(e.target.value)}
