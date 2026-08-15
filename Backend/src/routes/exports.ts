@@ -113,4 +113,4 @@ router.get('/audit-logs', authenticate, asyncHandler(async (req: AuthRequest, re
   res.send(csv);
 }));
 
-export { router as exportRoutes };
+export default router;

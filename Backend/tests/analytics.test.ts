@@ -4,7 +4,7 @@ import request from 'supertest';
 import express from 'express';
 import { createErrorHandler } from '../src/lib/errors';
 import { prisma } from '../src/lib/prisma';
-import { analyticsRoutes } from '../src/routes/analytics';
+import analyticsRoutes from '../src/routes/analytics';
 
 jest.mock('../src/lib/prisma', () => ({
   prisma: {

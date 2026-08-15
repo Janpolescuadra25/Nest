@@ -4,6 +4,8 @@ import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } f
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { prisma } from '../lib/prisma';
 import { AppError, asyncHandler } from '../lib/errors';
+import { validate } from '../middleware/validate';
+import { valueMappingCreateSchema, valueMappingUpdateSchema } from '../lib/validators';
 
 const router = Router();
 router.use(authenticate, enforceEffectiveRole);

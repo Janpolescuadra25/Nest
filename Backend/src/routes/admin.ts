@@ -678,7 +678,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
 router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: AuthRequest, res: Response) => {
   try {
     const id = req.params['id'] as string;
-    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true, role: true } });
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, email: true, name: true, role: true, adminId: true } });
     if (!target) throw new AppError('User not found.', 404);
     if (target.adminId !== req.user!.userId) {
       throw new AppError('You can only manage your own team members.', 403);

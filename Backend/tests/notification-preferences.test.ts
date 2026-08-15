@@ -23,7 +23,7 @@ jest.mock('../src/middleware/auth.middleware', () => ({
   AuthRequest: jest.requireActual('../src/middleware/auth.middleware').AuthRequest,
 }));
 
-const { notificationRoutes } = require('../src/routes/notifications');
+const notificationRoutes = require('../src/routes/notifications').default;
 
 describe('Notification preferences API', () => {
   let app: express.Application;

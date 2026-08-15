@@ -338,16 +338,19 @@ export const ruleUpdateSchema = z.object({
 
 // ── Value mapping schemas (O-5) ─────────────────────────────────────
 export const valueMappingCreateSchema = z.object({
-  field: z.string().min(1).max(200),
-  rawValue: z.string().min(1).max(500),
-  mappedValue: z.string().max(500).optional(),
-  priority: z.number().int().min(0).optional(),
-}).strict();
+  templateId: z.string().min(1),
+  fieldType: z.string().min(1),
+  scannedText: z.string().min(1),
+  entityId: z.string().min(1),
+  matchingRule: z.record(z.string(), z.unknown()).nullable().optional(),
+}).passthrough();
 
 export const valueMappingUpdateSchema = z.object({
-  mappedValue: z.string().max(500).optional(),
-  priority: z.number().int().min(0).optional(),
-}).strict();
+  fieldType: z.string().min(1).optional(),
+  scannedText: z.string().min(1).optional(),
+  entityId: z.string().min(1).optional(),
+  matchingRule: z.record(z.string(), z.unknown()).nullable().optional(),
+}).passthrough();
 
 export const locationCreateSchema = z.object({
   name: z.string().min(1).max(200),

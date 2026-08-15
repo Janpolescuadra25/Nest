@@ -112,4 +112,4 @@ router.get('/dashboard', authenticate, requireFeaturePermission('scan', 'write')
   }
 }));
 
-export { router as analyticsRoutes };
+export default router;

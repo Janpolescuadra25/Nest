@@ -4,8 +4,6 @@ import { asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { notificationPreferencesSchema } from '../lib/validators';
-import { validate } from '../middleware/validate';
-import { notificationPreferencesSchema } from '../lib/validators';
 
 const router = Router();
 router.use(authenticate);
@@ -56,4 +54,4 @@ router.put('/preferences', validate(notificationPreferencesSchema), asyncHandler
   });
 }));
 
-export { router as notificationRoutes };
+export default router;
