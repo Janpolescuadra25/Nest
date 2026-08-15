@@ -1,11 +1,11 @@
 ## 🗺️ Qyra Roadmap — Cypra v5
 
-### Repo State (`5fa3e26`, pushed)
+### Repo State (`87c55d4`, pushed)
 
 | Area | Status |
 |---|---|
 | Frontend tests | 108/108 ✅ |
-| Backend tests | 103/103 ✅ |
+| Backend tests | 108/110 ✅ (1 pre-existing suite failure: owner.test.ts RESEND_API_KEY) |
 | Invite system | ✅ Fully built (InviteLink model, 7 endpoints) |
 | Resource allocation fields | ✅ `allocatedScans/Locations/Templates`, `poolScans/Locations/Templates`, `maxMembers`, `timeBombAt` on User model |
 | Capacity/permissions | ✅ Feature-based (`scan:write`, `sync:execute`, etc.) |
@@ -22,6 +22,7 @@
 | O-3 | `9526c27` | Audit log enhancements: actor/user dropdown filter populated from team members, URL query param sync (dateFrom, dateTo, action, actorId) for shareable filtered views in ActivityTab. No backend changes. |
 | O-4 | `711ca8e` | API rate limiting: added 100 req/min apiLimiter with tiered stacking (globalLimiter 200/15min + apiLimiter 100/min), Retry-After headers on all rate limiters, rate limit test file with 2 tests. |
 | O-5 | `5fa3e26` | Input sanitization: added Zod validation to 6 route files (notifications, payee-mappings, product-mappings, products, rules, value-mappings) with 13 new schemas, 3 validation tests. |
+| O-5 Hotfix | `87c55d4` | Fixed TypeScript compilation errors from O-5: removed duplicate imports in notifications.ts, added missing validate/schema imports in value-mappings.ts, fixed named→default export mismatches (analytics, exports, notifications), added adminId to admin.ts select, corrected valueMapping schemas to match route fields. |
 | Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
 | N-5 | `01cf0fa` | Email notification preferences: NotificationPreference model, GET/PUT /api/notifications/preferences, quota warning cron, team change alerts in invite/admin/admin owner routes, SettingsView toggles, ToggleRow component. |
 | UX Fix | (feature: `42f1d09`, docs: `010e9ca`) | Approved/Review tab workflow fix — REJECTED scans hidden from Approved tab, filter counts include syncStatus. |
