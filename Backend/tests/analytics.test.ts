@@ -132,4 +132,20 @@ describe('Analytics dashboard API', () => {
       percentage: 5,
     });
   });
+
+  it('GET /api/analytics/dashboard rejects invalid query dates with validation error', async () => {
+    const response = await request(app).get('/api/analytics/dashboard?dateFrom=&dateTo=not-a-date');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      success: false,
+      error: expect.objectContaining({
+        message: 'Validation failed',
+        code: 'VALIDATION_ERROR',
+        fields: expect.objectContaining({
+          dateFrom: expect.stringContaining('Too small'),
+        }),
+      }),
+    });
+  });
 });

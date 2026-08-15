@@ -258,6 +258,11 @@ export const teamAllocationSchema = z.object({
   allocatedTemplates: z.number().int().min(0).nullable().optional(),
 }).strict();
 
+export const analyticsDashboardQuerySchema = z.object({
+  dateFrom: z.string().min(1).optional(),
+  dateTo: z.string().min(1).optional(),
+}).strict();
+
 // ── Notification schemas (O-5) ──────────────────────────────────────
 export const notificationPreferencesSchema = z.object({
   syncFailureAlerts: z.boolean().optional(),

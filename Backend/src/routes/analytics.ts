@@ -1,19 +1,17 @@
 import { Router, Response } from 'express';
 import { authenticate, requireFeaturePermission, type AuthRequest } from '../middleware/auth.middleware';
-import { asyncHandler } from '../lib/errors';
+import { AppError, asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
+import { analyticsDashboardQuerySchema } from '../lib/validators';
+import { validate } from '../middleware/validate';
 
 const router = Router();
 
-router.get('/dashboard', authenticate, requireFeaturePermission('scan', 'write'), asyncHandler(async (req: AuthRequest, res: Response) => {
+router.get('/dashboard', authenticate, requireFeaturePermission('scan', 'write'), validate(analyticsDashboardQuerySchema, 'query'), asyncHandler(async (req: AuthRequest, res: Response) => {
   try {
     const now = new Date();
     const toDate = req.query.dateTo ? new Date(String(req.query.dateTo)) : now;
     const fromDate = req.query.dateFrom ? new Date(String(req.query.dateFrom)) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date range' });
-    }
 
     const formattedFrom = fromDate.toISOString();
     const formattedTo = toDate.toISOString();
@@ -108,7 +106,7 @@ router.get('/dashboard', authenticate, requireFeaturePermission('scan', 'write')
     });
   } catch (error) {
     console.error('[Analytics] dashboard error:', error);
-    res.status(500).json({ error: 'Failed to load dashboard analytics' });
+    throw new AppError('Failed to load dashboard analytics', 500);
   }
 }));
 
