@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Bar, BarChart, Cell, Legend, Pie, PieChart, XAxis, YAxis } from 'recharts';
 import { api, type RecentScan } from '../lib/api';
 import { useToast } from './Toast';
 import { QBConnectionCard } from './QBConnectionCard';
@@ -38,6 +39,13 @@ interface AdminPartner {
   updatedAt: string;
 }
 
+interface DashboardAnalytics {
+  monthlyScanVolume: Array<{ month: string; count: number }>;
+  syncStatusBreakdown: { synced: number; failed: number; pending: number };
+  topMappedAccounts: Array<{ accountName: string; accountType: string; usageCount: number }>;
+  storageUsage: { used: number; total: number; percentage: number };
+}
+
 const EMPTY_STATS: OwnerStats = {
   totalPartners: 0,
   totalTeamMembers: 0,
@@ -50,6 +58,12 @@ const EMPTY_STATS: OwnerStats = {
   totalPending: 0,
 };
 
+const EMPTY_ANALYTICS: DashboardAnalytics = {
+  monthlyScanVolume: [],
+  syncStatusBreakdown: { synced: 0, failed: 0, pending: 0 },
+  topMappedAccounts: [],
+  storageUsage: { used: 0, total: 0, percentage: 0 },
+};
 
 export default function DashboardView({ jwt, onboardingState, onNavigate, onHasSynced }: Props) {
   const { showToast } = useToast();
@@ -67,6 +81,10 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
   const [healthDays, setHealthDays] = useState(3);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [scansLoading, setScansLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics>(EMPTY_ANALYTICS);
+  const [analyticsRange, setAnalyticsRange] = useState<'7d' | '30d' | '90d' | 'month'>('30d');
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
   const prevStepRef = useRef<number>(0);
 
@@ -108,6 +126,68 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
       setScanHealthLoaded(true);
     }
   }, [jwt, healthDays]);
+
+  const computeDateRange = (range: '7d' | '30d' | '90d' | 'month') => {
+    const now = new Date();
+    const toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const fromDate = new Date(toDate);
+
+    if (range === '7d') {
+      fromDate.setDate(toDate.getDate() - 6);
+    } else if (range === '30d') {
+      fromDate.setDate(toDate.getDate() - 29);
+    } else if (range === '90d') {
+      fromDate.setDate(toDate.getDate() - 89);
+    } else if (range === 'month') {
+      fromDate.setDate(1);
+    }
+
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const format = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+    return {
+      dateFrom: format(fromDate),
+      dateTo: format(toDate),
+    };
+  };
+
+  const fetchAnalytics = useCallback(async (range: '7d' | '30d' | '90d' | 'month') => {
+    setAnalyticsError('');
+    setAnalyticsLoading(true);
+    try {
+      const { dateFrom, dateTo } = computeDateRange(range);
+      const analyticsData = await api.getDashboardAnalytics(jwt, dateFrom, dateTo);
+      setAnalytics(analyticsData);
+    } catch (err) {
+      setAnalyticsError('Failed to load analytics');
+      setAnalytics(EMPTY_ANALYTICS);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [jwt]);
+
+  const handleSelectAnalyticsRange = (range: '7d' | '30d' | '90d' | 'month') => {
+    setAnalyticsRange(range);
+  };
+
+  const usageBarColor = analytics.storageUsage.percentage > 80 ? 'bg-red-500' : analytics.storageUsage.percentage >= 60 ? 'bg-yellow-500' : 'bg-green-500';
+
+  const rangeButtons: Array<{ key: '7d' | '30d' | '90d' | 'month'; label: string }> = [
+    { key: '7d', label: '7 Days' },
+    { key: '30d', label: '30 Days' },
+    { key: '90d', label: '90 Days' },
+    { key: 'month', label: 'This Month' },
+  ];
+
+  const syncStatusData = [
+    { name: 'Synced', value: analytics.syncStatusBreakdown.synced, fill: '#22c55e' },
+    { name: 'Failed', value: analytics.syncStatusBreakdown.failed, fill: '#ef4444' },
+    { name: 'Pending', value: analytics.syncStatusBreakdown.pending, fill: '#eab308' },
+  ];
+
+  useEffect(() => {
+    void fetchAnalytics(analyticsRange);
+  }, [fetchAnalytics, analyticsRange]);
 
   const handleReconnect = useCallback(async () => {
     try {
@@ -245,6 +325,99 @@ export default function DashboardView({ jwt, onboardingState, onNavigate, onHasS
               Check SyncView for retry details
             </p>
           )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {rangeButtons.map((button) => (
+            <button
+              key={button.key}
+              type="button"
+              onClick={() => handleSelectAnalyticsRange(button.key)}
+              className={`${analyticsRange === button.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'} rounded-lg px-3 py-1 text-xs font-medium`}
+            >
+              {button.label}
+            </button>
+          ))}
+        </div>
+        {analyticsLoading ? (
+          <p className="text-sm text-gray-400">Loading analytics...</p>
+        ) : analyticsError ? (
+          <p className="text-sm text-red-500">{analyticsError}</p>
+        ) : null}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-sm font-semibold text-gray-800 mb-2">Monthly Scans</div>
+            <BarChart width={250} height={160} data={analytics.monthlyScanVolume}>
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-sm font-semibold text-gray-800 mb-2">Sync Health</div>
+            <PieChart width={250} height={160}>
+              <Pie
+                data={syncStatusData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={50}
+              >
+                {syncStatusData.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-sm font-semibold text-gray-800 mb-2">Top Accounts</div>
+            {analytics.topMappedAccounts.length === 0 ? (
+              <p className="text-gray-400">No mapping data yet</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600">
+                      <th className="py-2 pr-2 text-left">#</th>
+                      <th className="py-2 pr-2 text-left">Account</th>
+                      <th className="py-2 pr-2 text-left">Type</th>
+                      <th className="py-2 text-left">Count</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.topMappedAccounts.map((account, index) => (
+                      <tr key={`${account.accountName}-${index}`} className="border-t border-gray-100 text-gray-700">
+                        <td className="py-2 pr-2">{index + 1}</td>
+                        <td className="py-2 pr-2">{account.accountName}</td>
+                        <td className="py-2 pr-2">{account.accountType}</td>
+                        <td className="py-2">{account.usageCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="text-sm font-semibold text-gray-800 mb-2">Storage Usage</div>
+            <p className="text-xs text-gray-600 mb-1">
+              {analytics.storageUsage.used} of {analytics.storageUsage.total} scans used ({analytics.storageUsage.percentage}%)
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`${usageBarColor} h-2 rounded-full`}
+                style={{ width: `${Math.min(Math.max(analytics.storageUsage.percentage, 0), 100)}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

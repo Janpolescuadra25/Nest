@@ -248,6 +248,29 @@ export const api = {
   getScanPackPurchases: (jwt: string) =>
     get<ScanPackPurchase[]>('/api/checkout/scan-pack-purchases', jwt),
 
+  getDashboardAnalytics: (jwt: string, dateFrom?: string, dateTo?: string) => {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return get<{
+      monthlyScanVolume: Array<{ month: string; count: number }>;
+      syncStatusBreakdown: { synced: number; failed: number; pending: number };
+      topMappedAccounts: Array<{ accountName: string; accountType: string; usageCount: number }>;
+      storageUsage: { used: number; total: number; percentage: number };
+    }>(`/api/analytics/dashboard${query}`, jwt);
+  },
+
+  getNotificationPreferences: (jwt: string) =>
+    get<{ syncFailureAlerts: boolean; quotaWarningAlerts: boolean; teamChangeAlerts: boolean }>('/api/notifications/preferences', jwt),
+
+  updateNotificationPreferences: (jwt: string, prefs: {
+    syncFailureAlerts?: boolean;
+    quotaWarningAlerts?: boolean;
+    teamChangeAlerts?: boolean;
+  }) =>
+    put<{ syncFailureAlerts: boolean; quotaWarningAlerts: boolean; teamChangeAlerts: boolean }>('/api/notifications/preferences', prefs, jwt),
+
   changePassword: (jwt: string, currentPassword: string, newPassword: string) =>
     post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, jwt),
 
