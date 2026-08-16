@@ -44,10 +44,16 @@ Last Updated: 2026-08-16
 - **Key files**: Backend/src/lib/health-checks.ts, Backend/src/lib/storage.ts, Backend/src/index.ts, Backend/tests/health.test.ts
 - **Outcome**: 117/117 tests passing, 20/20 suites. Liveness and readiness probes operational. Database and storage connectivity verified on demand.
 
+### P-6a: Add Missing Composite Indexes
+- **Goal**: Add critical composite indexes to the Prisma schema for high-frequency query patterns.
+- **What was done**: Added 4 composite indexes to schema.prisma: User[adminId, role], ScanRecord[locationId, status], SyncLog[userId, syncedAt], AuditLog[actorId, createdAt]. Generated and applied Prisma migration 20260816162714_add_composite_indexes_p6a.
+- **Key files**: Backend/prisma/schema.prisma, Backend/prisma/migrations/20260816162714_add_composite_indexes_p6a/
+- **Outcome**: 4 new composite indexes active in PostgreSQL. 117/117 tests passing. Zero application code changes.
+
 ## Next Priority
 ### P-6: Database Query Optimization (4 sub-phases)
 
-**P-6a: Add Missing Composite Indexes**
+**P-6a: Add Missing Composite Indexes** ✅ Complete
 - **Goal**: Add critical composite indexes to the Prisma schema for high-frequency query patterns.
 - **What needs to be achieved**: Add composite indexes on `[userId, createdAt]` for ScanRecord, SyncLog, and AuditLog. Add composite index on `[locationId, status]` for ScanRecord. Add composite index on `[adminId, role]` for User. Generate and run Prisma migration.
 - **Risk**: Medium (requires Prisma migration, but zero application code changes)
