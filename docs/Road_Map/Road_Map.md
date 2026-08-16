@@ -23,7 +23,7 @@
 | P-4 | Input validation coverage completion (remaining unprotected routes) | ✅ Complete |
 | P-5 | Security review (auth coverage, feature permissions, CORS, helmet) | Pending |
 | P-6 | Database performance audit (N+1 queries, indexes) | Pending |
-| P-7 | Enhanced health check (component-level status, env validation) | Pending |
+| P-7 | Enhanced health check (component-level status, env validation) | ✅ Complete |
 
 ### Completed History
 
@@ -38,6 +38,7 @@
 | O-5 | `5fa3e26` | Input sanitization: added Zod validation to 6 route files (notifications, payee-mappings, product-mappings, products, rules, value-mappings) with 13 new schemas, 3 validation tests. |
 | O-5 Hotfix | `87c55d4` | Fixed TypeScript compilation errors from O-5: removed duplicate imports in notifications.ts, added missing validate/schema imports in value-mappings.ts, fixed named→default export mismatches (analytics, exports, notifications), added adminId to admin.ts select, corrected valueMapping schemas to match route fields. |
 | P-2 | `9cd6e4b` | Structured logging & request tracing: implemented pino logger with environment-aware config, pino-http middleware with custom request ID generation and propagation, updated global error handler for structured error logging, added 2 logging tests to reach 112/112 total backend tests. |
+| P-7 | `905402e` | Enhanced health check: added `/health/live`, `/health/ready`, preserved legacy `/health`, database and storage connectivity checks, test-safe startup guard, and 5 health endpoint tests. |
 | P-1 | `169b59c` | Test reliability: mocked email dependency in owner.test.ts to achieve 110/110 green tests (18/18 suites). |
 | Phase N | (feature: `42f1d09`, docs: `010e9ca`) | Sync reliability & activity logging: retry with exponential backoff (N-1), AuditLog model + logAction helper (N-2, pre-built), ActivityTab UI (N-3, pre-built), sync status badges + filtering (N-4), NotificationPreference model + email alerts + settings toggles (N-5). |
 | N-5 | `01cf0fa` | Email notification preferences: NotificationPreference model, GET/PUT /api/notifications/preferences, quota warning cron, team change alerts in invite/admin/admin owner routes, SettingsView toggles, ToggleRow component. |

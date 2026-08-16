@@ -41,7 +41,7 @@ export default function AdminsTab({ jwt, userRole }: Props) {
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [memberMap, setMemberMap] = useState<Record<string, OwnerAdminMember[]>>({});
-  const [poolStats, setPoolStats] = useState<Record<string, { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingTemplates: number }>>({});
+  const [poolStats, setPoolStats] = useState<Record<string, { poolScans: number | null; poolLocations: number | null; poolTemplates: number | null; poolStorageBytes: number | null; maxMembers: number | null; memberCount: number; remainingScans: number; remainingLocations: number; remainingTemplates: number; remainingStorage: number }>>({});
   const [teamLoading, setTeamLoading] = useState<Record<string, boolean>>({});
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [editMaxUsers, setEditMaxUsers] = useState<Record<string, string>>({});

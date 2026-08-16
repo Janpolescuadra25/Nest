@@ -256,6 +256,16 @@ Qyra is configured for deployment on [Render.com](https://render.com):
 
 The backend automatically runs `prisma migrate deploy` on each deploy to keep the database schema in sync.
 
+## Deployment
+
+### Infrastructure
+- **Backend API**: Render.com
+- **Frontend / Landing Page**: Render.com
+- **Database**: Neon (PostgreSQL)
+
+### Landing Page
+The landing page is a static HTML file located at `Backend/public/landing/index.html`. It is served by the backend Express server and deployed to Render.com as part of the backend deployment.
+
 ## License
 
 Private repository. All rights reserved.

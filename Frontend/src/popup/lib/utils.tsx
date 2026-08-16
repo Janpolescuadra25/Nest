@@ -73,3 +73,12 @@ export function trialCountdown(expiresAt: string | null | undefined): ReactNode 
   const color = days <= 3 ? 'text-red-600' : days <= 7 ? 'text-orange-400' : 'text-emerald-600';
   return <span className={`text-xs font-medium ${color}`}>{days}d left</span>;
 }
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  return `${(mb / 1024).toFixed(1)} GB`;
+}

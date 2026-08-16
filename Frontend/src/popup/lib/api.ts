@@ -227,6 +227,15 @@ export interface OwnerUserUsage {
   storageLimitBytes: number | null;
 }
 
+export interface Api {
+  getSession: (jwt: string) => Promise<{ user: UserInfo }>;
+  login: (email: string, password: string) => Promise<{ token: string; user: UserInfo }>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  getUserUsage: (jwt: string) => Promise<OwnerUserUsage>;
+  ownerSetStorageLimit: (jwt: string, userId: string, maxStorageBytes: number | null) => Promise<void>;
+  getOwnerUserUsage: (jwt: string, userId: string) => Promise<OwnerUserUsage>;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const api = {
   getSession: (jwt: string) =>
@@ -259,6 +268,9 @@ export const api = {
 
   getRecentScans: (jwt: string) =>
     get<{ scans: RecentScan[] }>('/api/scans/recent', jwt),
+
+  getUserUsage: (jwt: string) =>
+    get<OwnerUserUsage>('/api/usage', jwt),
 
   getPlans: (jwt?: string | null) =>
     get<{ plans: Plan[] }>('/api/checkout/plans', jwt),
@@ -405,6 +417,9 @@ export const api = {
 
   ownerResetPermissions: (jwt: string, userId: string) =>
     patch<{ user: { id: string } }>(`/api/owner/users/${userId}/permissions-reset`, {}, jwt),
+
+  ownerSetStorageLimit: (jwt: string, userId: string, maxStorageBytes: number | null) =>
+    put<void>(`/api/owner/users/${userId}/storage-limit`, { maxStorageBytes }, jwt),
 
   getOwnerUserUsage: (jwt: string, userId: string) =>
     get<OwnerUserUsage>(`/api/owner/users/${userId}/usage`, jwt),

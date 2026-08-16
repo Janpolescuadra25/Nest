@@ -1,6 +1,6 @@
 {
   "name": "qyra-extension",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Qyra Chrome Extension — Toast POS to QuickBooks sync",
   "scripts": {

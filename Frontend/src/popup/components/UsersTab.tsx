@@ -3,7 +3,7 @@ import { api, type OwnerUserUsage } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
 import { useToast } from './Toast';
 import { ConfirmDialog, ErrorCard, StatusBadge, DashboardSkeleton, EmptyState } from './shared';
-import { trialCountdown } from '../lib/utils';
+import { trialCountdown, formatBytes } from '../lib/utils';
 
 interface OwnerUser {
   id: string;
@@ -75,15 +75,6 @@ export default function UsersTab({ jwt }: Props) {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; user: OwnerUser | null }>({ open: false, user: null });
   const [usageByUserId, setUsageByUserId] = useState<Record<string, { loading: boolean; data: OwnerUserUsage | null; error?: string }>>({});
   const [storageLimitEditor, setStorageLimitEditor] = useState<Record<string, { open: boolean; value: string; unit: 'MB' | 'GB'; unlimited: boolean }>>({});
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    const kb = bytes / 1024;
-    if (kb < 1024) return `${kb.toFixed(1)} KB`;
-    const mb = kb / 1024;
-    if (mb < 1024) return `${mb.toFixed(1)} MB`;
-    return `${(mb / 1024).toFixed(1)} GB`;
-  };
 
   const getEditorState = (userId: string) => storageLimitEditor[userId] ?? { open: false, value: '', unit: 'GB', unlimited: false };
 
@@ -390,7 +381,10 @@ export default function UsersTab({ jwt }: Props) {
                               <div>
                                 <div className="text-[11px] text-gray-500">Storage limit</div>
                                 <div className="text-sm font-semibold text-gray-900">
-                                  {usageByUserId[user.id]!.data!.storageLimitBytes == null ? 'Unlimited' : formatBytes(usageByUserId[user.id]!.data!.storageLimitBytes)}
+                                  {(() => {
+                                    const limit = usageByUserId[user.id]!.data!.storageLimitBytes;
+                                    return limit == null ? 'Unlimited' : formatBytes(limit);
+                                  })()}
                                 </div>
                               </div>
                               <button

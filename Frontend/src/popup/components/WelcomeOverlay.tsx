@@ -80,18 +80,24 @@ export default function WelcomeOverlay({ user, jwt, onDismiss }: WelcomeOverlayP
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-white/95 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-white/95 flex items-center justify-center p-4 animate-fade-in"
       onClick={markSeen}
     >
       <div
-        className="max-w-md w-full rounded-3xl border border-gray-200 bg-white shadow-xl p-6"
+        className="max-w-md w-full rounded-3xl border border-gray-200 bg-white shadow-xl p-6 animate-fade-in-up delay-100"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4">
-          <div className="text-emerald-600 font-bold text-sm uppercase tracking-wide">Qyra</div>
-          <h1 className="mt-3 text-2xl font-semibold text-gray-900">Welcome to Qyra!</h1>
+          <div className="flex items-center gap-3">
+            <img src="/public/icons/qyra-logo.png" alt="Qyra" className="h-10 w-10 rounded-full bg-emerald-50 p-1" />
+            <div>
+              <div className="text-emerald-600 font-bold text-sm uppercase tracking-wide">Qyra</div>
+              <p className="text-sm text-slate-500">Ready to automate your bookkeeping workflow</p>
+            </div>
+          </div>
+          <h1 className="mt-6 text-2xl font-semibold text-gray-900">Welcome to Qyra</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Scan POS reports and sync them to QuickBooks Online in seconds.
+            AI-driven POS scanning, extraction, and QuickBooks sync for your team.
           </p>
         </div>
 

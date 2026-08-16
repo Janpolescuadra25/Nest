@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api, type OwnerUserUsage } from '../lib/api';
 import { hasPerm } from '../lib/permissions';
-import { relativeTime } from '../lib/utils';
+import { relativeTime, formatBytes } from '../lib/utils';
 import type { RecentScan, UserInfo } from '../lib/api';
 import type { QBStatus, ScanHealth } from '../../types';
 import { QBConnectionCard } from './QBConnectionCard';

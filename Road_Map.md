@@ -1,69 +1,59 @@
-# Qyra Backend — Production Hardening Roadmap
-Last Updated: 2026-08-16
+# Qyra — Product Roadmap
+Last Updated: 2026-08-17
 
 ## Current Verified State
-- **Test Suite**: 117/117 passing, 20/20 suites
-- **Compilation**: Clean (tsc --noEmit exits with 0)
-- **Logging**: Pino structured logging with request IDs. Zero console.* calls in src/. All logs include timestamp, level, module, and message.
-- **Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. Enforced by createErrorHandler in errors.ts. 100% of route error responses use the standardized AppError/asyncHandler pipeline. No direct res.status(4xx/5xx) responses remain in route files.
-- **Validation**: All 22 routes have Zod schema validation via validate middleware.
-- **Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) endpoints with database and S3 connectivity checks. Legacy `/health` endpoint preserved for backward compatibility.
+- **Backend Test Suite**: 117/117 passing, 20/20 suites
+- **Backend Compilation**: Clean (tsc --noEmit exits with 0)
+- **Backend Logging**: Pino structured logging with request IDs. Zero console.* calls in src/.
+- **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 100% of route error responses use AppError/asyncHandler pipeline.
+- **Backend Validation**: All 22 routes have Zod schema validation.
+- **Backend Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) with DB and S3 connectivity checks.
+- **Landing Page**: Updated hero copy ("Scan → Extract → Sync"), all "reconciliation" wording removed, playful CSS animations added (fade-in-up keyframes, Intersection Observer scroll reveal on feature cards).
+- **Extension Welcome Overlay**: Logo + tagline fade-in-up animation implemented. All original functionality preserved.
+- **Frontend Type Check**: Clean (`tsc --noEmit` exits with 0, zero errors). All 6 type errors across 5 files resolved (formatBytes shared utility, missing API methods, nullable narrowing).
+- **Extension Store Prep**: STORE_LISTING.md created with permissions justifications, store description, and submission checklists. Manifest description updated to match landing page messaging. Version aligned to 1.0.1. `<all_urls>` host permission removed — only specific POS domain entries remain.
+- **Deployment Infrastructure**: Backend API hosted on Render.com. Frontend landing page served via Render.com static site or backend static file serving. PostgreSQL database on Neon.
 
-## Completed Phases
+## Recently Completed
 
-### P-2: Structured Logging
-- **Goal**: Replace all console.* calls with production-grade structured logging and add request tracing.
-- **What was done**: Installed pino and pino-pretty. Created logger.ts with environment-aware config (JSON in production, human-readable in dev). Created request-id middleware (crypto.randomUUID) and request-logger middleware (request/response duration tracking). Replaced all console.* calls across 20+ source files with structured pino child loggers. Updated global error handler to use structured logger with request context.
-- **Key files**: Backend/src/lib/logger.ts, Backend/src/middleware/request-id.ts, Backend/src/middleware/request-logger.ts, Backend/src/index.ts, Backend/src/lib/errors.ts, all route and service files
-- **Outcome**: Zero console.* calls remain in src/. All logs include timestamp, level, module, and message. Request IDs attached to every request and error. 112/112 tests passing.
+### Visual Refresh — Landing Page & Extension Intro Animation
+- **Goal**: Update the landing page copy to highlight the "auto entry → sync to QuickBooks" flow (removing all "reconciliation" wording) and add a playful animated intro to the browser extension welcome overlay.
+- **What was done**:
+  - Landing page (`Backend/public/landing/index.html`): Replaced hero headline with "Your POS Data, Automatically in QuickBooks" and badge "Scan → Extract → Sync". Updated feature section headline to "Everything You Need to Sync Faster". Added CSS keyframes (`fadeInUp`, `fadeIn`, `fadeInScale`) and staggered animation utility classes. Added Intersection Observer for scroll-triggered `.feature-card` reveal animations.
+  - Extension welcome overlay (`Frontend/src/popup/components/WelcomeOverlay.tsx`): Imported Qyra logo (`/public/icons/qyra-logo.png`), added overlay entrance animation (`animate-fade-in`) and inner card staggered reveal (`animate-fade-in-up delay-100`). Updated welcome copy to emphasize AI-driven POS scanning + QuickBooks sync.
+  - Extension stylesheet (`Frontend/src/popup/popup.css`): Added `fadeInUp` and `fadeIn` keyframes with `.animate-fade-in`, `.animate-fade-in-up`, and delay utility classes.
+- **Outcome**: All 3 "reconciliation" instances removed from landing page. Playful animations live on both landing page (hero stagger + scroll reveal) and extension (logo + tagline fade-in). Zero regressions — all existing functionality preserved. Frontend typecheck clean for modified files.
 
-### P-5: Security Header Verification & Error Shape Fix
-- **Goal**: Add regression test for helmet security headers and resolve validate.ts error response mismatch.
-- **What was done**: Added security-headers.test.ts. Fixed validate.ts to return flat error shape matching repo standard. Updated analytics.test.ts assertion.
-- **Outcome**: Security headers verified by test. All error responses use the same flat shape. 112/112 tests passing.
+### F-1: Fix Pre-Existing Frontend TypeScript Errors
+- **Goal**: Resolve all pre-existing TypeScript compilation errors in the Frontend workspace so that `npm run typecheck` passes cleanly.
+- **What was done**:
+  - Moved `formatBytes` from `UsersTab.tsx` into shared utility `Frontend/src/popup/lib/utils.tsx` and updated imports in `UserDashboard.tsx` and `UsersTab.tsx`.
+  - Added missing `getUserUsage` and `ownerSetStorageLimit` method implementations to `Frontend/src/popup/lib/api.ts`.
+  - Extended `poolStats` type in `AdminsTab.tsx` to include `remainingStorage` property.
+  - Fixed nullable `storageLimitBytes` type narrowing in `UsersTab.tsx` before passing to `formatBytes`.
+- **Outcome**: `tsc --noEmit` produces zero errors. 6 type errors across 5 files resolved with zero functional changes, zero `any`/`@ts-ignore` usage.
 
-### P-4: Input Validation Coverage
-- **Goal**: Ensure all routes accepting user input have Zod schema validation.
-- **What was done**: Added analyticsDashboardQuerySchema. Extended validate.ts to support body/query/params locations. Updated analytics route.
-- **Outcome**: 22/22 routes have Zod validation. 112/112 tests passing.
+### F-2: Chrome Web Store Listing Preparation
+- **Goal**: Prepare all assets, descriptions, and metadata required for submitting the Qyra extension to the Chrome Web Store.
+- **What was done**:
+  - Audited `<all_urls>` host permission — confirmed unnecessary (all script injection targets only specific POS domains). Removed from manifest.
+  - Aligned `package.json` version to `1.0.1` to match `manifest.json`.
+  - Updated manifest description to "Scan POS reports, invoices, and bill payments. AI extracts transactions and syncs them to QuickBooks Online automatically."
+  - Created `Frontend/STORE_LISTING.md` with store description, permission justifications, screenshot requirements checklist, and pre-submission checklist.
+  - Validated production build (`npm run build` — clean, no errors).
+- **Outcome**: Extension is fully prepared for Chrome Web Store submission. All automated prep complete. Remaining items are user-dependent: capture 4 screenshots, create developer account, provide privacy policy URL.
 
-### P-3a: Global Error Handler Standardization
-- **Goal**: Standardize all error responses to use a consistent shape.
-- **What was done**: Created AppError/ValidationError classes, asyncHandler wrapper, createErrorHandler global middleware. Converted 8 direct-response routes.
-- **Outcome**: All error responses use the flat error shape. 115/115 tests passing at completion.
+## Active Phases
 
-### P-3b: Final Error Response Standardization
-- **Goal**: Convert all remaining direct `res.status(4xx/5xx).json(...)` responses to use the standardized AppError/asyncHandler pipeline.
-- **What was done**: Converted 23 missed direct error responses across 4 route files (rules.ts, checkout.ts, templates.ts, quickbooks.ts). Fixed type safety for AppError's fields parameter to enforce string-only values.
-- **Key files**: Backend/src/routes/rules.ts, Backend/src/routes/checkout.ts, Backend/src/routes/templates.ts, Backend/src/routes/quickbooks.ts
-- **Outcome**: 100% of route error responses use the standardized pipeline. All responses maintain the required flat error shape. 112/112 tests passing. Clean TypeScript compilation.
-
-### P-7: Enhanced Health Check
-- **Goal**: Add production-grade liveness and readiness probes with external service connectivity checks.
-- **What was done**: Created health-checks.ts with database and S3 connectivity checks with individual timeout-bounded checks. Added `/health/live` (liveness), `/health/ready` (readiness), and preserved legacy `/health` endpoint. Added test-safe startup guard to prevent cron jobs during tests. Created health.test.ts with 5 endpoint tests.
-- **Key files**: Backend/src/lib/health-checks.ts, Backend/src/lib/storage.ts, Backend/src/index.ts, Backend/tests/health.test.ts
-- **Outcome**: 117/117 tests passing, 20/20 suites. Liveness and readiness probes operational. Database and storage connectivity verified on demand.
-
-### P-6a: Add Missing Composite Indexes
-- **Goal**: Add critical composite indexes to the Prisma schema for high-frequency query patterns.
-- **What was done**: Added 4 composite indexes to schema.prisma: User[adminId, role], ScanRecord[locationId, status], SyncLog[userId, syncedAt], AuditLog[actorId, createdAt]. Generated and applied Prisma migration 20260816162714_add_composite_indexes_p6a.
-- **Key files**: Backend/prisma/schema.prisma, Backend/prisma/migrations/20260816162714_add_composite_indexes_p6a/
-- **Outcome**: 4 new composite indexes active in PostgreSQL. 117/117 tests passing. Zero application code changes.
-
-### P-6b: Eager Loading Cleanup
-- **Goal**: Remove unnecessary deep nested include patterns.
-- **What was done**: Audit found all include chains are 1-2 levels deep and necessary for their route logic. No changes required.
-- **Outcome**: Already optimized. Zero modifications needed.
-
-### P-6c: Targeted Pagination for High-Growth Tables
-- **Goal**: Add pagination to findMany queries on ScanRecord, SyncLog, and AuditLog.
-- **What was done**: Audit found all 8 findMany calls on target models are either already paginated (3 routes), naturally bounded by user/location filter (3 routes), or export-only where pagination would break the workflow (2 routes). No changes required.
-- **Outcome**: Already implemented where needed. Zero modifications needed.
-
-### P-6d: Projection & Query Deduplication
-- **Goal**: Add targeted select to queries fetching unnecessary fields.
-- **What was done**: Combined with P-6b and P-6c audits — no unnecessary field fetching or duplicate queries found in any route handler.
-- **Outcome**: Not required. Query patterns are already efficient.
+### F-3: Landing Page Deployment & Cross-Browser Verification
+- **Goal**: Deploy the updated landing page to production on Render.com and verify all animations and copy render correctly across modern browsers.
+- **What needs to be achieved**:
+  - Deploy the backend (including the updated landing page at `Backend/public/landing/index.html`) to Render.com
+  - Verify "Scan → Extract → Sync" hero copy renders correctly in Chrome, Firefox, Safari, and Edge
+  - Verify CSS keyframe animations (fadeInUp, fadeIn, fadeInScale) work in all target browsers
+  - Verify Intersection Observer scroll-reveal triggers correctly on page load and scroll in all target browsers
+  - Confirm zero instances of "reconciliation" on the deployed page
+  - Verify all links, CTAs, and navigation elements still function correctly
 
 ## Next Priority
-Production hardening is complete. All phases delivered.
+Deploy the updated landing page to production and verify all animations and copy render correctly across modern browsers (F-3).
