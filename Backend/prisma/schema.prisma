@@ -99,6 +99,7 @@ model User {
   @@index([transferredFromId])
   @@index([adminId])
   @@index([managedById])
+  @@index([adminId, role])
   @@map("users")
 }
 
@@ -135,6 +136,7 @@ model AuditLog {
   @@index([action])
   @@index([targetUserId])
   @@index([createdAt])
+  @@index([actorId, createdAt])
   @@map("audit_logs")
 }
 
@@ -363,6 +365,7 @@ model ScanRecord {
   @@index([status])
   @@index([createdAt])
   @@index([source])
+  @@index([locationId, status])
   @@map("scan_records")
 }
 
@@ -417,6 +420,7 @@ model SyncLog {
   @@index([scanRecordId])
   @@index([syncType, requestHash])
   @@index([userId, syncType, requestHash])
+  @@index([userId, syncedAt])
   @@map("sync_logs")
 }
 
