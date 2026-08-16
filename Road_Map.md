@@ -2,11 +2,12 @@
 Last Updated: 2026-08-16
 
 ## Current Verified State
-- **Test Suite**: 112/112 passing, 19/19 suites
+- **Test Suite**: 117/117 passing, 20/20 suites
 - **Compilation**: Clean (tsc --noEmit exits with 0)
 - **Logging**: Pino structured logging with request IDs. Zero console.* calls in src/. All logs include timestamp, level, module, and message.
 - **Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. Enforced by createErrorHandler in errors.ts. 100% of route error responses use the standardized AppError/asyncHandler pipeline. No direct res.status(4xx/5xx) responses remain in route files.
 - **Validation**: All 22 routes have Zod schema validation via validate middleware.
+- **Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) endpoints with database and S3 connectivity checks. Legacy `/health` endpoint preserved for backward compatibility.
 
 ## Completed Phases
 
@@ -37,5 +38,35 @@ Last Updated: 2026-08-16
 - **Key files**: Backend/src/routes/rules.ts, Backend/src/routes/checkout.ts, Backend/src/routes/templates.ts, Backend/src/routes/quickbooks.ts
 - **Outcome**: 100% of route error responses use the standardized pipeline. All responses maintain the required flat error shape. 112/112 tests passing. Clean TypeScript compilation.
 
+### P-7: Enhanced Health Check
+- **Goal**: Add production-grade liveness and readiness probes with external service connectivity checks.
+- **What was done**: Created health-checks.ts with database and S3 connectivity checks with individual timeout-bounded checks. Added `/health/live` (liveness), `/health/ready` (readiness), and preserved legacy `/health` endpoint. Added test-safe startup guard to prevent cron jobs during tests. Created health.test.ts with 5 endpoint tests.
+- **Key files**: Backend/src/lib/health-checks.ts, Backend/src/lib/storage.ts, Backend/src/index.ts, Backend/tests/health.test.ts
+- **Outcome**: 117/117 tests passing, 20/20 suites. Liveness and readiness probes operational. Database and storage connectivity verified on demand.
+
 ## Next Priority
-To be determined. Remaining unscoped phases: P-6 (database query optimization), P-7 (enhanced health check).
+### P-6: Database Query Optimization (4 sub-phases)
+
+**P-6a: Add Missing Composite Indexes**
+- **Goal**: Add critical composite indexes to the Prisma schema for high-frequency query patterns.
+- **What needs to be achieved**: Add composite indexes on `[userId, createdAt]` for ScanRecord, SyncLog, and AuditLog. Add composite index on `[locationId, status]` for ScanRecord. Add composite index on `[adminId, role]` for User. Generate and run Prisma migration.
+- **Risk**: Medium (requires Prisma migration, but zero application code changes)
+- **Success criteria**: Migration runs cleanly. 117/117 tests pass. No application code modifications.
+
+**P-6b: Eager Loading Cleanup**
+- **Goal**: Remove unnecessary deep nested `include` patterns in dashboard and analytics routes.
+- **What needs to be achieved**: Audit all `include` chains deeper than 2 levels. Simplify or replace with targeted `select` where full nested objects aren't needed by the frontend.
+- **Risk**: Low (only affects dashboard/analytics routes)
+- **Success criteria**: All nested includes reduced to necessary depth. 117/117 tests pass.
+
+**P-6c: Targeted Pagination for High-Growth Tables**
+- **Goal**: Add `take`/`skip` pagination to findMany queries on tables that grow unbounded (scan history, sync logs, audit logs).
+- **What needs to be achieved**: Identify routes querying ScanRecord, SyncLog, and AuditLog without pagination. Add pagination with sensible defaults and optional page/limit query parameters. Routes querying bounded data (user's locations, team members) are excluded.
+- **Risk**: Medium (changes API response for paginated routes — consumers must handle pagination metadata)
+- **Success criteria**: All high-growth table queries have pagination. Existing tests updated for paginated responses. 117/117 tests pass.
+
+**P-6d: Projection & Query Deduplication**
+- **Goal**: Add targeted `select` to findMany calls fetching unnecessary fields. Remove redundant duplicate queries within single request handlers.
+- **What needs to be achieved**: Replace `include` with `select` for queries where only specific fields are consumed. Deduplicate queries that fetch the same data twice in one request.
+- **Risk**: High (removing fetched fields can break frontend consumers that access them)
+- **Success criteria**: All queries fetch only required fields. No duplicate queries per request. Requires frontend compatibility verification. 117/117 tests pass.
