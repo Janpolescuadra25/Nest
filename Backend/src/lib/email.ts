@@ -1,5 +1,8 @@
 import { Resend } from 'resend';
+import { logger } from './logger';
 import { formatBytes } from './utils';
+
+const log = logger.child({ module: 'Email' });
 
 // ── Singleton ─────────────────────────────────────────────────────────────────
 
@@ -106,11 +109,11 @@ export async function sendWelcomeEmail({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Welcome email sent to ${to}`);
+      log.info({ to }, `Welcome email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendWelcomeEmail failed:', err);
+    log.error({ err }, 'sendWelcomeEmail failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -127,7 +130,7 @@ export async function sendVerificationEmail({
   verificationLink: string;
 }): Promise<{ success: boolean; error?: string }> {
   if (!process.env.APP_URL) {
-    console.warn('[Email] APP_URL not configured — verification links will be broken');
+    log.warn('APP_URL not configured — verification links will be broken');
   }
   try {
     const resend = getResendClient();
@@ -156,11 +159,11 @@ export async function sendVerificationEmail({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Verification email sent to ${to}`);
+      log.info({ to }, `Verification email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendVerificationEmail failed:', err);
+    log.error({ err }, 'sendVerificationEmail failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -205,11 +208,11 @@ export async function sendTrialWarning({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Trial warning (${daysRemaining}d) sent to ${to}`);
+      log.info({ to, daysRemaining }, `Trial warning (${daysRemaining}d) sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendTrialWarning failed:', err);
+    log.error({ err }, 'sendTrialWarning failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -235,7 +238,7 @@ export async function sendSyncFailureAlert({
     const total = staleCount + maxRetriedCount + oldFailureCount;
 
     if (!process.env.APP_URL) {
-      console.warn('[email] APP_URL not set, using fallback dashboard link');
+      log.warn('APP_URL not set, using fallback dashboard link');
     }
 
     const html = emailWrapper(`
@@ -271,11 +274,11 @@ export async function sendSyncFailureAlert({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Sync failure alert sent to ${to}`);
+      log.info({ to, total }, `Sync failure alert sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendSyncFailureAlert failed:', err);
+    log.error({ err }, 'sendSyncFailureAlert failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -316,11 +319,11 @@ export async function sendQuotaWarning({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Quota warning sent to ${to}`);
+      log.info({ to, percentage }, `Quota warning sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendQuotaWarning failed:', err);
+    log.error({ err }, 'sendQuotaWarning failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -361,11 +364,11 @@ export async function sendTeamChangeAlert({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Team change alert sent to ${to}`);
+      log.info({ to, action }, `Team change alert sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendTeamChangeAlert failed:', err);
+    log.error({ err }, 'sendTeamChangeAlert failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -407,11 +410,11 @@ export async function sendTrialExpired({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Trial expired email sent to ${to}`);
+      log.info({ to }, `Trial expired email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendTrialExpired failed:', err);
+    log.error({ err }, 'sendTrialExpired failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -453,11 +456,11 @@ export async function sendTrialRenewed({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Trial renewed email sent to ${to}`);
+      log.info({ to }, `Trial renewed email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendTrialRenewed failed:', err);
+    log.error({ err }, 'sendTrialRenewed failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -474,7 +477,7 @@ export async function sendPasswordResetEmail({
   resetLink: string;
 }): Promise<{ success: boolean; error?: string }> {
   if (!process.env.APP_URL) {
-    console.warn('[Email] APP_URL not configured — password reset links will be broken');
+    log.warn('APP_URL not configured — password reset links will be broken');
   }
   try {
     const resend = getResendClient();
@@ -503,11 +506,11 @@ export async function sendPasswordResetEmail({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Password reset email sent to ${to}`);
+      log.info({ to }, `Password reset email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendPasswordResetEmail failed:', err);
+    log.error({ err }, 'sendPasswordResetEmail failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -552,11 +555,11 @@ export async function sendRejectionEmail({
       html,
     });
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Email] Rejection email sent to ${to}`);
+      log.info({ to }, `Rejection email sent to ${to}`);
     }
     return { success: true };
   } catch (err) {
-    console.error('[Email] sendRejectionEmail failed:', err);
+    log.error({ err }, 'sendRejectionEmail failed');
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

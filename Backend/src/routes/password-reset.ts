@@ -8,7 +8,9 @@ import { sendPasswordResetEmail } from '../lib/email';
 import { passwordResetLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { passwordResetRequestSchema, passwordResetVerifySchema } from '../lib/validators';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'PasswordReset' });
 const router = Router();
 
 // ── POST /api/password-reset/request ─────────────────────────────────────────
@@ -45,13 +47,13 @@ router.post('/request', passwordResetLimiter, validate(passwordResetRequestSchem
       resetLink: `${process.env.APP_URL}/reset-password?token=${token}`,
     });
     if (!emailResult.success) {
-      console.error('[PasswordReset] Failed to send reset email:', emailResult.error);
+      log.error({ err: emailResult.error }, 'Failed to send reset email');
     }
 
     return res.json(GENERIC_RESPONSE);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[PasswordReset] request error:', err);
+    log.error({ err }, 'Request error');
     throw new AppError('Internal server error', 500);
   }
 }));
@@ -116,7 +118,7 @@ router.post('/verify', passwordResetLimiter, validate(passwordResetVerifySchema)
     return res.json({ message: 'Password updated successfully. You can now log in.' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[PasswordReset] verify error:', err);
+    log.error({ err }, 'Verify error');
     throw new AppError('Internal server error', 500);
   }
 }));

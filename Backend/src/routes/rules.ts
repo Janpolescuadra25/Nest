@@ -6,6 +6,9 @@ import { prisma } from '../lib/prisma';
 import { applyRules, applyRulesToLineItems } from '../services/rules.engine';
 import { validate } from '../middleware/validate';
 import { ruleCreateSchema, ruleUpdateSchema } from '../lib/validators';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Rules' });
 
 const router = Router();
 
@@ -65,7 +68,7 @@ router.put('/:id', requireFeaturePermission('rules', 'write'), validate(ruleUpda
     res.json(updated);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Rules] update error:', err);
+    log.error({ err }, 'update error');
     throw new AppError('Failed to update rule', 500);
   }
 }));
@@ -87,7 +90,7 @@ router.delete('/:id', requireFeaturePermission('rules', 'write'), asyncHandler(a
     res.json({ message: 'Rule deleted' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Rules] delete error:', err);
+    log.error({ err }, 'delete error');
     throw new AppError('Failed to delete rule', 500);
   }
 }));

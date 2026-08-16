@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import { UserRole, UserStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.middleware';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Admin' });
 import { requireCapacity } from '../middleware/capacity';
 import { prisma } from '../lib/prisma';
 import { sendTeamChangeAlert, sendWelcomeEmail, sendTrialRenewed } from '../lib/email';
@@ -37,7 +40,7 @@ async function maybeSendTeamChangeAlert(params: {
     action: params.action,
   });
   if (!result.success) {
-    console.error('[Admin] sendTeamChangeAlert failed:', result.error);
+    log.error({ error: result.error }, 'sendTeamChangeAlert failed');
   }
 }
 
@@ -106,7 +109,7 @@ router.get('/team', requireRole('ADMIN', 'MANAGER'), asyncHandler(async(req: Aut
     return res.json({ users, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] getTeam error:', err);
+    log.error({ err }, 'getTeam error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -153,7 +156,7 @@ router.get('/stats', requireRole('ADMIN', 'MANAGER'), asyncHandler(async(req: Au
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] stats error:', err);
+    log.error({ err }, 'stats error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -187,7 +190,7 @@ router.get('/audit-log', requireRole('ADMIN'), asyncHandler(async(req: AuthReque
     return res.json({ logs, total, page, limit });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] audit-log error:', err);
+    log.error({ err }, 'audit-log error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -264,7 +267,7 @@ router.post('/team/invite', requireRole('ADMIN', 'MANAGER'), requireCapacity('us
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] inviteTeamMember error:', err);
+    log.error({ err }, 'inviteTeamMember error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -397,7 +400,7 @@ router.post('/invite', validate(inviteLinkSchema), asyncHandler(async(req: AuthR
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] createInviteLink error:', err);
+    log.error({ err }, 'createInviteLink error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -436,7 +439,7 @@ router.get('/invites', asyncHandler(async(req: AuthRequest, res: Response) => {
     return res.json({ invites, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] listInviteLinks error:', err);
+    log.error({ err }, 'listInviteLinks error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -467,7 +470,7 @@ router.delete('/invites/:id', asyncHandler(async(req: AuthRequest, res: Response
     return res.json({ message: 'Invite revoked' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] revokeInviteLink error:', err);
+    log.error({ err }, 'revokeInviteLink error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -669,7 +672,7 @@ router.patch('/team/:id', requireRole('ADMIN'), validate(patchTeamMemberSchema),
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] patchTeamMember error:', err);
+    log.error({ err }, 'patchTeamMember error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -705,7 +708,7 @@ router.post('/team/:id/disable', requireRole('ADMIN'), asyncHandler(async(req: A
     return res.json({ message: 'User disabled successfully.' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] disableTeamMember error:', err);
+    log.error({ err }, 'disableTeamMember error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -776,7 +779,7 @@ router.patch('/team/:id/allocation', requireRole('ADMIN'), validate(teamAllocati
     res.json(updated);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] patchTeamAllocation error:', err);
+    log.error({ err }, 'patchTeamAllocation error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -845,7 +848,7 @@ router.patch('/users/:id/timebomb', requireRole('OWNER', 'ADMIN'), asyncHandler(
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] setTimeBomb error:', err);
+    log.error({ err }, 'setTimeBomb error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -912,7 +915,7 @@ router.patch('/users/:id/timebomb/clear', requireRole('OWNER', 'ADMIN'), asyncHa
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] clearTimeBomb error:', err);
+    log.error({ err }, 'clearTimeBomb error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -992,7 +995,7 @@ router.patch('/users/:id/role', requireRole('OWNER', 'ADMIN'), asyncHandler(asyn
     return res.json({ user: { ...updated, effectiveAccess: getEffectiveAccess(buildUserForAccess(updated)) } });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Admin] changeUserRole error:', err);
+    log.error({ err }, 'changeUserRole error');
     throw new AppError('Internal server error.', 500);
   }
 }))

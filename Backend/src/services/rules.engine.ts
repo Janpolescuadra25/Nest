@@ -1,5 +1,8 @@
 import { create, all } from 'mathjs';
 import { RuleConfig } from '../types';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'RulesEngine' });
 
 const ALLOWED_FACTORIES = new Set([
   // Arithmetic
@@ -62,7 +65,7 @@ export function applyRules(
           }, 0);
           result[targetField] = combined;
           if (process.env.NODE_ENV !== 'production') {
-            console.log(`[RulesEngine] COMBINE "${rule.name}": ${sourceFields.join(' + ')} = ${combined} → ${targetField}`);
+            log.info({ rule: rule.name, sourceFields, targetField, combined }, 'COMBINE rule applied');
           }
           break;
         }
@@ -76,7 +79,7 @@ export function applyRules(
           }, 0);
           result[targetField] = base - deduction;
           if (process.env.NODE_ENV !== 'production') {
-            console.log(`[RulesEngine] DEDUCT "${rule.name}": ${base} - ${deduction} = ${result[targetField]} → ${targetField}`);
+            log.info({ rule: rule.name, sourceFields, targetField, base, deduction }, 'DEDUCT rule applied');
           }
           break;
         }
@@ -87,7 +90,7 @@ export function applyRules(
           const value = result[sourceFields[0]] ?? 0;
           result[targetField] = value >= threshold ? value : 0;
           if (process.env.NODE_ENV !== 'production') {
-            console.log(`[RulesEngine] THRESHOLD "${rule.name}": ${value} >= ${threshold}? → ${result[targetField]}`);
+            log.info({ rule: rule.name, sourceFields, targetField, threshold, value }, 'THRESHOLD rule applied');
           }
           break;
         }
@@ -104,14 +107,14 @@ export function applyRules(
           const value = compiled.evaluate() as number;
           result[targetField] = value;
           if (process.env.NODE_ENV !== 'production') {
-            console.log(`[RulesEngine] FORMULA "${rule.name}": ${evaluatable} = ${value} → ${targetField}`);
+            log.info({ rule: rule.name, evaluatable, targetField, value }, 'FORMULA rule applied');
           }
           break;
         }
       }
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error(`[RulesEngine] Error applying rule "${rule.name}":`, err);
+        log.error({ err, rule: rule.name }, 'Error applying rule');
       }
     }
   }

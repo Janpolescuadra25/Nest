@@ -39,9 +39,11 @@ import { startScanCleanupCron } from './cron/scan-cleanup';
 import { createErrorHandler } from './lib/errors';
 import { requestId } from './middleware/request-id';
 import { requestLogger } from './middleware/request-logger';
+import { logger } from './lib/logger';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const log = logger.child({ module: 'Index' });
 
 // Trust the first proxy hop so req.ip reflects the real client IP (needed for
 // accurate rate limiting behind Render's load balancer).
@@ -112,7 +114,7 @@ app.get('/health', async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', service: 'qyra-backend', database: 'connected', timestamp: new Date().toISOString() });
   } catch (err) {
-    console.error('[Health] Database check failed:', err);
+    log.error({ err }, 'Health check database failed');
     res.status(503).json({ status: 'error', service: 'qyra-backend', database: 'disconnected', timestamp: new Date().toISOString() });
   }
 });
@@ -189,23 +191,23 @@ startTrialWarningCron(prisma);
 startSyncFailureAlertCron(prisma);
 startQuotaAlertCron(prisma);
 startScanCleanupCron(prisma);
-resetOwnerIfRequested().catch(err => console.error('[Owner Reset] Startup error:', err));
+resetOwnerIfRequested().catch(err => log.error({ err }, 'Owner Reset startup error'));
 const server = app.listen(PORT, () => {
-  console.log(`[Qyra] Server running on http://localhost:${PORT}`);
-  console.log(`[Qyra] Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  log.info({ port: PORT }, 'Server running');
+  log.info({ environment: process.env.NODE_ENV ?? 'development' }, 'Environment');
 });
 
 function gracefulShutdown(signal: string) {
-  console.log(`[Qyra] ${signal} received. Shutting down gracefully...`);
+  log.info({ signal }, 'Shutdown signal received');
   server.close(() => {
-    console.log('[Qyra] HTTP server closed.');
+    log.info('HTTP server closed');
     prisma.$disconnect().then(() => {
-      console.log('[Qyra] Database disconnected.');
+      log.info('Database disconnected');
       process.exit(0);
     });
   });
   setTimeout(() => {
-    console.error('[Qyra] Forced shutdown after timeout.');
+    log.error('Forced shutdown after timeout');
     process.exit(1);
   }, 10_000);
 }

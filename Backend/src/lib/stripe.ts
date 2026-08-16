@@ -1,4 +1,7 @@
 import Stripe from 'stripe';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'Stripe' });
 
 export const isStripeConfigured = !!process.env.STRIPE_SECRET_KEY;
 export const stripe = process.env.STRIPE_SECRET_KEY
@@ -8,7 +11,7 @@ export const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 if (!isStripeConfigured) {
-  console.warn('[Stripe] STRIPE_SECRET_KEY not configured. Stripe features will be unavailable.');
+  log.warn('STRIPE_SECRET_KEY not configured. Stripe features will be unavailable.');
 }
 
 export type PlanKey = 'free' | 'starter' | 'professional' | 'premium' | 'enterprise';

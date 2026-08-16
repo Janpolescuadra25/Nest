@@ -7,7 +7,9 @@ import { suggestMappings } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { validateMappingConditions } from '../lib/validate-conditions';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'Mappings' });
 const router = Router();
 
 router.use(authenticate, enforceEffectiveRole);
@@ -100,7 +102,7 @@ router.put('/:id', requireFeaturePermission('map', 'write'), asyncHandler(async 
     res.json(updated);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Mappings] update error:', err);
+    log.error({ err }, 'Update error');
     throw new AppError('Failed to update mapping', 500);
   }
 }));
@@ -122,7 +124,7 @@ router.delete('/:id', requireFeaturePermission('map', 'write'), asyncHandler(asy
     res.json({ message: 'Mapping deleted' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Mappings] delete error:', err);
+    log.error({ err }, 'Delete error');
     throw new AppError('Failed to delete mapping', 500);
   }
 }));
@@ -210,7 +212,7 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
     res.json({ suggestions });
   } catch (err: any) {
     if (err instanceof AppError) throw err;
-    console.error('[Mappings] suggestion error:', err);
+    log.error({ err }, 'Suggestion error');
 
     const isRateLimit = err?.status === 429
       || err?.message?.includes('429')

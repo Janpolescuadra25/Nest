@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { sendQuotaWarning } from '../lib/email';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'QuotaAlerts' });
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -82,6 +85,6 @@ async function checkQuotaAlerts(prisma: PrismaClient): Promise<void> {
       }
     }
   } catch (err) {
-    console.error('[quota-alerts] Error checking storage quotas:', err);
+    log.error({ err }, 'Error checking storage quotas');
   }
 }

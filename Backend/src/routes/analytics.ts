@@ -4,6 +4,9 @@ import { AppError, asyncHandler } from '../lib/errors';
 import { prisma } from '../lib/prisma';
 import { analyticsDashboardQuerySchema } from '../lib/validators';
 import { validate } from '../middleware/validate';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Analytics' });
 
 const router = Router();
 
@@ -105,7 +108,7 @@ router.get('/dashboard', authenticate, requireFeaturePermission('scan', 'write')
       },
     });
   } catch (error) {
-    console.error('[Analytics] dashboard error:', error);
+    log.error({ err: error }, 'dashboard error');
     throw new AppError('Failed to load dashboard analytics', 500);
   }
 }));

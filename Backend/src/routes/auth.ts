@@ -10,6 +10,9 @@ import { validate } from '../middleware/validate';
 import { loginSchema, registerSchema, changePasswordSchema } from '../lib/validators';
 import { sendVerificationEmail } from '../lib/email';
 import { hashToken } from '../lib/encryption';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Auth' });
 
 function mergeTeamBilling(user: any) {
   const teamOwner = user.admin ?? {};
@@ -99,7 +102,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async(req
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] Login error:', err);
+    log.error({ err }, 'Login error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -161,7 +164,7 @@ router.get('/usage', authenticate, asyncHandler(async(req: AuthRequest, res: Res
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] get usage error:', err);
+    log.error({ err }, 'Get usage error');
     throw new AppError('Failed to fetch usage', 500);
   }
 }))
@@ -221,7 +224,7 @@ router.get('/usage', authenticate, asyncHandler(async(req: AuthRequest, res: Res
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] get usage error:', err);
+    log.error({ err }, 'Get usage error');
     throw new AppError('Failed to fetch usage', 500);
   }
 }))
@@ -269,10 +272,10 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
         verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
       });
       if (!emailResult.success) {
-        console.error('[Auth] Verification email failed:', emailResult.error);
+        log.error({ err: emailResult.error }, 'Verification email failed');
       }
     } catch (emailErr) {
-      console.error('[Auth] Registration setup error:', emailErr);
+      log.error({ err: emailErr }, 'Registration setup error');
     }
 
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? '7d';
@@ -311,7 +314,7 @@ router.post('/register', authLimiter, validate(registerSchema), asyncHandler(asy
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] Register error:', err);
+    log.error({ err }, 'Register error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -341,7 +344,7 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), as
     return res.json({ message: 'Password changed successfully.' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] Change password error:', err);
+    log.error({ err }, 'Change password error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -406,7 +409,7 @@ router.get('/me', authenticate, asyncHandler(async(req: AuthRequest, res: Respon
     return res.json({ user: { ...user, ...billing, admin: undefined } });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Auth] Me error:', err);
+    log.error({ err }, 'Me error');
     throw new AppError('Internal server error.', 500);
   }
 }))

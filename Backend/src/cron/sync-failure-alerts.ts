@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { sendSyncFailureAlert } from '../lib/email';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'SyncFailureAlerts' });
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -157,7 +160,7 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
         dashboardLink,
       });
       if (!emailResult.success) {
-        console.error('[sync-failure-alerts] sendSyncFailureAlert failed:', emailResult.error);
+        log.error({ err: emailResult.error }, 'sendSyncFailureAlert failed');
       }
 
       if (emailResult.success) {
@@ -177,6 +180,6 @@ async function checkSyncFailures(prisma: PrismaClient): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('[sync-failure-alerts] Error checking sync failures:', error);
+    log.error({ err: error }, 'Error checking sync failures');
   }
 }

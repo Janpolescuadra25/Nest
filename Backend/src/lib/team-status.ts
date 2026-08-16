@@ -1,6 +1,9 @@
 import { PrismaClient, Prisma, UserRole, UserStatus } from '@prisma/client';
 import { sendTrialExpired, sendTrialWarning } from './email';
 import { UserForAccess } from '../middleware/effective-role';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'TeamStatus' });
 
 const TRIAL_WARNING_THRESHOLDS = [1, 3, 7] as const;
 const MS_PER_DAY = 86_400_000;
@@ -79,7 +82,7 @@ export async function processTrialExpiry(prisma: PrismaClient): Promise<number> 
         customExpiryMessage: user.customExpiryMessage,
       }).then((result) => {
         if (!result?.success) {
-          console.error(`[TeamStatus] Trial expired email failed for ${user.email}:`, result?.error ?? 'No result returned');
+          log.error({ error: result?.error ?? 'No result returned', userEmail: user.email }, `Trial expired email failed for ${user.email}`);
         }
       })
     ),
@@ -143,7 +146,7 @@ export async function processTrialWarnings(prisma: PrismaClient): Promise<number
           });
 
           if (!emailResult?.success) {
-            console.error('[TeamStatus] Trial warning email failed:', emailResult?.error ?? 'No result returned');
+            log.error({ error: emailResult?.error ?? 'No result returned' }, 'Trial warning email failed');
           }
           break;
         }
@@ -197,7 +200,7 @@ export async function processTimeBombTransitions(prisma: PrismaClient): Promise<
           },
         })
       )
-    ).catch((err) => console.error('[TeamStatus] Failed to write grace period audit logs:', err));
+    ).catch((err) => log.error({ err }, 'Failed to write grace period audit logs'));
   }
 
   const graceExpiredUsers = await prisma.user.findMany({
@@ -247,7 +250,7 @@ export async function processTimeBombTransitions(prisma: PrismaClient): Promise<
           },
         })
       )
-    ).catch((err) => console.error('[TeamStatus] Failed to write time bomb expiry audit logs:', err));
+    ).catch((err) => log.error({ err }, 'Failed to write time bomb expiry audit logs'));
   }
 
   return {

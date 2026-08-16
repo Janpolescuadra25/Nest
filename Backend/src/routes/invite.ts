@@ -14,7 +14,9 @@ import { validateInviteLink, InviteError } from '../utils/invite.utils';
 import { logAction } from '../middleware/audit';
 import { getPermissionDefaults } from '../middleware/permissions';
 import { sendTeamChangeAlert, sendVerificationEmail } from '../lib/email';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'Invite' });
 const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -141,10 +143,10 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
         verificationLink: `${process.env.APP_URL}/api/email-verification/verify/${verificationToken}`,
       });
       if (!emailResult.success) {
-        console.error('[Invite] Verification email failed:', emailResult.error);
+        log.error({ err: emailResult.error }, 'Verification email failed');
       }
     } catch (emailErr) {
-      console.error('[Invite] signup setup error:', emailErr);
+      log.error({ err: emailErr }, 'Signup setup error');
     }
 
     try {
@@ -163,12 +165,12 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
             action: 'joined',
           });
           if (!teamAlertResult.success) {
-            console.error('[Invite] sendTeamChangeAlert failed:', teamAlertResult.error);
+            log.error({ err: teamAlertResult.error }, 'sendTeamChangeAlert failed');
           }
         }
       }
     } catch (alertErr) {
-      console.error('[Invite] sendTeamChangeAlert error:', alertErr);
+      log.error({ err: alertErr }, 'sendTeamChangeAlert error');
     }
 
     // Log audit actions
@@ -214,7 +216,7 @@ router.post('/signup/:token', authLimiter, validate(signupViaInviteSchema), asyn
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Invite] signupViaInvite error:', err);
+    log.error({ err }, 'SignupViaInvite error');
     throw new AppError('Internal server error.', 500);
   }
 }));
@@ -272,7 +274,7 @@ router.get('/:token', authLimiter, asyncHandler(async (req: Request, res: Respon
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Invite] getInvite error:', err);
+    log.error({ err }, 'GetInvite error');
     throw new AppError('Internal server error.', 500);
   }
 }));

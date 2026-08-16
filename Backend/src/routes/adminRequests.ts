@@ -9,7 +9,9 @@ import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rate-limit';
 import { getPermissionDefaults } from '../middleware/permissions';
 import { adminRequestSchema } from '../lib/validators';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'AdminRequests' });
 const router = Router();
 
 // ── POST /api/admin-requests  (public — no auth) ──────────────────────────────
@@ -59,7 +61,7 @@ router.post('/', authLimiter, validate(adminRequestSchema), asyncHandler(async(r
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[AdminRequests] create error:', err);
+    log.error({ err }, 'Create error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -89,7 +91,7 @@ router.get('/', authenticate, requireRole('OWNER'), asyncHandler(async(req: Auth
     return res.json({ requests, total, page, limit });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[AdminRequests] list error:', err);
+    log.error({ err }, 'List error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -167,7 +169,7 @@ router.post('/:id/approve', authenticate, requireRole('OWNER'), asyncHandler(asy
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[AdminRequests] approve error:', err);
+    log.error({ err }, 'Approve error');
     throw new AppError('Internal server error.', 500);
   }
 }))
@@ -197,13 +199,13 @@ router.post('/:id/reject', authenticate, requireRole('OWNER'), asyncHandler(asyn
     // Send rejection email (non-blocking)
     const emailResult = await sendRejectionEmail({ to: request.email, name: request.name });
     if (!emailResult.success) {
-      console.error('[AdminRequests] rejection email failed:', emailResult.error);
+      log.error({ err: emailResult.error }, 'Rejection email failed');
     }
 
     return res.json({ message: 'Request rejected.' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[AdminRequests] reject error:', err);
+    log.error({ err }, 'Reject error');
     throw new AppError('Internal server error.', 500);
   }
 }))

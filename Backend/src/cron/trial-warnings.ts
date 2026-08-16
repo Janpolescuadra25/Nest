@@ -1,12 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { processTrialWarnings } from '../lib/team-status';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'TrialWarnings' });
 
 async function checkTrialWarnings(prisma: PrismaClient): Promise<void> {
   try {
     const warningsSent = await processTrialWarnings(prisma);
-    console.log(`[TrialWarnings] Sent ${warningsSent} warnings`);
+    log.info({ warningsSent }, 'Sent warnings');
   } catch (err) {
-    console.error('[TrialWarnings] checkTrialWarnings error:', err);
+    log.error({ err }, 'checkTrialWarnings error');
   }
 }
 

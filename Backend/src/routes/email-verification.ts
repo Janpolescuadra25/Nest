@@ -6,7 +6,9 @@ import { prisma } from '../lib/prisma';
 import { hashToken } from '../lib/encryption';
 import { sendVerificationEmail } from '../lib/email';
 import { emailVerificationLimiter } from '../middleware/rate-limit';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'EmailVerification' });
 const router = Router();
 
 // ── POST /api/email-verification/request ─────────────────────────────────────
@@ -36,7 +38,7 @@ router.post('/request', authenticate, emailVerificationLimiter, asyncHandler(asy
     return res.json({ message: 'Verification email sent' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[EmailVerification] request error:', err);
+    log.error({ err }, 'Request error');
     throw new AppError('Internal server error', 500);
   }
 }));
@@ -72,7 +74,7 @@ router.get('/verify/:token', asyncHandler(async (req: Request, res: Response) =>
 
     return res.redirect(`${process.env.APP_URL}/verify-email?status=success`);
   } catch (err) {
-    console.error('[EmailVerification] verify error:', err);
+    log.error({ err }, 'Verify error');
     return res.redirect(`${process.env.APP_URL}/verify-email?status=invalid`);
   }
 }));

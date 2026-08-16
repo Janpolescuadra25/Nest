@@ -6,6 +6,9 @@ import { prisma } from '../lib/prisma';
 import { AuthPayload } from '../types';
 import { getEffectiveAccess, hasPermission, UserForAccess, EffectiveAccess } from './effective-role';
 import { Feature, Action } from './permissions';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Auth' });
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 if (!JWT_SECRET) {
@@ -118,7 +121,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
       return next(new AppError('Invalid or expired token', 401));
     } else {
-      console.error('[Auth] Middleware error:', err);
+      log.error({ err }, 'Middleware error');
       return next(new AppError('Authentication service unavailable', 500));
     }
   }

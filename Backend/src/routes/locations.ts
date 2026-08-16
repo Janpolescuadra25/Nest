@@ -13,7 +13,9 @@ import { parsePagination, buildPaginationMeta } from '../lib/pagination';
 import { validateMappingConditions } from '../lib/validate-conditions';
 import { validate } from '../middleware/validate';
 import { locationCreateSchema, locationUpdateSchema, importTemplateSchema, mappingCreateSchema, ruleCreateSchema } from '../lib/validators';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'Locations' });
 const router = Router();
 
 const attachmentUpload = multer({
@@ -76,7 +78,7 @@ router.get('/', asyncHandler(async(req: AuthRequest, res: Response): Promise<voi
     res.json({ data, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] list error:', err);
+    log.error({ err }, 'List error');
     throw new AppError('Failed to fetch locations', 500);
   }
 }))
@@ -103,7 +105,7 @@ router.post('/', requireFeaturePermission('locations', 'write'), requireCapacity
     res.status(201).json(location);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] create error:', err);
+    log.error({ err }, 'Create error');
     throw new AppError('Failed to create location', 500);
   }
 }))
@@ -125,7 +127,7 @@ router.get('/:id', asyncHandler(async(req: AuthRequest, res: Response): Promise<
     res.json(location);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] get error:', err);
+    log.error({ err }, 'Get error');
     throw new AppError('Failed to fetch location', 500);
   }
 }))
@@ -159,7 +161,7 @@ router.put('/:id', requireFeaturePermission('locations', 'write'), validate(loca
     res.json(updated);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] update error:', err);
+    log.error({ err }, 'Update error');
     throw new AppError('Failed to update location', 500);
   }
 }))
@@ -181,7 +183,7 @@ router.delete('/:id', requireFeaturePermission('locations', 'write'), asyncHandl
     res.json({ message: 'Location deleted' });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] delete error:', err);
+    log.error({ err }, 'Delete error');
     throw new AppError('Failed to delete location', 500);
   }
 }))
@@ -322,7 +324,7 @@ router.post('/:id/import-template', requireFeaturePermission('map', 'write'), va
   } catch (err: unknown) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Import failed';
-    console.error('[import-template]', message);
+    log.error({ err, message }, 'Import template error');
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'Template import failed. Please try again.', 500);
@@ -350,7 +352,7 @@ router.get('/:id/mappings', asyncHandler(async(req: AuthRequest, res: Response):
     res.json(mappings);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] mappings list error:', err);
+    log.error({ err }, 'Mappings list error');
     throw new AppError('Failed to fetch mappings', 500);
   }
 }))
@@ -435,7 +437,7 @@ router.post('/:id/mappings', requireFeaturePermission('map', 'write'), validate(
     res.status(201).json(mapping);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] mapping create error:', err);
+    log.error({ err }, 'Mapping create error');
     throw new AppError('Failed to create mapping', 500);
   }
 }))
@@ -571,7 +573,7 @@ router.get('/:id/rules', asyncHandler(async(req: AuthRequest, res: Response): Pr
     res.json(rules);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] rules list error:', err);
+    log.error({ err }, 'Rules list error');
     throw new AppError('Failed to fetch rules', 500);
   }
 }))
@@ -622,7 +624,7 @@ router.post('/:id/rules', requireFeaturePermission('rules', 'write'), validate(r
     res.status(201).json(rule);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] rule create error:', err);
+    log.error({ err }, 'Rule create error');
     throw new AppError('Failed to create rule', 500);
   }
 }))
@@ -657,7 +659,7 @@ router.get('/:id/scans', asyncHandler(async(req: AuthRequest, res: Response): Pr
     res.json({ scans, hasMore });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Locations] scans list error:', err);
+    log.error({ err }, 'Scans list error');
     throw new AppError('Failed to fetch scans', 500);
   }
 }))

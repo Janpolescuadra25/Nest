@@ -3,7 +3,9 @@ import Stripe from 'stripe';
 import { stripe, isStripeConfigured, type PlanKey, getScanPack, getPlanLimits, PLANS } from '../lib/stripe';
 import { asyncHandler, AppError } from '../lib/errors';
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'Webhooks' });
 const router = Router();
 
 type WebhookEvent = {
@@ -300,7 +302,7 @@ router.post(
 
       default:
         if (process.env.NODE_ENV !== 'production') {
-          console.log(`Unhandled Stripe event type: ${event.type}`);
+          log.info({ eventType: event.type }, 'Unhandled Stripe event type');
         }
     }
 

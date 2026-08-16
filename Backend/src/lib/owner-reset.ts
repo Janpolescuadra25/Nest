@@ -1,5 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
+import { logger } from './logger';
+
+const log = logger.child({ module: 'OwnerReset' });
 
 export async function resetOwnerIfRequested(): Promise<void> {
   if (process.env.RESET_OWNER_PASSWORD !== 'true') return;
@@ -9,14 +12,14 @@ export async function resetOwnerIfRequested(): Promise<void> {
   const ownerName = process.env.OWNER_NAME;
 
   if (!ownerEmail || !ownerPassword || !ownerName) {
-    console.error('[Owner Reset] RESET_OWNER_PASSWORD=true but OWNER_EMAIL, OWNER_PASSWORD, or OWNER_NAME is missing.');
+    log.error('RESET_OWNER_PASSWORD=true but OWNER_EMAIL, OWNER_PASSWORD, or OWNER_NAME is missing.');
     return;
   }
 
   try {
     const existingOwner = await prisma.user.findFirst({ where: { role: 'OWNER' } });
     if (!existingOwner) {
-      console.log('[Owner Reset] No owner found — nothing to reset.');
+      log.info('No owner found — nothing to reset.');
       return;
     }
 
@@ -31,20 +34,20 @@ export async function resetOwnerIfRequested(): Promise<void> {
           emailVerified: true,
         },
       });
-      console.log(`[Owner Reset] Updated owner credentials for ${ownerEmail}.`);
+      log.info({ ownerEmail }, `Updated owner credentials for ${ownerEmail}.`);
     } catch (err: any) {
       if (err.code === 'P2002') {
-        console.log(`[Owner Reset] Email ${ownerEmail} already exists — updating password only.`);
+        log.info({ ownerEmail }, `Email ${ownerEmail} already exists — updating password only.`);
         await prisma.user.update({
           where: { id: existingOwner.id },
           data: { password: hashedPassword, name: ownerName, emailVerified: true },
         });
-        console.log(`[Owner Reset] Owner password updated. Email remains: ${existingOwner.email}`);
+        log.info({ existingOwnerEmail: existingOwner.email }, `Owner password updated. Email remains: ${existingOwner.email}`);
       } else {
         throw err;
       }
     }
   } catch (err) {
-    console.error('[Owner Reset] Failed:', err);
+    log.error({ err }, 'Failed');
   }
 }

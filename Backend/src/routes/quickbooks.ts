@@ -15,6 +15,9 @@ import { encrypt, decryptSafe, hashToken } from '../lib/encryption';
 import { QBApiError } from '../lib/qb-errors';
 import { createSyncLogEntry, countSyncAttempts, findDuplicateSync, hashSyncRequest } from '../lib/dedup';
 import { logAction } from '../middleware/audit';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'QuickBooks' });
 
 const router = Router();
 
@@ -32,9 +35,7 @@ function restrictSkipDedup(req: AuthRequest, _res: Response, next: NextFunction)
   if (req.body?.skipDedupCheck) {
     const role = req.user?.role;
     if (role !== 'OWNER' && role !== 'ADMIN') {
-      console.warn(
-        `[Security] User ${req.user?.userId} (${role}) attempted skipDedupCheck without OWNER/ADMIN role`
-      );
+      log.warn({ userId: req.user?.userId, role }, `User attempted skipDedupCheck without OWNER/ADMIN role`);
       req.body.skipDedupCheck = false;
     }
   }
@@ -68,7 +69,7 @@ router.get('/auth-url', authenticate, asyncHandler(async(req: AuthRequest, res: 
     res.json({ authUrl, state });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[QB] Failed to generate auth URL:', err);
+    log.error({ err }, 'Failed to generate auth URL');
     throw new AppError('Failed to generate authorization URL', 500);
   }
 }))
@@ -83,7 +84,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
 
   // ── Intuit sent back an OAuth error ───────────────────────────────────────
   if (error) {
-    console.error('[QB] Intuit returned OAuth error:', error);
+    log.error({ error }, 'Intuit returned OAuth error');
     res.send(errorPage(`Intuit returned error: ${error}`));
     return;
   }
@@ -91,7 +92,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
   // ── Missing required params ───────────────────────────────────────────────
   if (!code || !realmId || !state) {
     const missing = [!code && 'code', !realmId && 'realmId', !state && 'state'].filter(Boolean);
-    console.error('[QB] Missing OAuth params:', missing.join(', '));
+    log.error({ missing: missing.join(', ') }, 'Missing OAuth params');
     return res.send(errorPage(`Missing required parameters: ${missing.join(', ')}`));
   }
 
@@ -101,12 +102,12 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
     const stateRecord = await prisma.oAuthState.findUnique({ where: { state: hashToken(state) } });
 
     if (!stateRecord) {
-      console.error('[QB] State not found in DB — may have been used already or expired. state:', state);
+      log.error({ state }, 'State not found in DB — may have been used already or expired');
       return res.send(errorPage('Authorization session not found or already used. Please start the connection flow again from the extension.'));
     }
 
     if (stateRecord.expiresAt < new Date()) {
-      console.error('[QB] State expired at', stateRecord.expiresAt);
+      log.warn({ expiresAt: stateRecord.expiresAt }, 'State expired');
       await prisma.oAuthState.delete({ where: { state: hashToken(state) } }).catch(() => {});
       return res.send(errorPage('Authorization session expired. Please start the connection flow again from the extension.'));
     }
@@ -114,7 +115,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
     userId = stateRecord.userId;
     await prisma.oAuthState.delete({ where: { state: hashToken(state) } }); // one-time use
   } catch (err) {
-    console.error('[QB] DB error during state lookup:', err);
+    log.error({ err }, 'DB error during state lookup');
     return res.send(errorPage('Internal error verifying authorization state.'));
   }
 
@@ -140,7 +141,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
     const responseText = await tokenResponse.text();
 
     if (!tokenResponse.ok) {
-      console.error('[QB] Token exchange FAILED — status:', tokenResponse.status, '| body:', responseText);
+      log.error({ status: tokenResponse.status, body: responseText }, 'Token exchange FAILED');
       res.send(errorPage(`Token exchange failed (HTTP ${tokenResponse.status}): ${responseText}`));
       return;
     }
@@ -153,7 +154,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
     };
 
     if (!tokens.access_token || !tokens.refresh_token) {
-      console.error('[QB] Token response missing required fields:', tokens);
+      log.error({ tokens }, 'Token response missing required fields');
       res.send(errorPage('Token response from Intuit was missing access_token or refresh_token.'));
       return;
     }
@@ -183,7 +184,7 @@ router.get('/callback', authLimiter, asyncHandler(async(req: Request, res: Respo
     res.send(successPage(realmId));
   } catch (err) {
     const errMessage = err instanceof Error ? err.message : String(err);
-    console.error('[QB] Unexpected error during token exchange / DB write:', err);
+    log.error({ err }, 'Unexpected error during token exchange / DB write');
     return res.send(
       errorPage(
         process.env.NODE_ENV !== 'production'
@@ -226,7 +227,7 @@ router.get('/status', authenticate, asyncHandler(async(req: AuthRequest, res: Re
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[QB] status error:', err);
+    log.error({ err }, 'status error');
     throw new AppError('Failed to check QB status', 500);
   }
 }))
@@ -308,7 +309,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
     }
 
     if (result.status === 'FAILED') {
-      console.error('[QB] journal-entry error:', result.errorMessage);
+      log.error({ errorMessage: result.errorMessage }, 'journal-entry error');
       const isValidation = result.errorType === 'VALIDATION';
       throw new AppError(
         isValidation
@@ -330,7 +331,7 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] journal-entry error:', message);
+    log.error({ err }, 'journal-entry error');
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'An unexpected error occurred. Please try again.', 500);
@@ -470,7 +471,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
     }
 
     if (result.status === 'FAILED') {
-      console.error('[QB] bill error:', result.errorMessage);
+      log.error({ errorMessage: result.errorMessage }, 'bill error');
       const isValidation = result.errorType === 'VALIDATION';
       throw new AppError(
         isValidation
@@ -493,7 +494,7 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] bill error:', message);
+    log.error({ err }, 'bill error');
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'An unexpected error occurred. Please try again.', 500);
@@ -591,7 +592,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
     }
 
     if (result.status === 'FAILED') {
-      console.error('[QB] vendorcredit error:', result.errorMessage);
+      log.error({ errorMessage: result.errorMessage }, 'vendorcredit error');
       const isValidation = result.errorType === 'VALIDATION';
       throw new AppError(
         isValidation
@@ -614,7 +615,7 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] vendorcredit error:', message);
+    log.error({ err }, 'vendorcredit error');
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'An unexpected error occurred. Please try again.', 500);
@@ -715,7 +716,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
     }
 
     if (result.status === 'FAILED') {
-      console.error('[QB] cheque error:', result.errorMessage);
+      log.error({ errorMessage: result.errorMessage }, 'cheque error');
       const isValidation = result.errorType === 'VALIDATION';
       throw new AppError(
         isValidation
@@ -737,7 +738,7 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] cheque error:', message);
+    log.error({ err }, 'cheque error');
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'An unexpected error occurred. Please try again.', 500);
@@ -865,7 +866,7 @@ async function syncSingleScan(
           action: 'ATTACHMENT_FAILED',
           details: { scanRecordId, entityType: 'JournalEntry', error: err instanceof Error ? err.message : String(err) },
         });
-        console.error('[QB] Failed to attach file to QB entity:', err);
+        log.error({ err, scanRecordId, entityType: 'JournalEntry', entityId: result.id }, 'Failed to attach file to QB entity');
       }
     }
 
@@ -890,7 +891,7 @@ async function syncSingleScan(
       requestPayload: { txnDate, lines, privateNote, docNumber: finalDocNumber } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
-    }).catch(console.error);
+    }).catch((err) => log.error({ err, scanRecordId, requestHash }, 'Failed to create QuickBooks sync log entry'));
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
@@ -900,7 +901,7 @@ async function syncSingleScan(
           syncStatus: 'FAILED',
           lastSyncError: message,
         },
-      }).catch(console.error);
+      }).catch((err) => log.error({ err, scanRecordId }, 'Failed to mark scan record failed after QuickBooks sync'));
     }
 
     return { status: 'FAILED', errorType, errorMessage: message };
@@ -1020,7 +1021,7 @@ async function syncSingleVendorCredit(
           action: 'ATTACHMENT_FAILED',
           details: { scanRecordId, entityType: 'VendorCredit', error: err instanceof Error ? err.message : String(err) },
         });
-        console.error('[QB] Failed to attach file to QB entity:', err);
+        log.error({ err, scanRecordId, entityType: 'VendorCredit', entityId: result.id }, 'Failed to attach file to QB entity');
       }
     }
 
@@ -1045,7 +1046,7 @@ async function syncSingleVendorCredit(
       requestPayload: { txnDate, vendorRef, apAccountRef, memo, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
-    }).catch(console.error);
+    }).catch((err) => log.error({ err, scanRecordId, requestHash }, 'Failed to create QuickBooks vendor credit sync log entry'));
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
@@ -1055,7 +1056,7 @@ async function syncSingleVendorCredit(
           syncStatus: 'FAILED',
           lastSyncError: message,
         },
-      }).catch(console.error);
+      }).catch((err) => log.error({ err, scanRecordId }, 'Failed to mark scan record failed after QuickBooks vendor credit sync'));
     }
 
     return { status: 'FAILED', errorType, errorMessage: message };
@@ -1177,7 +1178,7 @@ async function syncSingleCheque(
           action: 'ATTACHMENT_FAILED',
           details: { scanRecordId, entityType: 'Purchase', error: err instanceof Error ? err.message : String(err) },
         });
-        console.error('[QB] Failed to attach file to QB entity:', err);
+        log.error({ err, scanRecordId, entityType: 'Purchase', entityId: result.id }, 'Failed to attach file to QB entity');
       }
     }
 
@@ -1202,7 +1203,7 @@ async function syncSingleCheque(
       requestPayload: { txnDate, bankAccountRef, payeeRef, customerRef, amount, memo, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
-    }).catch(console.error);
+    }).catch((err) => log.error({ err, scanRecordId, requestHash }, 'Failed to create QuickBooks cheque sync log entry'));
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
@@ -1212,7 +1213,7 @@ async function syncSingleCheque(
           syncStatus: 'FAILED',
           lastSyncError: message,
         },
-      }).catch(console.error);
+      }).catch((err) => log.error({ err, scanRecordId }, 'Failed to mark scan record failed after QuickBooks cheque sync'));
     }
 
     return { status: 'FAILED', errorType, errorMessage: message };
@@ -1336,7 +1337,7 @@ async function syncSingleBill(
           action: 'ATTACHMENT_FAILED',
           details: { scanRecordId, entityType: 'Bill', error: err instanceof Error ? err.message : String(err) },
         });
-        console.error('[QB] Failed to attach file to QB entity:', err);
+        log.error({ err, scanRecordId, entityType: 'Bill', entityId: result.id }, 'Failed to attach file to QB entity');
       }
     }
 
@@ -1361,7 +1362,7 @@ async function syncSingleBill(
       requestPayload: { txnDate, vendorRef, apAccountRef, termsRef, dueDate, memo, privateNote, docNumber: finalDocNumber, lines } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
-    }).catch(console.error);
+    }).catch((err) => log.error({ err, scanRecordId, requestHash }, 'Failed to create QuickBooks bill sync log entry'));
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
@@ -1371,7 +1372,7 @@ async function syncSingleBill(
           syncStatus: 'FAILED',
           lastSyncError: message,
         },
-      }).catch(console.error);
+      }).catch((err) => log.error({ err, scanRecordId }, 'Failed to mark scan record failed after QuickBooks bill sync'));
     }
 
     return { status: 'FAILED', errorType, errorMessage: message };
@@ -1476,7 +1477,7 @@ async function syncSingleBillPayment(
           action: 'ATTACHMENT_FAILED',
           details: { scanRecordId, entityType: 'BillPayment', error: err instanceof Error ? err.message : String(err) },
         });
-        console.error('[QB] Failed to attach file to QB entity:', err);
+        log.error({ err, scanRecordId, entityType: 'BillPayment', entityId: result.id }, 'Failed to attach file to QB entity');
       }
     }
 
@@ -1500,7 +1501,7 @@ async function syncSingleBillPayment(
       requestPayload: { vendorRef, payType, txnDate, totalAmt, lines, bankAccountRef, checkNum } as unknown as Prisma.JsonObject,
       errorMessage: message,
       errorType,
-    }).catch(console.error);
+    }).catch((err) => log.error({ err, scanRecordId, requestHash }, 'Failed to create QuickBooks bill payment sync log entry'));
 
     if (scanRecordId) {
       await prisma.scanRecord.update({
@@ -1510,7 +1511,7 @@ async function syncSingleBillPayment(
           syncStatus: 'FAILED',
           lastSyncError: message,
         },
-      }).catch(console.error);
+      }).catch((err) => log.error({ err, scanRecordId }, 'Failed to mark scan record failed after QuickBooks bill payment sync'));
     }
 
     return { status: 'FAILED', errorType, errorMessage: message };
@@ -1759,7 +1760,7 @@ router.post('/sync-batch', authenticate, enforceEffectiveRole, requireFeaturePer
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] sync-batch error:', message);
+    log.error({ err }, 'QB sync-batch error');
     throw new AppError('Batch sync failed', 500);
   }
 }));
@@ -1836,7 +1837,7 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] retry error:', message);
+    log.error({ err }, 'QB retry error');
     throw err instanceof AppError ? err : new AppError(message, 500);
   }
 }));
@@ -2010,7 +2011,7 @@ router.post('/retry-batch', authenticate, enforceEffectiveRole, requireFeaturePe
   } catch (err) {
     if (err instanceof AppError) throw err;
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] retry-batch error:', message);
+    log.error({ err }, 'QB retry-batch error');
     throw new AppError('Batch retry failed', 500);
   }
 }));
@@ -2098,8 +2099,8 @@ router.delete('/token', authenticate, asyncHandler(async(req: AuthRequest, res: 
       try {
         const decryptedAccess = decryptSafe(tokenRow.accessToken);
         await qbService.revokeAccessToken(decryptedAccess);
-      } catch {
-        console.warn('[QB] Intuit token revocation failed (best-effort, proceeding with local deletion)');
+      } catch (err) {
+        log.warn({ err, userId }, 'Intuit token revocation failed (best-effort, proceeding with local deletion)');
       }
 
       await prisma.qBToken.delete({ where: { userId } });
@@ -2108,7 +2109,7 @@ router.delete('/token', authenticate, asyncHandler(async(req: AuthRequest, res: 
     res.json({ success: true });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[QB] disconnect error:', err);
+    log.error({ err, userId: req.user?.userId }, 'QB disconnect error');
     throw new AppError('Failed to disconnect QuickBooks', 500);
   }
 }));
@@ -2122,8 +2123,7 @@ router.get('/accounts', authenticate, requireFeaturePermission('sync', 'execute'
     res.json({ accounts });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] accounts error:', message);
+    log.error({ err }, 'QB accounts error');
     throw new AppError('Failed to fetch accounts', 500);
   }
 }));
@@ -2137,8 +2137,7 @@ router.get('/classes', authenticate, requireFeaturePermission('sync', 'execute')
     res.json({ classes });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] classes error:', message);
+    log.error({ err }, 'QB classes error');
     throw new AppError('Failed to fetch classes', 500);
   }
 }));
@@ -2152,8 +2151,7 @@ router.get('/employees', authenticate, requireFeaturePermission('sync', 'execute
     res.json({ employees });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] employees error:', message);
+    log.error({ err }, 'QB employees error');
     throw new AppError('Failed to fetch employees', 500);
   }
 }));
@@ -2167,8 +2165,7 @@ router.get('/vendors', authenticate, requireFeaturePermission('sync', 'execute')
     res.json({ vendors });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] vendors error:', message);
+    log.error({ err }, 'QB vendors error');
     throw new AppError('Failed to fetch vendors', 500);
   }
 }));
@@ -2182,8 +2179,7 @@ router.get('/customers', authenticate, requireFeaturePermission('sync', 'execute
     res.json({ customers });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] customers error:', message);
+    log.error({ err }, 'QB customers error');
     throw new AppError('Failed to fetch customers', 500);
   }
 }));
@@ -2197,8 +2193,7 @@ router.get('/tax-codes', authenticate, requireFeaturePermission('sync', 'execute
     res.json({ taxCodes });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] tax-codes error:', message);
+    log.error({ err }, 'QB tax-codes error');
     throw new AppError('Failed to fetch tax codes', 500);
   }
 }));
@@ -2215,8 +2210,7 @@ router.get('/bills', authenticate, requireFeaturePermission('sync', 'execute'), 
     res.json({ bills: filteredBills });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] bills error:', message);
+    log.error({ err }, 'QB bills error');
     throw new AppError('Failed to fetch bills', 500);
   }
 }));
@@ -2233,8 +2227,7 @@ router.get('/vendor-credits', authenticate, requireFeaturePermission('sync', 'ex
     res.json({ vendorCredits: filteredCredits });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] vendor credits error:', message);
+    log.error({ err }, 'QB vendor credits error');
     throw new AppError('Failed to fetch vendor credits', 500);
   }
 }));
@@ -2295,7 +2288,7 @@ router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeatureP
     }
 
     if (result.status === 'FAILED') {
-      console.error('[QB] bill payment error:', result.errorMessage);
+      log.error({ result }, 'QB bill payment error');
       const isValidation = result.errorType === 'VALIDATION';
       throw new AppError(
         isValidation
@@ -2310,8 +2303,8 @@ router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeatureP
     throw new AppError('Unexpected bill payment result', 500);
   } catch (err) {
     if (err instanceof AppError) throw err;
+    log.error({ err }, 'QB bill payment error');
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] bill payment error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production' ? message : 'An unexpected error occurred. Please try again.', 500);
   }
 }));
@@ -2334,8 +2327,8 @@ router.get('/sync-all', authenticate, requireFeaturePermission('sync', 'execute'
     res.json(entities);
   } catch (err) {
     if (err instanceof AppError) throw err;
+    log.error({ err }, 'QB sync-all error');
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[QB] sync-all error:', message);
     throw new AppError(process.env.NODE_ENV !== 'production'
         ? message
         : 'An unexpected error occurred. Please try again.', 500);

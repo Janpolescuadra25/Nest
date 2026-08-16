@@ -1,14 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import { processTrialExpiry, processTimeBombTransitions } from '../lib/team-status';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'TimeBomb' });
 
 async function checkTrialExpiry(prisma: PrismaClient): Promise<void> {
   try {
     const expiredCount = await processTrialExpiry(prisma);
     if (expiredCount > 0) {
-      console.log(`[TimeBomb] Expired ${expiredCount} trial user${expiredCount !== 1 ? 's' : ''}`);
+      log.info({ expiredCount }, 'Expired trial users');
     }
   } catch (err) {
-    console.error('[TimeBomb] checkTrialExpiry error:', err);
+    log.error({ err }, 'checkTrialExpiry error');
   }
 }
 
@@ -29,12 +32,12 @@ async function checkTimeBombs(prisma: PrismaClient): Promise<void> {
   try {
     const result = await processTimeBombTransitions(prisma);
     if (result.gracePeriodCount > 0) {
-      console.log(`[TimeBomb] ${result.gracePeriodCount} user(s) entered grace period`);
+      log.info({ gracePeriodCount: result.gracePeriodCount }, 'Users entered grace period');
     }
     if (result.fullyExpiredCount > 0) {
-      console.log(`[TimeBomb] ${result.fullyExpiredCount} user(s) fully expired (TIME_BOMBED)`);
+      log.info({ fullyExpiredCount: result.fullyExpiredCount }, 'Users fully expired');
     }
   } catch (err) {
-    console.error('[TimeBomb] checkTimeBombs error:', err);
+    log.error({ err }, 'checkTimeBombs error');
   }
 }

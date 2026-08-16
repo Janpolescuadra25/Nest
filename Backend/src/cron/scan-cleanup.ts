@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { deleteFile } from '../lib/storage';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'ScanCleanup' });
 
 async function cleanupScanHistory(prisma: PrismaClient): Promise<void> {
   const users = await prisma.user.findMany({
@@ -35,7 +38,7 @@ async function cleanupScanHistory(prisma: PrismaClient): Promise<void> {
         try {
           await deleteFile(att.storageKey);
         } catch (err) {
-          console.error('[storage] Failed to delete file from R2:', err);
+          log.error({ err, storageKey: att.storageKey }, 'Failed to delete file from R2');
         }
       }
 
@@ -47,16 +50,16 @@ async function cleanupScanHistory(prisma: PrismaClient): Promise<void> {
       });
 
       if (result.count > 0) {
-        console.log(`[ScanCleanup] Deleted ${result.count} scan(s) for user ${user.id} older than ${cutoff.toISOString()}`);
+        log.info({ count: result.count, userId: user.id, cutoff: cutoff.toISOString() }, 'Deleted scan(s) older than cutoff');
         totalDeleted += result.count;
       }
     } catch (err) {
-      console.error(`[ScanCleanup] user ${user.id} cleanup error:`, err);
+      log.error({ err, userId: user.id }, 'User cleanup failed');
     }
   }
 
   if (totalDeleted > 0) {
-    console.log(`[ScanCleanup] Total deleted ${totalDeleted} stale scans`);
+    log.info({ totalDeleted }, 'Total deleted stale scans');
   }
 }
 

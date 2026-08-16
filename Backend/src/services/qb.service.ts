@@ -2,7 +2,9 @@ import { CreateBillInput, CreateBillPaymentInput, CreateChequeInput, CreateJourn
 import { QBApiError } from '../lib/qb-errors';
 import { prisma } from '../lib/prisma';
 import { encrypt, decryptSafe } from '../lib/encryption';
+import { logger } from '../lib/logger';
 
+const log = logger.child({ module: 'QBService' });
 const pendingRefreshes = new Map<string, Promise<{ accessToken: string; realmId: string }>>();
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 30_000): Promise<Response> {
@@ -76,7 +78,7 @@ interface QBTaxCode {
 async function qbQuery<T>(realmId: string, accessToken: string, query: string): Promise<T> {
   const url = `${QB_API_BASE_URL}/${realmId}/query?query=${encodeURIComponent(query)}&minorversion=75`;
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] QUERY ${url}`);
+    log.info({ url }, 'QB query');
   }
   const response = await fetchWithTimeout(url, {
     headers: {
@@ -233,7 +235,7 @@ async function createBillPayment(input: CreateBillPaymentInput): Promise<BillPay
   const url = `${QB_API_BASE_URL}/${realmId}/billpayment?minorversion=65`;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] POST ${url}`);
+    log.info({ url }, 'QB service POST');
   }
 
   const response = await fetchWithTimeout(url, {
@@ -375,8 +377,7 @@ function buildJournalEntryPayload(input: CreateJournalEntryInput): object {
   if (privateNote) payload.PrivateNote = privateNote;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('[QB Service] Journal Entry payload:');
-    console.log(JSON.stringify(payload, null, 2));
+    log.info({ payload }, 'Journal Entry payload');
   }
 
   return payload;
@@ -394,7 +395,7 @@ async function createJournalEntry(input: CreateJournalEntryInput): Promise<Journ
   const url = `${QB_API_BASE_URL}/${realmId}/journalentry?minorversion=65`;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] POST ${url}`);
+    log.info({ url }, 'QB service POST');
   }
 
   const response = await fetchWithTimeout(url, {
@@ -466,8 +467,7 @@ function buildBillPayload(input: CreateBillInput): object {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('[QB Service] Bill payload:');
-    console.log(JSON.stringify(payload, null, 2));
+    log.info({ payload }, 'Bill payload');
   }
 
   return payload;
@@ -479,7 +479,7 @@ async function createBill(input: CreateBillInput): Promise<JournalEntryResponse>
   const url = `${QB_API_BASE_URL}/${realmId}/bill?minorversion=65`;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] POST ${url}`);
+    log.info({ url }, 'QB service POST');
   }
 
   const response = await fetchWithTimeout(url, {
@@ -549,8 +549,7 @@ function buildVendorCreditPayload(input: CreateVendorCreditInput): object {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log('[QB Service] Vendor Credit payload:');
-    console.log(JSON.stringify(payload, null, 2));
+    log.info({ payload }, 'Vendor Credit payload');
   }
 
   return payload;
@@ -618,7 +617,7 @@ async function createCheque(input: CreateChequeInput): Promise<ChequeResponse> {
   const url = `${QB_API_BASE_URL}/${realmId}/purchase?minorversion=65`;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] POST ${url}`);
+    log.info({ url }, 'QB service POST');
   }
 
   const response = await fetchWithTimeout(url, {
@@ -659,7 +658,7 @@ async function createVendorCredit(input: CreateVendorCreditInput): Promise<Journ
   const url = `${QB_API_BASE_URL}/${realmId}/vendorcredit?minorversion=65`;
 
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[QB Service] POST ${url}`);
+    log.info({ url }, 'QB service POST');
   }
 
   const response = await fetchWithTimeout(url, {
@@ -872,7 +871,7 @@ async function revokeAccessToken(accessToken: string): Promise<void> {
     body: JSON.stringify({ token: accessToken }),
   });
   if (!response.ok) {
-    console.warn(`[QB] Token revocation returned status ${response.status}, proceeding with local deletion`);
+    log.warn({ status: response.status }, 'Token revocation returned non-ok status, proceeding with local deletion');
   }
 }
 

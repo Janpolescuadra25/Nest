@@ -1,5 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Audit' });
 
 type AuditAction =
   | 'USER_CREATED'
@@ -63,7 +66,7 @@ export async function logAction(params: {
       },
     });
   } catch (err: unknown) {
-    console.error('[Audit] Failed to log action:', params.action, err);
+    log.error({ err, action: params.action }, 'Failed to log action');
     // Audit logging should never block the main operation
   }
 }

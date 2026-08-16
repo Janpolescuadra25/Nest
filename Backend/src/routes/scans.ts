@@ -16,6 +16,9 @@ import multer from 'multer';
 import { detectPOS, parseDocumentWithGemini, parseInvoiceWithGemini, parsePOSReport } from '../lib/gemini';
 import type { ParsePOSTabResponse } from '../types';
 import { validateTransactionType } from './templates';
+import { logger } from '../lib/logger';
+
+const log = logger.child({ module: 'Scans' });
 
 async function deductBonusScan(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
@@ -165,14 +168,14 @@ router.post('/', requireFeaturePermission('scan', 'write'), validate(scanCreateS
           });
         }
       } catch (err) {
-        console.error('[storage] Failed to generate POS Excel export:', err);
+        log.error({ err }, 'Failed to generate POS Excel export');
       }
     }
 
     res.status(201).json(scan);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Scans] create error:', err);
+    log.error({ err }, 'Create error');
     throw new AppError('Failed to save scan record', 500);
   }
 }));
@@ -227,7 +230,7 @@ router.get('/health', asyncHandler(async (req: AuthRequest, res: Response): Prom
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Scans] health error:', err);
+    log.error({ err }, 'Health error');
     throw new AppError('Failed to fetch scan health', 500);
   }
 }));
@@ -255,7 +258,7 @@ router.get('/recent', asyncHandler(async (req: AuthRequest, res: Response): Prom
     res.json({ scans: recentScans });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Scans] recent error:', err);
+    log.error({ err }, 'Recent error');
     throw new AppError('Failed to fetch recent scans', 500);
   }
 }));
@@ -403,7 +406,7 @@ router.get('/:id', asyncHandler(async (req: AuthRequest, res: Response): Promise
     res.json(scan);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Scans] get error:', err);
+    log.error({ err }, 'Get error');
     throw new AppError('Failed to fetch scan record', 500);
   }
 }));
@@ -431,7 +434,7 @@ router.get('/:id/attachment-url', asyncHandler(async (req: AuthRequest, res: Res
     res.json({ url });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    console.error('[Scans] attachment url error:', err);
+    log.error({ err }, 'Attachment URL error');
     throw new AppError('Failed to fetch attachment URL', 500);
   }
 }));
@@ -558,7 +561,7 @@ router.post(
       try {
         attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
       } catch (err) {
-        console.error('[storage] Failed to upload file:', err);
+        log.error({ err }, 'Failed to upload file');
       }
     }
 
@@ -593,7 +596,7 @@ router.post(
       try {
         attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
       } catch (err) {
-        console.error('[storage] Failed to upload file:', err);
+        log.error({ err }, 'Failed to upload file');
       }
     }
 
@@ -647,7 +650,7 @@ router.post(
       try {
         attachment = await uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype, req.user!.userId);
       } catch (err) {
-        console.error('[storage] Failed to upload file:', err);
+        log.error({ err }, 'Failed to upload file');
       }
     }
 
