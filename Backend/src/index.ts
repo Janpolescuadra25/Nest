@@ -37,6 +37,8 @@ import { startSyncFailureAlertCron } from './cron/sync-failure-alerts';
 import { startQuotaAlertCron } from './cron/quota-alerts';
 import { startScanCleanupCron } from './cron/scan-cleanup';
 import { createErrorHandler } from './lib/errors';
+import { requestId } from './middleware/request-id';
+import { requestLogger } from './middleware/request-logger';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +48,7 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 // ── Middleware ──────────────────────────────────────────────────────────────
+app.use(requestId);
 app.use(cors({
   origin: (origin, callback) => {
     // No origin = server-to-server request (webhooks, health checks). Always allow.
@@ -87,6 +90,7 @@ app.use(cors({
 app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '1mb' }), webhookRoutes);
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -122,14 +126,6 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 app.use(apiLimiter);
-
-// ── Request Logger ─────────────────────────────────────────────────────────
-app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[${req.method}] ${req.path}`);
-  }
-  next();
-});
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);

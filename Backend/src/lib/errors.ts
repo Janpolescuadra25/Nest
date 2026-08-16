@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler, ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
+import { logger } from './logger';
 
 export class AppError extends Error {
   public readonly status: number;
@@ -39,7 +40,7 @@ export function asyncHandler<T extends RequestHandler>(fn: T): T {
 }
 
 export function createErrorHandler(): ErrorRequestHandler {
-  return (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  return (err: unknown, req: Request, res: Response, _next: NextFunction) => {
     const error = err as { message?: string; status?: number; statusCode?: number; fields?: Record<string, string>; category?: string };
 
     // QB auth failures return 401 internally but should be 403 to the client
@@ -60,13 +61,19 @@ export function createErrorHandler(): ErrorRequestHandler {
       payload.fields = error.fields;
     }
 
-    console.error('[Express Error]', error.message ?? err);
-    if (err instanceof Error && err.stack) {
-      console.error(err.stack);
-      if (process.env.NODE_ENV !== 'production') {
-        payload.stack = err.stack;
-      }
+    if (err instanceof Error && err.stack && process.env.NODE_ENV !== 'production') {
+      payload.stack = err.stack;
     }
+
+    logger.error(
+      {
+        err,
+        requestId: (req as any)?.id,
+        statusCode: status,
+        path: req?.originalUrl,
+      },
+      error.message || 'Unhandled error'
+    );
 
     res.status(status).json(payload);
   };
