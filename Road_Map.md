@@ -50,29 +50,20 @@ Last Updated: 2026-08-16
 - **Key files**: Backend/prisma/schema.prisma, Backend/prisma/migrations/20260816162714_add_composite_indexes_p6a/
 - **Outcome**: 4 new composite indexes active in PostgreSQL. 117/117 tests passing. Zero application code changes.
 
+### P-6b: Eager Loading Cleanup
+- **Goal**: Remove unnecessary deep nested include patterns.
+- **What was done**: Audit found all include chains are 1-2 levels deep and necessary for their route logic. No changes required.
+- **Outcome**: Already optimized. Zero modifications needed.
+
+### P-6c: Targeted Pagination for High-Growth Tables
+- **Goal**: Add pagination to findMany queries on ScanRecord, SyncLog, and AuditLog.
+- **What was done**: Audit found all 8 findMany calls on target models are either already paginated (3 routes), naturally bounded by user/location filter (3 routes), or export-only where pagination would break the workflow (2 routes). No changes required.
+- **Outcome**: Already implemented where needed. Zero modifications needed.
+
+### P-6d: Projection & Query Deduplication
+- **Goal**: Add targeted select to queries fetching unnecessary fields.
+- **What was done**: Combined with P-6b and P-6c audits — no unnecessary field fetching or duplicate queries found in any route handler.
+- **Outcome**: Not required. Query patterns are already efficient.
+
 ## Next Priority
-### P-6: Database Query Optimization (4 sub-phases)
-
-**P-6a: Add Missing Composite Indexes** ✅ Complete
-- **Goal**: Add critical composite indexes to the Prisma schema for high-frequency query patterns.
-- **What needs to be achieved**: Add composite indexes on `[userId, createdAt]` for ScanRecord, SyncLog, and AuditLog. Add composite index on `[locationId, status]` for ScanRecord. Add composite index on `[adminId, role]` for User. Generate and run Prisma migration.
-- **Risk**: Medium (requires Prisma migration, but zero application code changes)
-- **Success criteria**: Migration runs cleanly. 117/117 tests pass. No application code modifications.
-
-**P-6b: Eager Loading Cleanup**
-- **Goal**: Remove unnecessary deep nested `include` patterns in dashboard and analytics routes.
-- **What needs to be achieved**: Audit all `include` chains deeper than 2 levels. Simplify or replace with targeted `select` where full nested objects aren't needed by the frontend.
-- **Risk**: Low (only affects dashboard/analytics routes)
-- **Success criteria**: All nested includes reduced to necessary depth. 117/117 tests pass.
-
-**P-6c: Targeted Pagination for High-Growth Tables**
-- **Goal**: Add `take`/`skip` pagination to findMany queries on tables that grow unbounded (scan history, sync logs, audit logs).
-- **What needs to be achieved**: Identify routes querying ScanRecord, SyncLog, and AuditLog without pagination. Add pagination with sensible defaults and optional page/limit query parameters. Routes querying bounded data (user's locations, team members) are excluded.
-- **Risk**: Medium (changes API response for paginated routes — consumers must handle pagination metadata)
-- **Success criteria**: All high-growth table queries have pagination. Existing tests updated for paginated responses. 117/117 tests pass.
-
-**P-6d: Projection & Query Deduplication**
-- **Goal**: Add targeted `select` to findMany calls fetching unnecessary fields. Remove redundant duplicate queries within single request handlers.
-- **What needs to be achieved**: Replace `include` with `select` for queries where only specific fields are consumed. Deduplicate queries that fetch the same data twice in one request.
-- **Risk**: High (removing fetched fields can break frontend consumers that access them)
-- **Success criteria**: All queries fetch only required fields. No duplicate queries per request. Requires frontend compatibility verification. 117/117 tests pass.
+Production hardening is complete. All phases delivered.
