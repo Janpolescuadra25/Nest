@@ -56,169 +56,42 @@
     .delay-300 { animation-delay: 300ms; }
     .delay-400 { animation-delay: 400ms; }
     .delay-500 { animation-delay: 500ms; }
-
-    .intro-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      background: rgba(15, 23, 42, 0.94);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
-
-    .intro-panel {
-      width: min(100%, 680px);
-      border-radius: 2rem;
-      background: rgba(15, 23, 42, 0.98);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: 0 32px 90px rgba(15, 23, 42, 0.25);
-      padding: 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .intro-skip {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      border: 1px solid rgba(148, 163, 184, 0.30);
-      background: transparent;
-      color: #e2e8f0;
-      border-radius: 9999px;
-      font-size: 0.82rem;
-      padding: 0.75rem 1rem;
-      cursor: pointer;
-    }
-
-    .intro-slides {
-      min-height: 240px;
-    }
-
-    .intro-slide {
-      display: none;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 0.45s ease, transform 0.45s ease;
-      color: #f8fafc;
-    }
-
-    .intro-slide.active {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .intro-slide h2 {
-      font-size: clamp(2rem, 3.75vw, 2.85rem);
-      line-height: 1.05;
-      margin-top: 1rem;
-      margin-bottom: 1rem;
-      color: #f8fafc;
-    }
-
-    .intro-slide p {
-      color: #cbd5e1;
-      line-height: 1.8;
-      margin: 0;
-    }
-
-    .intro-controls {
-      margin-top: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    .intro-dots {
-      display: flex;
-      gap: 0.6rem;
-    }
-
-    .intro-dot {
-      width: 0.85rem;
-      height: 0.85rem;
-      border-radius: 9999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: transparent;
-      cursor: pointer;
-      transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-    }
-
-    .intro-dot.active {
-      background: #34d399;
-      border-color: #34d399;
-      transform: scale(1.2);
-    }
-
-    .intro-next {
-      border: none;
-      background: #34d399;
-      color: #0f172a;
-      border-radius: 9999px;
-      padding: 0.95rem 1.4rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.2s ease, background-color 0.2s ease;
-    }
-
-    .intro-next:hover {
-      background: #22c55e;
-      transform: translateY(-1px);
-    }
-
-    .intro-cta {
-      margin-top: 1.75rem;
-      display: flex;
-      justify-content: center;
-    }
-
-    .intro-cta a {
-      background: #34d399;
-      color: #0f172a;
-      padding: 1rem 1.6rem;
-      border-radius: 9999px;
-      font-weight: 700;
-      text-decoration: none;
-    }
+    .i-slide.i-active{opacity:1!important;transform:translateY(0) scale(1)!important}
+    .i-dot.i-active{background-color:#10b981!important;width:1.5rem!important}
+    @keyframes iLogoScale{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
   </style>
 </head>
 <body class="bg-white text-slate-900">
-  <div id="intro-overlay" class="intro-overlay">
-    <div class="intro-panel">
-      <button id="intro-skip" type="button" class="intro-skip">Skip intro</button>
-      <div class="intro-slides">
-        <article class="intro-slide active">
-          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">Welcome to Qyra</p>
-          <h2>Scan any POS report, invoice, vendor credit, or check.</h2>
-          <p>Capture the data your restaurant needs and turn it into QuickBooks-ready transactions without manual entry.</p>
-        </article>
-        <article class="intro-slide">
-          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">AI-powered extraction</p>
-          <h2>AI extracts line items, totals, and accounts automatically.</h2>
-          <p>Qyra reads receipts, PDFs, images, and spreadsheets so your team can move faster with fewer mistakes.</p>
-        </article>
-        <article class="intro-slide">
-          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">Sync with confidence</p>
-          <h2>Review, approve, and sync to QuickBooks with one workflow.</h2>
-          <p>Managers and accountants can approve drafts, then sync approved entries to QuickBooks automatically.</p>
-          <div class="intro-cta">
-            <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" target="_blank" rel="noopener noreferrer">Install Qyra</a>
-          </div>
-        </article>
-      </div>
-      <div class="intro-controls">
-        <div class="intro-dots">
-          <button type="button" class="intro-dot active" aria-label="Slide 1"></button>
-          <button type="button" class="intro-dot" aria-label="Slide 2"></button>
-          <button type="button" class="intro-dot" aria-label="Slide 3"></button>
-        </div>
-        <button id="intro-next" type="button" class="intro-next">Next</button>
+<!-- Intro Overlay -->
+<div id="intro-overlay" style="position:fixed;inset:0;z-index:9999;background:#0f172a;display:flex;align-items:center;justify-content:center;transition:opacity .7s ease">
+  <button id="intro-skip" style="position:absolute;top:1.5rem;right:1.5rem;color:rgba(255,255,255,.6);font-size:.875rem;font-weight:500;letter-spacing:.025em;background:none;border:none;cursor:pointer;z-index:10;padding:.5rem 1rem" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">Close</button>
+  <div style="position:relative;width:100%;max-width:42rem;padding:0 2rem;text-align:center">
+    <div id="intro-slide-1" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
+      <p style="color:#34d399;font-size:.875rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1.5rem">Introducing</p>
+      <h2 style="color:#fff;font-size:1.875rem;font-weight:700;line-height:1.2;margin:0">Stop Entering Data<br>by Hand</h2>
+      <div style="margin-top:2rem;display:flex;align-items:center;gap:.75rem;color:rgba(255,255,255,.7);font-size:1.125rem">
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Scan</span>
+        <span style="color:rgba(255,255,255,.4)">→</span>
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Extract</span>
+        <span style="color:rgba(255,255,255,.4)">→</span>
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Sync</span>
       </div>
     </div>
+    <div id="intro-slide-2" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:scale(.75);transition:opacity .7s ease,transform .7s ease">
+      <img src="../icons/qyra-logo.png" alt="Qyra" style="width:8rem;height:8rem;animation:iLogoScale 1.8s cubic-bezier(.16,1,.3,1) forwards" />
+      <p style="margin-top:1.5rem;color:rgba(255,255,255,.5);font-size:.875rem;letter-spacing:.2em;text-transform:uppercase">Qyra</p>
+    </div>
+    <div id="intro-slide-3" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
+      <h2 style="color:#fff;font-size:1.5rem;font-weight:700;line-height:1.2;margin:0">From Any Document to<br>QuickBooks — Automatically</h2>
+      <a href="#pricing" id="intro-cta" style="margin-top:2rem;display:inline-flex;align-items:center;gap:.5rem;background:#059669;color:#fff;font-weight:600;padding:.75rem 1.5rem;border-radius:9999px;text-decoration:none;transition:background .2s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">Get Started Free</a>
+    </div>
+    <div style="position:absolute;bottom:-3rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem">
+      <span class="i-dot" data-i="0" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+      <span class="i-dot" data-i="1" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+      <span class="i-dot" data-i="2" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+    </div>
   </div>
+</div>
   <div class="relative min-h-screen overflow-x-hidden">
     <header class="fixed inset-x-0 top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -476,55 +349,38 @@
           el.style.opacity = '0';
           observer.observe(el);
         });
-
-        const introOverlay = document.getElementById('intro-overlay');
-        if (introOverlay) {
-          const slides = Array.from(introOverlay.querySelectorAll('.intro-slide'));
-          const dots = Array.from(introOverlay.querySelectorAll('.intro-dot'));
-          const nextButton = document.getElementById('intro-next');
-          const skipButton = document.getElementById('intro-skip');
-          let activeIndex = 0;
-          let timer = window.setInterval(() => {
-            activeIndex = (activeIndex + 1) % slides.length;
-            updateSlide();
-          }, 4200);
-
-          function updateSlide() {
-            slides.forEach((slide, index) => {
-              slide.classList.toggle('active', index === activeIndex);
-            });
-            dots.forEach((dot, index) => {
-              dot.classList.toggle('active', index === activeIndex);
-            });
-          }
-
-          function hideIntro() {
-            if (!introOverlay.parentElement) return;
-            introOverlay.style.display = 'none';
-            window.clearInterval(timer);
-          }
-
-          dots.forEach((dot, index) => {
-            dot.addEventListener('click', () => {
-              activeIndex = index;
-              updateSlide();
-              window.clearInterval(timer);
-              timer = window.setInterval(() => {
-                activeIndex = (activeIndex + 1) % slides.length;
-                updateSlide();
-              }, 4200);
-            });
-          });
-
-          nextButton?.addEventListener('click', () => {
-            activeIndex = (activeIndex + 1) % slides.length;
-            updateSlide();
-          });
-
-          skipButton?.addEventListener('click', hideIntro);
-        }
       });
     </script>
+
+<script>
+(function(){
+  var o=document.body.firstElementChild;
+  if(!o||o.tagName!=='DIV')return;
+  var s=document.querySelectorAll('.i-slide');
+  var d=document.querySelectorAll('.i-dot');
+  var c=0,t=null;
+  function show(n){
+    s.forEach(function(x){x.classList.remove('i-active')});
+    d.forEach(function(x){x.classList.remove('i-active')});
+    if(s[n])s[n].classList.add('i-active');
+    if(d[n])d[n].classList.add('i-active');
+    c=n;
+  }
+  function dismiss(){
+    if(t)clearInterval(t);
+    o.style.opacity='0';
+    setTimeout(function(){o.style.display='none';document.body.style.overflow=''},700);
+  }
+  function next(){
+    if(c<s.length-1){show(c+1)}else{dismiss()}
+  }
+  document.getElementById('intro-skip').addEventListener('click',dismiss);
+  document.getElementById('intro-cta').addEventListener('click',dismiss);
+  document.body.style.overflow='hidden';
+  show(0);
+  t=setInterval(next,3500);
+})();
+</script>
 
     <footer class="border-t border-slate-200 bg-slate-900 py-8 text-white">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
