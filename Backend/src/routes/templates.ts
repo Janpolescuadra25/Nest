@@ -165,8 +165,7 @@ router.post('/parse-excel', requireFeaturePermission('templates', 'read'), uploa
 
   const filename = (req.file.originalname || '').toLowerCase();
   if (!filename.endsWith('.xlsx') && !filename.endsWith('.xls')) {
-    res.status(400).json({ error: 'Only .xlsx and .xls files are supported' });
-    return;
+    throw new AppError('Only .xlsx and .xls files are supported', 400);
   }
 
   const workbook = new Excel.Workbook();
@@ -208,8 +207,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
 
   const filename = (req.file.originalname || '').toLowerCase();
   if (!filename.endsWith('.xlsx') && !filename.endsWith('.xls')) {
-    res.status(400).json({ error: 'Only .xlsx and .xls files are supported' });
-    return;
+    throw new AppError('Only .xlsx and .xls files are supported', 400);
   }
 
   const templateId = String(req.query.templateId || '');
@@ -227,8 +225,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
   const columnMappings = template.columnMappings as Record<string, unknown> | null;
   if (template.transactionType !== 'JOURNAL_ENTRY' && template.transactionType !== 'CHEQUE' && template.transactionType !== 'BILL') {
     if (!columnMappings || typeof columnMappings !== 'object' || Array.isArray(columnMappings) || Object.keys(columnMappings).length === 0) {
-      res.status(400).json({ error: 'Template has no column mapping configured.' });
-      return;
+      throw new AppError('Template has no column mapping configured.', 400);
     }
   }
 
@@ -282,8 +279,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     const taxCol = colIndex('tax');
 
     if (accountCol === -1) {
-      res.status(400).json({ error: 'Row 5 must contain an "Account" column header.' });
-      return;
+      throw new AppError('Row 5 must contain an "Account" column header.', 400);
     }
 
     const lineItems: Array<Record<string, unknown>> = [];
@@ -323,8 +319,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     }
 
     if (lineItems.length === 0) {
-      res.status(400).json({ error: 'No valid line items found in the Excel data.' });
-      return;
+      throw new AppError('No valid line items found in the Excel data.', 400);
     }
 
     res.json({
@@ -353,17 +348,11 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     const headerRow = rows[0].map(h => String(h ?? '').trim().toLowerCase());
 
     if (rows.length < 2) {
-      res.status(400).json({
-        error: 'Cheque file must contain at least a header row and one data row.'
-      });
-      return;
+      throw new AppError('Cheque file must contain at least a header row and one data row.', 400);
     }
 
     if (headerRow.length !== 11) {
-      res.status(400).json({
-        error: `Cheque file must have exactly 11 columns per row. Found ${headerRow.length} columns.`
-      });
-      return;
+      throw new AppError(`Cheque file must have exactly 11 columns per row. Found ${headerRow.length} columns.`, 400);
     }
 
     const mismatched: string[] = [];
@@ -375,10 +364,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
       }
     }
     if (mismatched.length > 0) {
-      res.status(400).json({
-        error: 'Header mismatch: ' + mismatched.join('; ')
-      });
-      return;
+      throw new AppError('Header mismatch: ' + mismatched.join('; '), 400);
     }
 
     const transactions: any[] = [];
@@ -431,10 +417,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
 
     if (matchesFixedBillHeader) {
       if (rows.length < 2) {
-        res.status(400).json({
-          error: 'Bill file must contain at least a header row and one data row.',
-        });
-        return;
+        throw new AppError('Bill file must contain at least a header row and one data row.', 400);
       }
 
       const transactions: any[] = [];
@@ -488,13 +471,11 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
     }
 
     if (!columnMappings) {
-      res.status(400).json({ error: 'Template has no column mapping configured.' });
-      return;
+      throw new AppError('Template has no column mapping configured.', 400);
     }
   } else {
     if (!columnMappings) {
-      res.status(400).json({ error: 'Template has no column mapping configured.' });
-      return;
+      throw new AppError('Template has no column mapping configured.', 400);
     }
   }
 

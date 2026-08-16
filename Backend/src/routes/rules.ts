@@ -109,8 +109,7 @@ router.post('/apply', requireFeaturePermission('rules', 'read'), asyncHandler(as
   };
 
   if (!rules || !Array.isArray(rules)) {
-    res.status(400).json({ error: 'Rules array is required' });
-    return;
+    throw new AppError('Rules array is required', 400);
   }
 
   const activeRules = rules.filter((r) => r.isActive);
@@ -123,8 +122,7 @@ router.post('/apply', requireFeaturePermission('rules', 'read'), asyncHandler(as
       res.json({ type: 'lineItems', data: lineItems });
       return;
     }
-    res.status(400).json({ error: 'Provide scanData or lineItems' });
-    return;
+    throw new AppError('Provide scanData or lineItems', 400);
   }
 
   if (scanData && typeof scanData === 'object' && !Array.isArray(scanData)) {
@@ -139,7 +137,7 @@ router.post('/apply', requireFeaturePermission('rules', 'read'), asyncHandler(as
     return;
   }
 
-  res.status(400).json({ error: 'Provide scanData or lineItems' });
+  throw new AppError('Provide scanData or lineItems', 400);
 }));
 
 export default router;

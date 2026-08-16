@@ -299,13 +299,11 @@ router.post('/journal-entry', authenticate, enforceEffectiveRole, requireFeature
         return;
       }
 
-      res.status(409).json({
-        error: 'Duplicate journal entry detected',
-        reason: result.reason,
-        qbJournalEntryId: result.qbJournalEntryId,
-        docNumber: result.docNumber,
+      throw new AppError('Duplicate journal entry detected', 409, {
+        reason: result.reason ?? '',
+        qbJournalEntryId: result.qbJournalEntryId ?? '',
+        docNumber: result.docNumber ?? '',
       });
-      return;
     }
 
     if (result.status === 'FAILED') {
@@ -461,13 +459,11 @@ router.post('/bill', authenticate, enforceEffectiveRole, requireFeaturePermissio
         return;
       }
 
-      res.status(409).json({
-        error: 'Duplicate bill detected',
-        reason: result.reason,
-        qbJournalEntryId: result.qbJournalEntryId,
-        docNumber: result.docNumber,
+      throw new AppError('Duplicate bill detected', 409, {
+        reason: result.reason ?? '',
+        qbJournalEntryId: result.qbJournalEntryId ?? '',
+        docNumber: result.docNumber ?? '',
       });
-      return;
     }
 
     if (result.status === 'FAILED') {
@@ -582,13 +578,11 @@ router.post('/vendorcredit', authenticate, enforceEffectiveRole, requireFeatureP
         return;
       }
 
-      res.status(409).json({
-        error: 'Duplicate vendor credit detected',
-        reason: result.reason,
-        qbJournalEntryId: result.qbJournalEntryId,
-        docNumber: result.docNumber,
+      throw new AppError('Duplicate vendor credit detected', 409, {
+        reason: result.reason ?? '',
+        qbJournalEntryId: result.qbJournalEntryId ?? '',
+        docNumber: result.docNumber ?? '',
       });
-      return;
     }
 
     if (result.status === 'FAILED') {
@@ -706,26 +700,11 @@ router.post('/cheque', authenticate, enforceEffectiveRole, requireFeaturePermiss
         return;
       }
 
-      res.status(409).json({
-        error: 'Duplicate check detected',
-        reason: result.reason,
-        qbJournalEntryId: result.qbJournalEntryId,
-        docNumber: result.docNumber,
+      throw new AppError('Duplicate check detected', 409, {
+        reason: result.reason ?? '',
+        qbJournalEntryId: result.qbJournalEntryId ?? '',
+        docNumber: result.docNumber ?? '',
       });
-      return;
-    }
-
-    if (result.status === 'FAILED') {
-      log.error({ errorMessage: result.errorMessage }, 'cheque error');
-      const isValidation = result.errorType === 'VALIDATION';
-      throw new AppError(
-        isValidation
-          ? result.errorMessage ?? 'Validation error from QuickBooks'
-          : (process.env.NODE_ENV !== 'production'
-              ? result.errorMessage ?? 'Unknown error'
-              : 'An unexpected error occurred. Please try again.'),
-        isValidation ? 400 : 500,
-      );
     }
 
     res.json({
@@ -1821,18 +1800,9 @@ router.post('/retry/:scanRecordId', authenticate, enforceEffectiveRole, requireF
         attemptCount,
       });
     } else if (result.status === 'SKIPPED') {
-      res.status(409).json({
-        success: false,
-        error: result.reason ?? 'Duplicate detected',
-        attemptCount,
-      });
+      throw new AppError(result.reason ?? 'Duplicate detected', 409, { attemptCount: String(attemptCount) });
     } else {
-      res.status(422).json({
-        success: false,
-        error: result.errorMessage ?? 'Retry failed',
-        errorType: result.errorType,
-        attemptCount,
-      });
+      throw new AppError(result.errorMessage ?? 'Retry failed', 422, { errorType: result.errorType ?? '', attemptCount: String(attemptCount) });
     }
   } catch (err) {
     if (err instanceof AppError) throw err;
@@ -2282,8 +2252,7 @@ router.post('/bill-payment', authenticate, enforceEffectiveRole, requireFeatureP
         return;
       }
       if (result.reason === 'duplicate_request') {
-        res.status(409).json({ error: 'Duplicate bill payment detected', reason: result.reason });
-        return;
+        throw new AppError('Duplicate bill payment detected', 409, { reason: result.reason ?? '' });
       }
     }
 
