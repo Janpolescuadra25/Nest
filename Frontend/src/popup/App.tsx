@@ -9,6 +9,7 @@ import { getOnboardingState, type OnboardingState } from './lib/onboarding';
 import { OnboardingBanner } from './components/OnboardingBanner';
 import LoginView from './components/LoginView';
 import ChangePasswordView from './components/ChangePasswordView';
+import { LogoSplash } from './components/LogoSplash';
 import WelcomeOverlay from './components/WelcomeOverlay';
 import TabNav from './components/TabNav';
 import ScanView from './components/ScanView';
@@ -81,6 +82,7 @@ export default function App() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [showLogoSplash, setShowLogoSplash] = useState<boolean | null>(null);
   const { status: qbStatus } = useQuickBooks(jwt);
   const { locations, loading: locationsLoading, refetch: refetchLocations } = useLocations(jwt);
 
@@ -97,6 +99,16 @@ export default function App() {
     }, 1000);
     return () => window.clearInterval(interval);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    chrome.storage.local.get('hasSeenLogoAnimation', (result) => {
+      if (result.hasSeenLogoAnimation) {
+        setShowLogoSplash(false);
+      } else {
+        setShowLogoSplash(true);
+      }
+    });
+  }, []);
 
   const handleResendVerification = useCallback(async () => {
     if (!jwt || resendCooldown > 0) return;
@@ -221,6 +233,16 @@ export default function App() {
   });
 
   const handleHasSynced = useCallback(() => setDeferredSynced(true), []);
+
+  if (showLogoSplash === true) {
+    return <LogoSplash onComplete={() => setShowLogoSplash(false)} />;
+  }
+
+  if (showLogoSplash === null) {
+    return (
+      <div className="flex items-center justify-center bg-[#F5F5F7]" style={{ width: '100vw', height: '100vh' }} />
+    );
+  }
 
   if (loading) {
     return (

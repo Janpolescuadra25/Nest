@@ -41,6 +41,28 @@
   to { opacity: 1; }
 }
 
+@keyframes logoSplash {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.15;
+    filter: blur(8px);
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+.animate-logo-splash {
+  animation: logoSplash 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .animate-fade-in {
   opacity: 0;
   animation: fadeIn 0.35s ease-out forwards;

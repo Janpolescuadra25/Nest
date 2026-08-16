@@ -56,9 +56,169 @@
     .delay-300 { animation-delay: 300ms; }
     .delay-400 { animation-delay: 400ms; }
     .delay-500 { animation-delay: 500ms; }
+
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(15, 23, 42, 0.94);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .intro-panel {
+      width: min(100%, 680px);
+      border-radius: 2rem;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 32px 90px rgba(15, 23, 42, 0.25);
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .intro-skip {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.30);
+      background: transparent;
+      color: #e2e8f0;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+    }
+
+    .intro-slides {
+      min-height: 240px;
+    }
+
+    .intro-slide {
+      display: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+      color: #f8fafc;
+    }
+
+    .intro-slide.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .intro-slide h2 {
+      font-size: clamp(2rem, 3.75vw, 2.85rem);
+      line-height: 1.05;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+      color: #f8fafc;
+    }
+
+    .intro-slide p {
+      color: #cbd5e1;
+      line-height: 1.8;
+      margin: 0;
+    }
+
+    .intro-controls {
+      margin-top: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .intro-dots {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .intro-dot {
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: transparent;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .intro-dot.active {
+      background: #34d399;
+      border-color: #34d399;
+      transform: scale(1.2);
+    }
+
+    .intro-next {
+      border: none;
+      background: #34d399;
+      color: #0f172a;
+      border-radius: 9999px;
+      padding: 0.95rem 1.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+
+    .intro-next:hover {
+      background: #22c55e;
+      transform: translateY(-1px);
+    }
+
+    .intro-cta {
+      margin-top: 1.75rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .intro-cta a {
+      background: #34d399;
+      color: #0f172a;
+      padding: 1rem 1.6rem;
+      border-radius: 9999px;
+      font-weight: 700;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body class="bg-white text-slate-900">
+  <div id="intro-overlay" class="intro-overlay">
+    <div class="intro-panel">
+      <button id="intro-skip" type="button" class="intro-skip">Skip intro</button>
+      <div class="intro-slides">
+        <article class="intro-slide active">
+          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">Welcome to Qyra</p>
+          <h2>Scan any POS report, invoice, vendor credit, or check.</h2>
+          <p>Capture the data your restaurant needs and turn it into QuickBooks-ready transactions without manual entry.</p>
+        </article>
+        <article class="intro-slide">
+          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">AI-powered extraction</p>
+          <h2>AI extracts line items, totals, and accounts automatically.</h2>
+          <p>Qyra reads receipts, PDFs, images, and spreadsheets so your team can move faster with fewer mistakes.</p>
+        </article>
+        <article class="intro-slide">
+          <p class="text-sm uppercase tracking-[0.28em] text-emerald-300">Sync with confidence</p>
+          <h2>Review, approve, and sync to QuickBooks with one workflow.</h2>
+          <p>Managers and accountants can approve drafts, then sync approved entries to QuickBooks automatically.</p>
+          <div class="intro-cta">
+            <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" target="_blank" rel="noopener noreferrer">Install Qyra</a>
+          </div>
+        </article>
+      </div>
+      <div class="intro-controls">
+        <div class="intro-dots">
+          <button type="button" class="intro-dot active" aria-label="Slide 1"></button>
+          <button type="button" class="intro-dot" aria-label="Slide 2"></button>
+          <button type="button" class="intro-dot" aria-label="Slide 3"></button>
+        </div>
+        <button id="intro-next" type="button" class="intro-next">Next</button>
+      </div>
+    </div>
+  </div>
   <div class="relative min-h-screen overflow-x-hidden">
     <header class="fixed inset-x-0 top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -316,6 +476,53 @@
           el.style.opacity = '0';
           observer.observe(el);
         });
+
+        const introOverlay = document.getElementById('intro-overlay');
+        if (introOverlay) {
+          const slides = Array.from(introOverlay.querySelectorAll('.intro-slide'));
+          const dots = Array.from(introOverlay.querySelectorAll('.intro-dot'));
+          const nextButton = document.getElementById('intro-next');
+          const skipButton = document.getElementById('intro-skip');
+          let activeIndex = 0;
+          let timer = window.setInterval(() => {
+            activeIndex = (activeIndex + 1) % slides.length;
+            updateSlide();
+          }, 4200);
+
+          function updateSlide() {
+            slides.forEach((slide, index) => {
+              slide.classList.toggle('active', index === activeIndex);
+            });
+            dots.forEach((dot, index) => {
+              dot.classList.toggle('active', index === activeIndex);
+            });
+          }
+
+          function hideIntro() {
+            if (!introOverlay.parentElement) return;
+            introOverlay.style.display = 'none';
+            window.clearInterval(timer);
+          }
+
+          dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+              activeIndex = index;
+              updateSlide();
+              window.clearInterval(timer);
+              timer = window.setInterval(() => {
+                activeIndex = (activeIndex + 1) % slides.length;
+                updateSlide();
+              }, 4200);
+            });
+          });
+
+          nextButton?.addEventListener('click', () => {
+            activeIndex = (activeIndex + 1) % slides.length;
+            updateSlide();
+          });
+
+          skipButton?.addEventListener('click', hideIntro);
+        }
       });
     </script>
 

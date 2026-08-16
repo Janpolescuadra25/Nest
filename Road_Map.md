@@ -8,8 +8,8 @@ Last Updated: 2026-08-17
 - **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 100% of route error responses use AppError/asyncHandler pipeline.
 - **Backend Validation**: All 22 routes have Zod schema validation.
 - **Backend Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) with DB and S3 connectivity checks.
-- **Landing Page**: Updated hero copy ("Scan → Extract → Sync"), all "reconciliation" wording removed, playful CSS animations added (fade-in-up keyframes, Intersection Observer scroll reveal on feature cards).
-- **Extension Welcome Overlay**: Logo + tagline fade-in-up animation implemented. All original functionality preserved.
+- **Landing Page**: Updated hero copy ("From Any Document to QuickBooks — Automatically"), all "reconciliation" wording removed, 3-slide auto-play intro overlay with skip button, CSS animations (fade-in-up keyframes, Intersection Observer scroll reveal on feature cards).
+- **Extension Welcome Overlay**: Logo + tagline fade-in-up animation. First-install logo splash screen (one-time, fullscreen, chrome.storage.local tracked). All original functionality preserved.
 - **Frontend Type Check**: Clean (`tsc --noEmit` exits with 0, zero errors). All 6 type errors across 5 files resolved (formatBytes shared utility, missing API methods, nullable narrowing).
 - **Extension Store Prep**: STORE_LISTING.md created with permissions justifications, store description, and submission checklists. Manifest description updated to match landing page messaging. Version aligned to 1.0.1. `<all_urls>` host permission removed — only specific POS domain entries remain.
 - **Deployment Infrastructure**: Backend API hosted on Render.com. Frontend landing page served via Render.com static site or backend static file serving. PostgreSQL database on Neon.
@@ -46,12 +46,15 @@ Last Updated: 2026-08-17
 ## Active Phases
 
 ### F-3: Landing Page Deployment & Cross-Browser Verification
-- **Goal**: Deploy the updated landing page to production on Render.com and verify all animations and copy render correctly across modern browsers.
+- **Goal**: Deploy the updated landing page (new copy, animations, 3-slide intro overlay) and extension (logo splash, welcome overlay animation) to production on Render.com, and verify everything works across modern browsers.
 - **What needs to be achieved**:
   - Deploy the backend (including the updated landing page at `Backend/public/landing/index.html`) to Render.com
-  - Verify "Scan → Extract → Sync" hero copy renders correctly in Chrome, Firefox, Safari, and Edge
-  - Verify CSS keyframe animations (fadeInUp, fadeIn, fadeInScale) work in all target browsers
-  - Verify Intersection Observer scroll-reveal triggers correctly on page load and scroll in all target browsers
+  - Deploy the extension (including new `LogoSplash.tsx` and updated `App.tsx`) to the Chrome Web Store or load unpacked for testing
+  - Verify the landing page 3-slide intro auto-plays correctly (3.5s per slide, skip button works, progress dots update)
+  - Verify the extension first-install logo splash plays only once (chrome.storage.local flag works)
+  - Verify hero copy "From Any Document to QuickBooks — Automatically" renders correctly in Chrome, Firefox, Safari, and Edge
+  - Verify all CSS animations (fadeInUp, fadeIn, introLogoScale, logoSplash) work across target browsers
+  - Verify Intersection Observer scroll-reveal triggers correctly on the features section
   - Confirm zero instances of "reconciliation" on the deployed page
   - Verify all links, CTAs, and navigation elements still function correctly
 
