@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
@@ -86,6 +86,14 @@ export async function getPresignedUrl(storageKey: string, expirySeconds = 3600):
 
 export async function deleteFile(storageKey: string): Promise<void> {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: storageKey }));
+}
+
+export async function verifyStorageBucketAccessible(): Promise<void> {
+  try {
+    await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET }));
+  } catch (err: unknown) {
+    throw new Error(`Storage bucket access failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 /**

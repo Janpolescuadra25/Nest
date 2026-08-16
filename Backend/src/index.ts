@@ -30,6 +30,7 @@ import webhookRoutes from './routes/webhooks';
 import { authenticate } from './middleware/auth.middleware';
 import { apiLimiter } from './middleware/rate-limit';
 import { prisma } from './lib/prisma';
+import { runReadinessChecks } from './lib/health-checks';
 import { resetOwnerIfRequested } from './lib/owner-reset';
 import { startTimeBombCron } from './cron/timebomb';
 import { startTrialWarningCron } from './cron/trial-warnings';
@@ -109,14 +110,39 @@ app.use(helmet({
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ── Health Check — before globalLimiter so Render's poller is never 429'd ──
-app.get('/health', async (_req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', service: 'qyra-backend', database: 'connected', timestamp: new Date().toISOString() });
-  } catch (err) {
-    log.error({ err }, 'Health check database failed');
-    res.status(503).json({ status: 'error', service: 'qyra-backend', database: 'disconnected', timestamp: new Date().toISOString() });
+function sendLiveHealth(res: express.Response): void {
+  res.json({ status: 'ok', service: 'qyra-backend', timestamp: new Date().toISOString() });
+}
+
+app.get('/health', (_req, res) => {
+  sendLiveHealth(res);
+});
+
+app.get('/health/live', (_req, res) => {
+  sendLiveHealth(res);
+});
+
+app.get('/health/ready', async (_req, res) => {
+  const result = await runReadinessChecks();
+  if (result.ok) {
+    res.json({
+      status: 'ok',
+      service: 'qyra-backend',
+      readiness: 'ready',
+      checks: result.checks,
+      timestamp: new Date().toISOString(),
+    });
+    return;
   }
+
+  log.error({ checks: result.checks }, 'Readiness probe failed');
+  res.status(503).json({
+    status: 'error',
+    service: 'qyra-backend',
+    readiness: 'not ready',
+    checks: result.checks,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 const globalLimiter = rateLimit({
@@ -186,34 +212,38 @@ app.use((_req, res) => {
 app.use(createErrorHandler());
 
 // ── Start ────────────────────────────────────────────────────────────────────
-startTimeBombCron(prisma);
-startTrialWarningCron(prisma);
-startSyncFailureAlertCron(prisma);
-startQuotaAlertCron(prisma);
-startScanCleanupCron(prisma);
-resetOwnerIfRequested().catch(err => log.error({ err }, 'Owner Reset startup error'));
-const server = app.listen(PORT, () => {
-  log.info({ port: PORT }, 'Server running');
-  log.info({ environment: process.env.NODE_ENV ?? 'development' }, 'Environment');
-});
+const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID != null;
 
-function gracefulShutdown(signal: string) {
-  log.info({ signal }, 'Shutdown signal received');
-  server.close(() => {
-    log.info('HTTP server closed');
-    prisma.$disconnect().then(() => {
-      log.info('Database disconnected');
-      process.exit(0);
-    });
+if (!isTestEnvironment) {
+  startTimeBombCron(prisma);
+  startTrialWarningCron(prisma);
+  startSyncFailureAlertCron(prisma);
+  startQuotaAlertCron(prisma);
+  startScanCleanupCron(prisma);
+  resetOwnerIfRequested().catch(err => log.error({ err }, 'Owner Reset startup error'));
+  const server = app.listen(PORT, () => {
+    log.info({ port: PORT }, 'Server running');
+    log.info({ environment: process.env.NODE_ENV ?? 'development' }, 'Environment');
   });
-  setTimeout(() => {
-    log.error('Forced shutdown after timeout');
-    process.exit(1);
-  }, 10_000);
-}
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  function gracefulShutdown(signal: string) {
+    log.info({ signal }, 'Shutdown signal received');
+    server.close(() => {
+      log.info('HTTP server closed');
+      prisma.$disconnect().then(() => {
+        log.info('Database disconnected');
+        process.exit(0);
+      });
+    });
+    setTimeout(() => {
+      log.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10_000);
+  }
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 export default app;
 
