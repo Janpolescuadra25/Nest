@@ -12,13 +12,8 @@ export function validate(schema: z.ZodSchema, location: 'body' | 'query' | 'para
         fields[path] = issue.message;
       }
       return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          requestId: (req as any).id || '',
-          fields,
-        },
+        error: 'Validation failed',
+        fields,
       });
     }
     if (location === 'body') req.body = result.data;

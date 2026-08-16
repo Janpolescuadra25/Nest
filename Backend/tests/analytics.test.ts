@@ -138,13 +138,9 @@ describe('Analytics dashboard API', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      success: false,
-      error: expect.objectContaining({
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        fields: expect.objectContaining({
-          dateFrom: expect.stringContaining('Too small'),
-        }),
+      error: 'Validation failed',
+      fields: expect.objectContaining({
+        dateFrom: expect.stringContaining('Too small'),
       }),
     });
   });
