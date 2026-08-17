@@ -407,6 +407,10 @@ export default function ScanView({
 
   const effectiveColumnMappings = useMemo(() => {
     if (selectedTemplate?.transactionType === 'CHEQUE') {
+      if (!CHEQUE_DEFAULT_COLUMN_MAPPINGS || Object.keys(CHEQUE_DEFAULT_COLUMN_MAPPINGS).length === 0) {
+        console.warn('[Qyra] CHEQUE_DEFAULT_COLUMN_MAPPINGS is empty — falling back to empty object');
+        return {};
+      }
       return CHEQUE_DEFAULT_COLUMN_MAPPINGS;
     }
     return selectedTemplate?.columnMappings as Record<string, unknown> | null;
@@ -1347,7 +1351,8 @@ export default function ScanView({
                       ))}
                     </div>
                   </div>
-                  <div className="overflow-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
+                  <div className="overflow-x-auto overflow-y-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
+                    <div className="min-w-max">
                     <table className="min-w-full text-left text-xs text-gray-700">
                       <thead>
                         <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
@@ -1374,6 +1379,7 @@ export default function ScanView({
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               ))}

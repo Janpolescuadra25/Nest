@@ -57,14 +57,22 @@ Last Updated: 2026-08-18
   - Verified all links, CTAs, and navigation elements still function correctly
 - **Outcome**: Landing page and extension intro animations deployed and verified across modern browsers. All animations, copy, and navigation function correctly.
 
-## Active Phases
-
 ### F-4: Scan Section Fixes
 - **Goal**: Fix three bugs in the scan section that block Excel-based workflows for cheque templates, journal entry previews, and AI-assisted column mapping.
+- **What was done**:
+  - **F-4.1**: Added `CHEQUE_DEFAULT_COLUMN_MAPPINGS` constant (11 fixed column names) and `effectiveColumnMappings` useMemo in `ScanView.tsx`. When `transactionType === 'CHEQUE'`, the default mappings are auto-applied so the "Parse Excel Data" button is immediately enabled without the mapping modal. The "no column mapping configured" warning is suppressed for cheque templates.
+  - **F-4.2**: Backend `parse-excel` endpoint in `templates.ts` now computes `maxCols` across all rows and pads headers accordingly, so JE files show all 7 columns. Frontend `excelDataResult` display in `ScanView.tsx` now renders JE metadata (Date, Journal No, Adjusting, Memo) in a key-value grid followed by a full transaction table (Account, Debit, Credit, Description, Name, Class, Tax).
+  - **F-4.3**: Removed `disableAutoDetect={isExcelMode}` from `MappingFilters` in `MappingView/index.tsx`, enabling both Auto-Detect and AI Suggest for Excel mode. Presets remain disabled for Excel.
+- **Outcome**: All three fixes implemented and verified. Frontend `tsc --noEmit` clean, backend `tsc --noEmit` clean, 117/117 backend tests passing.
+
+## Active Phases
+
+### F-5B: Scan Section Polish
+- **Goal**: Polish the scan section fixes from F-4 with defensive edge-case handling, horizontal scroll for narrow viewports, and roadmap alignment.
 - **What needs to be achieved**:
-  - **F-4.1**: Cheque template auto-apply fixed column mappings — when a CHEQUE template is selected, the 11 fixed column names (Payee, Bank Account, Payment Date, Check No., Category, Description, Amount, Tax, Customer, QB Memo, Tax Type) are auto-populated as effective column mappings so the "Parse Excel Data" button is immediately enabled without requiring the user to open the mapping modal. The "no column mapping configured" warning must not appear for cheque templates.
-  - **F-4.2**: Journal Entry Excel preview shows full data — the raw Excel preview (from `parse-excel`) must include ALL columns from ALL rows (padded to the maximum column count across the sheet), not just the 2 columns from the first metadata row. After parsing, the `excelDataResult` display must render JE metadata (Date, Journal No, Adjusting, Memo) in a key-value grid followed by a full transaction table (Account, Debit, Credit, Description, Name, Class, Tax) — all visible without expanding.
-  - **F-4.3**: Enable AI Suggest for Excel/CSV templates — remove the `disableAutoDetect={isExcelMode}` gate from `MappingFilters` so the "🤖 AI Suggest" button is clickable when an Excel scan entry is active. The `suggestMappings` function already works with any string field names (including Excel column headers), so no adaptation is needed. Presets remain disabled for Excel mode.
+  - **F-5B.1**: Verify AI Suggest loading state works for Excel mode — the `suggesting` state must show "Suggesting…" and disable the button while the API call is in progress. Confirmed working: `suggesting` state is propagated to `MappingFilters` regardless of scan mode.
+  - **F-5B.2**: Add defensive fallback for cheque `effectiveColumnMappings` — if `CHEQUE_DEFAULT_COLUMN_MAPPINGS` is somehow empty/undefined, log a warning and return `{}` instead of crashing. Happy path unchanged.
+  - **F-5B.3**: Add `overflow-x: auto` wrapper to JE transaction preview table so users can horizontally scroll on narrow viewports (extension popup, mobile) instead of the table being cut off. Table styling, column widths, and layout unchanged.
 
 ## Next Priority
-Implement and verify the three scan-section fixes (F-4): cheque auto-mapping, JE preview full data, and AI Suggest for Excel templates. Run frontend typecheck and backend tests to confirm zero regressions.
+User-dependent QA: complete the F-5A checklist (browser testing of cheque flow, JE preview, AI Suggest for Excel, landing page, and health endpoints) after deployment.
