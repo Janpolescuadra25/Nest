@@ -172,8 +172,11 @@ router.post('/parse-excel', requireFeaturePermission('templates', 'read'), uploa
   await workbook.xlsx.load(req.file.buffer as any);
   const sheets = workbook.worksheets.map((worksheet) => {
     const rows = sheetToArrays(worksheet);
+    const maxCols = rows.reduce((max, row) => Math.max(max, row.length), 0);
     const rawHeaders = (rows[0] ?? []).map((header) => String(header ?? '').trim());
-    const headers = rawHeaders.map((header, index) => header || `Column ${index + 1}`);
+    const headers = Array.from({ length: maxCols }, (_, i) =>
+      (rawHeaders[i] ?? '').trim() || `Column ${i + 1}`,
+    );
     const previewRows = rows.slice(1, 501).map((row) => {
       const rowData: Record<string, string> = {};
       headers.forEach((header, index) => {

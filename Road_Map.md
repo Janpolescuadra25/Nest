@@ -1,5 +1,5 @@
 # Qyra — Product Roadmap
-Last Updated: 2026-08-17
+Last Updated: 2026-08-18
 
 ## Current Verified State
 - **Backend Test Suite**: 117/117 passing, 20/20 suites
@@ -43,20 +43,28 @@ Last Updated: 2026-08-17
   - Validated production build (`npm run build` — clean, no errors).
 - **Outcome**: Extension is fully prepared for Chrome Web Store submission. All automated prep complete. Remaining items are user-dependent: capture 4 screenshots, create developer account, provide privacy policy URL.
 
-## Active Phases
-
 ### F-3: Landing Page Deployment & Cross-Browser Verification
 - **Goal**: Deploy the updated landing page (new copy, animations, 3-slide intro overlay) and extension (logo splash, welcome overlay animation) to production on Render.com, and verify everything works across modern browsers.
+- **What was done**:
+  - Deployed backend (including updated landing page at `Backend/public/landing/index.html`) to Render.com
+  - Deployed extension (including `LogoSplash.tsx` and updated `App.tsx`) — load unpacked for testing
+  - Verified the landing page 3-slide intro auto-plays correctly (3.5s per slide, skip button works, progress dots update)
+  - Verified the extension first-install logo splash plays only once (chrome.storage.local flag works)
+  - Verified hero copy renders correctly across Chrome, Firefox, Safari, and Edge
+  - Verified all CSS animations (fadeInUp, fadeIn, introLogoScale, logoSplash) work across target browsers
+  - Verified Intersection Observer scroll-reveal triggers correctly on the features section
+  - Confirmed zero instances of "reconciliation" on the deployed page
+  - Verified all links, CTAs, and navigation elements still function correctly
+- **Outcome**: Landing page and extension intro animations deployed and verified across modern browsers. All animations, copy, and navigation function correctly.
+
+## Active Phases
+
+### F-4: Scan Section Fixes
+- **Goal**: Fix three bugs in the scan section that block Excel-based workflows for cheque templates, journal entry previews, and AI-assisted column mapping.
 - **What needs to be achieved**:
-  - Deploy the backend (including the updated landing page at `Backend/public/landing/index.html`) to Render.com
-  - Deploy the extension (including new `LogoSplash.tsx` and updated `App.tsx`) to the Chrome Web Store or load unpacked for testing
-  - Verify the landing page 3-slide intro auto-plays correctly (3.5s per slide, skip button works, progress dots update)
-  - Verify the extension first-install logo splash plays only once (chrome.storage.local flag works)
-  - Verify hero copy "From Any Document to QuickBooks — Automatically" renders correctly in Chrome, Firefox, Safari, and Edge
-  - Verify all CSS animations (fadeInUp, fadeIn, introLogoScale, logoSplash) work across target browsers
-  - Verify Intersection Observer scroll-reveal triggers correctly on the features section
-  - Confirm zero instances of "reconciliation" on the deployed page
-  - Verify all links, CTAs, and navigation elements still function correctly
+  - **F-4.1**: Cheque template auto-apply fixed column mappings — when a CHEQUE template is selected, the 11 fixed column names (Payee, Bank Account, Payment Date, Check No., Category, Description, Amount, Tax, Customer, QB Memo, Tax Type) are auto-populated as effective column mappings so the "Parse Excel Data" button is immediately enabled without requiring the user to open the mapping modal. The "no column mapping configured" warning must not appear for cheque templates.
+  - **F-4.2**: Journal Entry Excel preview shows full data — the raw Excel preview (from `parse-excel`) must include ALL columns from ALL rows (padded to the maximum column count across the sheet), not just the 2 columns from the first metadata row. After parsing, the `excelDataResult` display must render JE metadata (Date, Journal No, Adjusting, Memo) in a key-value grid followed by a full transaction table (Account, Debit, Credit, Description, Name, Class, Tax) — all visible without expanding.
+  - **F-4.3**: Enable AI Suggest for Excel/CSV templates — remove the `disableAutoDetect={isExcelMode}` gate from `MappingFilters` so the "🤖 AI Suggest" button is clickable when an Excel scan entry is active. The `suggestMappings` function already works with any string field names (including Excel column headers), so no adaptation is needed. Presets remain disabled for Excel mode.
 
 ## Next Priority
-Deploy the updated landing page to production and verify all animations and copy render correctly across modern browsers (F-3).
+Implement and verify the three scan-section fixes (F-4): cheque auto-mapping, JE preview full data, and AI Suggest for Excel templates. Run frontend typecheck and backend tests to confirm zero regressions.

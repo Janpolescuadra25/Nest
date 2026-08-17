@@ -110,6 +110,20 @@ export function mapParsedTransactionsToScanEntries(
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
+const CHEQUE_DEFAULT_COLUMN_MAPPINGS: Record<string, string> = {
+  'Payee': 'Payee',
+  'Bank Account': 'Bank Account',
+  'Payment Date': 'Payment Date',
+  'Check No.': 'Check No.',
+  'Category': 'Category',
+  'Description': 'Description',
+  'Amount': 'Amount',
+  'Tax': 'Tax',
+  'Customer': 'Customer',
+  'QB Memo': 'QB Memo',
+  'Tax Type': 'Tax Type',
+};
+
 interface Props {
   jwt: string;
   user: UserInfo;
@@ -390,6 +404,13 @@ export default function ScanView({
     }
     return null;
   }, [documentClassification, selectedTemplate]);
+
+  const effectiveColumnMappings = useMemo(() => {
+    if (selectedTemplate?.transactionType === 'CHEQUE') {
+      return CHEQUE_DEFAULT_COLUMN_MAPPINGS;
+    }
+    return selectedTemplate?.columnMappings as Record<string, unknown> | null;
+  }, [selectedTemplate]);
 
   useEffect(() => {
     if (activeScanData) {
@@ -1222,7 +1243,7 @@ export default function ScanView({
               <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700">
                 Select a template in the Mappings tab before parsing Excel data.
               </div>
-            ) : selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0) ? (
+            ) : selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!effectiveColumnMappings || Object.keys(effectiveColumnMappings).length === 0) ? (
               <div className="rounded-lg border border-orange-700 bg-orange-50/20 p-3 text-xs text-orange-700 space-y-2">
                 <div>⚠️ This template has no column mapping configured. Configure it first.</div>
                 <button
@@ -1241,7 +1262,7 @@ export default function ScanView({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!uploadedExcelFile || !selectedTemplate || (selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!selectedTemplate.columnMappings || Object.keys(selectedTemplate.columnMappings).length === 0)) || excelParseLoading}
+                disabled={!uploadedExcelFile || !selectedTemplate || (selectedTemplate.transactionType !== 'JOURNAL_ENTRY' && (!effectiveColumnMappings || Object.keys(effectiveColumnMappings).length === 0)) || excelParseLoading}
                 onClick={handleParseExcelData}
                 className="text-xs bg-emerald-700 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 text-white rounded px-3 py-1.5"
               >
@@ -1307,10 +1328,55 @@ export default function ScanView({
           )}
 
           {excelDataResult && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-700 space-y-2">
-              <div>Parsed {excelDataResult.totalRows} row(s), skipped {excelDataResult.skippedRows} empty row(s).</div>
-              <div>{excelDataResult.transactions.length} transaction(s) loaded into the scan pipeline.</div>
-              <div>Active scan entry: {activeScanEntryLabel}</div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-700 space-y-3">
+              <div className="space-y-1">
+                <div>Parsed {excelDataResult.totalRows} row(s), skipped {excelDataResult.skippedRows} empty row(s).</div>
+                <div>{excelDataResult.transactions.length} transaction(s) loaded into the scan pipeline.</div>
+                <div>Active scan entry: {activeScanEntryLabel}</div>
+              </div>
+              {selectedTemplate?.transactionType === 'JOURNAL_ENTRY' && excelDataResult.transactions.map((txn, txnIdx) => (
+                <div key={txnIdx} className="space-y-3">
+                  <div className="rounded-lg border border-gray-200 bg-[#F5F5F7] p-3">
+                    <div className="text-xs font-semibold text-gray-900 mb-2">Journal Entry Metadata</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(txn.header).map(([key, value]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className="text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                          <span className="text-gray-900 font-medium">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="overflow-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
+                    <table className="min-w-full text-left text-xs text-gray-700">
+                      <thead>
+                        <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
+                          <th className="px-2 py-2">Account</th>
+                          <th className="px-2 py-2">Debit</th>
+                          <th className="px-2 py-2">Credit</th>
+                          <th className="px-2 py-2">Description</th>
+                          <th className="px-2 py-2">Name</th>
+                          <th className="px-2 py-2">Class</th>
+                          <th className="px-2 py-2">Tax</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {txn.lineItems.map((item, itemIdx) => (
+                          <tr key={itemIdx} className="odd:bg-gray-50 even:bg-[#F5F5F7]">
+                            <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item.accountColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600">{String(item.debitColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600">{String(item.creditColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item.descriptionColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item.nameColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item.classColumn ?? '')}</td>
+                            <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item.taxCodeColumn ?? '')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           {scanEntries.length > 1 && scanMode === 'excel' && (

@@ -1394,7 +1394,6 @@ export default function MappingView({
         listsLoading={listsLoading}
         accountsLoaded={accounts.length > 0}
         showImportButton={showMappingControls}
-        disableAutoDetect={isExcelMode}
         disablePresets={isExcelMode}
       />
 
