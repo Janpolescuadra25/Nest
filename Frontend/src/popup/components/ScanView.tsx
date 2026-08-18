@@ -1372,7 +1372,7 @@ export default function ScanView({
               ))}
             </div>
           )}
-          {scanEntries.length > 1 && scanMode === 'excel' && (
+          {scanEntries.length > 1 && scanMode === 'excel' && selectedTemplate?.transactionType !== 'CHEQUE' && (
             <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
               <div className="text-sm font-semibold text-gray-900">Excel entries</div>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -1393,6 +1393,52 @@ export default function ScanView({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {scanMode === 'excel' && selectedTemplate?.transactionType === 'CHEQUE' && scanEntries.length > 0 && scanEntries[0].lineItems.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="text-sm font-semibold text-gray-900">Preview from Cheque Template</div>
+              <div className="overflow-x-auto overflow-y-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
+                <div className="min-w-max">
+                  <table className="min-w-full text-left text-xs text-gray-700">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
+                        <th className="px-2 py-2">#</th>
+                        <th className="px-2 py-2">Payee</th>
+                        <th className="px-2 py-2">Bank Account</th>
+                        <th className="px-2 py-2">Date</th>
+                        <th className="px-2 py-2">Check No.</th>
+                        <th className="px-2 py-2">Category</th>
+                        <th className="px-2 py-2">Description</th>
+                        <th className="px-2 py-2">Amount</th>
+                        <th className="px-2 py-2">Tax</th>
+                        <th className="px-2 py-2">Customer</th>
+                        <th className="px-2 py-2">Memo</th>
+                        <th className="px-2 py-2">Tax Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scanEntries[0].lineItems.map((item, itemIdx) => (
+                        <tr key={itemIdx} className="odd:bg-gray-50 even:bg-[#F5F5F7]">
+                          <td className="px-2 py-2 text-gray-600">{itemIdx + 1}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Payee'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Bank Account'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600">{String(item['Payment Date'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600">{String(item['Check No.'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Category'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Description'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600">{String(item['Amount'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600">{String(item['Tax'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Customer'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['QB Memo'] ?? '')}</td>
+                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Tax Type'] ?? '')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
