@@ -354,8 +354,8 @@
 
 <script>
 (function(){
-  var o=document.body.firstElementChild;
-  if(!o||o.tagName!=='DIV')return;
+  var o=document.getElementById('intro-overlay');
+  if(!o)return;
   var s=document.querySelectorAll('.i-slide');
   var d=document.querySelectorAll('.i-dot');
   var c=0,t=null;
