@@ -82,6 +82,7 @@ export function mapParsedTransactionsToScanEntries(
   transactions: ExcelDataParseResult['transactions'],
   uploadedExcelFileName: string,
 ): ScanEntry[] {
+  console.log('[MAP DEBUG] Input transactions count:', transactions.length, 'first tx lineItems:', transactions[0]?.lineItems?.length);
   return transactions.map((transaction, transactionIndex) => {
     return {
       id: generateId(),
@@ -1079,6 +1080,7 @@ export default function ScanView({
 
     try {
       const result = await api.parseExcelData(jwt, selectedTemplate.id, uploadedExcelFile);
+      console.log('[SCAN DEBUG] Parse response transactions:', result?.transactions?.length, 'first tx lineItems:', result?.transactions?.[0]?.lineItems?.length);
       setExcelDataResult(result);
       const parsedEntries: ScanEntry[] = mapParsedTransactionsToScanEntries(result.transactions, uploadedExcelFile.name);
       setScanEntries(parsedEntries);

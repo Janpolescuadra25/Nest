@@ -414,6 +414,10 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
       });
     }
 
+    console.log('[CHEQUE DEBUG] Total Excel rows:', rows.length);
+    console.log('[CHEQUE DEBUG] Line items built:', lineItems.length);
+    console.log('[CHEQUE DEBUG] Transactions:', transactions.length, 'lineItems in first:', transactions[0]?.lineItems?.length);
+
     res.json({ transactions, totalRows: rows.length - 1, skippedRows });
     return;
   } else if (template.transactionType === 'BILL') {
