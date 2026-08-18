@@ -82,7 +82,6 @@ export function mapParsedTransactionsToScanEntries(
   transactions: ExcelDataParseResult['transactions'],
   uploadedExcelFileName: string,
 ): ScanEntry[] {
-  console.log('[MAP DEBUG] Input transactions count:', transactions.length, 'first tx lineItems:', transactions[0]?.lineItems?.length);
   return transactions.map((transaction, transactionIndex) => {
     return {
       id: generateId(),
@@ -1080,7 +1079,6 @@ export default function ScanView({
 
     try {
       const result = await api.parseExcelData(jwt, selectedTemplate.id, uploadedExcelFile);
-      console.log('[SCAN DEBUG] Parse response transactions:', result?.transactions?.length, 'first tx lineItems:', result?.transactions?.[0]?.lineItems?.length);
       setExcelDataResult(result);
       const parsedEntries: ScanEntry[] = mapParsedTransactionsToScanEntries(result.transactions, uploadedExcelFile.name);
       setScanEntries(parsedEntries);
@@ -1400,47 +1398,74 @@ export default function ScanView({
           )}
 
           {scanMode === 'excel' && selectedTemplate?.transactionType === 'CHEQUE' && scanEntries.length > 0 && scanEntries[0].lineItems.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <div className="text-sm font-semibold text-gray-900">Preview from Cheque Template</div>
-              <div className="overflow-x-auto overflow-y-auto border border-gray-200 rounded-lg bg-gray-50" style={{ maxHeight: '300px' }}>
-                <div className="min-w-max">
-                  <table className="min-w-full text-left text-xs text-gray-700">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-[#F5F5F7] text-gray-600">
-                        <th className="px-2 py-2">#</th>
-                        <th className="px-2 py-2">Payee</th>
-                        <th className="px-2 py-2">Bank Account</th>
-                        <th className="px-2 py-2">Date</th>
-                        <th className="px-2 py-2">Check No.</th>
-                        <th className="px-2 py-2">Category</th>
-                        <th className="px-2 py-2">Description</th>
-                        <th className="px-2 py-2">Amount</th>
-                        <th className="px-2 py-2">Tax</th>
-                        <th className="px-2 py-2">Customer</th>
-                        <th className="px-2 py-2">Memo</th>
-                        <th className="px-2 py-2">Tax Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {scanEntries[0].lineItems.map((item, itemIdx) => (
-                        <tr key={itemIdx} className="odd:bg-gray-50 even:bg-[#F5F5F7]">
-                          <td className="px-2 py-2 text-gray-600">{itemIdx + 1}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Payee'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Bank Account'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600">{String(item['Payment Date'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600">{String(item['Check No.'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Category'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Description'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600">{String(item['Amount'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600">{String(item['Tax'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Customer'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['QB Memo'] ?? '')}</td>
-                          <td className="px-2 py-2 text-gray-600 truncate max-w-[10rem]">{String(item['Tax Type'] ?? '')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {scanEntries[0].lineItems.map((item, itemIdx) => (
+                  <div key={itemIdx} className="border border-gray-200 rounded-3xl bg-white shadow-sm overflow-hidden">
+                    <div className="bg-emerald-50 border-b border-gray-200 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-gray-900">Cheque #{itemIdx + 1}</div>
+                        <div className="text-xs font-medium text-emerald-700">{item['checkNo'] ?? itemIdx + 1}</div>
+                      </div>
+                      <div className="text-[11px] text-gray-500">Cheque preview</div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Payee</div>
+                        <div>{String(item['payeeName'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Bank Account</div>
+                        <div>{String(item['bankAccount'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Payment Date</div>
+                        <div>{String(item['paymentDate'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Check No.</div>
+                        <div>{String(item['checkNo'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Category</div>
+                        <div>{String(item['category'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Description</div>
+                        <div>{String(item['description'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Amount</div>
+                        <div>{String(item['amount'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Tax</div>
+                        <div>{String(item['tax'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">Customer</div>
+                        <div>{String(item['customer'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700">
+                        <div className="font-medium text-gray-900">QB Memo</div>
+                        <div>{String(item['memo'] ?? '')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-[#F5F5F7] p-3 text-xs text-gray-700 sm:col-span-2">
+                        <div className="font-medium text-gray-900">Tax Type</div>
+                        <div>{String(item['taxType'] ?? '')}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => onTabChange('sync-history')}
+                  className="bg-emerald-700 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Sync All Cheques
+                </button>
               </div>
             </div>
           )}

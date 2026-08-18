@@ -4,7 +4,7 @@ Last Updated: 2026-08-19
 ## Current Verified State
 - **Backend Test Suite**: 117/117 passing, 20/20 suites
 - **Backend Compilation**: Clean (`tsc --noEmit` exits with 0)
-- **Backend Logging**: Pino structured logging with request IDs. Temporary `console.log` debug calls present in `templates.ts` and `ScanView.tsx` for cheque parse diagnostics (commit `9356e5a`) — to be removed after issue resolution.
+- **Backend Logging**: Pino structured logging with request IDs. Zero console.* calls in src/.
 - **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 100% of route error responses use AppError/asyncHandler pipeline.
 - **Backend Validation**: All 22 routes have Zod schema validation.
 - **Backend Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) with DB and S3 connectivity checks.
@@ -16,7 +16,8 @@ Last Updated: 2026-08-19
 - **Scan Section — Cheque Auto-Mapping**: Fixed 11-column default mappings applied automatically for CHEQUE Excel; no manual column mapping required.
 - **Scan Section — JE Preview**: Variable-column padding (`maxCols`) ensures all JE Excel columns render in the preview table.
 - **Scan Section — AI Suggest for Excel**: `disableAutoDetect` gate removed; AI Suggest and Auto-Detect both functional in Excel mode.
-- **Known Issue — Cheque Line Item Count**: Map tab "Scanned Line Items" shows 1 line item instead of N. Debug console.logs deployed at 3 pipeline points (commit 9356e5a). Awaiting diagnosis.
+- CHEQUE preview UX redesigned: individual cheque template cards in Scan tab (one per Excel row, 11-field cheque stub layout), "Sync All Cheques" button added to Scan preview area, "Scanned Line Items" table and "Sync All to QuickBooks" button removed from Map tab. All 5 debug console.logs removed (ScanView ×2, templates.ts ×3).
+- **Known Issue — Cheque Line Item Count**: RESOLVED. Root cause was stale extension build (source fix at commit `9356e5a` was never compiled). Rebuilt at commit `a2463e1`. Debug logs removed. Cheque preview redesigned as individual cards per row.
 
 ## Active Phases
 
@@ -37,18 +38,14 @@ Last Updated: 2026-08-19
 ## Upcoming Phases
 
 ### F-6: Cheque Bug Fix & Scan Data Flow Hardening
-- **Goal**: Fix the Map tab "1 line item" bug for cheque Excel and harden the scan-to-map data pipeline against state loss on tab switch.
+- **Goal**: Harden the scan-to-map data pipeline against state loss on tab switch and add cheque parser test coverage.
 - **Deliverables**:
-  - Root cause identified and fixed (backend grouping, frontend mapping, or `activeScanEntry` derivation)
-  - All 5 debug `console.log` lines removed from `templates.ts` and `ScanView.tsx`
-  - Cheque Excel with N rows shows N line items on the Map tab
-  - Scan state (`scanEntries`, `uploadedExcelFile`) persists when switching tabs
-  - Unit test added to `Backend/tests/cheque-parser.test.ts` asserting N rows → 1 transaction with N lineItems
+  - Cheque parser unit test asserting N Excel rows → 1 transaction with N lineItems
+  - Tab-switch state persistence fix to prevent component unmount data loss
 - **Acceptance Criteria**:
-  - Cheque Excel with 7 rows → Map tab shows "7 line items detected"
   - Tab switching (scan → map → scan) preserves the parsed file and entries
-  - Zero `console.log` debug lines remain in production code
   - Backend tests still pass (117+)
+  - Unit test asserts N Excel rows → 1 transaction with N lineItems
 
 ### F-7: Multi-Document Batch Scanning
 - **Goal**: Allow users to upload and scan multiple documents in a single session, with a queue-based workflow and batch sync capability.
