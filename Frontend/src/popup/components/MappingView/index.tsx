@@ -2270,6 +2270,15 @@ Row 6+: (data rows with values matching column headers)`}
           <div className="px-3 py-2 border-t border-gray-200 bg-gray-100 text-xs text-gray-600">
             {activeScanEntry.lineItems.length} line item{activeScanEntry.lineItems.length === 1 ? '' : 's'} detected
           </div>
+          <div className="px-3 py-3 border-t border-gray-200 bg-white flex justify-end">
+            <button
+              type="button"
+              onClick={() => onTabChange('sync-history')}
+              className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
+            >
+              Sync All to QuickBooks
+            </button>
+          </div>
         </div>
       )}
 

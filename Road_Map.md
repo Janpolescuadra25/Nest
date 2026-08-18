@@ -63,16 +63,29 @@ Last Updated: 2026-08-18
   - **F-4.1**: Added `CHEQUE_DEFAULT_COLUMN_MAPPINGS` constant (11 fixed column names) and `effectiveColumnMappings` useMemo in `ScanView.tsx`. When `transactionType === 'CHEQUE'`, the default mappings are auto-applied so the "Parse Excel Data" button is immediately enabled without the mapping modal. The "no column mapping configured" warning is suppressed for cheque templates.
   - **F-4.2**: Backend `parse-excel` endpoint in `templates.ts` now computes `maxCols` across all rows and pads headers accordingly, so JE files show all 7 columns. Frontend `excelDataResult` display in `ScanView.tsx` now renders JE metadata (Date, Journal No, Adjusting, Memo) in a key-value grid followed by a full transaction table (Account, Debit, Credit, Description, Name, Class, Tax).
   - **F-4.3**: Removed `disableAutoDetect={isExcelMode}` from `MappingFilters` in `MappingView/index.tsx`, enabling both Auto-Detect and AI Suggest for Excel mode. Presets remain disabled for Excel.
-- **Outcome**: All three fixes implemented and verified. Frontend `tsc --noEmit` clean, backend `tsc --noEmit` clean, 117/117 backend tests passing.
+  - **F-4.4**: Cheque parser groups all Excel rows into a single transaction with all 11 fields preserved per line item, and added a Sync All to QuickBooks navigation button on the Map page.
+- **Outcome**: All four fixes implemented and verified. Frontend `tsc --noEmit` clean, backend `tsc --noEmit` clean, 117/117 backend tests passing.
 
-## Active Phases
+## Recently Completed
 
 ### F-5B: Scan Section Polish
 - **Goal**: Polish the scan section fixes from F-4 with defensive edge-case handling, horizontal scroll for narrow viewports, and roadmap alignment.
+- **What was done**:
+  - **F-5B.1**: Verify AI Suggest loading state works for Excel mode — the `suggesting` state must show "Suggesting…" and disable the button while the API call is in progress.
+  - **F-5B.2**: Added defensive fallback for cheque `effectiveColumnMappings` — if `CHEQUE_DEFAULT_COLUMN_MAPPINGS` is somehow empty/undefined, log a warning and return `{}` instead of crashing.
+  - **F-5B.3**: Added `overflow-x: auto` wrapper to JE transaction preview table so users can horizontally scroll on narrow viewports (extension popup, mobile) instead of the table being cut off.
+- **Outcome**: Scan section polish tasks are complete.
+
+## Active Phases
+
+### F-5A: User QA
+- **Goal**: Validate the latest scan and landing page workflows with actual browser testing and user QA.
 - **What needs to be achieved**:
-  - **F-5B.1**: Verify AI Suggest loading state works for Excel mode — the `suggesting` state must show "Suggesting…" and disable the button while the API call is in progress. Confirmed working: `suggesting` state is propagated to `MappingFilters` regardless of scan mode.
-  - **F-5B.2**: Add defensive fallback for cheque `effectiveColumnMappings` — if `CHEQUE_DEFAULT_COLUMN_MAPPINGS` is somehow empty/undefined, log a warning and return `{}` instead of crashing. Happy path unchanged.
-  - **F-5B.3**: Add `overflow-x: auto` wrapper to JE transaction preview table so users can horizontally scroll on narrow viewports (extension popup, mobile) instead of the table being cut off. Table styling, column widths, and layout unchanged.
+  - Verify cheque Excel flow end-to-end (parse, mapping, review, sync navigation)
+  - Verify JE Excel preview displays metadata and full transaction rows
+  - Verify AI Suggest for Excel templates is available and functional
+  - Verify landing page animations and chrome extension intro interact correctly
+  - Verify all health endpoints and browser compatibility across modern browsers
 
 ## Next Priority
 User-dependent QA: complete the F-5A checklist (browser testing of cheque flow, JE preview, AI Suggest for Excel, landing page, and health endpoints) after deployment.
