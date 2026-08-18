@@ -82,29 +82,16 @@ export function mapParsedTransactionsToScanEntries(
   transactions: ExcelDataParseResult['transactions'],
   uploadedExcelFileName: string,
 ): ScanEntry[] {
-  return transactions.flatMap((transaction, transactionIndex) => {
-    const commonEntry: Omit<ScanEntry, 'id' | 'rowNumber' | 'lineItems'> = {
+  return transactions.map((transaction, transactionIndex) => {
+    return {
+      id: generateId(),
       source: 'excel',
       fileName: uploadedExcelFileName,
       header: transaction.header,
-      ...(transaction.type === 'CHEQUE' || transaction.type === 'BILL' ? { type: transaction.type } : {}),
-    } as Omit<ScanEntry, 'id' | 'rowNumber' | 'lineItems'>;
-
-    if (transaction.type === 'CHEQUE') {
-      return transaction.lineItems.map((lineItem, rowIndex) => ({
-        ...commonEntry,
-        id: generateId(),
-        rowNumber: rowIndex + 1,
-        lineItems: [lineItem],
-      }));
-    }
-
-    return [{
-      ...commonEntry,
-      id: generateId(),
       rowNumber: transactionIndex + 1,
       lineItems: transaction.lineItems,
-    }];
+      ...(transaction.type === 'CHEQUE' || transaction.type === 'BILL' ? { type: transaction.type } : {}),
+    };
   });
 }
 
