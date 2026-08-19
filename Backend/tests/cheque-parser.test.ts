@@ -65,7 +65,7 @@ describe('Cheque fixed-column Excel parser', () => {
     app = buildApp();
   });
 
-  it('parses a valid 3-row cheque Excel file into a single transaction with 3 line items', async () => {
+  it('parses a valid 3-row cheque Excel file into 3 separate transactions', async () => {
     const data = [
       ['Payee', 'Bank Account', 'Payment Date', 'Check No.', 'Category', 'Description', 'Amount', 'Tax', 'Customer', 'QB Memo', 'Tax Type'],
       ['Vendor A', 'Bank 1', '2026-08-08', '1001', 'Office Supplies', 'Pens', '150.00', 'Exclusive', 'Customer A', 'Memo A', 'Taxable'],
@@ -82,13 +82,17 @@ describe('Cheque fixed-column Excel parser', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.transactions).toHaveLength(1);
+    expect(res.body.transactions).toHaveLength(3);
     expect(res.body.totalRows).toBe(3);
     expect(res.body.skippedRows).toBe(0);
     expect(res.body.transactions[0].type).toBe('CHEQUE');
     expect(res.body.transactions[0].header.payeeName).toBe('Vendor A');
     expect(res.body.transactions[0].header.checkNo).toBe('1001');
-    expect(res.body.transactions[0].lineItems).toHaveLength(3);
+    expect(res.body.transactions[0].lineItems).toHaveLength(1);
+    expect(res.body.transactions[1].header.payeeName).toBe('Vendor B');
+    expect(res.body.transactions[1].header.checkNo).toBe('1002');
+    expect(res.body.transactions[2].header.payeeName).toBe('Vendor A');
+    expect(res.body.transactions[2].header.checkNo).toBe('1003');
     expect(res.body.transactions[0].lineItems[0].category).toBe('Office Supplies');
     expect(Number(res.body.transactions[0].lineItems[0].amount)).toBe(150);
   });
@@ -165,13 +169,18 @@ describe('Cheque fixed-column Excel parser', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.transactions).toHaveLength(1);
+    expect(res.body.transactions).toHaveLength(2);
     expect(res.body.totalRows).toBe(3);
     expect(res.body.skippedRows).toBe(1);
-    expect(res.body.transactions[0].lineItems).toHaveLength(2);
+    expect(res.body.transactions[0].lineItems).toHaveLength(1);
+    expect(res.body.transactions[0].header.payeeName).toBe('Vendor A');
+    expect(res.body.transactions[0].header.checkNo).toBe('1001');
+    expect(res.body.transactions[1].lineItems).toHaveLength(1);
+    expect(res.body.transactions[1].header.payeeName).toBe('Vendor C');
+    expect(res.body.transactions[1].header.checkNo).toBe('1003');
   });
 
-  it('accepts headers case-insensitively', async () => {
+  it('accepts headers case-insensitively and parses one cheque transaction', async () => {
     const data = [
       ['PAYEE', 'bank account', 'Payment Date', 'check no.', 'Category', 'Description', 'amount', 'Tax', 'Customer', 'QB MEMO', 'Tax Type'],
       ['Vendor A', 'Bank 1', '2026-08-08', '1001', 'Office Supplies', 'Pens', '150.00', 'Exclusive', 'Customer A', 'Memo A', 'Taxable'],
@@ -187,6 +196,7 @@ describe('Cheque fixed-column Excel parser', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.transactions).toHaveLength(1);
+    expect(res.body.transactions[0].lineItems).toHaveLength(1);
   });
 });
 

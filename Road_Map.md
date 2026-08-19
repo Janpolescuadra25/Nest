@@ -16,7 +16,7 @@ Last Updated: 2026-08-20
 - **Scan Section — Cheque Auto-Mapping**: Fixed 11-column default mappings applied automatically for CHEQUE Excel; no manual column mapping required.
 - **Scan Section — JE Preview**: Variable-column padding (`maxCols`) ensures all JE Excel columns render in the preview table.
 - **Scan Section — AI Suggest for Excel**: `disableAutoDetect` gate removed; AI Suggest and Auto-Detect both functional in Excel mode.
-- CHEQUE preview UX redesigned: individual cheque template cards in Scan tab (one per Excel row, 11-field cheque stub layout), "Sync All Cheques" button added to Scan preview area, "Scanned Line Items" table and "Sync All to QuickBooks" button removed from Map tab. All 5 debug console.logs removed (ScanView ×2, templates.ts ×3).
+- CHEQUE preview: each Excel row produces a separate cheque form in the Preview tab (individual sync + Sync All button). Backend CHEQUE parser creates one transaction per row. CheckPreviewForm auto-populates date, check number, bank account, and payee from Excel data via existing header auto-resolution.
 - **Known Issue — Cheque Line Item Count**: RESOLVED. Root cause was stale extension build (source fix at commit `9356e5a` was never compiled). Rebuilt at commit `a2463e1`. Debug logs removed. Cheque preview redesigned as individual cards per row.
 
 ## Active Phases
@@ -37,14 +37,11 @@ Last Updated: 2026-08-20
 ### F-6: Scan Data Flow Hardening & Cheque Parser Tests
 - **Goal**: Harden the scan-to-map data pipeline against state loss on tab switch and add cheque parser test coverage.
 - **Deliverables**:
-  - Cheque parser unit test asserting N Excel rows → 1 transaction with N lineItems
-  - Tab-switch state persistence fix to prevent component unmount data loss
+    - Tab-switch state persistence fix to prevent component unmount data loss
 - **Acceptance Criteria**:
   - Tab switching (scan → map → scan) preserves the parsed file and entries
   - Backend tests still pass (117+)
-  - Unit test asserts N Excel rows → 1 transaction with N lineItems
 
-### F-7: Multi-Document Batch Scanning
 - **Goal**: Allow users to upload and scan multiple documents in a single session, with a queue-based workflow and batch sync capability.
 - **Deliverables**:
   - Multi-file upload UI (drag-and-drop zone accepts multiple files)

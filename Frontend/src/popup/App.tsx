@@ -34,6 +34,7 @@ import UsersTab from './components/UsersTab';
 import LocationsTab from './components/LocationsTab';
 import ProductCatalogView from './components/ProductCatalogView';
 import type { TabId, ScanData, ScanEntry, ScanSource, Template } from '../types';
+import SyncAllChequesButton from './components/SyncAllChequesButton';
 import { ToastProvider, ToastContainer } from './components/Toast';
 
 const ROLE_META: Record<string, { icon: string; color: string }> = {

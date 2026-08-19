@@ -372,7 +372,6 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
 
     const transactions: any[] = [];
     let skippedRows = 0;
-    const lineItems: any[] = [];
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -385,7 +384,7 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
         continue;
       }
 
-      lineItems.push({
+      const lineItem = {
         payeeName: String(row[0] ?? '').trim(),
         bankAccount: String(row[1] ?? '').trim(),
         paymentDate: String(row[2] ?? '').trim(),
@@ -397,20 +396,17 @@ router.post('/parse-excel-data', requireFeaturePermission('templates', 'read'), 
         customer: String(row[8] ?? '').trim(),
         memo: String(row[9] ?? '').trim(),
         taxType: String(row[10] ?? '').trim(),
-      });
-    }
+      };
 
-    if (lineItems.length > 0) {
-      const firstItem = lineItems[0];
       transactions.push({
         type: 'CHEQUE',
         header: {
-          payeeName: firstItem.payeeName,
-          bankAccount: firstItem.bankAccount,
-          paymentDate: firstItem.paymentDate,
-          checkNo: firstItem.checkNo,
+          payeeName: lineItem.payeeName,
+          bankAccount: lineItem.bankAccount,
+          paymentDate: lineItem.paymentDate,
+          checkNo: lineItem.checkNo,
         },
-        lineItems,
+        lineItems: [lineItem],
       });
     }
 
