@@ -21,19 +21,16 @@ Last Updated: 2026-08-19
 
 ## Active Phases
 
-### F-5A: User QA & Cheque Bug Diagnosis
-- **Goal**: Complete browser-based QA of all scan and landing page workflows, and diagnose the cheque line item count bug on the Map tab.
+### F-5A: User QA & Verification
+- **Goal**: Complete browser-based QA of all scan and landing page workflows.
 - **What needs to be achieved**:
   1. Verify cheque Excel flow end-to-end (parse → mapping → review → sync navigation)
   2. Verify JE Excel preview displays metadata and full transaction rows
   3. Verify AI Suggest for Excel templates is available and functional
   4. Verify landing page animations and extension intro interact correctly
   5. Verify all health endpoints and browser compatibility
-  6. **Diagnose cheque bug**: Open DevTools, scan a multi-row cheque Excel, navigate to Map tab, and report the `[CHEQUE DEBUG]`, `[SCAN DEBUG]`, and `[MAP DEBUG]` console output
 - **Acceptance Criteria**:
   - All 5 verification items pass in Chrome (latest), Firefox (latest), and Edge (latest)
-  - Console debug output from the 3 checkpoint logs is reported for the cheque bug
-  - Bug diagnosis narrows the root cause to either backend grouping, frontend mapping, or `activeScanEntry` derivation
 
 ## Upcoming Phases
 
@@ -105,6 +102,6 @@ Last Updated: 2026-08-19
   - Zero critical errors in the first 48 hours post-launch
 
 ## Next Priority
-1. **Immediate (F-5A)**: Complete the user QA checklist and diagnose the cheque line item bug. These are prerequisites for both F-6 (bug fix) and store submission.
-2. **Short-term (F-6)**: Fix the cheque bug and harden scan data flow. This unblocks reliable cheque workflows.
+1. **Immediate (F-5A)**: Complete the user QA checklist. This is a prerequisite for both F-6 and store submission.
+2. **Short-term (F-6)**: Harden scan data flow. This unblocks reliable cheque workflows.
 3. **Medium-term (F-7 → F-10)**: Batch scanning, custom presets, sync analytics, and Chrome Web Store launch — in that order. Each phase builds on the previous.
