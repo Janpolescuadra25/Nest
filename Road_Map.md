@@ -1,5 +1,5 @@
 # Qyra — Product Roadmap
-Last Updated: 2026-08-19
+Last Updated: 2026-08-20
 
 ## Current Verified State
 - **Backend Test Suite**: 117/117 passing, 20/20 suites
@@ -34,7 +34,7 @@ Last Updated: 2026-08-19
 
 ## Upcoming Phases
 
-### F-6: Cheque Bug Fix & Scan Data Flow Hardening
+### F-6: Scan Data Flow Hardening & Cheque Parser Tests
 - **Goal**: Harden the scan-to-map data pipeline against state loss on tab switch and add cheque parser test coverage.
 - **Deliverables**:
   - Cheque parser unit test asserting N Excel rows → 1 transaction with N lineItems
