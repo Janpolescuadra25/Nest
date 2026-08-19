@@ -196,7 +196,7 @@ Copy `.env.example` and `.env.production.example` from `Backend/` and fill in th
 ## Project Structure
 
 ```
-Nest/
+Qyra/
 ├── Backend/
 │   ├── src/
 │   │   ├── routes/            # API route handlers (auth, owner, admin, scans, quickbooks, etc.)
@@ -206,7 +206,7 @@ Nest/
 │   │   └── utils/             # Helper functions (invite utils, etc.)
 │   ├── prisma/
 │   │   ├── schema.prisma      # Database schema (User, Location, ScanRecord, SyncLog, Template, etc.)
-│   │   └── migrations/        # Database migrations (21 migrations)
+│   │   └── migrations/        # Database migrations (62 migrations)
 │   ├── tests/                 # Backend tests
 │   └── .env.example           # Environment variable template
 ├── Frontend/
