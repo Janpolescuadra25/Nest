@@ -24,9 +24,74 @@
     .pricing-card {
       min-width: 220px;
     }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .animate-fade-in-up {
+      opacity: 0;
+      animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-fade-in {
+      opacity: 0;
+      animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .delay-100 { animation-delay: 100ms; }
+    .delay-200 { animation-delay: 200ms; }
+    .delay-300 { animation-delay: 300ms; }
+    .delay-400 { animation-delay: 400ms; }
+    .delay-500 { animation-delay: 500ms; }
+    .i-slide.i-active{opacity:1!important;transform:translateY(0) scale(1)!important}
+    .i-dot.i-active{background-color:#10b981!important;width:1.5rem!important}
+    @keyframes iLogoScale{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
   </style>
 </head>
 <body class="bg-white text-slate-900">
+<!-- Intro Overlay -->
+<div id="intro-overlay" style="position:fixed;inset:0;z-index:9999;background:#0f172a;display:flex;align-items:center;justify-content:center;transition:opacity .7s ease">
+  <button id="intro-skip" style="position:absolute;top:1.5rem;right:1.5rem;color:rgba(255,255,255,.6);font-size:.875rem;font-weight:500;letter-spacing:.025em;background:none;border:none;cursor:pointer;z-index:10;padding:.5rem 1rem" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">Close</button>
+  <div style="position:relative;width:100%;max-width:42rem;min-height:70vh;padding:0 2rem;text-align:center">
+    <div id="intro-slide-1" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
+      <p style="color:#34d399;font-size:.875rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1.5rem">Introducing</p>
+      <h2 style="color:#fff;font-size:1.875rem;font-weight:700;line-height:1.2;margin:0">Stop Entering Data<br>by Hand</h2>
+      <div style="margin-top:2rem;display:flex;align-items:center;gap:.75rem;color:rgba(255,255,255,.7);font-size:1.125rem">
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Scan</span>
+        <span style="color:rgba(255,255,255,.4)">→</span>
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Extract</span>
+        <span style="color:rgba(255,255,255,.4)">→</span>
+        <span style="padding:.25rem .75rem;background:rgba(16,185,129,.2);border-radius:9999px;color:#34d399;font-size:.875rem;font-weight:500">Sync</span>
+      </div>
+    </div>
+    <div id="intro-slide-2" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:scale(.75);transition:opacity .7s ease,transform .7s ease">
+      <img src="icons/qyra-logo.png" alt="Qyra" style="width:8rem;height:8rem;animation:iLogoScale 1.8s cubic-bezier(.16,1,.3,1) forwards" />
+      <p style="margin-top:1.5rem;color:rgba(255,255,255,.5);font-size:.875rem;letter-spacing:.2em;text-transform:uppercase">Qyra</p>
+    </div>
+    <div id="intro-slide-3" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
+      <h2 style="color:#fff;font-size:1.5rem;font-weight:700;line-height:1.2;margin:0">From Any Document to<br>QuickBooks — Automatically</h2>
+      <a href="#pricing" id="intro-cta" style="margin-top:2rem;display:inline-flex;align-items:center;gap:.5rem;background:#059669;color:#fff;font-weight:600;padding:.75rem 1.5rem;border-radius:9999px;text-decoration:none;transition:background .2s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">Get Started Free</a>
+    </div>
+    <div style="position:absolute;bottom:-3rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem">
+      <span class="i-dot" data-i="0" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+      <span class="i-dot" data-i="1" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+      <span class="i-dot" data-i="2" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
+    </div>
+  </div>
+</div>
   <div class="relative min-h-screen overflow-x-hidden">
     <header class="fixed inset-x-0 top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
       <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -58,10 +123,10 @@
           <div class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl shadow-slate-200/40 backdrop-blur-xl sm:p-12">
             <div class="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div class="max-w-2xl">
-                <p class="mb-4 inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">POS + QuickBooks</p>
-                <h1 class="text-4xl font-bold tracking-tight sm:text-5xl text-slate-900">Automate Your POS-to-QuickBooks Reconciliation</h1>
-                <p class="mt-6 max-w-xl text-base leading-8 text-slate-600">Scan POS reports, invoices, vendor credits, checks, and bill payments — from any POS system, Excel, or image. AI extracts the data, maps it to QuickBooks, and syncs automatically.</p>
-                <div class="mt-10">
+                <p class="mb-4 inline-flex rounded-full bg-emerald-100 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700 animate-fade-in-up">Scan → Extract → Sync</p>
+                <h1 class="text-4xl font-bold tracking-tight sm:text-5xl text-slate-900 animate-fade-in-up delay-100">From Any Document to QuickBooks — Automatically</h1>
+                <p class="mt-6 max-w-xl text-base leading-8 text-slate-600 animate-fade-in-up delay-200">Scan invoices, vendor credits, checks, bill payments, or POS reports — from any system, Excel, or image. Qyra extracts the data with AI, enters it automatically, and syncs it straight to QuickBooks. No manual entry, no errors.</p>
+                <div class="mt-10 animate-fade-in-up delay-300">
                   <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-emerald-500/20 transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started Free</a>
                 </div>
               </div>
@@ -69,7 +134,7 @@
                 <div class="space-y-4">
                   <p class="text-sm uppercase tracking-[0.2em] text-emerald-700">Built for business teams</p>
                   <div class="rounded-3xl bg-white p-6 shadow-lg shadow-slate-200">
-                    <p class="text-sm text-slate-700">Multi-POS scanning, AI extraction, and QuickBooks sync in one workflow.</p>
+                    <p class="text-sm text-slate-700">Document scanning, AI extraction, and QuickBooks sync in one workflow.</p>
                     <div class="mt-6 grid gap-4 sm:grid-cols-2">
                       <div class="rounded-3xl bg-emerald-100 p-4">
                         <p class="text-2xl">📸</p>
@@ -91,36 +156,36 @@
       <section id="features" class="bg-white py-20">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="mx-auto max-w-3xl text-center">
-            <p class="text-sm uppercase tracking-[0.25em] text-emerald-600">Everything You Need to Reconcile Faster</p>
-            <h2 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Everything You Need to Reconcile Faster</h2>
+            <p class="text-sm uppercase tracking-[0.25em] text-emerald-600">Everything You Need to Sync Faster</p>
+            <h2 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Everything You Need to Sync Faster</h2>
           </div>
           <div class="mt-12 grid gap-6 lg:grid-cols-3">
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">📸</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">Multi-POS Scanning</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Connect to Toast, SALIDO, Oracle, or any POS system. Scan sales reports directly from the browser tab or upload exported files.</p>
             </article>
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">🧾</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">AI Document Extraction</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Upload images or PDFs of invoices, vendor credits, checks, and bill payments. AI extracts line items, amounts, and account details automatically.</p>
             </article>
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">📊</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">Excel Import</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Upload Excel files from any POS or accounting system. Columns are auto-mapped to QuickBooks fields with smart column detection.</p>
             </article>
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">🔄</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">QuickBooks Auto-Sync</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Scanned entries are mapped and synced directly to QuickBooks Online. Supports deposits, invoices, vendor credits, and bill payments.</p>
             </article>
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">✅</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">Team Approval Workflow</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Accountants scan and draft entries. Managers review and approve. Approved entries auto-sync to QuickBooks — no manual step.</p>
             </article>
-            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <article class="rounded-3xl border border-slate-200 p-6 shadow-sm feature-card">
               <p class="text-3xl">📍</p>
               <h3 class="mt-5 text-xl font-semibold text-slate-900">Multi-Location Support</h3>
               <p class="mt-3 text-sm leading-7 text-slate-600">Manage scans across all your business locations from one dashboard. Track usage per location and per team member.</p>
@@ -203,32 +268,32 @@
             <div class="pricing-card rounded-3xl border border-slate-200 p-6 shadow-sm">
               <p class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Free</p>
               <p class="mt-5 text-4xl font-bold text-slate-900">$0<span class="text-base font-medium">/mo</span></p>
-              <p class="mt-4 text-sm text-slate-600">1 user • 2 locations • 10 AI scans/mo • 7-day history</p>
+              <p class="mt-4 text-sm text-slate-600">1 user • 1 location • 7 AI scans/wk • 7-day history</p>
               <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="mt-8 inline-flex w-full justify-center rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started</a>
             </div>
             <div class="pricing-card rounded-3xl border border-slate-200 p-6 shadow-sm">
               <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">Starter</p>
               <p class="mt-5 text-4xl font-bold text-slate-900">$19<span class="text-base font-medium">/mo</span></p>
-              <p class="mt-4 text-sm text-slate-600">2 users • 5 locations • 200 scans/mo • 30-day history</p>
+              <p class="mt-4 text-sm text-slate-600">2 users • 5 locations • 50 scans/wk • 30-day history</p>
               <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="mt-8 inline-flex w-full justify-center rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started</a>
             </div>
             <div class="pricing-card rounded-3xl border border-emerald-500/20 bg-emerald-50 p-6 shadow-sm">
               <div class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Most Popular</div>
               <p class="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Professional</p>
               <p class="mt-5 text-4xl font-bold text-slate-900">$39<span class="text-base font-medium">/mo</span></p>
-              <p class="mt-4 text-sm text-slate-600">5 users • 20 locations • 1,000 scans/mo • 90-day history</p>
+              <p class="mt-4 text-sm text-slate-600">5 users • 20 locations • 250 scans/wk • 90-day history</p>
               <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="mt-8 inline-flex w-full justify-center rounded-full bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800" target="_blank" rel="noopener">Get Started</a>
             </div>
             <div class="pricing-card rounded-3xl border border-slate-200 p-6 shadow-sm">
               <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">Premium</p>
               <p class="mt-5 text-4xl font-bold text-slate-900">$79<span class="text-base font-medium">/mo</span></p>
-              <p class="mt-4 text-sm text-slate-600">12 users • 75 locations • 5,000 scans/mo • 1-year history</p>
+              <p class="mt-4 text-sm text-slate-600">12 users • 75 locations • 1,250 scans/wk • 1-year history</p>
               <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="mt-8 inline-flex w-full justify-center rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started</a>
             </div>
             <div class="pricing-card rounded-3xl border border-slate-200 p-6 shadow-sm">
               <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-600">Enterprise</p>
               <p class="mt-5 text-4xl font-bold text-slate-900">$149<span class="text-base font-medium">/mo</span></p>
-              <p class="mt-4 text-sm text-slate-600">20 users • 250 locations • 20,000 scans/mo • 2-year history</p>
+              <p class="mt-4 text-sm text-slate-600">20 users • 250 locations • 5,000 scans/wk • 2-year history</p>
               <a href="https://chrome.google.com/webstore/detail/ccghhfmkjbcakhnoamgihifonfiammoc" class="mt-8 inline-flex w-full justify-center rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700" target="_blank" rel="noopener">Get Started</a>
             </div>
           </div>
@@ -241,7 +306,7 @@
           <div class="mx-auto max-w-3xl text-center">
             <p class="text-sm uppercase tracking-[0.25em] text-emerald-600">Create Your Free Account</p>
             <h2 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Create Your Free Account</h2>
-            <p class="mt-3 text-sm leading-7 text-slate-600">Free accounts include 10 AI scans per month.</p>
+            <p class="mt-3 text-sm leading-7 text-slate-600">Free accounts include 7 AI scans per week.</p>
           </div>
           <div class="mt-12 flex flex-col gap-10 lg:flex-row lg:justify-center">
             <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-slate-50 p-8 shadow-sm">
@@ -259,7 +324,7 @@
                   <input id="signup-password" type="password" minlength="8" required class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
                 </div>
                 <button id="signup-submit" type="submit" class="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">Create Account</button>
-                <p class="text-center text-xs text-slate-500">By signing up, you agree to our Terms of Service. Free accounts include 10 AI scans per month.</p>
+                <p class="text-center text-xs text-slate-500">By signing up, you agree to our Terms of Service. Free accounts include 7 AI scans per week.</p>
                 <div id="signup-message" class="min-h-[1.5rem] text-sm"></div>
               </form>
             </div>
@@ -268,6 +333,54 @@
       </section>
 
     </main>
+
+    <script>
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-fade-in-up');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.feature-card').forEach((el) => {
+          el.style.opacity = '0';
+          observer.observe(el);
+        });
+      });
+    </script>
+
+<script>
+(function(){
+  var o=document.getElementById('intro-overlay');
+  if(!o)return;
+  var s=document.querySelectorAll('.i-slide');
+  var d=document.querySelectorAll('.i-dot');
+  var c=0,t=null;
+  function show(n){
+    s.forEach(function(x){x.classList.remove('i-active')});
+    d.forEach(function(x){x.classList.remove('i-active')});
+    if(s[n])s[n].classList.add('i-active');
+    if(d[n])d[n].classList.add('i-active');
+    c=n;
+  }
+  function dismiss(){
+    if(t)clearInterval(t);
+    o.style.opacity='0';
+    setTimeout(function(){o.style.display='none';document.body.style.overflow=''},700);
+  }
+  function next(){
+    if(c<s.length-1){show(c+1)}else{dismiss()}
+  }
+  document.getElementById('intro-skip').addEventListener('click',dismiss);
+  document.getElementById('intro-cta').addEventListener('click',dismiss);
+  document.body.style.overflow='hidden';
+  show(0);
+  t=setInterval(next,3500);
+})();
+</script>
 
     <footer class="border-t border-slate-200 bg-slate-900 py-8 text-white">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
