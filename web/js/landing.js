@@ -2,6 +2,9 @@
 // Qyra Landing Page — All JS (CSP-safe external file)
 // ===========================================
 
+// ── API base for cross-origin requests (Vercel → Render) ──
+var API_BASE = 'https://nest-backend-mddn.onrender.com';
+
 // ── 1. IntersectionObserver — feature card scroll reveal ──
 var observer = new IntersectionObserver(function (entries) {
   entries.forEach(function (entry) {
@@ -108,7 +111,7 @@ if (signupForm) {
     var password = document.getElementById('signup-password').value;
 
     try {
-      var response = await fetch('/api/auth/register', {
+      var response = await fetch(API_BASE + '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name, email: email, password: password }),

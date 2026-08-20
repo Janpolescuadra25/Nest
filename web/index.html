@@ -59,12 +59,14 @@
     .i-slide.i-active{opacity:1!important;transform:translateY(0) scale(1)!important}
     .i-dot.i-active{background-color:#10b981!important;width:1.5rem!important}
     @keyframes iLogoScale{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+    .intro-skip-btn:hover{color:#fff!important}
+    .intro-cta-btn:hover{background:#047857!important}
   </style>
 </head>
 <body class="bg-white text-slate-900">
 <!-- Intro Overlay -->
 <div id="intro-overlay" style="position:fixed;inset:0;z-index:9999;background:#0f172a;display:flex;align-items:center;justify-content:center;transition:opacity .7s ease">
-  <button id="intro-skip" style="position:absolute;top:1.5rem;right:1.5rem;color:rgba(255,255,255,.6);font-size:.875rem;font-weight:500;letter-spacing:.025em;background:none;border:none;cursor:pointer;z-index:10;padding:.5rem 1rem" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'">Close</button>
+  <button id="intro-skip" class="intro-skip-btn" style="position:absolute;top:1.5rem;right:1.5rem;color:rgba(255,255,255,.6);font-size:.875rem;font-weight:500;letter-spacing:.025em;background:none;border:none;cursor:pointer;z-index:10;padding:.5rem 1rem;transition:color .2s">Close</button>
   <div style="position:relative;width:100%;max-width:42rem;min-height:70vh;padding:0 2rem;text-align:center">
     <div id="intro-slide-1" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
       <p style="color:#34d399;font-size:.875rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1.5rem">Introducing</p>
@@ -83,7 +85,7 @@
     </div>
     <div id="intro-slide-3" class="i-slide" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transform:translateY(1rem);transition:opacity .7s ease,transform .7s ease">
       <h2 style="color:#fff;font-size:1.5rem;font-weight:700;line-height:1.2;margin:0">From Any Document to<br>QuickBooks — Automatically</h2>
-      <a href="#pricing" id="intro-cta" style="margin-top:2rem;display:inline-flex;align-items:center;gap:.5rem;background:#059669;color:#fff;font-weight:600;padding:.75rem 1.5rem;border-radius:9999px;text-decoration:none;transition:background .2s" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">Get Started Free</a>
+      <a href="#pricing" id="intro-cta" style="margin-top:2rem;display:inline-flex;align-items:center;gap:.5rem;background:#059669;color:#fff;font-weight:600;padding:.75rem 1.5rem;border-radius:9999px;text-decoration:none;transition:background .2s" class="intro-cta-btn">Get Started Free</a>
     </div>
     <div style="position:absolute;bottom:-3rem;left:50%;transform:translateX(-50%);display:flex;gap:.5rem">
       <span class="i-dot" data-i="0" style="width:.5rem;height:.5rem;border-radius:9999px;background:rgba(255,255,255,.3);transition:all .3s ease"></span>
@@ -334,54 +336,6 @@
 
     </main>
 
-    <script>
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('animate-fade-in-up');
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.15 });
-
-      document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.feature-card').forEach((el) => {
-          el.style.opacity = '0';
-          observer.observe(el);
-        });
-      });
-    </script>
-
-<script>
-(function(){
-  var o=document.getElementById('intro-overlay');
-  if(!o)return;
-  var s=document.querySelectorAll('.i-slide');
-  var d=document.querySelectorAll('.i-dot');
-  var c=0,t=null;
-  function show(n){
-    s.forEach(function(x){x.classList.remove('i-active')});
-    d.forEach(function(x){x.classList.remove('i-active')});
-    if(s[n])s[n].classList.add('i-active');
-    if(d[n])d[n].classList.add('i-active');
-    c=n;
-  }
-  function dismiss(){
-    if(t)clearInterval(t);
-    o.style.opacity='0';
-    setTimeout(function(){o.style.display='none';document.body.style.overflow=''},700);
-  }
-  function next(){
-    if(c<s.length-1){show(c+1)}else{dismiss()}
-  }
-  document.getElementById('intro-skip').addEventListener('click',dismiss);
-  document.getElementById('intro-cta').addEventListener('click',dismiss);
-  document.body.style.overflow='hidden';
-  show(0);
-  t=setInterval(next,3500);
-})();
-</script>
-
     <footer class="border-t border-slate-200 bg-slate-900 py-8 text-white">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <p>© 2026 Qyra. All rights reserved.</p>
@@ -393,75 +347,6 @@
     </footer>
   </div>
 
-  <script>
-    const API_BASE = 'https://nest-backend-mddn.onrender.com';
-    const mobileButton = document.getElementById('mobile-menu-button');
-    const mobileMenu = document.getElementById('mobile-menu');
-
-    mobileButton.addEventListener('click', () => {
-      mobileMenu.classList.toggle('hidden');
-    });
-
-    document.querySelectorAll('a[href^="#"]').forEach(link => {
-      link.addEventListener('click', (event) => {
-        const targetId = link.getAttribute('href').slice(1);
-        const target = document.getElementById(targetId) || document.body;
-        if (target) {
-          event.preventDefault();
-          const offset = 90;
-          const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-          window.scrollTo({ top, behavior: 'smooth' });
-          if (!mobileMenu.classList.contains('hidden')) {
-            mobileMenu.classList.add('hidden');
-          }
-        }
-      });
-    });
-
-    function setMessage(container, message, type) {
-      container.textContent = message;
-      container.className = type === 'error' ? 'mt-4 text-sm text-red-600' : 'mt-4 text-sm text-emerald-600';
-    }
-
-    const signupForm = document.getElementById('signup-form');
-    const signupMessage = document.getElementById('signup-message');
-    const signupSubmit = document.getElementById('signup-submit');
-
-    signupForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      signupMessage.textContent = '';
-      signupSubmit.disabled = true;
-      signupSubmit.textContent = 'Creating...';
-
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
-
-      try {
-        const response = await fetch(API_BASE + '/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password }),
-        });
-        const data = await response.json();
-
-        if (response.ok) {
-          signupForm.reset();
-          signupMessage.className = 'mt-4 text-sm text-emerald-600';
-          signupMessage.innerHTML = `
-            <p class="text-green-700 text-sm mt-2">Account created! Check your email to verify your account.</p>
-            <a href="https://chromewebstore.google.com/detail/nest-restaurant-financial/ccghhfmkjbcakhnoamgihifonfiammoc" target="_blank" class="text-emerald-600 hover:text-emerald-700 text-sm underline mt-1 inline-block">Install Qyra from Chrome Web Store →</a>
-          `;
-        } else {
-          setMessage(signupMessage, data.error || 'Something went wrong. Please try again.', 'error');
-        }
-      } catch (error) {
-        setMessage(signupMessage, 'Something went wrong. Please try again.', 'error');
-      } finally {
-        signupSubmit.disabled = false;
-        signupSubmit.textContent = 'Create Account';
-      }
-    });
-  </script>
+  <script src="js/landing.js"></script>
 </body>
 </html>
