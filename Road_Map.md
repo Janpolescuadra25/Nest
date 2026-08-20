@@ -1,21 +1,21 @@
 # Qyra — Product Roadmap
-Last Updated: 2026-08-20
+Last Updated: 2026-08-21
 
 ## Current Verified State
 - **Backend Test Suite**: 117/117 passing, 20/20 suites
 - **Backend Compilation**: Clean (`tsc --noEmit` exits with 0)
 - **Backend Logging**: Pino structured logging with request IDs. Zero console.* calls in src/.
-- **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 18/22 route files use the AppError/asyncHandler pipeline; 4 routes (checkout, exports, notifications, webhooks) use alternative error handling.
+- **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 20/22 route files use the AppError/asyncHandler pipeline; 2 routes (exports, notifications) use asyncHandler without explicit AppError throws.
 - **Backend Validation**: 18/22 route files have explicit Zod schema validation; 4 routes (email-verification, exports, webhooks, mappings) use alternative handling.
 - **Backend Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) with DB and S3 connectivity checks.
 - **Landing Page**: Updated hero copy ("From Any Document to QuickBooks — Automatically"), all "reconciliation" wording removed, 3-slide auto-play intro overlay with skip button, CSS animations (fade-in-up keyframes, Intersection Observer scroll reveal on feature cards).
 - **Extension Welcome Overlay**: Logo + tagline fade-in-up animation. First-install logo splash screen (one-time, fullscreen, chrome.storage.local tracked). All original functionality preserved.
 - **Frontend Type Check**: Clean (`tsc --noEmit` exits with 0, zero errors). All 6 type errors across 5 files resolved.
-- **Extension Store Prep**: STORE_LISTING.md created, manifest description aligned, version 1.0.1, `<all_urls>` removed from host_permissions and content_scripts (remains in web_accessible_resources — to be removed, nothing uses it).
+- **Extension Store Prep**: STORE_LISTING.md created, manifest description aligned, version 1.0.1, `<all_urls>` fully removed from host_permissions, content_scripts, and web_accessible_resources.
 - **Deployment Infrastructure**: Backend on Render.com, PostgreSQL on Neon.
 - **Scan Section — Cheque Auto-Mapping**: Fixed 11-column default mappings applied automatically for CHEQUE Excel; no manual column mapping required.
-- **Scan Section — JE Preview**: Variable-column padding (`maxCols`) ensures all JE Excel columns render in the preview table.
-- **Scan Section — AI Suggest for Excel**: `disableAutoDetect` gate removed; AI Suggest and Auto-Detect both functional in Excel mode.
+- **Scan Section — JE Preview**: Column visibility toggles (`colVis` state persisted to localStorage via `qyra_je_col_vis`) allow users to show/hide JE columns in the preview table.
+- **Scan Section — AI Suggest for Excel**: `disableAutoDetect` prop is never passed from MappingView call site, so AI Suggest and Auto-Detect buttons are always enabled in Excel mode. The prop remains as dead code in MappingFilters.tsx.
 - CHEQUE preview: each Excel row produces a separate cheque form in the Preview tab (individual sync + Sync All button). Backend CHEQUE parser creates one transaction per row. CheckPreviewForm auto-populates date, check number, bank account, and payee from Excel data via existing header auto-resolution.
 - **Known Issue — Cheque Line Item Count**: RESOLVED. Root cause was stale extension build (source fix at commit `9356e5a` was never compiled). Rebuilt at commit `a2463e1`. Debug logs removed. Cheque preview redesigned as individual cards per row.
 

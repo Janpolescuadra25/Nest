@@ -38,7 +38,7 @@ English
 - oauth.platform.intuit.com — QuickBooks OAuth authentication.
 - sandbox-quickbooks.api.intuit.com — QuickBooks API connectivity.
 
-Conclusion: `<all_urls>` is currently present for web accessible resources and broad script injection support. It is likely broader than needed for the targeted POS domains; the current codebase uses content scripts and script injection only for Toast, SALIDO, and Oracle URLs, so `<all_urls>` may be removable with careful validation.
+Conclusion: `<all_urls>` has been fully removed from host_permissions, content_scripts, and web_accessible_resources. The extension now uses specific domain matches for all POS platforms and web accessible resources are no longer needed.
 
 ## Screenshot Requirements Checklist
 The following screenshots are needed for the store listing (user must capture these manually):
@@ -48,7 +48,7 @@ The following screenshots are needed for the store listing (user must capture th
 - [ ] Screenshot 4: QuickBooks sync confirmation/status view (1280x800 or 640x400)
 
 ## Pre-Submission Checklist
-- [ ] `<all_urls>` host permission decision made (remove or justify)
+- [x] `<all_urls>` host permission decision made — fully removed from host_permissions, content_scripts, and web_accessible_resources
 - [ ] All screenshots captured
 - [ ] Fresh production build validated (`npm run build` completes cleanly)
 - [ ] Extension loads in Chrome without errors

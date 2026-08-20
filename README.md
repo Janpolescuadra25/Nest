@@ -151,7 +151,7 @@ Then go to `chrome://extensions`, enable Developer Mode, and load the `Frontend/
 
 ## Environment Variables
 
-Copy `.env.example` and `.env.production.example` from `Backend/` and fill in the values.
+Copy `.env.example` from `Backend/` and fill in the values.
 
 ### QuickBooks
 | Variable | Description |
