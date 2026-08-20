@@ -631,6 +631,12 @@ export default function App() {
             ) : selectedTemplateForScan.transactionType === 'CHEQUE' ? (
               selectedTemplateForScan?.transactionType === 'CHEQUE' && activeScanEntry?.source === 'excel' && scanEntries.length > 0 ? (
                 <div>
+                  <SyncAllChequesButton
+                    jwt={jwt!}
+                    scanEntries={scanEntries}
+                    selectedTemplate={selectedTemplateForScan}
+                    selectedLocationId={selectedLocationId}
+                  />
                   {scanEntries.map((entry, index) => (
                     <div key={entry.id} style={{ marginBottom: '2rem' }}>
                       <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>

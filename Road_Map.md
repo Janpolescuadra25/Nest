@@ -34,14 +34,15 @@ Last Updated: 2026-08-20
 
 ## Upcoming Phases
 
-### F-6: Scan Data Flow Hardening & Cheque Parser Tests
-- **Goal**: Harden the scan-to-map data pipeline against state loss on tab switch and add cheque parser test coverage.
+### F-6: Scan Data Flow Hardening
+- **Goal**: Harden the scan-to-map data pipeline against state loss on tab switch.
 - **Deliverables**:
-    - Tab-switch state persistence fix to prevent component unmount data loss
+  - Tab-switch state persistence fix to prevent component unmount data loss
 - **Acceptance Criteria**:
   - Tab switching (scan → map → scan) preserves the parsed file and entries
   - Backend tests still pass (117+)
 
+### F-7: Multi-Document Batch Scanning
 - **Goal**: Allow users to upload and scan multiple documents in a single session, with a queue-based workflow and batch sync capability.
 - **Deliverables**:
   - Multi-file upload UI (drag-and-drop zone accepts multiple files)
