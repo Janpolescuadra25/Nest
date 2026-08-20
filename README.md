@@ -256,7 +256,7 @@ Qyra is configured for deployment on [Render.com](https://render.com):
 
 The backend automatically runs `prisma migrate deploy` on each deploy to keep the database schema in sync.
 
-## Deployment
+### Deployment Details
 
 ### Infrastructure
 - **Backend API**: Render.com
