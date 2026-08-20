@@ -5,13 +5,13 @@ Last Updated: 2026-08-20
 - **Backend Test Suite**: 117/117 passing, 20/20 suites
 - **Backend Compilation**: Clean (`tsc --noEmit` exits with 0)
 - **Backend Logging**: Pino structured logging with request IDs. Zero console.* calls in src/.
-- **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 100% of route error responses use AppError/asyncHandler pipeline.
-- **Backend Validation**: All 22 routes have Zod schema validation.
+- **Backend Error Shape**: Flat — `{ error: "message string" }` with optional `fields` object. 18/22 route files use the AppError/asyncHandler pipeline; 4 routes (checkout, exports, notifications, webhooks) use alternative error handling.
+- **Backend Validation**: 18/22 route files have explicit Zod schema validation; 4 routes (email-verification, exports, webhooks, mappings) use alternative handling.
 - **Backend Health Checks**: Liveness (`/health/live`) and readiness (`/health/ready`) with DB and S3 connectivity checks.
 - **Landing Page**: Updated hero copy ("From Any Document to QuickBooks — Automatically"), all "reconciliation" wording removed, 3-slide auto-play intro overlay with skip button, CSS animations (fade-in-up keyframes, Intersection Observer scroll reveal on feature cards).
 - **Extension Welcome Overlay**: Logo + tagline fade-in-up animation. First-install logo splash screen (one-time, fullscreen, chrome.storage.local tracked). All original functionality preserved.
 - **Frontend Type Check**: Clean (`tsc --noEmit` exits with 0, zero errors). All 6 type errors across 5 files resolved.
-- **Extension Store Prep**: STORE_LISTING.md created, manifest description aligned, version 1.0.1, `<all_urls>` removed.
+- **Extension Store Prep**: STORE_LISTING.md created, manifest description aligned, version 1.0.1, `<all_urls>` removed from host_permissions and content_scripts (remains in web_accessible_resources — to be removed, nothing uses it).
 - **Deployment Infrastructure**: Backend on Render.com, PostgreSQL on Neon.
 - **Scan Section — Cheque Auto-Mapping**: Fixed 11-column default mappings applied automatically for CHEQUE Excel; no manual column mapping required.
 - **Scan Section — JE Preview**: Variable-column padding (`maxCols`) ensures all JE Excel columns render in the preview table.

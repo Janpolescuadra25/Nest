@@ -41,13 +41,5 @@
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src data: http://localhost:3000 https://*.onrender.com https://appcenter.intuit.com https://oauth.platform.intuit.com https://sandbox-quickbooks.api.intuit.com"
-  },
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "public/icons/*.png"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  }
 }

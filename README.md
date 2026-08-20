@@ -206,7 +206,7 @@ Qyra/
 │   │   └── utils/             # Helper functions (invite utils, etc.)
 │   ├── prisma/
 │   │   ├── schema.prisma      # Database schema (User, Location, ScanRecord, SyncLog, Template, etc.)
-│   │   └── migrations/        # Database migrations (62 migrations)
+│   │   └── migrations/        # Database migrations (52 migrations)
 │   ├── tests/                 # Backend tests
 │   └── .env.example           # Environment variable template
 ├── Frontend/
