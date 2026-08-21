@@ -527,7 +527,6 @@ export default function MappingView({
   const isExcelMode = activeScanEntry?.source === 'excel';
   const activeEntryIndex = scanEntries?.findIndex((entry) => entry.id === activeScanEntryId) ?? -1;
   const totalEntries = scanEntries?.length ?? 0;
-  const showEntryNav = totalEntries > 1 && activeScanEntry?.source === 'excel';
 
   const columnMappingFields = useMemo(() => {
     if (selectedTemplate?.transactionType === 'BILL') {
@@ -1342,35 +1341,6 @@ export default function MappingView({
 
   return (
     <div className="p-3 space-y-3">
-      {showEntryNav && (
-        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg mb-3">
-          <button
-            type="button"
-            onClick={() => {
-              const prev = activeEntryIndex - 1;
-              if (prev >= 0 && scanEntries) onActiveScanEntryIdChange?.(scanEntries[prev].id);
-            }}
-            disabled={activeEntryIndex <= 0}
-            className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ← Prev
-          </button>
-          <span className="text-xs text-gray-600 font-medium">
-            Entry {activeEntryIndex + 1} of {totalEntries}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              const next = activeEntryIndex + 1;
-              if (next < totalEntries && scanEntries) onActiveScanEntryIdChange?.(scanEntries[next].id);
-            }}
-            disabled={activeEntryIndex >= totalEntries - 1}
-            className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Next →
-          </button>
-        </div>
-      )}
       {activeScanEntry && (
         <div className="flex items-center gap-2 px-3 py-1.5 mb-3 rounded-md bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
           <span className="font-medium">Scan Mode:</span>
