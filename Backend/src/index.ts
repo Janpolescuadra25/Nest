@@ -214,6 +214,11 @@ app.use(createErrorHandler());
 // ── Start ────────────────────────────────────────────────────────────────────
 const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID != null;
 
+const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+if (!geminiApiKey) {
+  log.warn('WARNING: GEMINI_API_KEY is not set. AI suggestion features will be unavailable.');
+}
+
 if (!isTestEnvironment) {
   startTimeBombCron(prisma);
   startTrialWarningCron(prisma);

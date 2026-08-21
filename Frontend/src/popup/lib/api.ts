@@ -548,6 +548,20 @@ export const api = {
   },
 
   parseExcelData: (jwt: string, templateId: string, file: File) => {
+    if (!file) {
+      throw new Error('Please select a file to upload');
+    }
+
+    const filename = file.name || '';
+    const extension = filename.split('.').pop()?.toLowerCase() ?? '';
+    if (!['xlsx', 'xls'].includes(extension)) {
+      throw new Error('Please select a valid Excel file (.xlsx or .xls)');
+    }
+
+    if (file.size > 10485760) {
+      throw new Error('File size must be under 10MB');
+    }
+
     const form = new FormData();
     form.append('file', file);
     return postForm<ExcelDataParseResult>(`/api/templates/parse-excel-data?templateId=${encodeURIComponent(templateId)}`, form, jwt);

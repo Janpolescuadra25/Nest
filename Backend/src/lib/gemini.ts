@@ -581,7 +581,7 @@ export async function suggestMappings(
   accountTypes?: { name: string; type: string; subType: string }[],
 ): Promise<Array<{ sourceField: string; accountHint: string; accountName: string; postingType: 'Debit' | 'Credit'; reason: string }>> {
   if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured');
+    throw new AppError('GEMINI_API_KEY is not configured', 503);
   }
 
   await waitForGeminiSlot();
@@ -625,29 +625,36 @@ ACCOUNTING RULES:
   });
 
   const prompt = `Scan Fields:\n${fieldsText}\n\nAvailable QuickBooks Accounts (Type • SubType):\n${accountsText}${accountTypes && accountTypes.length > ACCOUNT_CAP ? '\n- ...and more' : ''}\n\nTransaction Type: ${transactionType ?? 'Unknown'}${preferenceText}`;
-  const result = await model.generateContent([{ text: prompt }]);
-  const text = result.response.text();
-  let parsed: any;
   try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new AppError('AI returned an invalid response format', 502);
-  }
-  if (!parsed) {
-    throw new AppError('AI returned an empty response', 502);
-  }
+    const result = await model.generateContent([{ text: prompt }]);
+    const text = result.response.text();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new AppError('AI returned an invalid response format', 502);
+    }
+    if (!parsed) {
+      throw new AppError('AI returned an empty response', 502);
+    }
 
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
-  return parsed.map((item: any) => ({
-    sourceField: String(item.sourceField || ''),
-    accountHint: String(item.accountHint || ''),
-    accountName: String(item.accountName || ''),
-    postingType: item.postingType === 'Debit' ? 'Debit' : 'Credit',
-    reason: String(item.reason || ''),
-  }));
+    return parsed.map((item: any) => ({
+      sourceField: String(item.sourceField || ''),
+      accountHint: String(item.accountHint || ''),
+      accountName: String(item.accountName || ''),
+      postingType: item.postingType === 'Debit' ? 'Debit' : 'Credit',
+      reason: String(item.reason || ''),
+    }));
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError('AI suggestion service is temporarily unavailable. Please try again later.', 503);
+  }
 }
 
 export async function parseInvoiceWithGemini(
@@ -658,7 +665,7 @@ export async function parseInvoiceWithGemini(
   lineItems: { description: string; quantity: string; unitPrice: string; total: string }[];
 }> {
   if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured');
+    throw new AppError('GEMINI_API_KEY is not configured', 503);
   }
 
   await waitForGeminiSlot();
