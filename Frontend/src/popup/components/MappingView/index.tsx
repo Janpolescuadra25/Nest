@@ -836,66 +836,6 @@ export default function MappingView({
     }
   };
 
-  const autoDetect = () => {
-    if (!selectedTemplateId) {
-      setAutoMsg('Select a template first before using Auto-Detect.');
-      return;
-    }
-    if (!scanData || accounts.length === 0) {
-      setAutoMsg('No scan data or QB accounts loaded');
-      return;
-    }
-
-    let applied = 0;
-    const newMappings: LocalMapping[] = [];
-    const scanFields = Object.keys(scanData);
-
-    scanFields.forEach((field) => {
-      if (localMappings.some((mapping) => mapping.sourceField === field)) return;
-      const rule = AUTO_DETECT.find((rule) => rule.patterns.test(field));
-      if (!rule) return;
-      const expectedTypesForPostingType = (postingType: 'Debit' | 'Credit'): string[] =>
-        postingType === 'Debit'
-          ? ['Asset', 'Expense']
-          : ['Liability', 'Equity', 'Income'];
-
-      const matchedAccount = accounts.find(
-        (account) =>
-          account.Active &&
-          account.FullyQualifiedName.toLowerCase().includes(rule.accountHint.toLowerCase()) &&
-          expectedTypesForPostingType(rule.postingType).includes(account.AccountType),
-      );
-      if (!matchedAccount) return;
-      newMappings.push({
-        localId: `auto-${Date.now()}-${field}`,
-        remoteId: undefined,
-        sourceField: field,
-        accountId: matchedAccount.Id,
-        postingType: rule.postingType,
-        description: field,
-        classId: '',
-        taxCodeId: '',
-        entityType: '' as LocalMapping['entityType'],
-        entityId: '',
-        amountRule: 'Direct Amount',
-        keepSeparate: false,
-        isDirty: true,
-        expanded: false,
-        priority: 0,
-        conditions: null,
-      });
-      applied += 1;
-    });
-
-    setLocalMappings((prev) => [...prev, ...newMappings]);
-    setAutoMsg(
-      applied > 0
-        ? `✅ ${applied} mapping${applied !== 1 ? 's' : ''} auto-detected`
-        : 'No new mappings detected',
-    );
-    setTimeout(() => setAutoMsg(null), 4000);
-  };
-
   const suggestMappings = async () => {
     if (!selectedTemplateId) {
       setSuggestionError('Select a template first before using AI Suggest.');
@@ -1356,7 +1296,6 @@ export default function MappingView({
         onLocationChange={onLocationChange}
         onExport={handleExport}
         onImport={() => fileInputRef.current?.click()}
-        onAutoDetect={autoDetect}
         onAISuggest={suggestMappings}
         suggesting={suggesting}
         onApplyTemplate={applyTemplate}

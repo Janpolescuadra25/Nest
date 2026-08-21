@@ -12,7 +12,6 @@ interface Props {
   onLocationChange: (id: string) => void;
   onExport: () => void;
   onImport: () => void;
-  onAutoDetect: () => void;
   onAISuggest: () => void;
   suggesting?: boolean;
   onApplyTemplate: (template: string) => void;
@@ -20,7 +19,6 @@ interface Props {
   listsLoading: boolean;
   accountsLoaded: boolean;
   showImportButton?: boolean;
-  disableAutoDetect?: boolean;
   disablePresets?: boolean;
 }
 
@@ -32,7 +30,6 @@ export default function MappingFilters({
   onLocationChange,
   onExport,
   onImport,
-  onAutoDetect,
   onAISuggest,
   suggesting,
   onApplyTemplate,
@@ -40,7 +37,6 @@ export default function MappingFilters({
   listsLoading,
   accountsLoaded,
   showImportButton,
-  disableAutoDetect,
   disablePresets,
 }: Props) {
   return (
@@ -66,17 +62,9 @@ export default function MappingFilters({
 
       <div className="flex gap-1.5 flex-wrap">
         <button
-          onClick={disableAutoDetect ? undefined : onAutoDetect}
-          title={disableAutoDetect ? 'Auto-Detect is designed for POS scans' : undefined}
-          className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${disableAutoDetect ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-        >
-          🔍 Auto-Detect
-        </button>
-        <button
-          onClick={disableAutoDetect ? undefined : onAISuggest}
-          disabled={disableAutoDetect || suggesting}
-          title={disableAutoDetect ? 'AI Suggest is designed for POS scans' : undefined}
-          className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${disableAutoDetect || suggesting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+          onClick={onAISuggest}
+          disabled={suggesting}
+          className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${suggesting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
         >
           {suggesting ? 'Suggesting…' : '🤖 AI Suggest'}
         </button>
