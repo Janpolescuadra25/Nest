@@ -67,6 +67,33 @@ Last Updated: 2026-08-21
   - Exported preset JSON can be imported on another device
   - Built-in defaults are never overwritten by user presets
 
+### F-11: AI-Powered Value Mapping Suggestions
+
+**Goal:** Extend AI Suggest to automatically recommend value-to-entity mappings (payee→vendor, bank account→QB account, category→QB account, tax type→QB tax code) by matching scanned data against QuickBooks reference data, with fuzzy matching and confidence levels.
+
+**Context:** Current AI Suggest (`Backend/src/lib/gemini.ts` L576-670, endpoint at `Backend/src/routes/mappings.ts` L120-180) only suggests column-to-account field mappings for Journal Entry POS scans. Value mapping UI exists for Cheque/Bill/JE in EXCEL mode (`Frontend/src/popup/components/MappingView/ValueMappingSection.tsx`) but has zero AI assistance — all value mappings are manual dropdown selection. The `disableAutoDetect` prop in `MappingFilters.tsx` is dead code (defined but never passed from MappingView, defaults to undefined/falsy) — the AI Suggest button is already technically enabled for all templates but the backend only supports account mapping suggestions.
+
+**Deliverables:**
+- **Clean up `disableAutoDetect` dead code**: Remove the prop and all its references from `MappingFilters.tsx` only. This is pure cleanup — removing it changes no behavior since it was never passed.
+- **Backend value suggestion endpoint**: New `POST /api/mappings/suggest-values` endpoint that accepts scan data (extracted row values) + template type + mapping field type (payee/bank/category/tax), queries QB reference data via existing `qb.service.ts` methods (vendors, accounts, tax codes), and returns ranked suggestions with match type (exact/fuzzy/none) and confidence score.
+- **AI-powered fuzzy matching**: Use Gemini to compare scanned values against QB reference data. Exact string match = auto-apply. Substring/abbreviation match (e.g., "Jp" → "Jeypee Enterprises") = suggest with note explaining the match. No match = suggest creating a new QB entity or leaving unmapped. **Fuzzy matches must NEVER be auto-applied** — user must explicitly accept to prevent data integrity issues.
+- **Frontend value suggestion UI**: Add an "AI Suggest Values" button to each `ValueMappingSection` (or a single button above all value mapping accordions). Display suggestions as inline recommendation chips/badges with accept/reject actions. Show confidence level and match reasoning (e.g., "Jeypee Enterprises in QuickBooks may match Jp in your spreadsheet").
+- **Support all EXCEL-mode templates**: Cheque (payee, bank account, category, tax type), Bill (vendor, account, tax type), Journal Entry (payee, account, category). Each template type has different value mapping fields — the endpoint and UI must handle all permutations.
+- **Batch apply**: Allow user to "Accept All" suggestions for a single mapping category (e.g., accept all payee suggestions at once) or individually accept/reject.
+- **Rate limiting and caching**: Add rate limiting to the new endpoint to prevent Gemini API cost abuse. Cache QB reference data (vendors, accounts, tax codes) to reduce QuickBooks API calls — invalidate cache on sync events or after a configurable TTL.
+- **Maintain test suite**: All new code must pass existing tests (currently 117/117 passing) plus new tests for the endpoint.
+
+**Acceptance Criteria:**
+- `disableAutoDetect` prop and all references removed from `MappingFilters.tsx`
+- `POST /api/mappings/suggest-values` returns ranked suggestions for any template type + field type
+- Exact matches auto-applied, fuzzy matches shown with explanation (never auto-applied), no matches flagged
+- AI Suggest Values button functional in Cheque, Bill, and Journal Entry EXCEL modes
+- Suggestions include match type, confidence score, and human-readable reasoning
+- User can accept/reject individual suggestions or batch-accept per category
+- Rate limiting active on the new endpoint
+- QB reference data cached to reduce API calls
+- Backend test suite remains 117/117+ passing
+
 ### F-9: Sync Analytics, Auto-Retry & Webhook Status
 
 **Goal:** Strengthen sync reliability and observability through auto-retry, error categorization, alerting, and dashboard metrics.
@@ -114,4 +141,4 @@ Last Updated: 2026-08-21
 ## Next Priority
 1. **Immediate (F-5A)**: Complete the user QA checklist. This is a prerequisite for both F-6 and store submission.
 2. **Short-term (F-6)**: Harden scan data flow. This unblocks reliable cheque workflows.
-3. **Medium-term (F-7 → F-10)**: Batch scanning, custom presets, sync analytics, and Chrome Web Store launch — in that order. Each phase builds on the previous.
+3. **Medium-term (F-7 → F-8 → F-11 → F-9 → F-10)**: Batch scanning, custom presets, AI-powered value mapping suggestions, sync analytics, and Chrome Web Store launch — in that order. Each phase builds on the previous.
