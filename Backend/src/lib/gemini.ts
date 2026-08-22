@@ -6,6 +6,7 @@ import type { POSDetectionResult, POSReportData } from '../types';
 const geminiCallTimestamps: number[] = [];
 const GEMINI_RPM_LIMIT = 13;
 const GEMINI_QUEUE_TIMEOUT_MS = 10_000;
+const ENTITY_CAP = 200;
 
 async function waitForGeminiSlot(): Promise<void> {
   const now = Date.now();
@@ -91,6 +92,39 @@ export type ChequeData = {
 export type ChequeLineItem = {
   description: string;
   amount: string;
+};
+
+export type ValueMappingFieldType = 'account' | 'name' | 'class' | 'taxCode' | 'bankAccount' | 'taxType';
+
+export const VALID_VALUE_MAPPING_FIELD_TYPES = ['account', 'name', 'class', 'taxCode', 'bankAccount', 'taxType'] as const;
+
+export type ValueMappingFieldTypeString = (typeof VALID_VALUE_MAPPING_FIELD_TYPES)[number];
+
+export interface ValueMappingSuggestion {
+  sourceField: string;
+  fieldType: ValueMappingFieldTypeString;
+  scannedText: string;
+  suggestedEntityId: string;
+  suggestedEntityName: string;
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+}
+
+const valueMappingSuggestionSchema: ArraySchema = {
+  type: SchemaType.ARRAY,
+  items: {
+    type: SchemaType.OBJECT,
+    properties: {
+      sourceField: { type: SchemaType.STRING, description: 'The scan source field that produced this value' },
+      fieldType: { type: SchemaType.STRING, description: 'The type of value mapping (account, name, class, or taxCode)' },
+      scannedText: { type: SchemaType.STRING, description: 'The original scanned value text' },
+      suggestedEntityId: { type: SchemaType.STRING, description: 'The suggested QuickBooks entity Id' },
+      suggestedEntityName: { type: SchemaType.STRING, description: 'The suggested QuickBooks entity name' },
+      confidence: { type: SchemaType.STRING, description: 'Confidence level: high, medium, or low' },
+      reason: { type: SchemaType.STRING, description: 'Brief explanation of why this entity was suggested' },
+    },
+    required: ['sourceField', 'fieldType', 'scannedText', 'suggestedEntityId', 'suggestedEntityName', 'confidence', 'reason'],
+  },
 };
 
 export interface ParseDocumentResult {
@@ -726,4 +760,136 @@ RULES:
       })
     ),
   };
+}
+export async function suggestValueMappings(params: {
+  valueCategories: Array<{
+    sourceField: string;
+    fieldType: 'account' | 'name' | 'class' | 'taxCode' | 'bankAccount' | 'taxType';
+    scannedValues: string[];
+  }>;
+  qbEntities: {
+    accounts: Array<{ Id: string; FullyQualifiedName: string; AccountType?: string; AccountSubType?: string }>;
+    vendors: Array<{ Id: string; DisplayName?: string; FullyQualifiedName?: string }>;
+    customers: Array<{ Id: string; DisplayName?: string; FullyQualifiedName?: string }>;
+    taxCodes: Array<{ Id: string; Name?: string; FullyQualifiedName?: string }>;
+  };
+  transactionType?: string;
+}): Promise<ValueMappingSuggestion[]> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new AppError('GEMINI_API_KEY is not configured', 503);
+  }
+
+  const cleanedCategories = params.valueCategories
+    .map((category) => ({
+      sourceField: category.sourceField,
+      fieldType: category.fieldType,
+      scannedValues: category.scannedValues
+        .filter((value) => typeof value === 'string' && value.trim() !== '')
+        .map((value) => {
+          const text = value.trim();
+          return text.length > 100 ? `${text.slice(0, 97)}...` : text;
+        })
+        .slice(0, 50),
+    }))
+    .filter((category) => category.fieldType !== 'class' && category.scannedValues.length > 0);
+
+  if (cleanedCategories.length === 0) {
+    return [];
+  }
+
+  await waitForGeminiSlot();
+
+  const accountEntities = params.qbEntities.accounts.slice(0, ENTITY_CAP);
+  const vendorEntities = params.qbEntities.vendors.slice(0, ENTITY_CAP);
+  const customerEntities = params.qbEntities.customers.slice(0, ENTITY_CAP);
+  const taxCodeEntities = params.qbEntities.taxCodes.slice(0, ENTITY_CAP);
+
+  const buildEntityList = (
+    items: Array<{ Id: string; FullyQualifiedName?: string; DisplayName?: string; Name?: string; AccountType?: string; AccountSubType?: string }>,
+    includeType?: boolean,
+  ) =>
+    items
+      .map((item) => {
+        const entityName = item.FullyQualifiedName || item.DisplayName || item.Name || '[Unnamed]';
+        return includeType
+          ? `- ${entityName} (${item.AccountType || ''}${item.AccountSubType ? ` • ${item.AccountSubType}` : ''})`
+          : `- ${entityName}`;
+      })
+      .join('\n');
+
+  const categoriesText = cleanedCategories
+    .map((category) => `- ${category.sourceField} (${category.fieldType})\n${category.scannedValues.map((value) => `  - ${value}`).join('\n')}`)
+    .join('\n\n');
+
+  const entitiesText = [
+    accountEntities.length > 0 && `Accounts:\n${buildEntityList(accountEntities, true)}`,
+    vendorEntities.length > 0 && `Vendors:\n${buildEntityList(vendorEntities)}`,
+    customerEntities.length > 0 && `Customers:\n${buildEntityList(customerEntities)}`,
+    taxCodeEntities.length > 0 && `Tax Codes:\n${buildEntityList(taxCodeEntities)}`,
+  ].filter(Boolean).join('\n\n');
+
+  const transactionText = params.transactionType ? `\n\nTransaction Type: ${params.transactionType}` : '';
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: valueMappingSuggestionSchema,
+    },
+    systemInstruction: `You are an expert accounting assistant. Given a list of scanned values and available QuickBooks entities, recommend the best entity for each scanned value.
+
+RULES:
+- For each scanned value, choose the most likely QuickBooks entity from the appropriate list.
+- If the fieldType is 'name', match against vendors and customers.
+- If the fieldType is 'account' or 'bankAccount', match against accounts.
+- If the fieldType is 'taxCode' or 'taxType', match against tax codes.
+- If there is no good match, return the closest entity and mark confidence as low.
+- Do not produce entities for fieldType 'class'.
+- Return exactly valid JSON with the schema below and no extra commentary.
+
+Output should be an array of suggestions with the same sourceField and fieldType for each scanned value. Use high, medium, or low confidence and include a short reason for each recommendation.
+`,
+  });
+
+  try {
+    const prompt = `Value Categories:\n${categoriesText}\n\nAvailable QuickBooks Entities:\n${entitiesText}${transactionText}`;
+    const result = await model.generateContent([{ text: prompt }]);
+    const text = result.response.text();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new AppError('AI returned an invalid response format', 502);
+    }
+    if (!parsed) {
+      throw new AppError('AI returned an empty response', 502);
+    }
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item: any) => {
+      const rawFieldType = String(item.fieldType || '');
+      const fieldType = VALID_VALUE_MAPPING_FIELD_TYPES.includes(rawFieldType as ValueMappingFieldTypeString)
+        ? (rawFieldType as ValueMappingFieldTypeString)
+        : 'name';
+
+      return {
+        sourceField: String(item.sourceField || ''),
+        fieldType,
+        scannedText: String(item.scannedText || ''),
+        suggestedEntityId: String(item.suggestedEntityId || ''),
+        suggestedEntityName: String(item.suggestedEntityName || ''),
+        confidence: ['high', 'medium', 'low'].includes(String(item.confidence).toLowerCase())
+          ? (String(item.confidence).toLowerCase() as 'high' | 'medium' | 'low')
+          : 'low',
+        reason: String(item.reason || ''),
+      };
+    });
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError('AI value suggestion service is temporarily unavailable. Please try again later.', 503);
+  }
 }

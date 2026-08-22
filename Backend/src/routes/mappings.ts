@@ -3,7 +3,7 @@ import { Router, Response } from 'express';
 import { authenticate, AuthRequest, locationFilter, requireFeaturePermission } from '../middleware/auth.middleware';
 import { enforceEffectiveRole } from '../middleware/effective-role';
 import { qbService } from '../services/qb.service';
-import { suggestMappings } from '../lib/gemini';
+import { suggestMappings, suggestValueMappings, ValueMappingFieldTypeString } from '../lib/gemini';
 import { prisma } from '../lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { validateMappingConditions } from '../lib/validate-conditions';
@@ -238,6 +238,84 @@ router.post('/suggest', requireFeaturePermission('map', 'read'), asyncHandler(as
     }
 
     throw new AppError('Failed to suggest mappings', 500);
+  }
+}));
+
+router.post('/suggest-values', requireFeaturePermission('map', 'read'), asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { templateId, valueCategories } = req.body as {
+      templateId?: string;
+      valueCategories?: unknown;
+    };
+
+    if (!templateId || typeof templateId !== 'string') {
+      throw new AppError('templateId is required and must be a string', 400);
+    }
+    if (!Array.isArray(valueCategories) || valueCategories.length === 0) {
+      throw new AppError('valueCategories must be a non-empty array', 400);
+    }
+
+    const categories = valueCategories.map((category) => {
+      if (!category || typeof category !== 'object') {
+        throw new AppError('Each valueCategory must be an object', 400);
+      }
+      const cat = category as Record<string, unknown>;
+      const sourceField = typeof cat.sourceField === 'string' ? cat.sourceField.trim() : '';
+      const rawFieldType = typeof cat.fieldType === 'string' ? cat.fieldType.trim() : '';
+      const scannedValues = Array.isArray(cat.scannedValues) ? cat.scannedValues : undefined;
+
+      if (!sourceField) {
+        throw new AppError('Each valueCategory must have a valid sourceField', 400);
+      }
+      if (!rawFieldType) {
+        throw new AppError('Each valueCategory must have a valid fieldType', 400);
+      }
+      if (!scannedValues || scannedValues.length === 0 || !scannedValues.every((value) => typeof value === 'string')) {
+        throw new AppError('Each valueCategory must have a non-empty scannedValues array', 400);
+      }
+
+      return {
+        sourceField,
+        fieldType: rawFieldType as ValueMappingFieldTypeString,
+        scannedValues: scannedValues as string[],
+      };
+    });
+
+    const template = await prisma.template.findFirst({
+      where: { id: templateId, ...locationFilter(req.user!) },
+    });
+
+    if (!template) {
+      throw new AppError('Template not found', 404);
+    }
+
+    const needsAccounts = categories.some((category) => category.fieldType === 'account' || category.fieldType === 'bankAccount');
+    const needsName = categories.some((category) => category.fieldType === 'name');
+    const needsTaxCodes = categories.some((category) => category.fieldType === 'taxCode' || category.fieldType === 'taxType');
+
+    const suggestions = await qbService.callQB(req.user!.userId, async ({ accessToken, realmId }) => {
+      const accounts = needsAccounts ? await qbService.getAccounts(realmId, accessToken) : [];
+      const vendors = needsName ? await qbService.getVendors(realmId, accessToken) : [];
+      const customers = needsName ? await qbService.getCustomers(realmId, accessToken) : [];
+      const taxCodes = needsTaxCodes ? await qbService.getTaxCodes(realmId, accessToken) : [];
+
+      return await suggestValueMappings({
+        valueCategories: categories,
+        qbEntities: {
+          accounts,
+          vendors,
+          customers,
+          taxCodes,
+        },
+        transactionType: template.transactionType ?? undefined,
+      });
+    });
+
+    res.json({ success: true, data: suggestions });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    log.error({ err }, 'Value mapping suggestion error');
+    throw new AppError('Failed to suggest value mappings', 500);
   }
 }));
 
