@@ -11,7 +11,7 @@ import ProductMappingSection from './ProductMappingSection';
 import PayeeMappingSection from './PayeeMappingSection';
 import ValueMappingSection from './ValueMappingSection';
 import TemplateWizard from '../TemplateWizard';
-import { buildChequeColumnConfigs, buildBillColumnConfigs } from '../../lib/value-mapping-column-utils';
+import { buildChequeColumnConfigs, buildBillColumnConfigs, buildJournalEntryColumnConfigs } from '../../lib/value-mapping-column-utils';
 import SearchableSelect from '../SearchableSelect';
 import RuleFormSection from './RuleFormSection';
 import type { SelectOption } from '../SearchableSelect';
@@ -499,6 +499,20 @@ export default function MappingView({
     apAccountOptions,
     termsOptions,
   }), [chequePayeeOptions, apAccountOptions, termsOptions]);
+
+  const jeClassOptions = useMemo(() =>
+    classes
+      .filter((c) => c.Active)
+      .map((c) => ({ value: c.Id, label: c.Name, subtitle: c.FullyQualifiedName ?? undefined })),
+    [classes],
+  );
+
+  const journalEntryColumnConfigs = useMemo(() => buildJournalEntryColumnConfigs({
+    jeAccountOptions: accountOptions,
+    jeNameOptions: chequePayeeOptions,
+    jeClassOptions,
+    jeTaxOptions: taxCodeOptions,
+  }), [accountOptions, chequePayeeOptions, jeClassOptions, taxCodeOptions]);
 
   const isBill = selectedTemplate?.transactionType === 'BILL';
   const isVendorCredit = selectedTemplate?.transactionType === 'VENDOR_CREDIT';
@@ -1988,11 +2002,21 @@ export default function MappingView({
       )}
 
       {isJE && activeScanMode === 'EXCEL' && selectedTemplateId && (
-        <ValueMappingSection
-          jwt={jwt}
-          templateId={selectedTemplateId}
-          scanEntries={scanEntries ?? []}
-        />
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-gray-900">Journal Entry Value Mappings</h3>
+          <p className="text-sm text-gray-500 mb-4">Map each journal entry column to the correct QuickBooks target</p>
+          <div className="space-y-4">
+            {journalEntryColumnConfigs.map((config) => (
+              <ValueMappingSection
+                key={config.sourceField}
+                jwt={jwt}
+                templateId={selectedTemplateId}
+                columnConfig={config}
+                scanEntries={scanEntries ?? []}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {isBill && activeScanMode === 'EXCEL' && selectedTemplateId && (

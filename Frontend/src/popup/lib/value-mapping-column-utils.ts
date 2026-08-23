@@ -78,6 +78,46 @@ export function buildBillColumnConfigs(options: BillColumnOptions): ColumnMappin
   ];
 }
 
+interface JournalEntryColumnOptions {
+  jeAccountOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  jeNameOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  jeClassOptions: Array<{ value: string; label: string; subtitle?: string }>;
+  jeTaxOptions: Array<{ value: string; label: string; subtitle?: string }>;
+}
+
+export function buildJournalEntryColumnConfigs(options: JournalEntryColumnOptions): ColumnMappingConfig[] {
+  return [
+    {
+      sourceField: 'account',
+      fieldType: 'account',
+      label: 'Account',
+      description: 'Map raw account names from Excel to QuickBooks accounts',
+      targetOptions: options.jeAccountOptions,
+    },
+    {
+      sourceField: 'name',
+      fieldType: 'name',
+      label: 'Entity Name',
+      description: 'Map raw entity/customer names from Excel to QuickBooks vendors/customers',
+      targetOptions: options.jeNameOptions,
+    },
+    {
+      sourceField: 'class',
+      fieldType: 'class',
+      label: 'Class',
+      description: 'Map raw class names from Excel to QuickBooks classes',
+      targetOptions: options.jeClassOptions,
+    },
+    {
+      sourceField: 'tax',
+      fieldType: 'taxCode',
+      label: 'Tax Code',
+      description: 'Map raw tax names from Excel to QuickBooks tax codes',
+      targetOptions: options.jeTaxOptions,
+    },
+  ];
+}
+
 export function filterMappingsForColumn(
   mappings: ValueMapping[],
   columnConfig?: ColumnMappingConfig,
