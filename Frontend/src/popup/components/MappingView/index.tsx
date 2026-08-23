@@ -1991,6 +1991,7 @@ export default function MappingView({
         <ValueMappingSection
           jwt={jwt}
           templateId={selectedTemplateId}
+          scanEntries={scanEntries ?? []}
         />
       )}
 
@@ -2005,6 +2006,7 @@ export default function MappingView({
                 jwt={jwt}
                 templateId={selectedTemplateId}
                 columnConfig={config}
+                scanEntries={scanEntries ?? []}
               />
             ))}
           </div>
@@ -2022,6 +2024,7 @@ export default function MappingView({
                 jwt={jwt}
                 templateId={selectedTemplateId}
                 columnConfig={config}
+                scanEntries={scanEntries ?? []}
               />
             ))}
           </div>

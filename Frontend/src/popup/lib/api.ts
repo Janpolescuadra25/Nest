@@ -14,6 +14,16 @@ export class ApiError extends Error {
   }
 }
 
+export interface ValueMappingSuggestion {
+  sourceField: string;
+  fieldType: 'account' | 'name' | 'class' | 'taxCode';
+  scannedText: string;
+  suggestedEntityId: string;
+  suggestedEntityName: string;
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+}
+
 async function headers(jwt?: string | null): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (jwt) h['Authorization'] = `Bearer ${jwt}`;
@@ -690,6 +700,16 @@ export const api = {
 
   createValueMapping: (jwt: string, data: ValueMappingFormData & { templateId: string }) =>
     post<ValueMapping>('/api/value-mappings', data, jwt),
+
+  suggestValueMappings: (
+    jwt: string,
+    templateId: string,
+    valueCategories: Array<{ sourceField: string; fieldType: string; scannedValues: string[] }>,
+  ) => post<{ success: boolean; data: ValueMappingSuggestion[] }>(
+    '/api/mappings/suggest-values',
+    { templateId, valueCategories },
+    jwt,
+  ),
 
   updateValueMapping: (jwt: string, id: string, data: Partial<ValueMappingFormData>) =>
     put<ValueMapping>(`/api/value-mappings/${id}`, data, jwt),

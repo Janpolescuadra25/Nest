@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../lib/api';
+import type { ValueMappingSuggestion } from '../../lib/api';
 import { useQBContext } from '../../contexts/QBContext';
 import { ConfirmDialog } from '../shared';
 import SearchableSelect from '../SearchableSelect';
@@ -11,12 +12,13 @@ import {
   buildValueMappingPayload,
 } from '../../lib/value-mapping-column-utils';
 import type { SelectOption } from '../SearchableSelect';
-import type { ColumnMappingConfig, ValueMapping, ValueMappingFormData, MatchingRule, MatchingRuleType } from '../../../types';
+import type { ColumnMappingConfig, ValueMapping, ValueMappingFormData, MatchingRule, MatchingRuleType, ScanEntry } from '../../../types';
 
 interface Props {
   jwt: string;
   templateId: string;
   columnConfig?: ColumnMappingConfig;
+  scanEntries: ScanEntry[];
 }
 
 const FIELD_TYPE_OPTIONS: Array<{ value: ValueMapping['fieldType']; label: string; description: string }> = [
@@ -26,7 +28,7 @@ const FIELD_TYPE_OPTIONS: Array<{ value: ValueMapping['fieldType']; label: strin
   { value: 'taxCode', label: 'Tax Code', description: 'Map scanned text to a QuickBooks tax code' },
 ];
 
-export default function ValueMappingSection({ jwt, templateId, columnConfig }: Props) {
+export default function ValueMappingSection({ jwt, templateId, columnConfig, scanEntries }: Props) {
   const { accounts, classes, taxCodes, vendors, customers, employees } = useQBContext();
   const [mappings, setMappings] = useState<ValueMapping[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,9 @@ export default function ValueMappingSection({ jwt, templateId, columnConfig }: P
   const [testInput, setTestInput] = useState('');
   const [testResults, setTestResults] = useState<{ mappingId: string; scannedText: string; matched: boolean; confidence: number; matchType: string }[]>([]);
   const [deleteMappingDialog, setDeleteMappingDialog] = useState<{ open: boolean; mapping: ValueMapping | null }>({ open: false, mapping: null });
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<ValueMappingSuggestion[]>([]);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
   const accountOptions = useMemo<SelectOption[]>(() =>
     accounts
@@ -254,6 +259,105 @@ export default function ValueMappingSection({ jwt, templateId, columnConfig }: P
     setTestResults(results);
   };
 
+  const uniqueScannedValues = useMemo(() => {
+    if (!columnConfig || scanEntries.length === 0) return [];
+    const field = columnConfig.sourceField;
+    const values = new Set<string>();
+
+    scanEntries.forEach((entry: ScanEntry) => {
+      const headerValue = entry.header?.[field];
+      if (headerValue) {
+        const trimmed = headerValue.trim();
+        if (trimmed) values.add(trimmed);
+      }
+      entry.lineItems.forEach((lineItem: Record<string, string>) => {
+        const lineValue = lineItem[field];
+        if (lineValue) {
+          const trimmed = lineValue.trim();
+          if (trimmed) values.add(trimmed);
+        }
+      });
+    });
+
+    return Array.from(values);
+  }, [columnConfig, scanEntries]);
+
+  const unmappedValues = useMemo(() => {
+    const mappedTexts = new Set(mappings.map((mapping) => mapping.scannedText));
+    return uniqueScannedValues.filter((value) => !mappedTexts.has(value));
+  }, [uniqueScannedValues, mappings]);
+
+  const handleSuggest = async () => {
+    if (!columnConfig) return;
+    if (unmappedValues.length === 0) {
+      setSuggestionError('All scanned values already have mappings.');
+      return;
+    }
+
+    setSuggesting(true);
+    setSuggestionError(null);
+    setSuggestions([]);
+
+    try {
+      const response = await api.suggestValueMappings(jwt, templateId, [
+        {
+          sourceField: columnConfig.sourceField,
+          fieldType: columnConfig.fieldType,
+          scannedValues: unmappedValues,
+        },
+      ]);
+      const suggestionsResult = response.data ?? [];
+      if (suggestionsResult.length === 0) {
+        setSuggestionError('AI did not return any suggestions for these values.');
+        return;
+      }
+      setSuggestions(suggestionsResult);
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to fetch AI suggestions';
+      if (msg.includes('rate limited') || msg.includes('429')) {
+        setSuggestionError('⚠️ AI is busy right now. Please wait about 30 seconds, then try again.');
+      } else {
+        setSuggestionError(msg);
+      }
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const handleApplySuggestion = async (suggestion: ValueMappingSuggestion) => {
+    setError(null);
+    try {
+      const payload = buildValueMappingPayload(
+        {
+          fieldType: suggestion.fieldType,
+          scannedText: suggestion.scannedText,
+          entityId: suggestion.suggestedEntityId,
+          sourceField: columnConfig ? columnConfig.sourceField : suggestion.sourceField,
+        },
+        null,
+        columnConfig,
+      );
+
+      const created = await api.createValueMapping(jwt, {
+        templateId,
+        ...payload,
+      });
+
+      setMappings((prev) => [...prev, created].sort((a, b) =>
+        a.fieldType.localeCompare(b.fieldType) || a.scannedText.localeCompare(b.scannedText),
+      ));
+      setSuggestions((prev) => prev.filter((item) => item.scannedText !== suggestion.scannedText));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply suggestion');
+    }
+  };
+
+  const handleApplyAll = async () => {
+    for (const suggestion of [...suggestions]) {
+      await handleApplySuggestion(suggestion);
+    }
+  };
+
   const getEntityLabel = (value: string) => {
     if (value.startsWith('customer:')) {
         const cId = value.replace('customer:', '');
@@ -309,20 +413,27 @@ export default function ValueMappingSection({ jwt, templateId, columnConfig }: P
                   {columnConfig ? `Map your Excel ${columnConfig.label.toLowerCase()} values to QuickBooks` : 'Configure known value translations for your Excel journal entry upload.'}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
-              >
-                + Add Mapping
-              </button>
-            </div>
-
-            {error && (
-              <div className="text-xs text-red-600 bg-red-50 border border-red-300 rounded px-3 py-2">
-                {error}
+              <div className="flex flex-wrap gap-2 justify-end">
+                  {columnConfig && (
+                    <button
+                      type="button"
+                      onClick={handleSuggest}
+                      disabled={suggesting || unmappedValues.length === 0}
+                      title={unmappedValues.length === 0 ? 'No unmapped values to suggest' : 'Use AI to suggest value mappings'}
+                      className={`text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded transition-colors ${suggesting || unmappedValues.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                    >
+                      {suggesting ? 'Suggesting…' : '🤖 AI Suggest'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={openAdd}
+                    className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-2"
+                  >
+                    + Add Mapping
+                  </button>
+                </div>
               </div>
-            )}
 
             {loading ? (
               <div className="text-xs text-gray-600">Loading value mappings…</div>
@@ -494,6 +605,51 @@ export default function ValueMappingSection({ jwt, templateId, columnConfig }: P
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {suggestionError && (
+                  <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                    {suggestionError}
+                  </div>
+                )}
+
+                {suggestions.length > 0 && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs font-semibold text-blue-800">AI Suggestions ({suggestions.length})</div>
+                      <button
+                        type="button"
+                        onClick={handleApplyAll}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Accept All
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {suggestions.map((suggestion) => (
+                        <div key={`${suggestion.sourceField}-${suggestion.scannedText}`} className="rounded-lg border border-blue-100 bg-white p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900 truncate">
+                              “{suggestion.scannedText}” → {suggestion.suggestedEntityName}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-700">
+                                {suggestion.confidence}
+                              </span>
+                              <span className="ml-2">{suggestion.reason}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleApplySuggestion(suggestion)}
+                            className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1.5 whitespace-nowrap"
+                          >
+                            ✓ Apply
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
