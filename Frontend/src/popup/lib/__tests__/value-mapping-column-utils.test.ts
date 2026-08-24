@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildChequeColumnConfigs, filterMappingsForColumn, getEffectiveFieldType, getEffectiveTargetOptions, buildValueMappingPayload } from '../value-mapping-column-utils';
+import { buildChequeColumnConfigs, buildBillColumnConfigs, buildJournalEntryColumnConfigs, filterMappingsForColumn, getEffectiveFieldType, getEffectiveTargetOptions, buildValueMappingPayload } from '../value-mapping-column-utils';
 import type { ColumnMappingConfig, ValueMapping, ValueMappingFormData, MatchingRule } from '../../../types';
 
 describe('value-mapping-column-utils', () => {
@@ -15,6 +15,33 @@ describe('value-mapping-column-utils', () => {
       { value: 'acct-1', label: 'Account One', subtitle: 'Expense' },
     ],
     taxCodeOptions: [
+      { value: 'tax-1', label: 'Tax One', subtitle: 'Standard' },
+    ],
+  };
+
+  const mockBillOptions = {
+    billVendorOptions: [
+      { value: 'vendor-1', label: 'Vendor One', subtitle: 'Vendor' },
+    ],
+    apAccountOptions: [
+      { value: 'ap-1', label: 'Accounts Payable', subtitle: 'Liability' },
+    ],
+    termsOptions: [
+      { value: 'terms-1', label: 'Net 30', subtitle: 'Standard' },
+    ],
+  };
+
+  const mockJEOptions = {
+    jeAccountOptions: [
+      { value: 'acct-1', label: 'Account One', subtitle: 'Expense' },
+    ],
+    jeNameOptions: [
+      { value: 'vendor-1', label: 'Vendor One', subtitle: 'Vendor' },
+    ],
+    jeClassOptions: [
+      { value: 'class-1', label: 'Class One', subtitle: 'Department' },
+    ],
+    jeTaxOptions: [
       { value: 'tax-1', label: 'Tax One', subtitle: 'Standard' },
     ],
   };
@@ -37,6 +64,62 @@ describe('value-mapping-column-utils', () => {
     expect(configs[2].targetOptions).toBe(mockOptions.accountOptions);
     expect(configs[3].targetOptions).toBe(mockOptions.taxCodeOptions);
     expect(configs[1].targetOptions).not.toBe(configs[2].targetOptions);
+  });
+
+  it('buildBillColumnConfigs returns 3 configs with correct metadata', () => {
+    const configs = buildBillColumnConfigs(mockBillOptions);
+
+    expect(configs).toHaveLength(3);
+    expect(configs.map((config) => config.sourceField)).toEqual(['vendorRef', 'apAccountRef', 'termsRef']);
+    expect(configs.map((config) => config.fieldType)).toEqual(['name', 'account', 'name']);
+    expect(configs.map((config) => config.label)).toEqual(['Vendor', 'AP Account', 'Terms']);
+    expect(configs[0].targetOptions).toBe(mockBillOptions.billVendorOptions);
+    expect(configs[1].targetOptions).toBe(mockBillOptions.apAccountOptions);
+    expect(configs[2].targetOptions).toBe(mockBillOptions.termsOptions);
+  });
+
+  it('buildBillColumnConfigs assigns correct target options to each column', () => {
+    const configs = buildBillColumnConfigs(mockBillOptions);
+
+    expect(configs[0].targetOptions).toBe(mockBillOptions.billVendorOptions);
+    expect(configs[1].targetOptions).toBe(mockBillOptions.apAccountOptions);
+    expect(configs[2].targetOptions).toBe(mockBillOptions.termsOptions);
+  });
+
+  it('buildJournalEntryColumnConfigs returns 4 configs with correct metadata', () => {
+    const configs = buildJournalEntryColumnConfigs(mockJEOptions);
+
+    expect(configs).toHaveLength(4);
+    expect(configs.map((config) => config.sourceField)).toEqual(['account', 'name', 'class', 'tax']);
+    expect(configs.map((config) => config.fieldType)).toEqual(['account', 'name', 'class', 'taxCode']);
+    expect(configs.map((config) => config.label)).toEqual(['Account', 'Entity Name', 'Class', 'Tax Code']);
+    expect(configs[0].targetOptions).toBe(mockJEOptions.jeAccountOptions);
+    expect(configs[1].targetOptions).toBe(mockJEOptions.jeNameOptions);
+    expect(configs[2].targetOptions).toBe(mockJEOptions.jeClassOptions);
+    expect(configs[3].targetOptions).toBe(mockJEOptions.jeTaxOptions);
+  });
+
+  it('buildJournalEntryColumnConfigs assigns correct target options to each column', () => {
+    const configs = buildJournalEntryColumnConfigs(mockJEOptions);
+
+    expect(configs[0].targetOptions).toBe(mockJEOptions.jeAccountOptions);
+    expect(configs[1].targetOptions).toBe(mockJEOptions.jeNameOptions);
+    expect(configs[2].targetOptions).toBe(mockJEOptions.jeClassOptions);
+    expect(configs[3].targetOptions).toBe(mockJEOptions.jeTaxOptions);
+  });
+
+  it('buildJournalEntryColumnConfigs class field maps to class fieldType', () => {
+    const configs = buildJournalEntryColumnConfigs(mockJEOptions);
+
+    expect(configs[2].sourceField).toBe('class');
+    expect(configs[2].fieldType).toBe('class');
+  });
+
+  it('buildJournalEntryColumnConfigs tax field maps to taxCode fieldType', () => {
+    const configs = buildJournalEntryColumnConfigs(mockJEOptions);
+
+    expect(configs[3].sourceField).toBe('tax');
+    expect(configs[3].fieldType).toBe('taxCode');
   });
 
   it('payee targets equal chequePayeeOptions', () => {

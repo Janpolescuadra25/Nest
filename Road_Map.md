@@ -81,7 +81,7 @@ Last Updated: 2026-08-21
 - ✅ **Support all EXCEL-mode templates**: Cheque (payee, bank account, category, tax type), Bill (vendor, account, tax type), Journal Entry (payee, account, category). Each template type has different value mapping fields — the endpoint and UI must handle all permutations.
 - ✅ **Batch apply**: Allow user to "Accept All" suggestions for a single mapping category (e.g., accept all payee suggestions at once) or individually accept/reject.
 - **Rate limiting and caching**: Add rate limiting to the new endpoint to prevent Gemini API cost abuse. Cache QB reference data (vendors, accounts, tax codes) to reduce QuickBooks API calls — invalidate cache on sync events or after a configurable TTL.
-- **Maintain test suite**: All new code must pass existing tests (currently 117/117 passing) plus new tests for the endpoint.
+- ✅ **Maintain test suite**: All new code passes existing tests (114 frontend + 6 backend) plus new tests for column builders and suggest-values route validation.
 
 **Acceptance Criteria:**
 - `disableAutoDetect` prop and all references removed from `MappingFilters.tsx`

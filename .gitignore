@@ -8,3 +8,4 @@ dist/
 .codely-cli/
 .codely/
 Frontend/tsccheck*.txt
+jest-output.json
